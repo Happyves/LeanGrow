@@ -1,0 +1,96 @@
+
+import LeanGrow.CExpr
+import LeanGrow.DAGstruct
+import Batteries.Data.List.Basic
+--import Mathlib.Data.List.Alist
+
+open Lean
+
+/-
+Idea:
+If there are unassigned nodes, assign one and then enter the propagation phase.
+In the propagation phase, we take an element of the frontier of assigned nodes, look at its parents and attempt to
+assign them. If an assignment is contradictory, we dump this embedding attempt. Otherwise, we add the parents to
+the frontier, and delet the node we expanded on.
+-/
+
+
+-- Replace embedding from Hashmap to Array of options of capacity the number of nodes in thm-dag
+-- assignement corresponds to setting the entry to `.some image`
+
+#check Array.mkEmpty
+-- or initialize as List of .none, then cast to Array via
+#check Array.mk
+
+-- Consider
+#check_failure AList
+-- in `Mathlib.Data.List.AList`, which seems to be in new mathlib version ???????
+
+
+
+def merge_if_compatible (embed : Array (Option Nat)) (assignOutput : List (Nat × Nat)) :
+  Option (Array (Option Nat)) :=
+  dbg_trace s!"Attempting to merge:\n{embed}\n{assignOutput}" ;
+  match assignOutput with
+  | [] => .some embed
+  | (t,l) :: rest =>
+      let im := embed.get! t -- thm-nodes start as 0, like array indices, so we're good ?
+      match im with
+      | .none => merge_if_compatible (embed.set! t l) rest
+      | .some i => if i = l then merge_if_compatible embed rest else .none
+
+
+def embed_next (thm : DAG CExpr Nat) (embedSofar : Array (Option Nat)) (anti_images : HashMap Nat CExpr) (todo : Nat × CExpr) : List ((Array (Option Nat)) × (HashMap Nat CExpr) × (List (Nat × CExpr))) :=
+  let candidates := anti_images.fold (init := []) fun r k v =>
+      dbg_trace s!"CExpr matching :\n{todo.2}\n{v}" ;
+      match CExpr.MatchAssign todo.2 v with
+      | .none => r
+      | .some l => (k,l) :: r
+  dbg_trace s!"Expantion candidates (with parent embed): {candidates}"
+  candidates.foldl (fun L e =>
+    match merge_if_compatible (embedSofar.set! todo.1 e.1) e.2 with
+    | .none => L
+    | .some E => dbg_trace s!"Expantion phase interim embedding: {E}"
+        (E, (e.2).foldl (fun r v =>  HashMap.erase r v.2) (anti_images.erase e.1), (e.2.map Prod.fst).zip ((e.2.map (fun p => thm.dataName p.1)).reduceOption)) :: L
+    ) []
+
+
+--#exit
+
+
+def propagate (ltx : DAG CExpr Nat) (embedSofar :  Array (Option Nat)) (anti_images : HashMap Nat CExpr) (todo : Nat × CExpr) : Option ((Array (Option Nat)) × (List (Nat × CExpr)) × (HashMap Nat CExpr)) :=
+  match embedSofar.get! todo.1 with
+  | .none => .none
+  | .some im =>
+      match ltx.DataParentsList im with
+      | .none => .none
+      | .some (ce, ps) =>
+          match CExpr.MatchAssign todo.2 ce with
+          | .none => .none
+          | .some l =>
+              let pc := (ps.map (fun p => ltx.dataName p)).reduceOption
+              .some ((l.foldl (fun r e => r.set! e.1 e.2) embedSofar), ps.zip pc, l.foldl (fun r v =>  HashMap.erase r v.2) anti_images)
+
+--#exit
+
+partial def matcher (thm ltx : SizedDAG CExpr Nat) : List (Array (Option Nat)) :=
+  let rec main (thm ltx : DAG CExpr Nat) (embedSofar :  Array (Option Nat)) (anti_images : HashMap Nat CExpr) (unassignedNodes : List (Nat × CExpr)) (assignedFrontier : List (Nat × CExpr)) : List ( Array (Option Nat)) :=
+    match assignedFrontier with
+    | [] => dbg_trace s!"Empty frontier encountered for embed {embedSofar} and anti-image {anti_images.toList}"
+        match unassignedNodes with
+        | [] => dbg_trace "Returning embeding" ; [embedSofar]
+        | n :: l =>
+          dbg_trace s!"Expaning on {n}"
+          let L := embed_next thm embedSofar anti_images n
+          dbg_trace s!"Expansion options: {L.map (fun c => c.1)} w. anti-images {L.map (fun c => c.2.1.toList)}"
+          (L.map (fun (embed, new_anti_images, front) => main thm ltx embed new_anti_images l front)).join
+    | n :: l =>
+        dbg_trace "Entering propagation"
+        match propagate ltx embedSofar anti_images n with
+        | .none => dbg_trace "Propagation failed" ; []
+        | .some (emb, toFront, ai) => dbg_trace "Propagation succeded.\nCurrent embedding: {emb}" ; main thm ltx emb ai (toFront.foldl (fun r e => r.erase e) unassignedNodes) (List.union toFront l) -- no duplicates
+
+  let anti_im_ini : HashMap Nat CExpr := (ltx.nameDataList).foldl (fun x y => x.insert y.1 y.2) (HashMap.empty)
+
+  dbg_trace "Running main matcher"
+  main thm.dag ltx.dag (List.replicate thm.size .none).toArray anti_im_ini (thm.nameDataList) []
