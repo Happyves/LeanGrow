@@ -7,11 +7,23 @@ import Qq
 
 open Lean
 
-def naiveGetHyps (ty : Expr) : List Expr :=
+inductive miniBind where
+| default | inst | impl
+
+
+def naiveGetHyps (ty : Expr) : (List Expr) × (List miniBind) :=
   match ty with
-  | .forallE _ h b _ => h :: (naiveGetHyps b)
+  | .forallE _ h b i =>
+        let (H,I) := (naiveGetHyps b)
+        match i with
+        | .default => (h :: H, .default :: I)
+        | .instImplicit => (h :: H, .inst :: I)
+        | _ => (h :: H, .impl :: I)
   | .mdata  _ e => naiveGetHyps e
-  | _ => []
+  | _ => ([],[])
+
+
+--#exit
 
 /-- Dag nodes ordering from 0 to size - 1-/
 def orderHyps_wBvar (hyps : List Expr) : SizedDAG CExpr Nat :=
@@ -43,6 +55,7 @@ def orderHyps_wBvar (hyps : List Expr) : SizedDAG CExpr Nat :=
 
   let (d, n) := go hyps 0
   ⟨n, d⟩
+
 
 #exit
 

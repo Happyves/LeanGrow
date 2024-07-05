@@ -2,15 +2,19 @@
 import LeanGrow.DAGembed
 import LeanGrow.ProcessDecl
 import LeanGrow.ProcessLocalCtx
+import LeanGrow.Blacklisting
 import Mathlib
 
 open Lean
 
 
-
+-- TODO: use second list from `naiveGetHyps` to add only default args
 def embed_to_expr (embed : Array (Option Nat)) (size : Nat) (dict : PersistentHashMap ℕ FVarId) (info : ConstantInfo) : Expr :=
   let args : List Expr := (((List.range size).foldl (fun l i => (embed.get! i) :: l) []).reduceOption.map (fun x => Expr.fvar (dict.find! x))).reverse
   mkAppN (.const info.name (info.levelParams.map Level.param)) args.toArray
+
+
+#exit
 
 open Lean Elab Meta Command Tactic TryThis
 
@@ -43,8 +47,9 @@ elab "grow" n:name : tactic =>
           let ltx ←  getLCtx
           let (ltx_dag, ltx_dict, ltx_dict') := orderHyps_fromLocalCtx ltx
           dbg_trace s!"Local context dag :\n{instToStringFormat.toString (repr ltx_dag)}\n"
-          env.constants.map₁.forM (fun decName decInfo =>
-              if modules[env.const2ModIdx[decName].get! (α := Nat)]!
+          env.constants.map₁.forM (fun decName decInfo => do
+              let na ← Loogle.isBlackListed decName
+              if modules[env.const2ModIdx[decName].get! (α := Nat)]! && (! na)
               then match decInfo with
                    | .thmInfo v | .defnInfo v => do
                         dbg_trace s!"Looking at {v.name}"
@@ -103,9 +108,15 @@ elab "testing" n:name : tactic =>
 
 
 
-
 #exit
 
+example (l L : List ℕ) (h : l ≤ L) : True :=
+  by
+  grow `Mathlib.Data.List
+  trivial
+
+
+#exit
 
 example {m n : ℕ} (h : m ≤ n) : True :=
   by
