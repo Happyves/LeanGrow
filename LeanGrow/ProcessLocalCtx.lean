@@ -47,33 +47,40 @@ structure output where
   ctx' : PersistentHashMap Nat FVarId
 
 
-def orderHyps_wFvar (c : PersistentHashMap FVarId Nat) (c' : PersistentHashMap Nat FVarId) (hyps : List Expr) : (DAG CExpr Nat) × (PersistentHashMap FVarId Nat) × (PersistentHashMap Nat FVarId) :=
-  let rec abstractFvars_collectParents (e : Expr) (ctx : PersistentHashMap FVarId Nat) (ctx' : PersistentHashMap Nat FVarId) (count : Nat) : output:=
-    match e with
-    | .fvar i => match ctx.find? i with
-                 | .none => ⟨.node count (.ofFvar i), [count], count + 1, ctx.insert i count, ctx'.insert count i⟩
-                 | .some x => ⟨.node x (.ofFvar i), [x], count , ctx, ctx'⟩
-    | .app l r => let L := abstractFvars_collectParents l ctx ctx' count ;
-                  let R := abstractFvars_collectParents r L.ctx L.ctx' L.counter;
-                  ⟨.app L.ctype R.ctype, L.parents ++ R.parents, R.counter, R.ctx, R.ctx'⟩
-    | .lam n l r B => let L := abstractFvars_collectParents l ctx ctx' count ;
-                      let R := abstractFvars_collectParents r L.ctx L.ctx' L.counter;
-                      ⟨.lam n L.ctype R.ctype B, L.parents ++ R.parents, R.counter, R.ctx, R.ctx'⟩
-    | .forallE n l r B => let L := abstractFvars_collectParents l ctx ctx' count ;
-                          let R := abstractFvars_collectParents r L.ctx L.ctx' L.counter;
-                          ⟨.forallE n L.ctype R.ctype B, L.parents ++ R.parents, R.counter, R.ctx, R.ctx'⟩
-    | .mdata _ e => abstractFvars_collectParents e ctx ctx' count
-    | .proj n i e => let r := abstractFvars_collectParents e ctx ctx' count ; {r with ctype := .proj n i r.ctype}
-    | x => ⟨x.toCExpr, [], count, ctx, ctx'⟩
+def orderHyps_wFvar (c : PersistentHashMap FVarId Nat) (c' : PersistentHashMap Nat FVarId) (hyps : List (Expr × miniBind)) : (DAG CExpr Nat) × (PersistentHashMap FVarId Nat) × (PersistentHashMap Nat FVarId) :=
+  let rec abstractFvars_collectParents (e : Expr) (f : miniBind) (ctx : PersistentHashMap FVarId Nat) (ctx' : PersistentHashMap Nat FVarId) (count : Nat) : output:=
+    let res :=
+        match e with
+        | .fvar i => match ctx.find? i with
+                    | .none => ⟨.node count (.ofFvar i), [count], count + 1, ctx.insert i count, ctx'.insert count i⟩
+                    | .some x => ⟨.node x (.ofFvar i), [x], count , ctx, ctx'⟩
+        | .app l r => let L := abstractFvars_collectParents l .default ctx ctx' count ;
+                      let R := abstractFvars_collectParents r .default L.ctx L.ctx' L.counter;
+                      ⟨.app L.ctype R.ctype, L.parents ++ R.parents, R.counter, R.ctx, R.ctx'⟩
+        | .lam n l r B => let L := abstractFvars_collectParents l .default ctx ctx' count ;
+                          let R := abstractFvars_collectParents r .default L.ctx L.ctx' L.counter;
+                          ⟨.lam n L.ctype R.ctype B, L.parents ++ R.parents, R.counter, R.ctx, R.ctx'⟩
+        | .forallE n l r B => let L := abstractFvars_collectParents l .default ctx ctx' count ;
+                              let R := abstractFvars_collectParents r .default L.ctx L.ctx' L.counter;
+                              ⟨.forallE n L.ctype R.ctype B, L.parents ++ R.parents, R.counter, R.ctx, R.ctx'⟩
+        | .mdata _ e => abstractFvars_collectParents e .default ctx ctx' count
+        | .proj n i e => let r := abstractFvars_collectParents e .default ctx ctx' count ; {r with ctype := .proj n i r.ctype}
+        | x => ⟨x.toCExpr, [], count, ctx, ctx'⟩
+    match f with
+    | .default => res
+    | .impl => {res with ctype := .wrapInst res.ctype}
 
-  let rec go (l : List Expr) (ctx : PersistentHashMap FVarId Nat) (ctx' : PersistentHashMap Nat FVarId) (count : Nat) (hmm : Nat) : (DAG CExpr Nat) × (PersistentHashMap FVarId Nat) × (PersistentHashMap Nat FVarId) :=
+  let rec go (l : List (Expr × miniBind)) (ctx : PersistentHashMap FVarId Nat) (ctx' : PersistentHashMap Nat FVarId) (count : Nat) (hmm : Nat) : (DAG CExpr Nat) × (PersistentHashMap FVarId Nat) × (PersistentHashMap Nat FVarId) :=
     match l with
     | [] => ([], ctx, ctx')
     | h :: rest =>
-          let ⟨res, deps, new_count , new_ctx , new_ctx'⟩ := abstractFvars_collectParents h ctx ctx' (count)
+          let ⟨res, deps, new_count , new_ctx , new_ctx'⟩ := abstractFvars_collectParents h.1 h.2 ctx ctx' (count)
           let sofar := go rest new_ctx new_ctx' (new_count) (hmm + 1)
           (⟨hmm, res, deps⟩ :: sofar.1 , sofar.2)
   go hyps c c' 0 1
+
+
+--#exit
 
 /-- dag nodes from 1 to size-/
 def orderHyps_fromLocalCtx (ctx : LocalContext) : (SizedDAG CExpr Nat) × (PersistentHashMap FVarId Nat) × (PersistentHashMap Nat FVarId) :=
@@ -88,7 +95,7 @@ def orderHyps_fromLocalCtx (ctx : LocalContext) : (SizedDAG CExpr Nat) × (Persi
     cctx.reduceOption.map LocalDecl.type
     -- tail cause fist part of local context is impl info ???
   let hyps := mkHyps cctx
-  let (dag, c, c') := orderHyps_wFvar init_ctx'.1 init_ctx.1 hyps
+  let (dag, c, c') := orderHyps_wFvar init_ctx'.1 init_ctx.1 (hyps.map (fun e => (e, .default)))
   (⟨cctx.length, dag ⟩, c, c')
 
 

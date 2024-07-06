@@ -1,5 +1,6 @@
 
 import Lean
+import Mathlib
 
 open Lean
 
@@ -29,4 +30,11 @@ IMPORTANT OBSERVATIONS:
 
 - Are the above two eve true ???
 
+- We must handle instances, as they may not always be implicitly present in LCtx.
+  For example, if we want to find `Finset.filter` at (l : Finset ℕ) (p : ℕ → Prop)
+
 -/
+
+#check List.filter
+#check Finset.filter
+#print DecidablePred

@@ -25,6 +25,9 @@ deriving Repr, Inhabited, BEq
 def SizedDAG.nameDataList (d : SizedDAG α β) : List (β × α) :=
   d.dag.map (fun ⟨n, D, _⟩ => (n,D) )
 
+def DAG.nameDataList (d : DAG α β) : List (β × α) :=
+  d.map (fun ⟨n, D, _⟩ => (n,D) )
+
 def SizedDAG.DataParentsList [BEq β] (d : SizedDAG α β) (name : β) : Option (α × (List β)) :=
   let rec findName : DAG α β → Option (α × (List β))
     | [] => .none

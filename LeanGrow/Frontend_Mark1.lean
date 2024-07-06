@@ -8,13 +8,29 @@ import Mathlib
 open Lean
 
 
+def List.map₂ (l : List α) (L : List β) (f : α → β → γ) : List γ :=
+  match l, L with
+  | xl :: rl, xL :: rL => (f xl xL) :: (List.map₂ rl rL f)
+  | _, _ => []
+
+--#exit
+
 -- TODO: use second list from `naiveGetHyps` to add only default args
-def embed_to_expr (embed : Array (Option Nat)) (size : Nat) (dict : PersistentHashMap ℕ FVarId) (info : ConstantInfo) : Expr :=
-  let args : List Expr := (((List.range size).foldl (fun l i => (embed.get! i) :: l) []).reduceOption.map (fun x => Expr.fvar (dict.find! x))).reverse
+def embed_to_expr (embed : Array (Option NodeCst)) (impInfo : List miniBind) (size : Nat) (dict : PersistentHashMap ℕ FVarId) (info : ConstantInfo) : Expr :=
+  let proArg := ((List.range size).foldl (fun l i => (embed.get! i) :: l) []).map
+      (fun x => match x with
+                | .none => .none
+                | .some (.ofCst e) =>
+                      match (CExpr.toExpr e) with
+                      | .none => .none
+                      | .some ex => .some ex
+                | .some (.ofNode im) => .some (Expr.fvar (dict.find! im))
+      )
+  let args : List Expr := ((List.map₂ (proArg) impInfo (fun x i => match i with | .impl => .none | _ => x)).reduceOption).reverse
   mkAppN (.const info.name (info.levelParams.map Level.param)) args.toArray
 
 
-#exit
+--#exit
 
 open Lean Elab Meta Command Tactic TryThis
 
@@ -53,14 +69,15 @@ elab "grow" n:name : tactic =>
               then match decInfo with
                    | .thmInfo v | .defnInfo v => do
                         dbg_trace s!"Looking at {v.name}"
-                        let thm_dag := orderHyps_wBvar (naiveGetHyps v.type)
+                        let hyps := naiveGetHyps v.type
+                        let thm_dag := orderHyps_wBvar hyps
                         dbg_trace s!"Thm dag :\n{instToStringFormat.toString (repr thm_dag)}\n"
                         let embeds := matcher thm_dag ltx_dag
                         dbg_trace s!"Embeddings : {embeds}\n"
                         match embeds with
                         | [] => pure ()
                         | _ => do
-                            addEmbellishedTermSuggestions ref (embeds.map (fun e => embed_to_expr e thm_dag.size ltx_dict' decInfo)).toArray
+                            addEmbellishedTermSuggestions ref (embeds.map (fun e => embed_to_expr e (hyps.map Prod.snd) thm_dag.size ltx_dict' decInfo)).toArray
                               (depPostInfo := fun e => do return s!"\n{← ppExpr (← inferType e)}")
                             -- logInfo decName
                             -- for e in embeds do

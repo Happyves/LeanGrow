@@ -5,7 +5,7 @@ open Lean
 
 inductive OriginalData where
 | ofBvar : Nat → OriginalData
-| ofFvar (fvarId : FVarId) : OriginalData
+| ofFvar (fvarId : FVarId)
 deriving Inhabited, BEq, Repr
 
 inductive CExpr where
@@ -19,6 +19,7 @@ inductive CExpr where
 | letE : Name → CExpr → CExpr → CExpr → Bool → CExpr
 | lit : Literal → CExpr
 | proj : Name → Nat → CExpr → CExpr
+| wrapInst : CExpr → CExpr
 | failed : CExpr
 deriving Inhabited, BEq, Repr
 
@@ -34,11 +35,13 @@ def CExpr.toStringImp : CExpr → String
 | .letE _ t v b _ => s!"CExpr.letE {t.toStringImp} {v.toStringImp} {b.toStringImp}"
 | .lit l => s!"CExpr.lit {instToStringFormat.toString (repr l)}"
 | .proj t i b => s!"CExpr.proj {t} {i} {b.toStringImp}"
+| .wrapInst e => s!"CExpr.wrapInst {CExpr.toStringImp e}"
 | .failed => "CExpr.failed"
 
 instance : ToString CExpr where
   toString := CExpr.toStringImp
 
+#synth ToString CExpr
 
 def Lean.Expr.toCExpr : Expr → CExpr
 | .bvar i => .bvar i
@@ -61,20 +64,46 @@ def HashMap.merge [BEq α] [Hashable α] (a b : HashMap α β) : HashMap α β :
 --#exit
 
 
-def match_helper (l r : Option (List (Nat ×Nat))) : Option (List (Nat ×Nat)) :=
+def match_helper (l r : Option (List (Nat × NodeCst))) : Option (List (Nat × NodeCst)) :=
  match l, r with
  | .some x, .some y => .some (x ++ y)
  | .some x, .none => .some x
  | .none , .some y => .some y
  | _, _ => .none
 
+
+inductive NodeCst where
+| ofNode (i : Nat)
+| ofCst (c : CExpr)
+deriving Inhabited, Repr, BEq
+
+
+instance : ToString NodeCst where
+      toString := fun c => match c with
+                           | .ofNode i => s!"node {i}"
+                           | .ofCst c => CExpr.toStringImp c
+--#exit
+
+def CExpr.hasNodes : CExpr → Bool
+| .node _ _ => true
+| .app f a => (CExpr.hasNodes f) && (CExpr.hasNodes a)
+| .lam _ t b _ => (CExpr.hasNodes t) && (CExpr.hasNodes b)
+| .forallE _ t b _ => (CExpr.hasNodes t) && (CExpr.hasNodes b)
+| .letE _ t v b _ => (CExpr.hasNodes t) && (CExpr.hasNodes b) && (CExpr.hasNodes v)
+| .proj _ _ b => (CExpr.hasNodes b)
+| .wrapInst e => (CExpr.hasNodes e)
+| _ => false
+
+
+
 /-- proposes parent assignement (no assignement of node itself)-/
-def CExpr.MatchAssign (l r : CExpr) : Option (List (Nat × Nat)) :=
+def CExpr.MatchAssign (l r : CExpr) : Option (List (Nat × NodeCst)) :=
   match l, r with
-  | .node i _ , .node j _ => .some [(i, j)]
+  | .node i _ , .node j _ => .some [(i, .ofNode j)]
+  | .node i _ , e => if e.hasNodes then .none else .some [(i, .ofCst e)] -- scary of circular stuff ... to investigate...
   | .bvar i , .bvar j =>  if i == j then .some [] else .none
-  | .sort l, .sort l' => .some [] -- if l == l' then .some [] else .none
-  | .const n ll, .const n' ll' => dbg_trace s!"Sanity" ; if (n == n') && (ll == ll') then .some [] else .none
+  | .sort _, .sort _ => .some [] -- if l == l' then .some [] else .none -- raised issues as params in lib not the same as file
+  | .const n ll, .const n' ll' => if (n == n') && (ll == ll') then .some [] else .none
   | .app f a, .app f' a' =>
         let of := CExpr.MatchAssign  f f' ;
         let oa := CExpr.MatchAssign  a a' ;
@@ -95,6 +124,53 @@ def CExpr.MatchAssign (l r : CExpr) : Option (List (Nat × Nat)) :=
   | .lit l, .lit l' => if l == l' then .some [] else .none
   | .proj t i b, proj t' i' b' => if (t == t') && (i == i') then CExpr.MatchAssign b b' else .none
   | _ , _ => .none
+
+
+
+
+inductive miniBind where
+| default | impl --| inst
+
+
+def naiveGetHyps (ty : Expr) : (List (Expr × miniBind)) :=
+  match ty with
+  | .forallE _ h b i =>
+        let H := (naiveGetHyps b)
+        match i with
+        | .default => (h, .default)  :: H
+        --| .instImplicit => (h :: H, .inst :: I)
+        | _ => (h , .impl) :: H
+  | .mdata  _ e => naiveGetHyps e
+  | _ => []
+
+
+
+def CExpr.toExpr : CExpr → Option Expr
+| .node _ _ => .none
+| .bvar i => .some (.bvar i)
+| .sort l => .some (.sort l)
+| .const n ll => .some (.const n ll)
+| .app f a =>
+      match CExpr.toExpr f, CExpr.toExpr a with
+      | .some f', .some a' => .some (.app f' a')
+      | _ , _ => .none
+| .lam n t b B =>
+      match CExpr.toExpr t, CExpr.toExpr b with
+      | .some t', .some b' => .some (.lam n t' b' B)
+      | _ , _ => .none
+| .forallE n t b B =>
+      match CExpr.toExpr t, CExpr.toExpr b with
+      | .some t', .some b' => .some (.forallE n t' b' B)
+      | _ , _ => .none
+| .letE n t v b B =>
+      match CExpr.toExpr t, CExpr.toExpr v, CExpr.toExpr b with
+      | .some t', .some v', .some b' => .some (.letE n t' v' b' B)
+      | _ , _, _ => .none
+| .lit l => .some (.lit l)
+| .proj t i b => (.proj t i) <$> (CExpr.toExpr b)
+| .wrapInst e => (CExpr.toExpr e)
+| .failed => .none
+
 
 
 def Expr.getConstNames : Expr → List Name
