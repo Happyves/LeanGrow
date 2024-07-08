@@ -61,7 +61,7 @@ def embed_next (thm ltx : DAG CExpr Nat) (embedSofar : Array (Option NodeCst)) (
 def propagate (ltx : DAG CExpr Nat) (embedSofar :  Array (Option NodeCst)) (todo : Nat × CExpr) : Option ((Array (Option NodeCst)) × (List (Nat × CExpr))) :=
   match embedSofar.get! todo.1 with
   | .none => .none
-  | .some (.ofCst _) => .none
+  | .some (.ofCst _) => .some (embedSofar, [])
   | .some (.ofNode im) =>
       match ltx.DataParentsList im with
       | .none => .none
@@ -86,12 +86,20 @@ partial def matcher (thm ltx : SizedDAG CExpr Nat) : List (Array (Option NodeCst
           | _ =>  dbg_trace s!"Expaning on {n}"
                   let L := embed_next thm ltx embedSofar n
                   dbg_trace s!"Expansion options: {L.map (fun c => c.1)}"
-                  -- if L empty, keep going on l : cases of an implicit param not found for example
+                  --if L empty, keep going on l : cases of an implicit param not found for example
                   match L with
-                  | [] => main thm ltx embedSofar l []
+                  | [] =>
+                      match n.2 with
+                      | .sort Level.zero => [] -- couldn't embed the property → halt
+                      | .sort _ =>
+                          dbg_trace "Proceeding, since we hope to assing type later"
+                          main thm ltx embedSofar l [] -- is probably an implicit type, which is a constant (like ℕ) which we'll find durring the propagation phase
+                          -- maybe, if we order nodes to embed so as to have sinks first, this part
+                          -- inst't necessary as the nodes assigned to constants will already be asigned
+                      | _ => [] -- coudn't embed a concrete object → halt
                   | _ => (L.map (fun (embed, front) => main thm ltx embed l front)).join
     | n :: l =>
-        dbg_trace "Entering propagation"
+        dbg_trace "Entering propagation for assigned {n.1} in assogned frontier"
         match propagate ltx embedSofar  n with
         | .none => dbg_trace "Propagation failed" ; []
         | .some (emb, toFront) => dbg_trace "Propagation succeded.\nCurrent embedding: {emb}" ; main thm ltx emb (toFront.foldl (fun r e => r.erase e) unassignedNodes) (List.union toFront l) -- no duplicates

@@ -41,3 +41,5 @@ example  (h : 1+2 = 3) : True :=
   trivial
 
 #check instAddNat
+
+#eval q(Prop)

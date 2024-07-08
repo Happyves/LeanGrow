@@ -67,8 +67,8 @@ def HashMap.merge [BEq α] [Hashable α] (a b : HashMap α β) : HashMap α β :
 def match_helper (l r : Option (List (Nat × NodeCst))) : Option (List (Nat × NodeCst)) :=
  match l, r with
  | .some x, .some y => .some (x ++ y)
- | .some x, .none => .some x
- | .none , .some y => .some y
+--  | .some x, .none => .some x
+--  | .none , .some y => .some y
  | _, _ => .none
 
 
@@ -86,10 +86,10 @@ instance : ToString NodeCst where
 
 def CExpr.hasNodes : CExpr → Bool
 | .node _ _ => true
-| .app f a => (CExpr.hasNodes f) && (CExpr.hasNodes a)
-| .lam _ t b _ => (CExpr.hasNodes t) && (CExpr.hasNodes b)
-| .forallE _ t b _ => (CExpr.hasNodes t) && (CExpr.hasNodes b)
-| .letE _ t v b _ => (CExpr.hasNodes t) && (CExpr.hasNodes b) && (CExpr.hasNodes v)
+| .app f a => (CExpr.hasNodes f) || (CExpr.hasNodes a)
+| .lam _ t b _ => (CExpr.hasNodes t) || (CExpr.hasNodes b)
+| .forallE _ t b _ => (CExpr.hasNodes t) || (CExpr.hasNodes b)
+| .letE _ t v b _ => (CExpr.hasNodes t) || (CExpr.hasNodes b) || (CExpr.hasNodes v)
 | .proj _ _ b => (CExpr.hasNodes b)
 | .wrapInst e => (CExpr.hasNodes e)
 | _ => false
@@ -103,7 +103,8 @@ def CExpr.MatchAssign (l r : CExpr) : Option (List (Nat × NodeCst)) :=
   | .node i _ , e => if e.hasNodes then .none else .some [(i, .ofCst e)] -- scary of circular stuff ... to investigate...
   | .bvar i , .bvar j =>  if i == j then .some [] else .none
   | .sort _, .sort _ => .some [] -- if l == l' then .some [] else .none -- raised issues as params in lib not the same as file
-  | .const n ll, .const n' ll' => if (n == n') && (ll == ll') then .some [] else .none
+  | .const n _, .const n' _ => if (n == n') --&& (ll == ll')
+                                  then .some [] else .none
   | .app f a, .app f' a' =>
         let of := CExpr.MatchAssign  f f' ;
         let oa := CExpr.MatchAssign  a a' ;
@@ -129,7 +130,7 @@ def CExpr.MatchAssign (l r : CExpr) : Option (List (Nat × NodeCst)) :=
 
 
 inductive miniBind where
-| default | impl --| inst
+| default | inst | impl
 
 
 def naiveGetHyps (ty : Expr) : (List (Expr × miniBind)) :=
@@ -137,9 +138,9 @@ def naiveGetHyps (ty : Expr) : (List (Expr × miniBind)) :=
   | .forallE _ h b i =>
         let H := (naiveGetHyps b)
         match i with
+        | .instImplicit => (h , .inst) :: H
         | .default => (h, .default)  :: H
-        --| .instImplicit => (h :: H, .inst :: I)
-        | _ => (h , .impl) :: H
+        | _ => (h, .impl)  :: H
   | .mdata  _ e => naiveGetHyps e
   | _ => []
 

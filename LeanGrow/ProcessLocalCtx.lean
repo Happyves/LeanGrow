@@ -67,8 +67,8 @@ def orderHyps_wFvar (c : PersistentHashMap FVarId Nat) (c' : PersistentHashMap N
         | .proj n i e => let r := abstractFvars_collectParents e .default ctx ctx' count ; {r with ctype := .proj n i r.ctype}
         | x => ⟨x.toCExpr, [], count, ctx, ctx'⟩
     match f with
-    | .default => res
-    | .impl => {res with ctype := .wrapInst res.ctype}
+    | .inst => {res with ctype := .wrapInst res.ctype}
+    | _ => res
 
   let rec go (l : List (Expr × miniBind)) (ctx : PersistentHashMap FVarId Nat) (ctx' : PersistentHashMap Nat FVarId) (count : Nat) (hmm : Nat) : (DAG CExpr Nat) × (PersistentHashMap FVarId Nat) × (PersistentHashMap Nat FVarId) :=
     match l with

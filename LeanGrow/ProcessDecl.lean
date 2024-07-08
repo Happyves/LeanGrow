@@ -30,8 +30,8 @@ def orderHyps_wBvar (hyps : List (Expr × miniBind)) : SizedDAG CExpr Nat :=
         | .proj n i e => let r := abstractBvars_collectParents e .default inner_count len ; (.proj n i r.1, r.2)
         | x => (x.toCExpr, [])
     match f with
-    | .default => res
-    | .impl => (.wrapInst res.1, res.2)
+    | .inst => (.wrapInst res.1, res.2)
+    | _ => res
 
   let rec go (l : List (Expr × miniBind)) (count : Nat) : (DAG CExpr Nat) × Nat :=
     match l with
