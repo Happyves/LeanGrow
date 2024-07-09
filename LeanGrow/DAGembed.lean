@@ -88,15 +88,16 @@ partial def matcher (thm ltx : SizedDAG CExpr Nat) : List (Array (Option NodeCst
                   dbg_trace s!"Expansion options: {L.map (fun c => c.1)}"
                   --if L empty, keep going on l : cases of an implicit param not found for example
                   match L with
-                  | [] =>
-                      match n.2 with
-                      | .sort Level.zero => [] -- couldn't embed the property → halt
-                      | .sort _ =>
-                          dbg_trace "Proceeding, since we hope to assing type later"
-                          main thm ltx embedSofar l [] -- is probably an implicit type, which is a constant (like ℕ) which we'll find durring the propagation phase
-                          -- maybe, if we order nodes to embed so as to have sinks first, this part
-                          -- inst't necessary as the nodes assigned to constants will already be asigned
-                      | _ => [] -- coudn't embed a concrete object → halt
+                  | [] =>   match n.2 with
+                            | .sort Level.zero => [] -- couldn't embed the property → halt
+                                -- might be bad idea, as some terms also depend on proofs such as List.get
+                                -- maybe don't halt until done, then discard if non-instances aren't *all* assigned
+                            | .sort _ =>
+                                dbg_trace "Proceeding, since we hope to assing type later"
+                                main thm ltx embedSofar l [] -- is probably an implicit type, which is a constant (like ℕ) which we'll find durring the propagation phase
+                                -- maybe, if we order nodes to embed so as to have sinks first, this part
+                                -- inst't necessary as the nodes assigned to constants will already be asigned
+                            | _ => [] -- coudn't embed a concrete object → halt
                   | _ => (L.map (fun (embed, front) => main thm ltx embed l front)).join
     | n :: l =>
         dbg_trace "Entering propagation for assigned {n.1} in assogned frontier"
