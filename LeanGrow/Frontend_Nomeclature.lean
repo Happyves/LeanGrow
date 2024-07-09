@@ -3,7 +3,7 @@ import LeanGrow.DAGembed
 import LeanGrow.ProcessDecl
 import LeanGrow.ProcessLocalCtx
 import LeanGrow.Blacklisting
-import Mathlib
+import LeanGrow.Nomeclature
 
 open Lean
 
@@ -51,26 +51,40 @@ def Lean.Meta.Tactic.TryThis.addEmbellishedTermSuggestions (ref : Syntax) (es : 
 
 --#exit
 
-
-elab "grow" n:name : tactic =>
-  match (Lean.Syntax.isNameLit? n.raw) with
-  | none => throwError s!"Error : please enter the correct name of a module to search theorems in."
-  | some N => do
-        dbg_trace "running 1 !"
-        let env ← getEnv
-        let ref ← getRef
-        dbg_trace "running 2 !"
-        let modules := env.header.moduleNames.map (N.isPrefixOf ·)
-        Elab.Tactic.withMainContext do
-          dbg_trace "running 3 !"
-          let ltx ←  getLCtx
-          let (ltx_dag, ltx_dict, ltx_dict') := orderHyps_fromLocalCtx ltx
-          dbg_trace s!"Local context dag :\n{instToStringFormat.toString (repr ltx_dag)}\n"
-          env.constants.map₁.forM (fun decName decInfo => do
-              let na ← Loogle.isBlackListed decName
-              if modules[env.const2ModIdx[decName].get! (α := Nat)]! && (! na)
-              then match decInfo with
-                   | .thmInfo v | .defnInfo v | .axiomInfo v | .ctorInfo v | .quotInfo v | .recInfo v => do
+elab "no_grow" e:num n:num h:name "with" s:ident+ : tactic => do
+  let akward : Syntax → TacticM String :=
+    fun x : Syntax => match x with
+                      | Syntax.ident _ rawVal _ _   => return rawVal.toString
+                      | _ => throwError "Something went wrong when elaborating the keywords"
+  let S ← s.mapM (akward ∘ TSyntax.raw)
+  let Sm := if e.getNat = 0 then S.toList else merge S.toList what_I_meant_compiled
+  let env ← getEnv
+  let ref ← getRef
+  let modules := env.header.moduleNames.map (h.getName.isPrefixOf ·)
+  Elab.Tactic.withMainContext do
+    dbg_trace "running 3 !"
+    let ltx ←  getLCtx
+    let (ltx_dag, ltx_dict, ltx_dict') := orderHyps_fromLocalCtx ltx
+    env.constants.map₁.forM (fun declName declInfo => do
+      let na ← Loogle.isBlackListed declName
+      if modules[env.const2ModIdx[declName].get! (α := Nat)]! && (! na)
+      then  if declInfo.isThm
+            then
+              let data :=  (List.join ((Name.getStringList declName).map thm_parse)) -- List.dedup makes Lean lose it...
+              let mut count := n.getNat
+              let mut good? := false
+              for d in data do
+                if d ∈ Sm
+                then
+                  if count ≠ 0
+                  then
+                    count := count - 1
+                  else
+                    good? := true
+                    break
+              if (count = 0) || good?
+              then match declInfo with
+                    | .thmInfo v | .defnInfo v | .axiomInfo v | .ctorInfo v | .quotInfo v | .recInfo v => do
                         dbg_trace s!"Looking at {v.name}"
                         let hyps := naiveGetHyps v.type
                         let thm_dag := orderHyps_wBvar hyps
@@ -81,58 +95,26 @@ elab "grow" n:name : tactic =>
                         | [] => pure ()
                         | _ =>  do
                                 let P ← (embeds.mapM (fun e => embed_to_expr e --(hyps.map Prod.snd)
-                                  thm_dag.size ltx_dict' decInfo))
+                                  thm_dag.size ltx_dict' declInfo))
                                 addEmbellishedTermSuggestions ref P.toArray
                                   (depPostInfo := fun e => do return s!"\n{← ppExpr (← inferType e)}")
-                   | _ => pure ()
-              else return ())
+                    | _ => pure ()
+
+              else return ()
+            else return ()
+      else return ())
 
 
 
 
-elab "testing" n:name : tactic =>
-  match (Lean.Syntax.isNameLit? n.raw) with
-  | none => throwError s!"Error : please enter the correct name of a module to search theorems in."
-  | some N => do
-        dbg_trace "running 1 !"
-        let env ← getEnv
-        let ref ← getRef
-        dbg_trace "running 2 !"
-        Elab.Tactic.withMainContext do
-          dbg_trace "running 3 !"
-          let ltx ←  getLCtx
-          let (ltx_dag, ltx_dict, ltx_dict') := orderHyps_fromLocalCtx ltx
-          dbg_trace s!"Local context dag :\n{instToStringFormat.toString (repr ltx_dag)}\n"
-          env.constants.map₁.forM (fun decName decInfo => do
-              if decName = N
-              then do
-                   let hyps := naiveGetHyps decInfo.type
-                   let thm_dag := orderHyps_wBvar (hyps)
-                   dbg_trace s!"Thm dag :\n{instToStringFormat.toString (repr thm_dag)}\n"
-                   let embeds := matcher thm_dag ltx_dag
-                   dbg_trace s!"Embeddings : {embeds}\n"
-                   do
-                   let P ← (embeds.mapM (fun e => embed_to_expr e --(hyps.map Prod.snd)
-                     thm_dag.size ltx_dict' decInfo))
-                   addEmbellishedTermSuggestions ref P.toArray
-                    (depPostInfo := fun e => do return s!"\n{← ppExpr (← inferType e)}")
-               else return ())
 
-
-
-
-#exit
-
-example {m n : ℕ} (h1 : m ≤ n) (h2 : n ≤ n) : True :=
-  by
-  testing `Nat.gcd_sub_self_left
-  trivial
 
 --#exit
 
+
 example (l L : List ℕ) (h : 0 < l.length) : True :=
   by
-  grow `Mathlib.Data.List.Basic
+  no_grow 1 1 `Mathlib.Data.List with nil
   trivial
 
 #check Nat
