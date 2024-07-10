@@ -45,7 +45,7 @@ def orderHyps_wBvar (hyps : List (Expr × miniBind)) : SizedDAG CExpr Nat :=
   ⟨n, d⟩
 
 
-#exit
+--#exit
 
 open Qq
 
@@ -54,17 +54,14 @@ def e := q(∀ n : Nat, Prime n → ∀ m : Nat, Odd m → (h : Nat.Coprime n m)
 #eval e
 
 
-#eval naiveGetHyps e
-
-
 #eval orderHyps_wBvar (naiveGetHyps e)
+
+#eval DAG.topo_sort (orderHyps_wBvar (naiveGetHyps e)) RBTree.empty 0
+
+#eval DAG.find_sinks (orderHyps_wBvar (naiveGetHyps e))
+
 
 
 def e' := q(∀ n : Nat, ((fun (x y : Nat) => x + n + y = 42) 2 3) → True)
 
 #eval orderHyps_wBvar (naiveGetHyps e')
-
-
-#check LocalContext
-
---def unify_expr (target main : DAG Expr)

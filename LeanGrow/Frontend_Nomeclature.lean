@@ -109,7 +109,7 @@ elab "no_grow" e:num n:num h:name "with" s:ident+ : tactic => do
 
 
 
---#exit
+#exit
 
 
 example (l L : List ℕ) (h : 0 < l.length) : True :=

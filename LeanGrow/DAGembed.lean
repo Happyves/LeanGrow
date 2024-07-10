@@ -103,7 +103,8 @@ partial def matcher (thm ltx : SizedDAG CExpr Nat) : List (Array (Option NodeCst
         dbg_trace "Entering propagation for assigned {n.1} in assogned frontier"
         match propagate ltx embedSofar  n with
         | .none => dbg_trace "Propagation failed" ; []
-        | .some (emb, toFront) => dbg_trace "Propagation succeded.\nCurrent embedding: {emb}" ; main thm ltx emb (toFront.foldl (fun r e => r.erase e) unassignedNodes) (List.union toFront l) -- no duplicates
+        | .some (emb, toFront) => dbg_trace s!"Propagation succeded.\nCurrent embedding: {emb}\nCurrent unassigned: {(n :: toFront).foldl (fun r e => r.erase e) unassignedNodes}\nCurrent front: {(List.union toFront l)}\ntrace: {toFront}"
+                main thm ltx emb ((n :: toFront).foldl (fun r e => r.erase e) unassignedNodes) (List.union toFront l) -- no duplicates
 
   dbg_trace "Running main matcher"
   main thm.dag ltx.dag (List.replicate thm.size .none).toArray (thm.nameDataList) []

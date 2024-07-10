@@ -73,9 +73,9 @@ elab "grow" n:name : tactic =>
                    | .thmInfo v | .defnInfo v | .axiomInfo v | .ctorInfo v | .quotInfo v | .recInfo v => do
                         dbg_trace s!"Looking at {v.name}"
                         let hyps := naiveGetHyps v.type
-                        let thm_dag := orderHyps_wBvar hyps
+                        let thm_dag := SizeDAG.sinks_fst (orderHyps_wBvar hyps)
                         dbg_trace s!"Thm dag :\n{instToStringFormat.toString (repr thm_dag)}\n"
-                        let embeds := matcher thm_dag ltx_dag
+                        let embeds := matcher thm_dag (SizeDAG.sinks_fst ltx_dag)
                         dbg_trace s!"Embeddings : {embeds}\n"
                         match embeds with
                         | [] => pure ()
@@ -107,9 +107,9 @@ elab "testing" n:name : tactic =>
               if decName = N
               then do
                    let hyps := naiveGetHyps decInfo.type
-                   let thm_dag := orderHyps_wBvar (hyps)
+                   let thm_dag := SizeDAG.sinks_fst (orderHyps_wBvar (hyps))
                    dbg_trace s!"Thm dag :\n{instToStringFormat.toString (repr thm_dag)}\n"
-                   let embeds := matcher thm_dag ltx_dag
+                   let embeds := matcher thm_dag (SizeDAG.sinks_fst ltx_dag)
                    dbg_trace s!"Embeddings : {embeds}\n"
                    do
                    let P ← (embeds.mapM (fun e => embed_to_expr e --(hyps.map Prod.snd)
@@ -121,10 +121,11 @@ elab "testing" n:name : tactic =>
 
 
 
-#exit
+--#exit
 
 example {m n : ℕ} (h1 : m ≤ n) (h2 : n ≤ n) : True :=
   by
+  --testin `Nat.gcd_sub_self_left
   testing `Nat.gcd_sub_self_left
   trivial
 
