@@ -69,8 +69,8 @@ partial def Trie.CountCommon [BEq α] (l r : Trie α) : Nat :=
           if x == y
           then
             if ax == ay
-            then Nat.succ (Trie.CountCommon cx cy)
-            else 1
+            then Trie.CountCommon cx cy --Nat.succ (Trie.CountCommon cx cy)
+            else 0 --1
           else
             if ax == ay
             then (Trie.CountCommon cx cy)
@@ -81,7 +81,7 @@ partial def Trie.CountCommon [BEq α] (l r : Trie α) : Nat :=
           | .some i =>
                 let cym := cy.get! i
                 let sofar := (Trie.CountCommon cx cym)
-                if x == y then Nat.succ sofar else sofar
+                sofar --if x == y then Nat.succ sofar else sofar
   | .node x ax cx =>
       match r with
       | .leaf y => if x == y then 1 else 0
@@ -91,11 +91,11 @@ partial def Trie.CountCommon [BEq α] (l r : Trie α) : Nat :=
           | .some i =>
                 let cxm := cx.get! i
                 let sofar := (Trie.CountCommon cxm cy)
-                if x == y then Nat.succ sofar else sofar
+                sofar --if x == y then Nat.succ sofar else sofar
       | .node y ay cy =>
           let ints := ByteArray.intersect ax ay
           let sofar := (ints.map (fun p => Trie.CountCommon (cx.get! p.1) (cy.get! p.2))).foldl (fun r i => i+r) 0
-          if x == y then Nat.succ sofar else sofar
+          sofar --if x == y then Nat.succ sofar else sofar
 
 
 
@@ -184,3 +184,5 @@ partial def ppTrie : Trie Unit → String
 
 
 #eval Trie.CountCommon (SortedTrieFormList ["hello", "world", "and", "more", "content"]) (SortedTrieFormList ["hello", "world", "and", "more", "content"])
+#eval Trie.CountCommon (SortedTrieFormList ["hello", "world", "and", "more", "content"]) (SortedTrieFormList ["hello", "not", "and", "content"])
+#eval Trie.CountCommon (SortedTrieFormList ["content", "hello", "world", "more"]) (SortedTrieFormList ["hello", "world", "and", "more"])
