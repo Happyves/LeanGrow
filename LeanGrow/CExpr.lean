@@ -183,3 +183,12 @@ def Expr.getConstNames : Expr → List Name
 | .mdata _ e => (Expr.getConstNames e)
 | .proj n _ e => n :: (Expr.getConstNames e)
 | _ => []
+
+def CExpr.getConstNames : CExpr → List Name
+| .const n _ => [n]
+| .app l r => (CExpr.getConstNames l) ++ (CExpr.getConstNames r)
+| .lam _ l r _ => (CExpr.getConstNames l) ++ (CExpr.getConstNames r)
+| .forallE _ l r _ => (CExpr.getConstNames l) ++ (CExpr.getConstNames r)
+| .letE _ t l r _ => (CExpr.getConstNames t) ++(CExpr.getConstNames l) ++ (CExpr.getConstNames r)
+| .proj n _ e => n :: (CExpr.getConstNames e)
+| _ => []

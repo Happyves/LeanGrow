@@ -52,52 +52,98 @@ def ByteArray.intersect (A B: ByteArray) : List (Nat × Nat) :=
 
 
 
+def match_nontrivial [BEq α] (l r : Option α) := if !(l == .none) then (l == r) else false -- should avoid a computaiton quite often
 
+--#exit
 
 -- assumes Tries are sorted
 partial def Trie.CountCommon [BEq α] (l r : Trie α) : Nat :=
   match l with
   | .leaf x =>
       match r with
-      | .leaf y => if x == y then 1 else 0
-      | .node1 y _ _ => if x == y then 1 else 0
-      | .node y _ _ => if x == y then 1 else 0
+      | .leaf y => if match_nontrivial x y then 1 else 0
+      | .node1 y _ _ => if match_nontrivial x y then 1 else 0
+      | .node y _ _ => if match_nontrivial x y then 1 else 0
   | .node1 x ax cx =>
       match r with
-      | .leaf y => if x == y then 1 else 0
+      | .leaf y => if match_nontrivial x y then 1 else 0
       | .node1 y ay cy =>
-          if x == y
+          if match_nontrivial x y
           then
             if ax == ay
-            then Trie.CountCommon cx cy --Nat.succ (Trie.CountCommon cx cy)
-            else 0 --1
+            then Nat.succ (Trie.CountCommon cx cy)
+            else 1
           else
             if ax == ay
             then (Trie.CountCommon cx cy)
             else 0
       | .node y ay cy =>
           match ay.has? ax with
-          | .none => if x == y then 1 else 0
+          | .none => if match_nontrivial x y then 1 else 0
           | .some i =>
                 let cym := cy.get! i
                 let sofar := (Trie.CountCommon cx cym)
-                sofar --if x == y then Nat.succ sofar else sofar
+                if match_nontrivial x y then Nat.succ sofar else sofar
   | .node x ax cx =>
       match r with
-      | .leaf y => if x == y then 1 else 0
+      | .leaf y => if match_nontrivial x y then 1 else 0
       | .node1 y ay cy =>
           match ax.has? ay with
-          | .none => if x == y then 1 else 0
+          | .none => if match_nontrivial x y then 1 else 0
           | .some i =>
                 let cxm := cx.get! i
                 let sofar := (Trie.CountCommon cxm cy)
-                sofar --if x == y then Nat.succ sofar else sofar
+                if match_nontrivial x y then Nat.succ sofar else sofar
       | .node y ay cy =>
           let ints := ByteArray.intersect ax ay
           let sofar := (ints.map (fun p => Trie.CountCommon (cx.get! p.1) (cy.get! p.2))).foldl (fun r i => i+r) 0
-          sofar --if x == y then Nat.succ sofar else sofar
+          if match_nontrivial x y then Nat.succ sofar else sofar
 
 
+partial def Trie.intersect [BEq α] (l r : Trie α) : List (Option α)  :=
+  match l with
+  | .leaf x =>
+      match r with
+      | .leaf y => if match_nontrivial x y then [y] else []
+      | .node1 y _ _ => if match_nontrivial x y then [y] else []
+      | .node y _ _ => if match_nontrivial x y then [y] else []
+  | .node1 x ax cx =>
+      match r with
+      | .leaf y => if match_nontrivial x y then [y] else []
+      | .node1 y ay cy =>
+          if match_nontrivial x y
+          then
+            if ax == ay
+            then  [x] ++ Trie.intersect cx cy --Nat.succ (Trie.CountCommon cx cy)
+            else [x] --1
+          else
+            if ax == ay
+            then (Trie.intersect cx cy)
+            else []
+      | .node y ay cy =>
+          match ay.has? ax with
+          | .none => []
+          | .some i =>
+                let cym := cy.get! i
+                let sofar := (Trie.intersect cx cym)
+                if match_nontrivial x y then [x] ++ sofar else sofar
+  | .node x ax cx =>
+      match r with
+      | .leaf y => if match_nontrivial x y then [y] else []
+      | .node1 y ay cy =>
+          match ax.has? ay with
+          | .none => []
+          | .some i =>
+                let cxm := cx.get! i
+                let sofar := (Trie.intersect cxm cy)
+                if match_nontrivial x y then [x] ++ sofar else sofar
+      | .node y ay cy =>
+          let ints := ByteArray.intersect ax ay
+          let sofar := List.join (ints.map (fun p => Trie.intersect (cx.get! p.1) (cy.get! p.2)))
+          if match_nontrivial x y then [x] ++ sofar else sofar
+
+
+--#exit
 
 
 -- write a way to produce a sorted trie from a list of names next
@@ -169,20 +215,68 @@ partial def sorted_insert (t : Trie α) (s : String) (val : α) : Trie α :=
   sorted_upsert t s (fun _ => val)
 
 
-def SortedTrieFormList (namez : List String) : Trie Unit :=
+def SortedTrieFormList (namez : List String) : Trie String :=
+  namez.foldl (fun t s => sorted_insert t s s) Trie.empty
+
+def SortedTrieFormList' (namez : List String) : Trie Unit :=
   namez.foldl (fun t s => sorted_insert t s ()) Trie.empty
 
 
 #eval SortedTrieFormList ["hello", "world", "and", "more", "content"]
 
-partial def ppTrie : Trie Unit → String
-| .leaf _ => "leaf"
+partial def ppTrie : Trie String → String
+| .leaf e => s!"leaf {e}"
 | .node1 has s c => s!"node1 {has} {String.fromUTF8 ⟨#[s]⟩ (by sorry)} (\n" ++ ppTrie c ++ "\n)"
-| .node has s c => s!"node1 {has} {String.fromUTF8 s (by sorry)} (\n" ++ String.intercalate "\n" (c.map ppTrie).toList ++ "\n)"
+| .node has s c => s!"node {has} {String.fromUTF8 s (by sorry)} (\n" ++ String.intercalate "\n" (c.map ppTrie).toList ++ "\n)"
 
-#eval ppTrie (SortedTrieFormList ["hello", "world", "and", "more", "content"])
+-- #eval ppTrie (SortedTrieFormList ["hello", "world", "and", "more", "content"])
+-- #eval ppTrie (SortedTrieFormList ["hello", "world", "and", "more"])
+-- #eval ppTrie (SortedTrieFormList ["bool", "boom", "book"])
+-- #eval ppTrie (SortedTrieFormList ["hello", "world", "and", "more", "content", ", ", "and", "it", "goes", "on"])
+-- #eval ppTrie (SortedTrieFormList ["ban", "banana", "bandana"])
 
 
-#eval Trie.CountCommon (SortedTrieFormList ["hello", "world", "and", "more", "content"]) (SortedTrieFormList ["hello", "world", "and", "more", "content"])
-#eval Trie.CountCommon (SortedTrieFormList ["hello", "world", "and", "more", "content"]) (SortedTrieFormList ["hello", "not", "and", "content"])
-#eval Trie.CountCommon (SortedTrieFormList ["content", "hello", "world", "more"]) (SortedTrieFormList ["hello", "world", "and", "more"])
+-- #eval "hello".getUtf8Byte 0 (by sorry)
+
+-- #eval String.fromUTF8 ⟨#[("hello".getUtf8Byte 0 (by sorry))]⟩ (by sorry)
+
+-- --#exit
+
+
+-- #eval Trie.CountCommon (SortedTrieFormList ["hello", "world", "and", "more", "content"]) (SortedTrieFormList ["hello", "world", "and", "more", "content"])
+-- #eval Trie.CountCommon (SortedTrieFormList ["hello", "world", "and", "more", "content"]) (SortedTrieFormList ["hello", "not", "and", "content"])
+-- #eval Trie.CountCommon (SortedTrieFormList ["content", "hello", "world", "more"]) (SortedTrieFormList ["hello", "world", "and", "more"])
+-- #eval Trie.CountCommon (SortedTrieFormList ["bool", "boom", "book"]) (SortedTrieFormList ["hello", "world", "and", "more"])
+-- #eval Trie.CountCommon (SortedTrieFormList ["bool", "boom", "book"]) (SortedTrieFormList ["hello", "more"])
+
+-- #eval Trie.intersect (SortedTrieFormList ["hello", "world", "and", "more", "content"]) (SortedTrieFormList ["hello", "world", "and", "more", "content"])
+-- #eval Trie.intersect (SortedTrieFormList ["hello", "world", "and", "more", "content"]) (SortedTrieFormList ["hello", "not", "and", "content"])
+-- #eval Trie.intersect (SortedTrieFormList ["content", "hello", "world", "more"]) (SortedTrieFormList ["hello", "world", "and", "more"])
+-- #eval Trie.intersect (SortedTrieFormList ["bool", "boom", "book"]) (SortedTrieFormList ["hello", "world", "and", "more"])
+-- #eval Trie.intersect (SortedTrieFormList ["bool", "boom", "book"]) (SortedTrieFormList ["hello", "more"])
+-- #eval Trie.intersect (SortedTrieFormList ["bool", "boom", "book"]) (SortedTrieFormList ["book"])
+-- #eval Trie.intersect (SortedTrieFormList ["ban", "banana", "bandana"]) (SortedTrieFormList ["ban"])
+
+
+#eval (2 : UInt8)
+#eval #["testing"]
+
+#eval (⟨#[1,2]⟩ : ByteArray)
+
+def print_bytearray (a : ByteArray) : String :=
+  s!"⟨#[{String.intercalate "," (a.data.map ToString.toString).toList}]⟩"
+
+#eval print_bytearray (⟨#[1,2]⟩ : ByteArray)
+
+
+partial def print_trie : Trie Unit → String
+  | .leaf x => s!"Lean.Data.Trie.leaf ({x})"
+  | .node1 o i t => s!"Lean.Data.Trie.node1 ({o}) {i} ({print_trie t})"
+  | .node o i t => s!"Lean.Data.Trie.node ({o}) {print_bytearray i} #[{String.intercalate "," (t.data.map print_trie)}]"
+
+
+#eval (SortedTrieFormList' ["ban", "banana", "bandana"])
+
+#eval print_trie (SortedTrieFormList' ["ban", "banana", "bandana"])
+
+#eval Lean.Data.Trie.node1 (none) 98 (Lean.Data.Trie.node1 (none) 97 (Lean.Data.Trie.node1 (none) 110 (Lean.Data.Trie.node ((some ())) ⟨#[97,100]⟩ #[Lean.Data.Trie.node1 (none) 110 (Lean.Data.Trie.node1 (none) 97 (Lean.Data.Trie.leaf ((some ())))),Lean.Data.Trie.node1 (none) 97 (Lean.Data.Trie.node1 (none) 110 (Lean.Data.Trie.node1 (none) 97 (Lean.Data.Trie.leaf ((some ())))))])))
