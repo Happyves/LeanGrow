@@ -61,8 +61,7 @@ elab "cache_data" n:name : command =>
 
 --run_cmd cache_data `Mathlib.Data.List.Basic
 
-#check ( ⟨`List.map₂Left.eq_1,⟨5,⟨4,CExpr.app (CExpr.const `List [Level.param `u_2]) (CExpr.node 1 (OriginalData.ofBvar 2)),[1]⟩ :: ⟨3,CExpr.forallE `a._hyg.324 (CExpr.node 0 (OriginalData.ofBvar 2)) (CExpr.forallE `a (CExpr.app (CExpr.const `Option [Level.param `u_2]) (CExpr.node 1 (OriginalData.ofBvar 2))) (CExpr.node 2 (OriginalData.ofBvar 2)) Lean.BinderInfo.default) Lean.BinderInfo.default,[0, 1, 2]⟩ :: ⟨2,CExpr.sort (Lean.Level.succ (Lean.Level.param `u_3)) ,[]⟩ :: ⟨1,CExpr.sort (Lean.Level.succ (Lean.Level.param `u_2)) ,[]⟩ :: ⟨0,CExpr.sort (Lean.Level.succ (Lean.Level.param `u_1)) ,[]⟩ :: []⟩,Lean.Data.Trie.node (none) ⟨#[76,79]⟩ #[Lean.Data.Trie.node1 (none) 105 (Lean.Data.Trie.node1 (none) 115 (Lean.Data.Trie.node1 (none) 116 (Lean.Data.Trie.leaf ((some ()))))),Lean.Data.Trie.node1 (none) 112 (Lean.Data.Trie.node1 (none) 116 (Lean.Data.Trie.node1 (none) 105 (Lean.Data.Trie.node1 (none) 111 (Lean.Data.Trie.node1 (none) 110 (Lean.Data.Trie.leaf ((some ())))))))]⟩
-  : pdata)
+
 
 #check Name
 
@@ -72,3 +71,4 @@ def mo_playin : CoreM Unit := do
     if info.name = `PDATA.List.takeI_length then IO.print info.value!
 
 #eval mo_playin
+-- uses sorryAx ...
