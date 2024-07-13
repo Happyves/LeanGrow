@@ -82,3 +82,12 @@ def DAG.find_sinks [Inhabited α] (D : SizedDAG α Nat) : (List (DAGnode α Nat)
         let del_p := n.parents.foldl (fun (r) k => RBTree.erase r k) candidates
         go rest ref (RBTree.insert del_p n.name)
   go D.dag D.dag.toArray {}
+
+
+def DAG.toString (e : α → String) : DAG α Nat → String
+| [] => "[]"
+| ⟨n, d, p⟩ :: rest => s!"⟨{n},{e d},{p}⟩ :: " ++ (DAG.toString e rest)
+
+
+def SizedDAG.toString (e : α → String) : SizedDAG α Nat → String :=
+ fun ⟨s, d⟩ => s!"⟨{s},{DAG.toString e d}⟩"

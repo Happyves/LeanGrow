@@ -264,15 +264,19 @@ partial def ppTrie : Trie String → String
 #eval (⟨#[1,2]⟩ : ByteArray)
 
 def print_bytearray (a : ByteArray) : String :=
+  --dbg_trace "comp bytearray"
   s!"⟨#[{String.intercalate "," (a.data.map ToString.toString).toList}]⟩"
 
 #eval print_bytearray (⟨#[1,2]⟩ : ByteArray)
 
 
 partial def print_trie : Trie Unit → String
-  | .leaf x => s!"Lean.Data.Trie.leaf ({x})"
-  | .node1 o i t => s!"Lean.Data.Trie.node1 ({o}) {i} ({print_trie t})"
-  | .node o i t => s!"Lean.Data.Trie.node ({o}) {print_bytearray i} #[{String.intercalate "," (t.data.map print_trie)}]"
+  | .leaf x => --dbg_trace "comp trie"
+      s!"Lean.Data.Trie.leaf ({x})"
+  | .node1 o i t => --dbg_trace "comp trie"
+      s!"Lean.Data.Trie.node1 ({o}) {i} ({print_trie t})"
+  | .node o i t => --dbg_trace "comp trie"
+      s!"Lean.Data.Trie.node ({o}) {print_bytearray i} #[{String.intercalate "," (t.data.map print_trie)}]"
 
 
 #eval (SortedTrieFormList' ["ban", "banana", "bandana"])
