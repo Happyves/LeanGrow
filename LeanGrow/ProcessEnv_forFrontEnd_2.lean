@@ -72,3 +72,9 @@ def mo_playin : CoreM Unit := do
 
 #eval mo_playin
 -- uses sorryAx ...
+
+open Lean Meta Elab Term
+
+#check mkConst
+
+#check mkListLit
