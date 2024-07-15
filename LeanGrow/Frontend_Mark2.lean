@@ -77,3 +77,6 @@ example (l L : List ℕ) (h : 0 < l.length) : True :=
 
 
 #check List.instIsTransSubset
+
+
+#eval cluster_list.length

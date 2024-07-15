@@ -283,4 +283,104 @@ partial def print_trie : Trie Unit → String
 
 #eval print_trie (SortedTrieFormList' ["ban", "banana", "bandana"])
 
+#eval print_trie (SortedTrieFormList' ["ban", "banana", "banal"])
+
+#eval print_trie (SortedTrieFormList' ["", "ban", "banana", "banal"])
+
+
 #eval Lean.Data.Trie.node1 (none) 98 (Lean.Data.Trie.node1 (none) 97 (Lean.Data.Trie.node1 (none) 110 (Lean.Data.Trie.node ((some ())) ⟨#[97,100]⟩ #[Lean.Data.Trie.node1 (none) 110 (Lean.Data.Trie.node1 (none) 97 (Lean.Data.Trie.leaf ((some ())))),Lean.Data.Trie.node1 (none) 97 (Lean.Data.Trie.node1 (none) 110 (Lean.Data.Trie.node1 (none) 97 (Lean.Data.Trie.leaf ((some ())))))])))
+
+
+-- assumes sortes arrays
+def ByteArray.merge (A B: ByteArray) : ByteArray:=
+  Id.run do
+    let mut v := Array.mkEmpty (A.size + B.size)
+    let mut cb := 0
+    let mut ca := 0
+    for _ in (List.range (A.size + B.size)) do
+      if ca < A.size ∧ cb < B.size
+      then
+        let va := (A.get! ca)
+        let vb := (B.get! cb)
+        match Ord.compare va vb with
+        | .lt => v := v.push va ; ca := ca+1
+        | .eq => v := v.push va ; ca := ca+1 ; cb := cb+1
+        | .gt => v := v.push vb ; cb := cb+1
+      else break
+    if ca < A.size
+    then
+      for _ in [ca : A.size] do
+        v := v.push (A.get! ca) ; ca := ca+1
+    else
+      for _ in [cb : B.size] do
+        v := v.push (B.get! cb) ; cb := cb+1
+    return ⟨v⟩
+
+#eval ByteArray.merge ⟨#[(UInt8.ofNatCore 1 (by decide)),(UInt8.ofNatCore 2 (by decide)),(UInt8.ofNatCore 5 (by decide))]⟩ ⟨#[(UInt8.ofNatCore 2 (by decide)),(UInt8.ofNatCore 5 (by decide)),(UInt8.ofNatCore 10 (by decide))]⟩
+
+mutual
+
+partial def ByteArray.merge_extra [BEq α] [Inhabited α] (A B: ByteArray) (XA XB : Array (Trie α)) : (ByteArray) × (Array (Trie α)):=
+  Id.run do
+    let mut v := Array.mkEmpty (A.size + B.size)
+    let mut x := Array.mkEmpty (A.size + B.size)
+    let mut cb := 0
+    let mut ca := 0
+    for _ in (List.range (A.size + B.size)) do
+      if ca < A.size ∧ cb < B.size
+      then
+        let va := (A.get! ca)
+        let vb := (B.get! cb)
+        match Ord.compare va vb with
+        | .lt => v := v.push va ; x := x.push (XA.get! ca) ; ca := ca+1
+        | .eq => v := v.push va ; x := x.push (Trie.merge (XA.get! ca) (XB.get! cb)) ; ca := ca+1 ; cb := cb+1
+        | .gt => v := v.push vb ; x := x.push (XB.get! cb) ;  cb := cb+1
+      else break
+    if ca < A.size
+    then
+      for _ in [ca : A.size] do
+        v := v.push (A.get! ca) ; x := x.push (XA.get! ca) ; ca := ca+1
+    else
+      for _ in [cb : B.size] do
+        v := v.push (B.get! cb) ; x := x.push (XB.get! cb) ; cb := cb+1
+    return (⟨v⟩,x)
+
+
+partial def Trie.merge [BEq α] [Inhabited α] (l r : Trie α) : Trie α  :=
+  let mini_merge (x y : Option α) : Option α := (match x with | .some X => X | .none => match y with | .some Y => Y | .none => .none)
+  match l with
+  | .leaf x =>
+      match r with
+      | .leaf y => .leaf (mini_merge x y)
+      | .node1 y ay cy => .node1 (mini_merge x y) ay cy
+      | .node y ay cy => .node (mini_merge x y) ay cy
+  | .node1 x ax cx =>
+      match r with
+      | .leaf y => .node1 (mini_merge x y) ax cx
+      | .node1 y ay cy =>
+          match Ord.compare ax ay with
+          | .lt => .node (mini_merge x y) ⟨#[ax, ay]⟩  #[cx, cy]
+          | .eq => .node1 (mini_merge x y) ax  (Trie.merge cx cy)
+          | .gt => .node (mini_merge x y) ⟨#[ay, ax]⟩  #[cy, cx]
+      | .node y ay cy =>
+          match ay.has? ax with
+          | .none =>
+                let (cs',n) := Array.orderedInsertWithIndex (· ≤ ·) ax ay.data
+                .node (mini_merge x y) (⟨cs'⟩) (cy.insertAt! n cx)
+          | .some i =>
+                .node (mini_merge x y) ay (cy.modify i (Trie.merge cx))
+  | .node x ax cx =>
+      match r with
+      | .leaf y => .node (mini_merge x y) ax cx
+      | .node1 y ay cy =>
+          match ax.has? ay with
+          | .none =>
+                let (cs',n) := Array.orderedInsertWithIndex (· ≤ ·) ay ax.data
+                .node (mini_merge x y) (⟨cs'⟩) (cx.insertAt! n cy)
+          | .some i =>
+                .node (mini_merge x y) ax (cx.modify i (Trie.merge cy))
+      | .node y ay cy =>
+          let (uni_b, uni_t) := ByteArray.merge_extra ax ay cx cy
+          .node (mini_merge x y) uni_b uni_t
+
+end
