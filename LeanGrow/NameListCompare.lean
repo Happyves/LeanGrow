@@ -384,3 +384,6 @@ partial def Trie.merge [BEq α] [Inhabited α] (l r : Trie α) : Trie α  :=
           .node (mini_merge x y) uni_b uni_t
 
 end
+
+
+#eval ppTrie (Trie.merge (SortedTrieFormList ["ban", "banana", "banal"]) (SortedTrieFormList ["ban", "banana", "bandana"]))

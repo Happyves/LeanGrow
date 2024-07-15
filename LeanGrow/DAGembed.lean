@@ -93,6 +93,7 @@ partial def matcher (thm ltx : SizedDAG CExpr Nat) : List (Array (Option NodeCst
                             | .sort Level.zero => [] -- couldn't embed the property → halt
                                 -- might be bad idea, as some terms also depend on proofs such as List.get
                                 -- maybe don't halt until done, then discard if non-instances aren't *all* assigned
+                                -- Note : skipping implicit args is risky, since so thms have all implicit hyps, which should be infered from goal ... (kind of a bad design idea)
                             | .sort _ =>
                                 --dbg_trace "Proceeding, since we hope to assing type later"
                                 main thm ltx embedSofar l [] -- is probably an implicit type, which is a constant (like ℕ) which we'll find durring the propagation phase
