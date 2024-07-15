@@ -2,6 +2,7 @@
 import LeanGrow.ProcessEnv_forFrontEnd_2
 import LeanGrow.ProcessLocalCtx
 
+import LeanGrow.Caches.mark2cache_v2
 
 open Lean
 
@@ -14,7 +15,7 @@ def List.map₂ (l : List α) (L : List β) (f : α → β → γ) : List γ :=
 --#exit
 
 def embed_to_expr (embed : Array (Option NodeCst)) --(impInfo : List miniBind)
-  (size : Nat) (dict : PersistentHashMap ℕ FVarId) (info : ConstantInfo) : MetaM Expr := do
+  (size : Nat) (dict : PersistentHashMap ℕ FVarId) (n_info : Name) (l_info : List Name) : MetaM Expr := do
   let proArg ← ((List.range size).foldl (fun l i => (embed.getD i .none) :: l) []).mapM
       (fun x => match x with
                 | .none => return .some (← Meta.mkFreshExprMVar .none)
@@ -28,7 +29,7 @@ def embed_to_expr (embed : Array (Option NodeCst)) --(impInfo : List miniBind)
   --let args : List Expr := ((List.map₂ (proArg) impInfo (fun x i => match i with | .inst => .none | _ => x)).reduceOption).reverse
   -- TODO : replace instances with mvars, without fucking up, which is gonna be hard
   let args : List Expr := ((proArg).reduceOption).reverse
-  return mkAppN (.const info.name (info.levelParams.map Level.param)) args.toArray
+  return mkAppN (.const n_info (l_info.map Level.param)) args.toArray
 
 
 --#exit
@@ -51,34 +52,23 @@ def Lean.Meta.Tactic.TryThis.addEmbellishedTermSuggestions (ref : Syntax) (es : 
 
 
 elab "grow"  : tactic => do
-        let (md, _) ← readModuleData ⟨"/./home/yves/Desktop/CodeWorkspace/Lean4_General/LeanGrow/LeanGrow/Caches/mark2cache"⟩
         let ref ← getRef
         Elab.Tactic.withMainContext do
           let ltx ←  getLCtx
           let (ltx_dag, ltx_dict, ltx_dict') := orderHyps_fromLocalCtx ltx
-          md.constants.forM (fun decInfo => do
-              let na ← Loogle.isBlackListed decInfo.name
-              if (! na)
-              then match decInfo with
-                   |  .defnInfo v  => do
-                        if v.type == .const `pdata []
-                        then
-                          let thm_dag := v.value
-                          let embeds := matcher thm_dag (SizeDAG.sinks_fst ltx_dag)
-                          match embeds with
-                          | [] => pure ()
-                          | _ =>  do
-                                  let P ← (embeds.mapM (fun e => embed_to_expr e --(hyps.map Prod.snd)
-                                    thm_dag.size ltx_dict' decInfo))
-                                  addEmbellishedTermSuggestions ref P.toArray
-                                    (depPostInfo := fun e => do return s!"\n{← ppExpr (← inferType e)}")
-                        else return ()
-                   | _ => pure ()
-              else return ())
+          for dag in cluster_list do
+            let embeds := matcher dag.dag (SizeDAG.sinks_fst ltx_dag)
+            match embeds with
+            | [] => pure ()
+            | _ =>  do
+                    let P ← (embeds.mapM (fun e => embed_to_expr e --(hyps.map Prod.snd)
+                      dag.dag.size ltx_dict' dag.cst_name  dag.cst_level_params))
+                    addEmbellishedTermSuggestions ref P.toArray
+                      (depPostInfo := fun e => do return s!"\n{← ppExpr (← inferType e)}")
 
-#check unsafeCast
 
-#exit
+
+--#exit
 
 example (l L : List ℕ) (h : 0 < l.length) : True :=
   by
@@ -86,4 +76,4 @@ example (l L : List ℕ) (h : 0 < l.length) : True :=
   trivial
 
 
-#check List.splitOnP.go_ne_nil
+#check List.instIsTransSubset

@@ -251,5 +251,5 @@ def CExpr.toGoodString : CExpr → String
 | .proj n i b => s!"CExpr.proj `{kill_hygiene n} {i} ({CExpr.toGoodString b})"
 | .lit (Literal.strVal s) => s!"CExpr.lit (Lean.Literal.strVal \"{s}\")"
 | .lit (Literal.natVal n) => s!"CExpr.lit (Lean.Literal.natVal {n})"
-| .wrapInst e => s!"CExpr.wrapInst {CExpr.toGoodString e}"
+| .wrapInst e => s!"CExpr.wrapInst ({CExpr.toGoodString e})"
 | .failed => "CExpr.failed"

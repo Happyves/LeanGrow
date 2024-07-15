@@ -14,6 +14,8 @@ def orderHyps_wBvar (hyps : List (Expr × miniBind)) : SizedDAG CExpr Nat :=
   let rec abstractBvars_collectParents (e : Expr) (f : miniBind) (inner_count : Option Nat) (len : Nat) : CExpr × List Nat:=
     let res :=
         match e with
+        | .app (.app (.const `optParam _) e) _ => let r := abstractBvars_collectParents e .default inner_count len ; (r.1, r.2) -- got wierd problems in source file gen otherwise
+        | .app (.app (.const `outParam _) e) _ => let r := abstractBvars_collectParents e .default inner_count len ; (r.1, r.2)
         | .bvar i => match inner_count with
                     | .none => (.node (len - 1 - i) (.ofBvar i), [len - 1 - i])
                     | .some x => if i ≤ x then (.bvar i, []) else (.node (len + x - i) (.ofBvar i), [len + x - i])

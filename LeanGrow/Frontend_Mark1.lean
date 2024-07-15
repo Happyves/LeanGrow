@@ -129,12 +129,27 @@ example {m n : ℕ} (h1 : m ≤ n) (h2 : n ≤ n) : True :=
   testing `Nat.gcd_sub_self_left
   trivial
 
+
+
 --#exit
+
+example (l L : List ℕ) (h : 0 < l.length) : True :=
+  by
+  testing `List.instIsTransSubset
+  trivial
+
+
+#check List.instIsTransSubset
+
+
+#exit
 
 example (l L : List ℕ) (h : 0 < l.length) : True :=
   by
   grow `Mathlib.Data.List.Basic
   trivial
+
+
 
 #check Nat
 #check List.ne_nil_of_length_pos
