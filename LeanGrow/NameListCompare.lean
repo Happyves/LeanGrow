@@ -221,6 +221,9 @@ def SortedTrieFormList (namez : List String) : Trie String :=
 def SortedTrieFormList' (namez : List String) : Trie Unit :=
   namez.foldl (fun t s => sorted_insert t s ()) Trie.empty
 
+#check Trie.upsert
+#check Trie.insert
+-- by docs of ↑, the trie has no duplicate entries
 
 #eval SortedTrieFormList ["hello", "world", "and", "more", "content"]
 
@@ -387,3 +390,57 @@ end
 
 
 #eval ppTrie (Trie.merge (SortedTrieFormList ["ban", "banana", "banal"]) (SortedTrieFormList ["ban", "banana", "bandana"]))
+
+
+partial def Trie.size : Trie α → ℕ
+| .leaf x => if x.isSome then 1 else 0
+| .node1 x _ c => let sofar := Trie.size c ; if x.isSome then Nat.succ sofar else sofar
+| .node x _ cs => let sofar := (cs.map Trie.size).foldl (fun r i => r+i) 0 ; if x.isSome then Nat.succ sofar else sofar
+
+
+#eval Trie.size (Trie.merge (SortedTrieFormList ["ban", "banana", "banal"]) (SortedTrieFormList ["ban", "banana", "bandana"]))
+
+
+partial def Trie.toList : Trie α → List α
+| .leaf x =>
+    match x with
+    | .some y => [y]
+    | _ => []
+| .node1 x _ c =>
+    let go := Trie.toList c
+    match x with
+    | .some y => y :: go
+    | _ => go
+| .node x _ cs =>
+    let go :=  List.join (cs.map Trie.toList).toList
+    match x with
+    | .some y => y :: go
+    | _ => go
+
+#eval Trie.toList (Trie.merge (SortedTrieFormList ["ban", "banana", "banal"]) (SortedTrieFormList ["ban", "banana", "bandana"]))
+
+
+#check String.fromUTF8
+
+partial def Trie.print_keys (cache : ByteArray) : Trie α → List String
+| .leaf x =>
+    match x with
+    | .some _ => [String.fromUTF8 cache (by sorry)]
+    | _ => []
+| .node1 x a c =>
+    let go := Trie.print_keys (cache.push a) c
+    match x with
+    | .some _ => (String.fromUTF8 cache (by sorry)) :: go
+    | _ => go
+| .node x as cs =>
+    let go :=
+      Id.run do
+        let mut res := []
+        for z in (List.range as.size) do
+          res :=  (Trie.print_keys (cache.push (as.get! z)) (cs.get! z)) :: res
+        return res
+    match x with
+    | .some _ => (String.fromUTF8 cache (by sorry)) :: (List.join go)
+    | _ => (List.join go)
+
+#eval Trie.print_keys ⟨#[]⟩  (Trie.merge (SortedTrieFormList ["ban", "banana", "banal"]) (SortedTrieFormList ["ban", "banana", "bandana"]))
