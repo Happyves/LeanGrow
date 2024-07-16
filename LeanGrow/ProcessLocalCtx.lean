@@ -109,12 +109,29 @@ elab "testin" : tactic => do
     --logInfo m!"{ctx.decls.toList.reduceOption.map LocalDecl.userName}"
     IO.println s!"{instToStringFormat.toString (repr spice.1)}"
 
+elab "testin_2" : tactic => do
+  let g ← Elab.Tactic.getMainGoal
+  g.withContext do
+    let ctx ← getLCtx
+    let spice := DAG.find_sinks (orderHyps_fromLocalCtx ctx).1 true --(((DAG.find_sinks (orderHyps_fromLocalCtx ctx).1).map DAGnode.data).map CExpr.getConstNames).join.map Name.toString
+    --logInfo m!"{ctx.decls.toList.reduceOption.map LocalDecl.userName}"
+    IO.println s!"{instToStringFormat.toString (repr spice)}"
 
 example (n m p : Nat) (h : Odd (n+m)) (h2 : Even n) (h3 : (fun x : Even n => p) h2 = 42) : True :=
   by
   testin
   trivial
 
+
+example (n m p : Nat) (h : Odd (n+m)) (h2 : Even n) (h3 : (fun x : Even n => p) h2 = 42) : True :=
+  by
+  testin_2
+  trivial
+
+example (l : List ℕ) (a : ℕ) (h : a ∈ l) : True :=
+  by
+  testin_2
+  trivial
 
 
 

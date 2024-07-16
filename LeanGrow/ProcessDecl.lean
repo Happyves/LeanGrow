@@ -60,8 +60,11 @@ def e := q(∀ n : Nat, Prime n → ∀ m : Nat, Odd m → (h : Nat.Coprime n m)
 
 #eval DAG.topo_sort (orderHyps_wBvar (naiveGetHyps e)) RBTree.empty 0
 
-#eval DAG.find_sinks (orderHyps_wBvar (naiveGetHyps e))
+#eval DAG.find_sinks (orderHyps_wBvar (naiveGetHyps e)) false
 
+def e'' := q((l : List ℕ) → (a : ℕ) → (h : a ∈ l) → True)
+
+#eval DAG.find_sinks (orderHyps_wBvar (naiveGetHyps e'')) false
 
 
 def e' := q(∀ n : Nat, ((fun (x y : Nat) => x + n + y = 42) 2 3) → True)

@@ -36,11 +36,12 @@ elab "cachData" n:name : command =>
                               --dbg_trace s!"Looking at {v.name}"
                               let hyps := naiveGetHyps v.type
                               let thm_dag := SizeDAG.sinks_fst (orderHyps_wBvar hyps)
-                              let sink_names := (((DAG.find_sinks thm_dag).map DAGnode.data).map CExpr.getConstNames).join.map Name.toString
+                              let sink_names := (((DAG.find_sinks thm_dag false).map DAGnode.data).map CExpr.getConstNames).join.map Name.toString
                               let psn := SortedTrieFormList' sink_names
                               let maindata : pdata := ⟨decName, decInfo.levelParams, thm_dag, psn⟩
                               let package := "def PDATA." ++  decName.toString ++ " : pdata := " ++ (pdata.toString  maindata) ++ "\n"
                               return ((package) :: hmm.1, ("PDATA." ++  decName.toString) :: hmm.2)
+
                               -- let source := Parser.runParserCategory env `term (pdata.toString  maindata) s!"ficticiousFile {decName}"
                               -- --dbg_trace (pdata.toString  maindata)
                               -- match source with

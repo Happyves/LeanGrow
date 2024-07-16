@@ -173,7 +173,7 @@ def CExpr.toExpr : CExpr → Option Expr
 | .failed => .none
 
 
-
+-- fix wrt ↓ CExpr.getConstNames
 def Expr.getConstNames : Expr → List Name
 | .const n _ => [n]
 | .app l r => (Expr.getConstNames l) ++ (Expr.getConstNames r)
@@ -184,13 +184,15 @@ def Expr.getConstNames : Expr → List Name
 | .proj n _ e => n :: (Expr.getConstNames e)
 | _ => []
 
+-- Added `LeanGrowLabel`, so that thms involving types and more importantly functions get recognized as such
 def CExpr.getConstNames : CExpr → List Name
 | .const n _ => [n]
 | .app l r => (CExpr.getConstNames l) ++ (CExpr.getConstNames r)
 | .lam _ l r _ => (CExpr.getConstNames l) ++ (CExpr.getConstNames r)
-| .forallE _ l r _ => (CExpr.getConstNames l) ++ (CExpr.getConstNames r)
+| .forallE _ l r _ =>  (.str (.str .anonymous "LeanGrowLabel") "pi"):: ((CExpr.getConstNames l) ++ (CExpr.getConstNames r))
 | .letE _ t l r _ => (CExpr.getConstNames t) ++(CExpr.getConstNames l) ++ (CExpr.getConstNames r)
 | .proj n _ e => n :: (CExpr.getConstNames e)
+| .sort _ => [(.str (.str .anonymous "LeanGrowLabel") "sort")]
 | _ => []
 
 
