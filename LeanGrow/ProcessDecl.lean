@@ -47,7 +47,9 @@ def orderHyps_wBvar (hyps : List (Expr × miniBind)) : SizedDAG CExpr Nat :=
   ⟨n, d⟩
 
 
---#exit
+
+
+#exit
 
 open Qq
 

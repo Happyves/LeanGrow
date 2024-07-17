@@ -97,7 +97,7 @@ elab "growin"  : tactic => do
                             (depPostInfo := fun e => do return s!"\n{← ppExpr (← inferType e)}")
 
 
---#exit
+#exit
 
 elab "print_cluster_cst_names" : command => do
   for c in cl_L do
