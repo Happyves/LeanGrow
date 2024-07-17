@@ -7,6 +7,9 @@ import Qq
 open Lean Qq
 
 
+#exit
+
+
 #eval q(∀ β : Type 0, [Inhabited β] → default)
 
 #eval q(∀ β : Type 0, [Add β] → ∀ x y : β, x+y = y+x → True)
