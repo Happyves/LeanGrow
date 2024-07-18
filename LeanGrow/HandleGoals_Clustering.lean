@@ -4,15 +4,15 @@ import LeanGrow.Caches.mark1goalCache
 open Lean Data
 
 def process (pd : gdata) (flag : Bool) (fact_cluster : ( (List gdata))): List (Trie Unit × (List gdata)) → (List (Trie Unit × (List gdata)) × ((List gdata)))
-| [] => if flag then ([],[]) else  (if (Trie.size pd.name_list) == 0 then ([], [pd]) else ([(pd.name_list, [pd])], []))
+| [] => if flag then ([],[]) else (if ( Nat.toFloat (Trie.size pd.name_list)) == 0 then ([], pd :: fact_cluster) else ([(pd.name_list, [pd])], []))
 | c :: cs =>
-    let common := Trie.CountCommon pd.name_list c.1
     let S := ( Nat.toFloat (Trie.size pd.name_list)) -- cache size in gdata!
     if S == 0
     then
       let (clu, facz) := (process pd flag fact_cluster cs)
-      (clu, pd :: facz)
+      (c:: clu, facz)
     else
+      let common := Trie.CountCommon pd.name_list c.1
       let ratio := ( Nat.toFloat common ) / S
       -- v1
       -- if ratio ≥ 0.33
@@ -23,7 +23,7 @@ def process (pd : gdata) (flag : Bool) (fact_cluster : ( (List gdata))): List (T
       --       else let (clu, facz) := (process pd flag fact_cluster cs) ; ((merged_trie, clust) :: clu, facz)
       -- else let (clu, facz) := (process pd flag fact_cluster cs) ; (c :: clu, facz)
       -- v2
-      if ratio ≥ 0.80
+      if ratio ≥ 0.5
       then  let merged_trie := Trie.merge pd.name_list c.1
             let clust := pd :: c.2
             let (clu, facz) := (process pd true fact_cluster cs)

@@ -97,7 +97,7 @@ elab "growin"  : tactic => do
                             (depPostInfo := fun e => do return s!"\n{← ppExpr (← inferType e)}")
 
 
-#exit
+--#exit
 
 elab "print_cluster_cst_names" : command => do
   for c in cl_L do
@@ -161,3 +161,16 @@ example (l L : List ℕ) (h : 0 < l.length) : True :=
   trivial
 
 --#exit
+example {α : Type u} (l₁ : List α) {l₂ : List α} : True :=
+  by
+  grow
+  trivial
+
+#check List.head?_append_of_ne_nil
+-- fail
+
+
+example {α : Type u} (l₁ : List α) {l₂ : List α} (h : l₁ ≠ [])  : True :=
+  by
+  grow
+  trivial
