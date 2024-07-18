@@ -19,4 +19,9 @@ trace_hyp_names
 
 -- List.splitOn_nil has no sink names
 
--- TODO: for frontends, allow thms from cluster with empty trie to be applied! they currently aren't tried since the intersection is trivially 0
+/-
+TODO:
+- for frontends, allow thms from cluster with empty trie to be applied! they currently aren't tried since the intersection is trivially 0
+- implement the second phase clustering
+- switch to a ration where denom is max of trie sizes, to prevent bad clusters du to size... or sort thms by name list size before ?
+-/
