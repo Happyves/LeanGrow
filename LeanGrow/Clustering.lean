@@ -10,40 +10,44 @@ open Lean Data
 
 
 
-def process (pd : pdata) (flag : Bool) (fact_cluster : ( (List pdata))): List (Trie Unit × (List pdata)) → (List (Trie Unit × (List pdata)) × ((List pdata)))
+def process (pd : pdata) (flag : Bool) (fact_cluster : ( (List pdata))) (count len : Nat): List (Trie Unit × (List pdata)) → (List (Trie Unit × (List pdata)) × ((List pdata)))
 | [] => if flag then ([],[]) else (if ( Nat.toFloat (Trie.size pd.sink_cst_names)) == 0 then ([], pd :: fact_cluster) else ([(pd.sink_cst_names, [pd])], []))
 | c :: cs =>
-    let S := ( Nat.toFloat (Trie.size pd.sink_cst_names)) -- cache size in pdata!
-    if S == 0
+    if count ≤ (len / 4)
     then
-      let (clu, facz) := (process pd flag fact_cluster cs)
-      (c :: clu, facz)
+      let S := ( Nat.toFloat (Trie.size pd.sink_cst_names)) -- cache size in pdata!
+      if S == 0
+      then
+        let (clu, facz) := (process pd flag fact_cluster (count) len cs)
+        (c :: clu, facz)
+      else
+        let common := Trie.CountCommon pd.sink_cst_names c.1
+        let ratio := ( Nat.toFloat common ) / (min S (Nat.toFloat (Trie.size c.1)))
+        -- v1
+        -- if ratio ≥ 0.33
+        -- then  let merged_trie := Trie.merge pd.sink_cst_names c.1
+        --       let clust := pd :: c.2
+        --       if ratio ≥ 0.66
+        --       then let (clu, facz) := (process pd true fact_cluster cs) ; ((merged_trie, clust) :: clu, facz)
+        --       else let (clu, facz) := (process pd flag fact_cluster cs) ; ((merged_trie, clust) :: clu, facz)
+        -- else let (clu, facz) := (process pd flag fact_cluster cs) ; (c :: clu, facz)
+        -- v2
+        if ratio ≥ 0.8
+        then  let merged_trie := Trie.merge pd.sink_cst_names c.1
+              let clust := pd :: c.2
+              let (clu, facz) := (process pd true fact_cluster (count + 1) len cs)
+              ((merged_trie, clust) :: clu, facz)
+        else let (clu, facz) := (process pd flag fact_cluster (count) len cs)
+            (c :: clu, facz)
     else
-      let common := Trie.CountCommon pd.sink_cst_names c.1
-      let ratio := ( Nat.toFloat common ) / (min S (Nat.toFloat (Trie.size c.1)))
-      -- v1
-      -- if ratio ≥ 0.33
-      -- then  let merged_trie := Trie.merge pd.sink_cst_names c.1
-      --       let clust := pd :: c.2
-      --       if ratio ≥ 0.66
-      --       then let (clu, facz) := (process pd true fact_cluster cs) ; ((merged_trie, clust) :: clu, facz)
-      --       else let (clu, facz) := (process pd flag fact_cluster cs) ; ((merged_trie, clust) :: clu, facz)
-      -- else let (clu, facz) := (process pd flag fact_cluster cs) ; (c :: clu, facz)
-      -- v2
-      if ratio ≥ 0.8
-      then  let merged_trie := Trie.merge pd.sink_cst_names c.1
-            let clust := pd :: c.2
-            let (clu, facz) := (process pd true fact_cluster cs)
-            ((merged_trie, clust) :: clu, facz)
-      else let (clu, facz) := (process pd flag fact_cluster cs)
-           (c :: clu, facz)
-
+      let (clu, facz) := (process pd true fact_cluster (count) len cs)
+      (c :: clu, facz)
 
 def cluster : List pdata → (List (Trie Unit × (List pdata)) × ((List pdata)))
 | [] => ([], [])
 | pd :: rest =>
     let (sofar_c, sofar_f) := cluster rest
-    process pd false sofar_f sofar_c
+    process pd false sofar_f 0 sofar_c.length sofar_c
 
 
 def phase_two  (clu : List pdata) : (List (Trie Unit × (List pdata))):=
@@ -56,7 +60,7 @@ def phase_two  (clu : List pdata) : (List (Trie Unit × (List pdata))):=
     | [] => ([], [])
     | pd :: rest =>
         let (sofar_c, sofar_f) := c rest
-        process {pd with sink_cst_names := Trie.filter pd.sink_cst_names inters} false sofar_f sofar_c
+        process {pd with sink_cst_names := Trie.filter pd.sink_cst_names inters} false sofar_f 0 sofar_c.length sofar_c
 
   let (petals, core) := c clu
   (inters, core) :: petals
