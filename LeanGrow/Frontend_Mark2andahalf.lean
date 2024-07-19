@@ -60,7 +60,7 @@ elab "grow"  : tactic => do
           let psn := SortedTrieFormList' sink_names
           for (t, clust) in cl_L do
               let inter := Trie.CountCommon psn t
-              if inter ≠ 0
+              if inter ≠ 0 ∨ (Trie.size t == 0)
               then
                 dbg_trace "Match!"
                 for dag in clust do
@@ -83,7 +83,7 @@ elab "growin"  : tactic => do
           let psn := SortedTrieFormList' sink_names
           for (t, clust) in cl_L do
               let inter := Trie.CountCommon psn t
-              if inter ≠ 0 ∧ ( ((Nat.toFloat inter) / (Nat.toFloat sink_names.length))≥ 0.5)
+              if inter ≠ 0 ∨ (Trie.size t == 0) ∧ ( ((Nat.toFloat inter) / (Nat.toFloat sink_names.length))≥ 0.5)
               then
                 dbg_trace "Match!"
                 for dag in clust do
@@ -147,6 +147,7 @@ example (l : List ℕ) (a : ℕ) (h : a ∈ l) : True :=
   trivial
 
 #check List.length_erase_add_one
+#check List.getElem?_indexOf
 
 --#exit
 
@@ -159,6 +160,8 @@ example (l L : List ℕ) (h : 0 < l.length) : True :=
   by
   growin
   trivial
+
+#check List.ne_nil_of_length_pos
 
 --#exit
 example {α : Type u} (l₁ : List α) {l₂ : List α} : True :=

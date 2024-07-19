@@ -198,6 +198,8 @@ elab "print_cluster_cst_names" : command => do
 print_cluster_cst_names
 
 
+#eval g_cl_L.length
+
 elab "print_cluster_thms" : command => do
   let env ← getEnv
   for c in g_cl_L do
