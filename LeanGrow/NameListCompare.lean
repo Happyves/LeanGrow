@@ -530,3 +530,64 @@ partial def Trie.filter [BEq α] (l r : Trie α) : Trie α :=
 
 #eval Trie.print_keys ⟨#[]⟩  (Trie.filter (SortedTrieFormList ["ban", "banana", "banal"]) (SortedTrieFormList ["ban", "banana", "bandana"]))
 #eval Trie.print_keys ⟨#[]⟩  (Trie.filter (SortedTrieFormList ["ban", "banana", "bandana"]) (SortedTrieFormList ["ban", "banana", "banal"]))
+
+
+partial def Trie.merge_count (l r : Trie Nat) : Trie Nat  :=
+  let mini_merge (x y : Option Nat) : Option Nat :=
+    match x, y with
+    | .some X, .some Y => .some (X+Y)
+    | .some X, .none => .some (X)
+    | .none, .some Y => .some (Y)
+    | _, _ => .none
+  match l with
+  | .leaf x =>
+      match r with
+      | .leaf y => .leaf (mini_merge x y)
+      | .node1 y ay cy => .node1 (mini_merge x y) ay cy
+      | .node y ay cy => .node (mini_merge x y) ay cy
+  | .node1 x ax cx =>
+      match r with
+      | .leaf y => .node1 (mini_merge x y) ax cx
+      | .node1 y ay cy =>
+          match Ord.compare ax ay with
+          | .lt => .node (mini_merge x y) ⟨#[ax, ay]⟩  #[cx, cy]
+          | .eq => .node1 (mini_merge x y) ax  (Trie.merge cx cy)
+          | .gt => .node (mini_merge x y) ⟨#[ay, ax]⟩  #[cy, cx]
+      | .node y ay cy =>
+          match ay.has? ax with
+          | .none =>
+                let (cs',n) := Array.orderedInsertWithIndex (· ≤ ·) ax ay.data
+                .node (mini_merge x y) (⟨cs'⟩) (cy.insertAt! n cx)
+          | .some i =>
+                .node (mini_merge x y) ay (cy.modify i (Trie.merge cx))
+  | .node x ax cx =>
+      match r with
+      | .leaf y => .node (mini_merge x y) ax cx
+      | .node1 y ay cy =>
+          match ax.has? ay with
+          | .none =>
+                let (cs',n) := Array.orderedInsertWithIndex (· ≤ ·) ay ax.data
+                .node (mini_merge x y) (⟨cs'⟩) (cx.insertAt! n cy)
+          | .some i =>
+                .node (mini_merge x y) ax (cx.modify i (Trie.merge cy))
+      | .node y ay cy =>
+          let (uni_b, uni_t) := ByteArray.merge_extra ax ay cx cy
+          .node (mini_merge x y) uni_b uni_t
+
+
+partial def Trie.merge_count_initialise : Trie α → Trie Nat
+  | .leaf x => .leaf ((fun _ => 0) <$> x)
+  | .node1 x ax cx => .node1 ((fun _ => 0) <$> x) ax (Trie.merge_count_initialise cx)
+  | .node x ax cx => .node ((fun _ => 0) <$> x) ax (cx.map Trie.merge_count_initialise)
+
+partial def Trie.cut (t : Trie Nat) (ratio : Float) :  Trie Unit :=
+  let s := Trie.size t
+  let main_cut (x : Option Nat) : Option Unit :=
+    match x with
+    | .some y => if (Nat.toFloat y) / (Nat.toFloat s) ≥ ratio then .some () else .none
+    | .none => .none
+  let rec go : Trie Nat → Trie Unit
+    | .leaf x => .leaf (main_cut x)
+    | .node1 x ax cx => .node1 (main_cut x) ax (Trie.cut cx ratio)
+    | .node x ax cx => .node (main_cut x) ax (cx.map (Trie.cut · ratio))
+  go t

@@ -60,6 +60,7 @@ elab "grow"  : tactic => do
           let psn := SortedTrieFormList' sink_names
           for (t, clust) in cl_L do
               let inter := Trie.CountCommon psn t
+              dbg_trace s!"Cluster {clust.map (pdata.cst_name)}"
               if inter ≠ 0 ∨ (Trie.size t == 0)
               then
                 dbg_trace "Match!"
@@ -97,7 +98,7 @@ elab "growin"  : tactic => do
                             (depPostInfo := fun e => do return s!"\n{← ppExpr (← inferType e)}")
 
 
---#exit
+#exit
 
 elab "print_cluster_cst_names" : command => do
   for c in cl_L do
@@ -148,6 +149,7 @@ example (l : List ℕ) (a : ℕ) (h : a ∈ l) : True :=
 
 #check List.length_erase_add_one
 #check List.getElem?_indexOf
+#check List.insert_pos
 
 --#exit
 

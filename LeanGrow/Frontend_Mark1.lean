@@ -129,9 +129,17 @@ example {m n : ℕ} (h1 : m ≤ n) (h2 : n ≤ n) : True :=
   testing `Nat.gcd_sub_self_left
   trivial
 
+example {α : Type u} (l₁ : List α) (l₂ : List α) (h : l₁ ≠ []) : True :=
+  by
+  --testin `Nat.gcd_sub_self_left
+  testing `List.head?_append_of_ne_nil
+  trivial
 
+#check List.head?_append_of_ne_nil
 
---#exit
+-- TODO : note duplicate parent in dag → Delete duplicates at processing !
+
+#exit
 
 example (l L : List ℕ) (h : 0 < l.length) : True :=
   by
