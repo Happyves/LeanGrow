@@ -41,7 +41,8 @@ def orderHyps_wBvar (hyps : List (Expr × miniBind)) : SizedDAG CExpr Nat :=
     | h :: rest =>
           let (res, deps) := abstractBvars_collectParents h.1 h.2 .none (count)
           let sofar := go rest (count + 1)
-          (⟨count, res, deps⟩ :: sofar.1, sofar.2)
+          let deps_fix := List.dedup deps
+          (⟨count, res, deps_fix⟩ :: sofar.1, sofar.2)
 
   let (d, n) := go hyps 0
   ⟨n, d⟩
@@ -49,7 +50,7 @@ def orderHyps_wBvar (hyps : List (Expr × miniBind)) : SizedDAG CExpr Nat :=
 
 
 
-#exit
+--#exit
 
 open Qq
 
@@ -72,3 +73,9 @@ def e'' := q((l : List ℕ) → (a : ℕ) → (h : a ∈ l) → True)
 def e' := q(∀ n : Nat, ((fun (x y : Nat) => x + n + y = 42) 2 3) → True)
 
 #eval orderHyps_wBvar (naiveGetHyps e')
+
+def e''' := q({α : Type 1} → (l₁ : List α) → (l₂ : List α) → (h : l₁ ≠ []) → True )
+
+#eval orderHyps_wBvar (naiveGetHyps e''')
+
+#check List.dedup

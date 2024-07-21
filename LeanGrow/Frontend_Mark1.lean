@@ -129,7 +129,7 @@ example {m n : ℕ} (h1 : m ≤ n) (h2 : n ≤ n) : True :=
   testing `Nat.gcd_sub_self_left
   trivial
 
-example {α : Type u} (l₁ : List α) (l₂ : List α) (h : l₁ ≠ []) : True :=
+example {α : Type v} (l₁ : List α) (l₂ : List α) (h : l₁ ≠ []) : True :=
   by
   --testin `Nat.gcd_sub_self_left
   testing `List.head?_append_of_ne_nil
@@ -137,7 +137,13 @@ example {α : Type u} (l₁ : List α) (l₂ : List α) (h : l₁ ≠ []) : True
 
 #check List.head?_append_of_ne_nil
 
--- TODO : note duplicate parent in dag → Delete duplicates at processing !
+
+example (l : List ℕ) (a : ℕ) (h : a ∈ l) : True :=
+  by
+  testing `List.length_erase_add_one
+  trivial
+
+#check List.length_erase_add_one
 
 #exit
 

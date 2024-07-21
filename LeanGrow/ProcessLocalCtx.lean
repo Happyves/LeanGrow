@@ -76,7 +76,8 @@ def orderHyps_wFvar (c : PersistentHashMap FVarId Nat) (c' : PersistentHashMap N
     | h :: rest =>
           let ⟨res, deps, new_count , new_ctx , new_ctx'⟩ := abstractFvars_collectParents h.1 h.2 ctx ctx' (count)
           let sofar := go rest new_ctx new_ctx' (new_count) (hmm + 1)
-          (⟨hmm, res, deps⟩ :: sofar.1 , sofar.2)
+          let deps_fix := List.dedup deps
+          (⟨hmm, res, deps_fix⟩ :: sofar.1 , sofar.2)
   go hyps c c' 0 1
 
 

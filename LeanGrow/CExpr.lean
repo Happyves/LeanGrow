@@ -82,7 +82,36 @@ instance : ToString NodeCst where
       toString := fun c => match c with
                            | .ofNode i => s!"node {i}"
                            | .ofCst c => CExpr.toStringImp c
---#exit
+
+
+
+-- theorem CExpr.eq_of_beq_eq_true : {n m : CExpr} → Eq (BEq.beq n m) true → Eq n m
+--   | zero,   zero,   _ => rfl
+--   | zero,   succ _, h => Bool.noConfusion h
+--   | succ _, zero,   h => Bool.noConfusion h
+--   | succ n, succ m, h =>
+--     have : Eq (beq n m) true := h
+--     have : Eq n m := eq_of_beq_eq_true this
+--     this ▸ rfl
+
+-- theorem CExpr.ne_of_beq_eq_false : {n m : CExpr} → Eq (beq n m) false → Not (Eq n m)
+--   | zero,   zero,   h₁, _  => Bool.noConfusion h₁
+--   | zero,   succ _, _,  h₂ => Nat.noConfusion h₂
+--   | succ _, zero,   _,  h₂ => Nat.noConfusion h₂
+--   | succ n, succ m, h₁, h₂ =>
+--     have : Eq (beq n m) false := h₁
+--     Nat.noConfusion h₂ (fun h₂ => absurd h₂ (ne_of_beq_eq_false this))
+
+
+-- instance : DecidableEq CExpr :=
+--       fun x y =>
+--             match x == y with
+--             | true  => isTrue (eq_of_beq_eq_true h)
+--             | false => isFalse (ne_of_beq_eq_false h)
+
+-- #check instDecidableEqNat
+
+--
 
 def CExpr.hasNodes : CExpr → Bool
 | .node _ _ => true
