@@ -42,3 +42,10 @@ example (A B : Prop) (a : A) (h : A ↔ B) : True :=
   by
   handle_iffs_left
   trivial
+ 
+ /-
+ Todo
+ - handle mutiple iffs
+ - handle right iffs
+ -/ 
+  
