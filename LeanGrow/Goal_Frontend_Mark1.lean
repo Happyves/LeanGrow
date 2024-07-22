@@ -200,18 +200,34 @@ print_cluster_cst_names
 
 #eval g_cl_L.length
 
+
+def focus_goal (e : Expr) : Expr :=
+  let rec go (d : Nat) : Expr → Expr
+    | .bvar i => if i ≥ d then .const `HYP [] else .bvar i
+    | .app l r => .app (go d l) (go d r)
+    | .lam n l r B => .lam n (go d l) (go (d+1) r) B -- shouldn't occur ?
+    | .forallE n l r B => .forallE n (go d l) (go (d+1) r) B -- shouldn't occur ?
+    | .mdata _ e => go d e
+    | .proj n i e => .proj n i (go d e)
+    | x => x
+  go 0 e
+
 elab "print_cluster_thms" : command => do
   let env ← getEnv
   for c in g_cl_L do
     IO.println s!"Cluster:"
     for thm in c.2 do
       let thmdata := env.constants.find! thm.cst_name
-      IO.println s!"{thmdata.name} : {instToStringFormat.toString (← liftTermElabM (ppExpr (thmdata.type)))}"
+      IO.println s!"{thmdata.name} : {instToStringFormat.toString (← liftTermElabM (ppExpr (focus_goal (Expr.getForallBody thmdata.type))))}"
     IO.println "\n\n\n"
 
 
+def HYP := "HYP" -- fro printing
 
+--#exit
 print_cluster_thms
+-- nice effect for search of ∈
+
 
 --#exit
 

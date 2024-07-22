@@ -165,17 +165,10 @@ example (l L : List ℕ) (h : 0 < l.length) : True :=
 
 #check List.ne_nil_of_length_pos
 
---#exit
-example {α : Type u} (l₁ : List α) {l₂ : List α} : True :=
-  by
-  grow
-  trivial
-
-#check List.head?_append_of_ne_nil
--- fail
-
 
 example {α : Type u} (l₁ : List α) {l₂ : List α} (h : l₁ ≠ [])  : True :=
   by
   grow
   trivial
+
+#check List.head?_append_of_ne_nil
