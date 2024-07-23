@@ -149,12 +149,12 @@ def factor_eta (targets : List Expr) (body : Expr) : Expr :=
         go step l
   go body rt
 
-def wrap_factor_eta (targets : List Expr) (body : Expr) : Expr :=
+def wrap_factor_eta (targets : List Expr) (body : Expr) : MetaM Expr :=
   let inner := factor_eta targets body
-  let rec mkLam (t : List Expr) (b : Expr) : Expr :=
+  let rec mkLam (t : List Expr) (b : Expr) : MetaM Expr :=
     match t with
-    | [] => b
-    | x :: l => .lam `wfe x (mkLam l b) .default
+    | [] => do return b
+    | x :: l => do return (.lam `wfe (← (inferType x)) (← mkLam l b) .default)
   mkLam targets inner
 
 
@@ -174,17 +174,17 @@ elab "TryInduction" : tactic => withMainContext do
   for f in ltx.getFVars do
     let tf ←  (inferType f)
     let .some dtf ← process_type_of_ind_arg tf | continue
-    dbg_trace s!"{dtf.params ++ dtf.indices}"
-    let mot := wrap_factor_eta (dtf.indices ++ [f]) g
+    --dbg_trace s!"{dtf.params ++ dtf.indices}"
+    let mot ←  wrap_factor_eta (dtf.indices ++ [f]) g
     let ntf := tf.getAppFn.constName
     let .some recu := env.constants.find? (Name.str ntf "rec") | continue
-    let parTyp ← (inferType (.app (mkAppN (.const recu.name (recu.levelParams.map Level.param)) dtf.params.toArray) mot))
+    let parTyp ← (inferType (.app (mkAppN (.const recu.name [0]) dtf.params.toArray) mot))
     let steps := (myGetHyps parTyp (dtf.envdata.numCtors))
-    dbg_trace s!"{steps}"
+    --dbg_trace s!"{steps}"
     let newGoals := (← steps.foldlM (fun l t => do let m ← mkFreshExprMVar (.some (t)) ; return m :: l) []).reverse
     liftMetaTactic fun mvarId => do
-      mvarId.assign (mkAppN (.const recu.name (recu.levelParams.map Level.param)) (dtf.params ++ [mot] ++ newGoals ++ dtf.indices ++ [f]).toArray)
-      dbg_trace s!"test {← ppExpr (mkAppN (.const recu.name (recu.levelParams.map Level.param)) (dtf.params ++ [mot] ++ newGoals ++ dtf.indices ++ [f]).toArray)}"
+      mvarId.assign (mkAppN (.const recu.name [0]) (dtf.params ++ [mot] ++ newGoals ++ dtf.indices ++ [f]).toArray)
+      --dbg_trace s!"test {← ppExpr (mkAppN (.const recu.name [0]) (dtf.params ++ [mot] ++ newGoals ++ dtf.indices ++ [f]).toArray)}"
       return (newGoals.map Expr.mvarId!)
     break
 
@@ -196,6 +196,7 @@ elab "TryInduction" : tactic => withMainContext do
 
 
 --set_option trace.Kernel true
+--set_option pp.all true
 
 universe u --u_1
 
@@ -214,49 +215,3 @@ example : ∀ n, n + n = 2*n := by
   · clear n
     intro m mdef
     rw [two_mul]
-
-
-example  : 1+1=2 := by TryInduction ; rfl --; rfl
-
-#check Or.inl
-
-open Lean Meta Elab Tactic
-
-elab "testing" : tactic => withMainContext do
-  let m ← mkFreshExprMVar (.some (.const `True []))
-  liftMetaTactic fun mvarId => do
-    let _ ← isDefEq (mkMVar mvarId) (.app (.app (.app ((.const `Or.inl [])) (.const `True [])) (.const `True [])) m)
-    return [m.mvarId!]
-
-example (n : Nat) : True ∨ True := by
-  testing
-  trivial
-
-elab "testing" : tactic => withMainContext do
-  let m ← mkFreshExprMVar (.some (.const `True []))
-  liftMetaTactic fun mvarId => do
-    mvarId.assign (.app (.app (.app ((.const `Or.inl [])) (.const `True [])) (.const `True [])) m)
-    return [m.mvarId!]
-
-example (n : Nat) : True ∨ True := by
-  testing
-  trivial
-
-#check Nat.rec
-
-elab "testing" : tactic => withMainContext do
-  let ltx ← getLCtx
-  let .some f := (ltx.findFromUserName? `n) | pure ()
-  let m0 ← mkFreshExprMVar (.some (.const `True []))
-  let m1 ← mkFreshExprMVar (.some (.forallE `m (.const `Nat []) (.forallE `sofar (.const `True []) (.const `True []) .default) .default))
-  liftMetaTactic fun mvarId => do
-    mvarId.assign (.app (.app (.app (.app ((.const `Nat.rec [Level.param `u])) (.lam `x (.const `Nat []) ((.const `True [])) .default)) m0) m1) f.toExpr)
-    return [m0.mvarId!, m1.mvarId!]
-
-example (n : Nat) : True := by
-  testing
-  · trivial
-  · intro _ _
-    trivial
-
-#check LocalContext.findFromUserName?
