@@ -149,13 +149,16 @@ def factor_eta (targets : List Expr) (body : Expr) : Expr :=
         go step l
   go body rt
 
-def wrap_factor_eta (targets : List Expr) (body : Expr) : MetaM Expr :=
+def wrap_factor_eta (targets : List Expr) (body : Expr) : MetaM (Expr × Level) :=
   let inner := factor_eta targets body
   let rec mkLam (t : List Expr) (b : Expr) : MetaM Expr :=
     match t with
     | [] => do return b
     | x :: l => do return (.lam `wfe (← (inferType x)) (← mkLam l b) .default)
-  mkLam targets inner
+  do
+  let ter ← mkLam targets inner
+  let lvl ← getLevel inner
+  return (ter, lvl)
 
 
 def myGetHyps (ty : Expr) (upto : Nat): (List (Expr)) :=
@@ -167,6 +170,8 @@ def myGetHyps (ty : Expr) (upto : Nat): (List (Expr)) :=
     | _ => []
   else []
 
+
+
 elab "TryInduction" : tactic => withMainContext do
   let env ← getEnv
   let ltx ← getLCtx
@@ -175,15 +180,15 @@ elab "TryInduction" : tactic => withMainContext do
     let tf ←  (inferType f)
     let .some dtf ← process_type_of_ind_arg tf | continue
     --dbg_trace s!"{dtf.params ++ dtf.indices}"
-    let mot ←  wrap_factor_eta (dtf.indices ++ [f]) g
+    let (mot, lvl) ←  wrap_factor_eta (dtf.indices ++ [f]) g
     let ntf := tf.getAppFn.constName
     let .some recu := env.constants.find? (Name.str ntf "rec") | continue
-    let parTyp ← (inferType (.app (mkAppN (.const recu.name [0]) dtf.params.toArray) mot))
+    let parTyp ← (inferType (.app (mkAppN (.const recu.name [lvl]) dtf.params.toArray) mot)) -- or mkAppM, ... woried about multiple universe level params
     let steps := (myGetHyps parTyp (dtf.envdata.numCtors))
     --dbg_trace s!"{steps}"
     let newGoals := (← steps.foldlM (fun l t => do let m ← mkFreshExprMVar (.some (t)) ; return m :: l) []).reverse
     liftMetaTactic fun mvarId => do
-      mvarId.assign (mkAppN (.const recu.name [0]) (dtf.params ++ [mot] ++ newGoals ++ dtf.indices ++ [f]).toArray)
+      mvarId.assign (mkAppN (.const recu.name [lvl]) (dtf.params ++ [mot] ++ newGoals ++ dtf.indices ++ [f]).toArray)
       --dbg_trace s!"test {← ppExpr (mkAppN (.const recu.name [0]) (dtf.params ++ [mot] ++ newGoals ++ dtf.indices ++ [f]).toArray)}"
       return (newGoals.map Expr.mvarId!)
     break
@@ -192,8 +197,9 @@ elab "TryInduction" : tactic => withMainContext do
 
 #check Nat.rec
 
-#check @Nat.rec (fun n =>  n + n = 2*n)
+#check List.rec
 
+#check Lean.Meta.getLevel
 
 --set_option trace.Kernel true
 --set_option pp.all true
@@ -204,9 +210,9 @@ lemma test1 (n : Nat) : n + n = 2*n := by
   TryInduction
   · rfl
   · intro m mdef
-    rw [two_mul]
+    simp_rw [Nat.succ_eq_add_one, mul_add, mul_one, ← mdef, Nat.add_succ, Nat.succ_add]
 
---#print test1
+#print test1
 
 example : ∀ n, n + n = 2*n := by
   intro n
@@ -214,4 +220,8 @@ example : ∀ n, n + n = 2*n := by
   · clear n ; rfl
   · clear n
     intro m mdef
-    rw [two_mul]
+    simp_rw [Nat.succ_eq_add_one, mul_add, mul_one, ← mdef, Nat.add_succ, Nat.succ_add]
+
+example (α : Type _) (l L : List α) : (l ++ L).length = l.length + L.length := by
+  TryInduction
+-- pobaly solved by checking if params are sorts, and including their universe levels ???
