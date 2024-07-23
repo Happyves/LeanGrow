@@ -51,7 +51,7 @@ example (A B : Prop) (a : A) (h : A ↔ B) : B :=
 
 #check MVarId.assertHypotheses
 
-elab "handle_iffs_left_2" : tactic => do
+elab "handle_iffs" : tactic => do
   let ltx ← getLCtx
   let FVS := ltx.getFVars
   let mut Hs : Array Hypothesis := #[]
@@ -82,30 +82,30 @@ elab "handle_iffs_left_2" : tactic => do
 
 example (A B : Prop) (a : A) (h : A ↔ B) : B :=
   by
-  handle_iffs_left_2
+  handle_iffs
   exact h.lefty
 
 example (A B : Prop) (a : B) (h : A ↔ B) : A :=
   by
-  handle_iffs_left_2
+  handle_iffs
   exact h.righty
 
 example (A B : Prop) (a : A) (b : B) (h : A ↔ B) : True :=
   by
-  handle_iffs_left_2
+  handle_iffs
   trivial
 
 example (A B : Prop) (a : A) (b : B) (c : B) (h : A ↔ B) : True :=
   by
-  handle_iffs_left_2
+  handle_iffs
   trivial
 
 example (A B  C D: Prop) (a : A) (b : B) (c : C) (h1 : A ↔ B) (h2 : C ↔ D): True :=
   by
-  handle_iffs_left_2
+  handle_iffs
   trivial
 
 example (A B C : Prop) (a : A) (b : B) (c : C) (h1 : A ↔ B) (h2 : B ↔ C): True :=
   by
-  handle_iffs_left_2
+  handle_iffs
   trivial

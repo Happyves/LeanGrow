@@ -7,6 +7,8 @@ import Qq
 open Lean Qq
 
 
+#eval Expr.getAppFnArgs q(Nat.add 1 2)
+
 #exit
 
 
