@@ -105,11 +105,13 @@ example :  2 + 2 = 42 := by
 
 #check List.rec
 
-inductive test (a  b : Nat) : Int → Type where
+inductive test (a  b : Nat)  : Int → Type where
 | fst (h : a = 2) : test a b 3
 | snd (n : Int) : test a b (n+1)
 
 #check test.rec
+
+
 
 def Lean.ConstantInfo.isRecInfo : ConstantInfo → Bool
 | .recInfo _ => true
@@ -120,6 +122,7 @@ def Lean.ConstantInfo.isRecInfo : ConstantInfo → Bool
 #eval (do let env ← getEnv ; match env.constants.find? `test.rec with | .some info => IO.println (info.levelParams) | _ => pure () : CoreM Unit)
 #eval (do let env ← getEnv ; match env.constants.find? `List.rec with | .some info => IO.println s!"{info.isRecInfo} {(info.levelParams)}" | _ => pure () : CoreM Unit)
 #eval (do let env ← getEnv ; match env.constants.find? `Nat.rec with | .some info => IO.println s!"{info.isRecInfo} {(info.levelParams)}" | _ => pure () : CoreM Unit)
+#eval (do let env ← getEnv ; match env.constants.find? `Or.rec with | .some info => IO.println s!"{info.isRecInfo} {(info.levelParams)}" | _ => pure () : CoreM Unit)
 
 
 
@@ -170,7 +173,18 @@ def myGetHyps (ty : Expr) (upto : Nat): (List (Expr)) :=
     | _ => []
   else []
 
+def getLevelProcess (dec : Bool) : Level → Level
+  | .succ l => if dec then getLevelProcess false l else .succ l
+  | x => x
 
+def getLevelz : List Expr →  MetaM (List Level)
+| [] => do return []
+| x :: l => do
+    let xlvl ← getLevel x
+    let sofar ← getLevelz l
+    return (getLevelProcess true xlvl) :: sofar
+
+--#exit
 
 elab "TryInduction" : tactic => withMainContext do
   let env ← getEnv
@@ -180,15 +194,17 @@ elab "TryInduction" : tactic => withMainContext do
     let tf ←  (inferType f)
     let .some dtf ← process_type_of_ind_arg tf | continue
     --dbg_trace s!"{dtf.params ++ dtf.indices}"
-    let (mot, lvl) ←  wrap_factor_eta (dtf.indices ++ [f]) g
+    let lvlz ← getLevelz (dtf.params ++ dtf.indices)
+    let (mot, lvl) ← wrap_factor_eta (dtf.indices ++ [f]) g
+    IO.println s!"Levels : {lvl :: lvlz}"
     let ntf := tf.getAppFn.constName
     let .some recu := env.constants.find? (Name.str ntf "rec") | continue
-    let parTyp ← (inferType (.app (mkAppN (.const recu.name [lvl]) dtf.params.toArray) mot)) -- or mkAppM, ... woried about multiple universe level params
+    let parTyp ← (inferType (.app (mkAppN (.const recu.name (if recu.levelParams = [] then [] else lvl :: lvlz)) dtf.params.toArray) mot)) -- or mkAppM, ... woried about multiple universe level params
     let steps := (myGetHyps parTyp (dtf.envdata.numCtors))
     --dbg_trace s!"{steps}"
     let newGoals := (← steps.foldlM (fun l t => do let m ← mkFreshExprMVar (.some (t)) ; return m :: l) []).reverse
     liftMetaTactic fun mvarId => do
-      mvarId.assign (mkAppN (.const recu.name [lvl]) (dtf.params ++ [mot] ++ newGoals ++ dtf.indices ++ [f]).toArray)
+      mvarId.assign (mkAppN (.const recu.name (if recu.levelParams = [] then [] else lvl:: lvlz)) (dtf.params ++ [mot] ++ newGoals ++ dtf.indices ++ [f]).toArray)
       --dbg_trace s!"test {← ppExpr (mkAppN (.const recu.name [0]) (dtf.params ++ [mot] ++ newGoals ++ dtf.indices ++ [f]).toArray)}"
       return (newGoals.map Expr.mvarId!)
     break
@@ -204,7 +220,7 @@ elab "TryInduction" : tactic => withMainContext do
 --set_option trace.Kernel true
 --set_option pp.all true
 
-universe u --u_1
+--universe u --u_1
 
 lemma test1 (n : Nat) : n + n = 2*n := by
   TryInduction
@@ -222,6 +238,69 @@ example : ∀ n, n + n = 2*n := by
     intro m mdef
     simp_rw [Nat.succ_eq_add_one, mul_add, mul_one, ← mdef, Nat.add_succ, Nat.succ_add]
 
-example (α : Type _) (l L : List α) : (l ++ L).length = l.length + L.length := by
+--set_option pp.all true in
+
+example (α : Type u) (l L : List α) : (l ++ L).length = l.length + L.length := by
   TryInduction
--- pobaly solved by checking if params are sorts, and including their universe levels ???
+  · rw [List.length_append]
+  · intro _ _ _
+    rw [List.length_append]
+
+example (α : Type (u+1)) (l: List α) : Nat := by
+  TryInduction
+  · exact 42
+  · intro _ _ _
+    exact 42
+
+example (α : Type (max u v)) (l: List α) : Nat := by
+  TryInduction
+  · exact 42
+  · intro _ _ _
+    exact 42
+
+
+example (α : Type u) (l: List α) : Nat := by
+  TryInduction
+  · exact 42
+  · intro _ _ _
+    exact 42
+
+
+example (l: List Nat) : Nat := by
+  TryInduction
+  · exact 42
+  · intro _ _ _
+    exact 42
+
+
+set_option pp.all true in
+example (l L : List Nat) : (l ++ L).length = l.length + L.length := by
+  TryInduction
+  · rw [List.length_append]
+  · intro _ _ _
+    rw [List.length_append]
+
+set_option pp.all true in
+#check @List.rec Nat
+
+
+example (h : 1=1 ∨ 2=42) : True := by
+  TryInduction
+  · intro _
+    trivial
+  · intro _
+    trivial
+
+set_option pp.all true in
+#check Or.rec
+
+#check Nat.le.rec
+
+inductive moretests (α : Type u) : Type v → Type (max u v) where
+| mk β (x : Nat) : moretests α β
+
+#check moretests.rec
+
+example (α : Type u) (β : Type w) (x : moretests α β) : True := by
+  TryInduction
+  · intro _ ; trivial
