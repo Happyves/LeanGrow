@@ -34,12 +34,17 @@ elab "makeTransitionGraph" : command => do
 
 --makeTransitionGraph -- takes fucking ages, don't know if this is some bug
 
+
+
+
+#exit
+
 elab "makeTransitionGraph_duh" : command => do
   let mut icl := 1
   let mut toSource := ""
   for (_, clustL) in cl_L_a do
-    let mut inner_graph : Array Nat := Array.mkArray (cl_L_a.size * cl_L_a.size) 0
-    let mut bip_graph : Array Nat := Array.mkArray (cl_L_a.size * g_cl_L_a.size) 0
+    let mut inner_graph : Array Nat := Array.mkArray ((clustL.length) * (clustL.length)) 0
+    let mut bip_graph : Array Nat := Array.mkArray ((clustL.length) * g_cl_L_a.size) 0
     for pd in clustL do
       let mut icr := 1
       for (t,_) in cl_L_a do
@@ -55,10 +60,11 @@ elab "makeTransitionGraph_duh" : command => do
         icr := icr+1
     toSource := s!"\ndef inner_tran_g_{icl} : Array Nat  := {inner_graph}\ndef bip_tran_g_{icl} : Array Nat := {bip_graph}" ++ toSource
     icl := icl+1
-  let source := s!"import LeanGrow.Quadtree\nset_option maxHeartbeats 0\nset_option maxRecDepth 1000"
+  let source := s!"import LeanGrow.Quadtree" ++ toSource
   IO.FS.writeFile ⟨"/./home/yves/Desktop/CodeWorkspace/Lean4_General/LeanGrow/LeanGrow/Caches/transitionGraphs.lean"⟩ (source)
 
 --makeTransitionGraph_duh
+-- the perfromance might be ass because  the parsing causes repeated Array.push ??? Which copies the array ??
 
 #eval cl_L_a.size * cl_L_a.size
 
@@ -149,4 +155,4 @@ set_option maxRecDepth 10000
 set_option maxHeartbeats 0
 
 
---test_csv_parse2
+test_csv_parse2

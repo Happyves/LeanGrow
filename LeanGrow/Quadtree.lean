@@ -96,3 +96,13 @@ partial def QT_initialize (lb lt hb ht : Nat) : QT Nat Nat Nat :=
 #eval QT_initialize 0 11 0 11
 
 #eval (QT_initialize 0 10 0 10).update 1 9 Nat.succ
+
+/-
+Make version of QT_initialize where in phase where we make node, we run a computation,
+indexed by the keys. In my context, that would be finding the clusters in the cluster arrays
+index by these keys, and computing how many thms have their goal in the second cluster.
+
+Also, wrap the values in Except and maintain some sort of depth counter, so that when depth reached,
+we place a leaf with the name of the new QT to look at...
+So maybe output should be list of pairs of a string (which will be the name of qt in source), and the corresponding qt
+-/
