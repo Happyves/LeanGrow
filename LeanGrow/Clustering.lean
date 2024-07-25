@@ -79,7 +79,7 @@ def phase_two_electric_boogaloo  (clu : (List pdata)) : (List (Trie Unit × (Lis
     match clu with
     | [] => Trie.empty
     | _ => clu.tail.foldl (fun M t => Trie.merge_count M (Trie.merge_count_initialise t.sink_cst_names)) (Trie.merge_count_initialise clu.head!.sink_cst_names)
-  let core_trie := Trie.cut merge_count_trie 0.5
+  let core_trie := Trie.cut merge_count_trie (Trie.size merge_count_trie) 0.5
   let rec c :  List pdata → (List (Trie Unit × (List pdata)) × ((List pdata)))
     | [] => ([], [])
     | pd :: rest =>
@@ -105,7 +105,7 @@ elab "make_cluster" : command => do
   -- common
   let printit := res.map (fun (t,l) => s!"⟨{print_trie t}, [{String.intercalate "," (l.map (fun p => "PDATA." ++ p.cst_name.toString))}]⟩")
   let (package, cluster_num) := printit.foldl (fun (s,count) d => ((s!"\ndef cluster_{count} : Trie Unit × (List pdata) := " ++ d) :: s, count+1)) ([""],0)
-  let cl_L := s!"\ndef cl_L : List (Trie Unit × (List pdata)) := [{String.intercalate "," ((List.range printit.length).map (fun n => s!"cluster_{n}"))}]"
+  let cl_L := s!"\ndef cl_L : List (Trie Unit × (List pdata)) := [{String.intercalate "," ((List.range printit.length).map (fun n => s!"cluster_{n}"))}]\ndef cl_L_a : Array (Trie Unit × (List pdata)) := #[{String.intercalate "," ((List.range printit.length).map (fun n => s!"cluster_{n}"))}]"
   let source := "import LeanGrow.Caches.mark2cache_v2\nopen Lean Data\n" ++ ((String.join package) ++  cl_L)
   IO.FS.writeFile ⟨"/./home/yves/Desktop/CodeWorkspace/Lean4_General/LeanGrow/LeanGrow/Caches/mark2clusters_v2.lean"⟩ (source)
 

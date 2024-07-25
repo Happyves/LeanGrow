@@ -100,8 +100,8 @@ elab "make_cluster" : command => do
   let res := (Trie.empty , eres) :: (List.join (preres.map (fun c => dbg_trace s!"Phase two one cluster {Trie.print_keys ⟨#[]⟩ c.1}" ; phase_two_electric_boogaloo c.2)))
   -- common
   let printit := res.map (fun (t,l) => s!"⟨{print_trie t}, [{String.intercalate "," (l.map (fun p => "GDATA." ++ p.cst_name.toString))}]⟩")
-  let (package, cluster_num) := printit.foldl (fun (s,count) d => ((s!"\ndef cluster_{count} : Trie Unit × (List gdata) := " ++ d) :: s, count+1)) ([""],0)
-  let cl_L := s!"\ndef g_cl_L : List (Trie Unit × (List gdata)) := [{String.intercalate "," ((List.range printit.length).map (fun n => s!"cluster_{n}"))}]"
+  let (package, cluster_num) := printit.foldl (fun (s,count) d => ((s!"\ndef goal_cluster_{count} : Trie Unit × (List gdata) := " ++ d) :: s, count+1)) ([""],0)
+  let cl_L := s!"\ndef g_cl_L : List (Trie Unit × (List gdata)) := [{String.intercalate "," ((List.range printit.length).map (fun n => s!"goal_cluster_{n}"))}]\ndef g_cl_L_a : Array (Trie Unit × (List gdata)) := #[{String.intercalate "," ((List.range printit.length).map (fun n => s!"goal_cluster_{n}"))}]"
               -- else return hmm) ["import Caches.mark2cache_v2\n"]
   let source := "import LeanGrow.Caches.mark1goalCache\nopen Lean Data\n" ++ ((String.join package) ++  cl_L)
   IO.FS.writeFile ⟨"/./home/yves/Desktop/CodeWorkspace/Lean4_General/LeanGrow/LeanGrow/Caches/mark1goalClusters.lean"⟩ (source)
@@ -186,8 +186,8 @@ elab "make_cluster_2" : command => do
   -- let res := (Trie.empty , eres) :: (List.join (preres.map (fun c => dbg_trace s!"Phase two one cluster {Trie.print_keys ⟨#[]⟩ c.1}" ; phase_two_electric_boogaloo c.2)))
   -- -- common
   let printit := res.map (fun (t,l) => s!"⟨{print_trie t}, [{String.intercalate "," (l.map (fun p => "GDATA." ++ p.cst_name.toString))}]⟩")
-  let (package, cluster_num) := printit.foldl (fun (s,count) d => ((s!"\ndef cluster_{count} : Trie Unit × (List gdata) := " ++ d) :: s, count+1)) ([""],0)
-  let cl_L := s!"\ndef g_cl_L : List (Trie Unit × (List gdata)) := [{String.intercalate "," ((List.range printit.length).map (fun n => s!"cluster_{n}"))}]"
+  let (package, cluster_num) := printit.foldl (fun (s,count) d => ((s!"\ndef goal_cluster_{count} : Trie Unit × (List gdata) := " ++ d) :: s, count+1)) ([""],0)
+  let cl_L := s!"\ndef g_cl_L : List (Trie Unit × (List gdata)) := [{String.intercalate "," ((List.range printit.length).map (fun n => s!"goal_cluster_{n}"))}]\ndef g_cl_L_a : Array (Trie Unit × (List gdata)) := #[{String.intercalate "," ((List.range printit.length).map (fun n => s!"goal_cluster_{n}"))}]"
               -- else return hmm) ["import Caches.mark2cache_v2\n"]
   let source := "import LeanGrow.Caches.mark1goalCache\nopen Lean Data\n" ++ ((String.join package) ++  cl_L)
   IO.FS.writeFile ⟨"/./home/yves/Desktop/CodeWorkspace/Lean4_General/LeanGrow/LeanGrow/Caches/mark1goalClusters.lean"⟩ (source)

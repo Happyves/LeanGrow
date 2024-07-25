@@ -35,7 +35,7 @@ def gdata.toString : gdata → String :=
 
 --#exit
 
-elab "cachData" n:name : command =>
+elab "cachDataGoal" n:name : command =>
   match (Lean.Syntax.isNameLit? n.raw) with
   | none => throwError s!"Error : please enter the correct name of a module to search theorems in."
   | some N => do
@@ -78,4 +78,4 @@ elab "cachData" n:name : command =>
         return ()
 
 
---cachData `Mathlib.Data.List.Basic
+--cachDataGoal `Mathlib.Data.List.Basic

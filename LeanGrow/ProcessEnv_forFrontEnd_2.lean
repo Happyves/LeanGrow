@@ -13,11 +13,12 @@ structure pdata where
   cst_level_params : List Name
   dag : SizedDAG CExpr Nat
   sink_cst_names : Trie Unit
+  goal_cst_names : Trie Unit
 deriving Inhabited
 
 def pdata.toString : pdata → String :=
   --dbg_trace "comp pdata"
-  fun ⟨n,l,d,st⟩ => s!"⟨`{n},[{String.intercalate "," (l.map (fun x => s!"`{x}"))}],{SizedDAG.toString CExpr.toGoodString d},{print_trie st}⟩"
+  fun ⟨n,l,d,st,gt⟩ => s!"⟨`{n},[{String.intercalate "," (l.map (fun x => s!"`{x}"))}],{SizedDAG.toString CExpr.toGoodString d},{print_trie st},{print_trie gt}⟩"
 
 
 --#exit
@@ -34,11 +35,12 @@ elab "cachData" n:name : command =>
                     then match decInfo with
                           | .thmInfo v | .defnInfo v | .axiomInfo v | .ctorInfo v | .quotInfo v | .recInfo v => do
                               --dbg_trace s!"Looking at {v.name}"
+                              let gt := SortedTrieFormList' ((Expr.getConstNames (Expr.getForallBody v.type)).map Name.toString)
                               let hyps := naiveGetHyps v.type
                               let thm_dag := SizeDAG.sinks_fst (orderHyps_wBvar hyps)
                               let sink_names := (((DAG.find_sinks thm_dag false).map DAGnode.data).map CExpr.getConstNames).join.map Name.toString
                               let psn := SortedTrieFormList' sink_names
-                              let maindata : pdata := ⟨decName, decInfo.levelParams, thm_dag, psn⟩
+                              let maindata : pdata := ⟨decName, decInfo.levelParams, thm_dag, psn, gt⟩
                               let package := "def PDATA." ++  decName.toString ++ " : pdata := " ++ (pdata.toString  maindata) ++ "\n"
                               return ((package) :: hmm.1, ("PDATA." ++  decName.toString) :: hmm.2)
 
