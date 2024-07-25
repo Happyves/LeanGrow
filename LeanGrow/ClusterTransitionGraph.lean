@@ -11,8 +11,8 @@ open Lean
 
 
 elab "makeTransitionGraph" : command => do
-  let mut inner_graph : QT Nat Nat Nat := QT.nil
-  let mut bip_graph : QT Nat Nat Nat := QT.nil
+  let mut inner_graph : QT Nat Nat Nat := QT_initialize 0 cl_L_a.size 0 cl_L_a.size
+  let mut bip_graph : QT Nat Nat Nat := QT_initialize 0 cl_L_a.size 0 cl_L_a.size
   let mut icl := 0
   for (_, clustL) in cl_L_a do
     for pd in clustL do
@@ -20,25 +20,26 @@ elab "makeTransitionGraph" : command => do
       for (t,_) in cl_L_a do
         let inter := Trie.CountCommon pd.sink_cst_names t
         if inter ≠ 0 ∨ (Trie.size t == 0)
-        then inner_graph := inner_graph.upsert icl icr (fun x => match x with | .none => 1 | .some y => y+1)
+        then inner_graph := inner_graph.update icl icr (Nat.succ)
         icr := icr+1
       icr := 0
       for (t,_) in g_cl_L_a do
         let inter := Trie.CountCommon pd.goal_cst_names t
         if inter ≠ 0 ∨ (Trie.size t == 0)
-        then bip_graph := bip_graph.upsert icl icr (fun x => match x with | .none => 1 | .some y => y+1)
+        then bip_graph := bip_graph.update icl icr (Nat.succ)
         icr := icr+1
     icl := icl+1
   let source := s!"import LeanGrow.Quadtree\ndef inner_tran_g : QT Nat Nat Nat := {QT.toString instToStringNat.toString instToStringNat.toString instToStringNat.toString inner_graph}\ndef bip_tran_g : QT Nat Nat Nat := {QT.toString instToStringNat.toString instToStringNat.toString instToStringNat.toString bip_graph}"
   IO.FS.writeFile ⟨"/./home/yves/Desktop/CodeWorkspace/Lean4_General/LeanGrow/LeanGrow/Caches/transitionGraphs.lean"⟩ (source)
 
---makeTransitionGraph
+--makeTransitionGraph -- takes fucking ages, don't know if this is some bug
 
 elab "makeTransitionGraph_duh" : command => do
-  let mut inner_graph : Array Nat := Array.mkArray (cl_L_a.size * cl_L_a.size) 0
-  let mut bip_graph : Array Nat := Array.mkArray (cl_L_a.size * g_cl_L_a.size) 0
   let mut icl := 1
+  let mut toSource := ""
   for (_, clustL) in cl_L_a do
+    let mut inner_graph : Array Nat := Array.mkArray (cl_L_a.size * cl_L_a.size) 0
+    let mut bip_graph : Array Nat := Array.mkArray (cl_L_a.size * g_cl_L_a.size) 0
     for pd in clustL do
       let mut icr := 1
       for (t,_) in cl_L_a do
@@ -52,14 +53,16 @@ elab "makeTransitionGraph_duh" : command => do
         if inter ≠ 0 ∨ (Trie.size t == 0)
         then bip_graph := bip_graph.modify ((icl*icr)-1) (· +1)
         icr := icr+1
+    toSource := s!"\ndef inner_tran_g_{icl} : Array Nat  := {inner_graph}\ndef bip_tran_g_{icl} : Array Nat := {bip_graph}" ++ toSource
     icl := icl+1
-  let source := s!"import LeanGrow.Quadtree\nset_option maxHeartbeats 0\nset_option maxRecDepth 1000\ndef inner_tran_g : Array Nat  := {inner_graph}\ndef bip_tran_g : Array Nat := {bip_graph}"
+  let source := s!"import LeanGrow.Quadtree\nset_option maxHeartbeats 0\nset_option maxRecDepth 1000"
   IO.FS.writeFile ⟨"/./home/yves/Desktop/CodeWorkspace/Lean4_General/LeanGrow/LeanGrow/Caches/transitionGraphs.lean"⟩ (source)
 
 --makeTransitionGraph_duh
 
 #eval cl_L_a.size * cl_L_a.size
 
+#exit
 
 elab "makeTransitionGraph_hope" : command => do
   let mut inner_graph : Array Nat := Array.mkArray (cl_L_a.size * cl_L_a.size) 0
