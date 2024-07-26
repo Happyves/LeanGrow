@@ -58,7 +58,7 @@ def QT.insert [Ord α] [Ord β] (t : QT α β γ) (kx : α) (ky : β) (V : γ) :
 def QT.toString (as : α → String) (bs : β → String) (cs : γ → String) : QT α β γ → String
 | .nil => "QT.nil"
 | .leaf x y k => s!"QT.leaf ({as x}) ({bs y}) ({cs k})"
-| .node x y v nw ne sw se => s!"QT.node ({as x}) ({bs y}) ({cs v}) \n({QT.toString  as bs cs nw}) \n({QT.toString  as bs cs ne}) \n({QT.toString  as bs cs sw}) \n({QT.toString  as bs cs se})"
+| .node x y v nw ne sw se => s!"QT.node ({as x}) ({bs y}) ({cs v}) ({QT.toString  as bs cs nw}) ({QT.toString  as bs cs ne}) ({QT.toString  as bs cs sw}) ({QT.toString  as bs cs se})"
 
 
 def QT.upsert [Ord α] [Ord β] (t : QT α β γ) (kx : α) (ky : β) (f : Option γ → γ) : QT α β γ :=
@@ -106,3 +106,108 @@ Also, wrap the values in Except and maintain some sort of depth counter, so that
 we place a leaf with the name of the new QT to look at...
 So maybe output should be list of pairs of a string (which will be the name of qt in source), and the corresponding qt
 -/
+
+
+inductive ValPost
+| val (_ : Nat)
+| postponed (_ : Nat × Nat × Nat × Nat)
+deriving Inhabited, BEq, Repr
+
+/-- Can contain nodes with 0 value, but who's decendent have values ; subtrees with only 0 vlaues are avoided however-/
+partial def QT_process (lb lt hb ht : Nat) (comp : Nat → Nat → Nat) (d_count : Nat) : Option ((QT Nat Nat ValPost) × List (Nat × Nat × Nat × Nat)) :=
+      let hh := (ht - hb) / 2
+      let hl := (lt - lb) / 2
+      if ht = hb
+      then  if lt = lb
+            then  let res := comp lb hb
+                  if res = 0
+                  then .none
+                  else .some (.leaf lb hb (.val res), [])
+            else .some (((List.range (lt - lb )).map (· + lb)).foldl (fun q x => let res := comp x hb ; if res = 0 then q else q.insert x hb (.val res)) QT.nil, [])
+      else  if lt = lb
+            then .some (((List.range (ht - hb)).map (· + hb)).foldl (fun q x => let res := comp lb x ; if res = 0 then q else q.insert lb x (.val res)) QT.nil, [])
+            else  if d_count = 0
+                  then  .some (.leaf (lb+ hl) (hb + hh) (.postponed (lb, lt, hb, ht)), [(lb, lt, hb, ht)])
+                  else  match QT_process lb (lb + hl) (hb + hh + 1) ht comp (d_count - 1) with
+                        | .some (NW, lNW) =>
+                              match QT_process (lb + hl + 1) lt (hb + hh + 1) ht comp (d_count - 1) with
+                              | .some (NE, lNE) =>
+                                    match QT_process lb (lb + hl) hb (hb + hh) comp (d_count - 1) with
+                                    | .some (SW, lSW) =>
+                                          match QT_process (lb + hl + 1) lt hb (hb + hh) comp (d_count - 1) with
+                                          | .some (SE, lSE) =>
+                                                .some (.node (lb+ hl) (hb + hh) (.val (comp (lb+ hl) (hb + hh))) NW NE SW SE, lNW ++ lNE ++ lSW ++ lSE)
+                                          | .none =>
+                                                .some (.node (lb+ hl) (hb + hh) (.val (comp (lb+ hl) (hb + hh))) NW NE SW .nil, lNW ++ lNE ++ lSW)
+                                    | .none =>
+                                           match QT_process (lb + hl + 1) lt hb (hb + hh) comp (d_count - 1) with
+                                          | .some (SE, lSE) =>
+                                                .some (.node (lb+ hl) (hb + hh) (.val (comp (lb+ hl) (hb + hh))) NW NE .nil SE, lNW ++ lNE ++ lSE)
+                                          | .none =>
+                                                .some (.node (lb+ hl) (hb + hh) (.val (comp (lb+ hl) (hb + hh))) NW NE .nil .nil, lNW ++ lNE)
+                              | .none =>
+                                    match QT_process lb (lb + hl) hb (hb + hh) comp (d_count - 1) with
+                                    | .some (SW, lSW) =>
+                                          match QT_process (lb + hl + 1) lt hb (hb + hh) comp (d_count - 1) with
+                                          | .some (SE, lSE) =>
+                                                .some (.node (lb+ hl) (hb + hh) (.val (comp (lb+ hl) (hb + hh))) NW .nil SW SE, lNW ++ lSW ++ lSE)
+                                          | .none =>
+                                                .some (.node (lb+ hl) (hb + hh) (.val (comp (lb+ hl) (hb + hh))) NW .nil SW .nil, lNW ++ lSW)
+                                    | .none =>
+                                           match QT_process (lb + hl + 1) lt hb (hb + hh) comp (d_count - 1) with
+                                          | .some (SE, lSE) =>
+                                                .some (.node (lb+ hl) (hb + hh) (.val (comp (lb+ hl) (hb + hh))) NW .nil .nil SE, lNW ++ lSE)
+                                          | .none =>
+                                                .some (.node (lb+ hl) (hb + hh) (.val (comp (lb+ hl) (hb + hh))) NW .nil .nil .nil, lNW )
+                        | .none =>
+                              match QT_process (lb + hl + 1) lt (hb + hh + 1) ht comp (d_count - 1) with
+                              | .some (NE, lNE) =>
+                                    match QT_process lb (lb + hl) hb (hb + hh) comp (d_count - 1) with
+                                    | .some (SW, lSW) =>
+                                          match QT_process (lb + hl + 1) lt hb (hb + hh) comp (d_count - 1) with
+                                          | .some (SE, lSE) =>
+                                                .some (.node (lb+ hl) (hb + hh) (.val (comp (lb+ hl) (hb + hh))) .nil NE SW SE, lNE ++ lSW ++ lSE)
+                                          | .none =>
+                                                .some (.node (lb+ hl) (hb + hh) (.val (comp (lb+ hl) (hb + hh))) .nil NE SW .nil, lNE ++ lSW)
+                                    | .none =>
+                                           match QT_process (lb + hl + 1) lt hb (hb + hh) comp (d_count - 1) with
+                                          | .some (SE, lSE) =>
+                                                .some (.node (lb+ hl) (hb + hh) (.val (comp (lb+ hl) (hb + hh))) .nil NE .nil SE,  lNE ++ lSE)
+                                          | .none =>
+                                                .some (.node (lb+ hl) (hb + hh) (.val (comp (lb+ hl) (hb + hh))) .nil NE .nil .nil, lNE)
+                              | .none =>
+                                    match QT_process lb (lb + hl) hb (hb + hh) comp (d_count - 1) with
+                                    | .some (SW, lSW) =>
+                                          match QT_process (lb + hl + 1) lt hb (hb + hh) comp (d_count - 1) with
+                                          | .some (SE, lSE) =>
+                                                .some (.node (lb+ hl) (hb + hh) (.val (comp (lb+ hl) (hb + hh))) .nil .nil SW SE, lSW ++ lSE)
+                                          | .none =>
+                                                .some (.node (lb+ hl) (hb + hh) (.val (comp (lb+ hl) (hb + hh))) .nil .nil SW .nil, lSW)
+                                    | .none =>
+                                           match QT_process (lb + hl + 1) lt hb (hb + hh) comp (d_count - 1) with
+                                          | .some (SE, lSE) =>
+                                                .some (.node (lb+ hl) (hb + hh) (.val (comp (lb+ hl) (hb + hh))) .nil .nil .nil SE, lSE)
+                                          | .none =>
+                                                let res := comp (lb+ hl) (hb + hh)
+                                                if res = 0
+                                                then  .none
+                                                else  .some (.leaf (lb+ hl) (hb + hh) (.val (res)), [])
+
+
+partial def QT_build (lb lt hb ht : Nat) (comp : Nat → Nat → Nat) (depth : Nat) : List (String × (QT Nat Nat ValPost)) :=
+      match QT_process lb lt hb ht comp depth with
+      | .none => [(s!"qt_{lb}_{lt}_{hb}_{ht}", QT.nil)]
+      | .some (qt, pointers) =>
+            let go := (pointers.map (fun (x,y,z,w) => QT_build x y z w comp depth)).join
+            go ++ [(s!"qt_{lb}_{lt}_{hb}_{ht}", qt)]
+
+inductive Wrap
+| val (_ : Nat)
+| postponed (_ : QT Nat Nat Wrap)
+
+def ValPost.toStringTrick : ValPost → String
+| .val n => s!"Wrap.val {instToStringNat.toString n}"
+| .postponed (lb, lt, hb, ht) => s!"Wrap.postponed qt_{lb}_{lt}_{hb}_{ht}"
+
+#eval QT_build 0 10 0 10 (fun x y => if x^2 + y^2 ≥ 50 then 0 else x^2 + y^2) 3
+#eval QT_build 0 10 0 10 (fun x y => if x^2 + y^2 ≥ 30 then 0 else x^2 + y^2) 3

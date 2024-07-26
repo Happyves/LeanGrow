@@ -35,9 +35,7 @@ elab "makeTransitionGraph" : command => do
 --makeTransitionGraph -- takes fucking ages, don't know if this is some bug
 
 
-
-
-#exit
+--#exit
 
 elab "makeTransitionGraph_duh" : command => do
   let mut icl := 1
@@ -68,7 +66,7 @@ elab "makeTransitionGraph_duh" : command => do
 
 #eval cl_L_a.size * cl_L_a.size
 
-#exit
+--#exit
 
 elab "makeTransitionGraph_hope" : command => do
   let mut inner_graph : Array Nat := Array.mkArray (cl_L_a.size * cl_L_a.size) 0
@@ -155,4 +153,24 @@ set_option maxRecDepth 10000
 set_option maxHeartbeats 0
 
 
-test_csv_parse2
+--test_csv_parse2
+
+
+
+elab "makeTransitionGraph_pray" : command => do
+  let res := QT_build 0 (cl_L_a.size - 1) 0 (cl_L_a.size - 1)
+      (fun x y =>
+          let cl := cl_L_a.get! x
+          let cr := cl_L_a.get! y
+          Id.run do
+            let mut out := 0
+            for pd in cl.2 do
+              if Trie.CountCommon pd.goal_cst_names cr.1 ≠ 0
+              then out := out + 1
+            return out
+          )
+      3
+  let source := s!"import LeanGrow.Quadtree\n" ++ (String.intercalate "\n" (res.map (fun (n,qt) => s!"def {n} : QT Nat Nat Wrap := {QT.toString instToStringNat.toString instToStringNat.toString ValPost.toStringTrick qt}")))
+  IO.FS.writeFile ⟨"/./home/yves/Desktop/CodeWorkspace/Lean4_General/LeanGrow/LeanGrow/Caches/transitionGraphs.lean"⟩ (source)
+
+--makeTransitionGraph_pray
