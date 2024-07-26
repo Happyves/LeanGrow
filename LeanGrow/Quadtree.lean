@@ -14,10 +14,10 @@ def QT.find? [Ord α] [Ord β] (t : QT α β γ) (kx : α) (ky : β) : Option γ
   | .node x y v nw ne sw se =>
         match compare x kx, compare y ky with
         | .eq, .eq => .some v
-        | .eq, .lt => QT.find? se kx ky
-        | .eq, .gt => QT.find? ne kx ky
-        | .lt,  cy => if cy = .lt then QT.find? sw kx ky else QT.find? nw kx ky
-        | .gt, cy => if cy = .gt then QT.find? se kx ky else QT.find? ne kx ky
+        | .eq, .lt => QT.find? nw kx ky
+        | .eq, .gt => QT.find? se kx ky
+        | .lt,  cy => if cy = .lt then QT.find? ne kx ky else QT.find? se kx ky
+        | .gt, cy => if cy = .lt then QT.find? nw kx ky else QT.find? sw kx ky
 
 def QT.update [Ord α] [Ord β] [ToString α] [ToString β] (t : QT α β γ) (kx : α) (ky : β) (f : γ → γ) : QT α β γ :=
   match t with
@@ -27,7 +27,7 @@ def QT.update [Ord α] [Ord β] [ToString α] [ToString β] (t : QT α β γ) (k
         dbg_trace s!"{x} {kx} ; {y} {ky}"
         match compare x kx, compare y ky with
         | .eq, .eq => .node x y (f v) nw ne sw se
-        | .eq, .lt => .node x y v nw (QT.update ne kx ky f) sw se
+        | .eq, .lt => .node x y v (QT.update nw kx ky f) ne sw se
         | .eq, .gt => .node x y v nw ne sw (QT.update se kx ky f)
         | .lt, cy => if cy = .lt then .node x y v nw (QT.update ne kx ky f) sw se else .node x y v nw ne sw (QT.update se kx ky f)
         | .gt, cy => if cy = .lt then .node x y v (QT.update nw kx ky f) ne sw se else .node x y v nw ne (QT.update sw kx ky f) se
@@ -211,3 +211,60 @@ def ValPost.toStringTrick : ValPost → String
 
 #eval QT_build 0 10 0 10 (fun x y => if x^2 + y^2 ≥ 50 then 0 else x^2 + y^2) 3
 #eval QT_build 0 10 0 10 (fun x y => if x^2 + y^2 ≥ 30 then 0 else x^2 + y^2) 3
+
+#eval (( QT_build 0 10 0 10 (fun x y => if x^2 + y^2 ≥ 30 then 0 else x^2 + y^2) 3)).map (fun (n,t) => (n,(QT.toString instToStringNat.toString instToStringNat.toString ValPost.toStringTrick) t))
+
+namespace TestingStuff
+
+def qt_0_1_6_7 : QT Nat Nat Wrap := QT.nil
+
+def qt_3_4_6_7 : QT Nat Nat Wrap := QT.nil
+
+def qt_6_7_6_7 : QT Nat Nat Wrap := QT.nil
+
+def qt_0_1_3_4 : QT Nat Nat Wrap := QT.node (0) (3) (Wrap.val 9) (QT.leaf (0) (4) (Wrap.val 16)) (QT.leaf (1) (4) (Wrap.val 17)) (QT.leaf (0) (3) (Wrap.val 9)) (QT.leaf (1) (3) (Wrap.val 10))
+
+def qt_3_4_3_4  : QT Nat Nat Wrap := QT.node (3) (3) (Wrap.val 18) (QT.leaf (3) (4) (Wrap.val 25)) (QT.nil) (QT.leaf (3) (3) (Wrap.val 18)) (QT.leaf (4) (3) (Wrap.val 25))
+
+def qt_0_1_0_1  : QT Nat Nat Wrap := QT.node (0) (0) (Wrap.val 0) (QT.leaf (0) (1) (Wrap.val 1)) (QT.leaf (1) (1) (Wrap.val 2)) (QT.nil) (QT.leaf (1) (0) (Wrap.val 1))
+
+def qt_3_4_0_1  : QT Nat Nat Wrap := QT.node (3) (0) (Wrap.val 9) (QT.leaf (3) (1) (Wrap.val 10)) (QT.leaf (4) (1) (Wrap.val 17)) (QT.leaf (3) (0) (Wrap.val 9)) (QT.leaf (4) (0) (Wrap.val 16))
+
+def qt_6_7_3_4  : QT Nat Nat Wrap := QT.nil
+
+def qt_6_7_0_1  : QT Nat Nat Wrap := QT.nil
+
+def qt_0_10_0_10  : QT Nat Nat Wrap := QT.node (5) (5) (Wrap.val 0) (QT.node (2) (8) (Wrap.val 0) (QT.node (1) (9) (Wrap.val 0) (QT.nil) (QT.nil) (QT.nil) (QT.nil)) (QT.node (4) (9) (Wrap.val 0) (QT.nil) (QT.nil) (QT.nil) (QT.nil)) (QT.node (1) (7) (Wrap.val 0) (QT.nil) (QT.nil) (QT.leaf (0) (6) (Wrap.postponed qt_0_1_6_7)) (QT.nil)) (QT.node (4) (7) (Wrap.val 0) (QT.nil) (QT.nil) (QT.leaf (3) (6) (Wrap.postponed qt_3_4_6_7)) (QT.nil))) (QT.node (8) (8) (Wrap.val 0) (QT.node (7) (9) (Wrap.val 0) (QT.nil) (QT.nil) (QT.nil) (QT.nil)) (QT.nil) (QT.node (7) (7) (Wrap.val 0) (QT.nil) (QT.nil) (QT.leaf (6) (6) (Wrap.postponed qt_6_7_6_7)) (QT.nil)) (QT.node (9) (7) (Wrap.val 0) (QT.nil) (QT.nil) (QT.nil) (QT.nil))) (QT.node (2) (2) (Wrap.val 8) (QT.node (1) (4) (Wrap.val 17) (QT.leaf (0) (5) (Wrap.val 25)) (QT.leaf (2) (5) (Wrap.val 29)) (QT.leaf (0) (3) (Wrap.postponed qt_0_1_3_4)) (QT.leaf (2) (3) (Wrap.val 13))) (QT.node (4) (4) (Wrap.val 0) (QT.nil) (QT.nil) (QT.leaf (3) (3) (Wrap.postponed qt_3_4_3_4)) (QT.nil)) (QT.node (1) (1) (Wrap.val 2) (QT.leaf (0) (2) (Wrap.val 4)) (QT.leaf (2) (2) (Wrap.val 8)) (QT.leaf (0) (0) (Wrap.postponed qt_0_1_0_1)) (QT.leaf (2) (0) (Wrap.val 4))) (QT.node (4) (1) (Wrap.val 17) (QT.leaf (3) (2) (Wrap.val 13)) (QT.leaf (5) (2) (Wrap.val 29)) (QT.leaf (3) (0) (Wrap.postponed qt_3_4_0_1)) (QT.leaf (5) (0) (Wrap.val 25)))) (QT.node (8) (2) (Wrap.val 0) (QT.node (7) (4) (Wrap.val 0) (QT.nil) (QT.nil) (QT.leaf (6) (3) (Wrap.postponed qt_6_7_3_4)) (QT.nil)) (QT.node (9) (4) (Wrap.val 0) (QT.nil) (QT.nil) (QT.nil) (QT.nil)) (QT.node (7) (1) (Wrap.val 0) (QT.nil) (QT.nil) (QT.leaf (6) (0) (Wrap.postponed qt_6_7_0_1)) (QT.nil)) (QT.node (9) (1) (Wrap.val 0) (QT.nil) (QT.nil) (QT.nil) (QT.nil)))
+
+end TestingStuff
+
+
+def QT.findP (t : QT Nat Nat Wrap) (kx ky : Nat) : Option Nat :=
+  let rec unwrap (v : Wrap) :=
+      match v with
+      | .val w => .some w
+      | .postponed qt => QT.findP qt kx ky
+  match t with
+  | .nil => .none
+  | .leaf x y v =>
+            match v with
+            | .val w =>
+                  if (compare x kx = .eq) ∧ (compare y ky = .eq)
+                  then .some w
+                  else  .none
+            | .postponed qt => QT.findP qt kx ky
+  | .node x y v nw ne sw se =>
+        match compare x kx, compare y ky with
+        | .eq, .eq => unwrap v
+        | .eq, .lt => QT.findP nw kx ky
+        | .eq, .gt => QT.findP se kx ky
+        | .lt,  cy => if cy = .lt then QT.findP ne kx ky else QT.findP se kx ky
+        | .gt, cy => if cy = .lt then QT.findP nw kx ky else QT.findP sw kx ky
+
+#eval QT.findP TestingStuff.qt_0_10_0_10 0 3
+
+#eval timeit "" (do return QT.findP TestingStuff.qt_0_10_0_10 3 4)
+
+#eval timeit "" (do return QT.findP TestingStuff.qt_0_10_0_10 1 1)
+
+#eval timeit "" (do return QT.findP TestingStuff.qt_0_10_0_10 4 1)
