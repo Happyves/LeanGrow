@@ -2,6 +2,7 @@
 import LeanGrow.Caches.ProcessedTransitionGraphs
 import LeanGrow.Caches.ProcessedTransitionGraphsGolas
 import LeanGrow.Caches.mark2clusters_v2
+import LeanGrow.Caches.mark1goalClusters
 import LeanGrow.LtxManagement.Iffs
 import LeanGrow.LtxManagement.TryInduction
 import LeanGrow.PathCounter
@@ -62,7 +63,6 @@ def find_initial_clusters (sink_names : Trie Unit) : TacticM (List (Nat × List 
   let mut count := 0
   for (t, clust) in cl_L_a do
     let inter := Trie.CountCommon sink_names t
-    --dbg_trace s!"Cluster {clust.map (pdata.cst_name)}"
     if inter ≠ 0 ∨ (Trie.size t == 0) ∧ ( ((Nat.toFloat inter) / (Nat.toFloat (Trie.size sink_names)))≥ 0.5)
     then res := (count, clust) :: res ; count := count + 1
     else count := count + 1
@@ -90,35 +90,53 @@ def embed_to_expr (embed : Array (Option NodeCst))
 
 /-- remobve breaks to add all lemmata, makes for increadibly slow tactic though-/
 def explore_cluster (clu : List pdata) (ltx_dag : SizedDAG CExpr ℕ) (ltx_dict' : PersistentHashMap ℕ FVarId) (signature : Name) : TacticM Unit := do
-  let mut breaks := 5
+  let mut breaks := 3
   for dag in clu do
     if breaks > 0
     then
       let embeds := matcher dag.dag (SizeDAG.sinks_fst ltx_dag)
       withMainContext do
         for emb in embeds do
-          let res ← embed_to_expr emb dag.dag.size ltx_dict' dag.cst_name  dag.cst_level_params
-          let resT ← inferType res
-          liftMetaTactic fun mvarId => do
-            let mvarIdNew ← mvarId.define (signature ++ dag.cst_name ++ mvarId.name) resT res
-            let (_, mvarIdNew) ← mvarIdNew.intro1P
-            return [mvarIdNew]
+          try
+            let res ← embed_to_expr emb dag.dag.size ltx_dict' dag.cst_name  dag.cst_level_params
+            let resT ← inferType res
+            liftMetaTactic fun mvarId => do
+              let mvarIdNew ← mvarId.define (signature ++ dag.cst_name ++ mvarId.name) resT res
+              let (_, mvarIdNew) ← mvarIdNew.intro1P
+              return [mvarIdNew]
+          catch | _ => pure ()
     else
       break
 
 
-def randSelectCluster (data : List (Nat × Nat)) : IO Nat := do
-  let (cumulate, count) : (List (Nat × Nat)) × Nat := (data.foldl (fun (C,c) (clu,tran) => ((clu, c + tran):: C, c + tran)) ([],0))
-  let cumul' := cumulate.reverse
-  let r ← IO.rand 0 count
-  let mut ret := 0
-  for (cl,c) in cumul' do
-    if c ≥ r then ret := cl ; break
-  return ret
+
+def find_goal_cluster (cst_names : Trie Unit) : TacticM ((Nat)) := do
+  let mut res := 0
+  let mut count := 0
+  let mut ma := 0
+  for (t, _) in g_cl_L_a do
+    let inter := Trie.CountCommon cst_names t
+    if inter > ma
+    then  ma := inter
+          res := (count) ; count := count + 1
+    else  count := count + 1
+  return res
+
+
+def selectNextCluster (nei : List (Nat)) (gnc : Nat) : Option Nat :=
+  let weights := (nei.take 3).map (weighted_walk_counter joined_trans_hyp joined_trans_hyp_goal · gnc)
+  let mw := match List.maximum? weights with | .some m => m | _ => 0
+  let mwi := weights.findIdx (· == mw)
+  if mw == 0 then .none else .some mwi
+
 
 
 def walk_the_walk (sink_names : Trie Unit) : TacticM Unit := do
   let init ← find_initial_clusters sink_names
+  let g ← getMainTarget
+  let names := (Expr.getConstNames g).map Name.toString
+  let psn := SortedTrieFormList' names
+  let gc ← find_goal_cluster psn
   for (pos, data) in init do
     let mut p := pos
     let mut d := data
@@ -128,7 +146,7 @@ def walk_the_walk (sink_names : Trie Unit) : TacticM Unit := do
         let (ltx_dag, _, ltx_dict') := orderHyps_fromLocalCtx ltx
         explore_cluster d ltx_dag ltx_dict' (Name.mkSimple s!"p{p}i{i}")
         let nei := joined_trans_hyp.get! p
-        let next ← randSelectCluster nei
+        let next := match selectNextCluster (nei.map Prod.fst) gc with | .some n => n | _ => p
         let next_c := cl_L.get! next
         return (next, next_c.2)
       p := op
@@ -152,7 +170,16 @@ example (l L : List α) (h : 0 < l.length) : True := by
   trivial
 
 /-
-On breakes 5 and path length 3, one of the (random) runs yielded
-`p29i1.List.getLast?_eq_getLast_of_ne_nil._uniq.15395 : l.getLast? = some (l.getLast p87i0.List.ne_nil_of_length_pos._uniq.15311) := List.getLast?_eq_getLast_of_ne_nil p87i0.List.ne_nil_of_length_pos._uniq.15311`
-for example.
+Got wierd error to investigate, even the embed to expr handles failure:
+
+invalid occurrence of universe level 'u' at '_example', it does not occur at the declaration type, nor it is explicit universe level provided by the user, occurring at expression
+  Function.Bijective.{u + 1, u + 1} List.reverse.{u}
+at declaration body
+  fun {α : Type u_1} (l L : List α) (h : 0 < l.length) ↦
+    let p145i0.List.reverse_bijective._uniq.13241 : Function.Bijective List.reverse := List.reverse_bijective;
+    ?m.17083 l L h p145i0.List.reverse_bijective._uniq.13241
+
 -/
+
+#check List.reverse_bijective
+#check Function.Bijective

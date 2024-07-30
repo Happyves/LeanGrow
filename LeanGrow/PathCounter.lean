@@ -72,7 +72,7 @@ def weighted_walk_counter (inner_trans hyp_goal_trans : Array (List (Nat × Nat)
     let inner := Id.run do
       let mut w := 0
       for n in hnei do
-        let ws := walk_counter inner_trans 3 hc n -- 5 made graph generation incredibly slow already
+        let ws := walk_counter inner_trans 2 hc n -- 3 already made graph generation incredibly slow already
         let ww := get_total_weight inner_trans ws
         w := w + ww
       return w
