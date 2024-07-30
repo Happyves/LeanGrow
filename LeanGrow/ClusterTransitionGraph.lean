@@ -305,7 +305,7 @@ elab "makeProcessedTransitionGraph2" : command => do
     toSource := s!"\ndef cl_L_a_t_{co} : Array (List (Nat × Nat)) := {a}" :: toSource
     co := co+1
   toSource := toSource.reverse
-  let source := String.join toSource
+  let source := (String.join toSource) ++ s!"\ndef joined_trans_hyp := {String.intercalate " ++ " ((List.range (num_splits + 1)).map (s!"cl_L_a_t_{·}"))}"
   IO.FS.writeFile ⟨"/./home/yves/Desktop/CodeWorkspace/Lean4_General/LeanGrow/LeanGrow/Caches/ProcessedTransitionGraphs.lean"⟩ (source)
 
 --makeProcessedTransitionGraph2
@@ -371,7 +371,7 @@ elab "makeProcessedTransitionGraphGoals" : command => do
     toSource := s!"\ndef g_cl_L_a_t_{co} : Array (List (Nat × Nat)) := {a}" :: toSource
     co := co+1
   toSource := toSource.reverse
-  let source := String.join toSource
+  let source := (String.join toSource) ++ s!"\ndef joined_trans_hyp_goal := {String.intercalate " ++ " ((List.range (num_splits + 1)).map (s!"g_cl_L_a_t_{·}"))}"
   IO.FS.writeFile ⟨"/./home/yves/Desktop/CodeWorkspace/Lean4_General/LeanGrow/LeanGrow/Caches/ProcessedTransitionGraphsGolas.lean"⟩ (source)
 
 --makeProcessedTransitionGraphGoals
