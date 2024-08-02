@@ -19,12 +19,12 @@ def QT.find? [Ord α] [Ord β] (t : QT α β γ) (kx : α) (ky : β) : Option γ
         | .lt,  cy => if cy = .lt then QT.find? ne kx ky else QT.find? se kx ky
         | .gt, cy => if cy = .lt then QT.find? nw kx ky else QT.find? sw kx ky
 
-def QT.update [Ord α] [Ord β] [ToString α] [ToString β] (t : QT α β γ) (kx : α) (ky : β) (f : γ → γ) : QT α β γ :=
+def QT.update [Ord α] [Ord β] (t : QT α β γ) (kx : α) (ky : β) (f : γ → γ) : QT α β γ :=
   match t with
   |  .nil => .nil
   | .leaf x y v => if (compare x kx = .eq) ∧ (compare y ky = .eq) then .leaf x y (f v) else .leaf x y v
   | .node x y v nw ne sw se =>
-        dbg_trace s!"{x} {kx} ; {y} {ky}"
+        --dbg_trace s!"{x} {kx} ; {y} {ky}"
         match compare x kx, compare y ky with
         | .eq, .eq => .node x y (f v) nw ne sw se
         | .eq, .lt => .node x y v (QT.update nw kx ky f) ne sw se

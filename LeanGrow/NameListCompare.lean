@@ -269,7 +269,7 @@ def SortedTrieFormList' (namez : List String) : Trie Unit :=
 
 #eval SortedTrieFormList ["hello", "world", "and", "more", "content"]
 
-partial def ppTrie : Trie String → String
+partial def ppTrie [ToString α] : Trie α → String
 | .leaf e => s!"leaf {e}"
 | .node1 has s c => s!"node1 {has} {String.fromUTF8 ⟨#[s]⟩ (by sorry)} (\n" ++ ppTrie c ++ "\n)"
 | .node has s c => s!"node {has} {String.fromUTF8 s (by sorry)} (\n" ++ String.intercalate "\n" (c.map ppTrie).toList ++ "\n)"
@@ -315,7 +315,7 @@ def print_bytearray (a : ByteArray) : String :=
 #eval print_bytearray (⟨#[1,2]⟩ : ByteArray)
 
 
-partial def print_trie : Trie Unit → String
+partial def print_trie [ToString α] : Trie α → String
   | .leaf x => --dbg_trace "comp trie"
       s!"Lean.Data.Trie.leaf ({x})"
   | .node1 o i t => --dbg_trace "comp trie"
@@ -628,3 +628,41 @@ partial def Trie.cut (t : Trie Nat) (s : Nat) (ratio : Float) :  Trie Unit :=
 
 
 #eval Trie.toList (Trie.merge_count  (Trie.merge_count_initialise (SortedTrieFormList ["List", "List.lookmap", "List.cons", "Eq"])) (Trie.merge_count_initialise (SortedTrieFormList ["List", "List.lookmap", "List.lookmap.go", "Eq", "Array.toListAppend"])))
+
+partial def Trie.enumerate (count : Nat ) : Trie α → ((Trie Nat) × Nat)
+| .leaf x => if x.isSome then (.leaf (.some count), count + 1) else (.leaf .none, count)
+| .node1 x a t =>
+      if x.isSome
+      then
+        let (nt,nc) := Trie.enumerate (count + 1) t
+        (.node1 (.some count) a nt, nc)
+      else
+        let (nt,nc) := Trie.enumerate (count) t
+        (.node1 (.none) a nt, nc)
+| .node x as ts =>
+  if x.isSome
+      then
+        let (nts, nc) := Id.run do
+          let mut res := Array.mkArray ts.size (.leaf .none)
+          let mut co := count + 1
+          for x in (List.range ts.size) do
+            let t := ts.get! x
+            let (nt,c) := Trie.enumerate co t
+            res := res.set! x nt
+            co := c
+          return (res,co)
+        (.node (.some count) as nts, nc)
+      else
+        let (nts, nc) := Id.run do
+          let mut res := Array.mkArray ts.size (.leaf .none)
+          let mut co := count
+          for x in (List.range ts.size) do
+            let t := ts.get! x
+            let (nt,c) := Trie.enumerate co t
+            res := res.set! x nt
+            co := c
+          return (res,co)
+        (.node (.none) as nts, nc)
+
+#eval ppTrie (Trie.enumerate 0 (SortedTrieFormList ["ban", "banana", "banal"])).1
+#eval (Trie.enumerate 0 (SortedTrieFormList ["ban", "banana", "banal"])).2
