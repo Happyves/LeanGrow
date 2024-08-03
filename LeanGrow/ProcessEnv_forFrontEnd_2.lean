@@ -65,11 +65,12 @@ elab "cachData" n:name : command =>
         -- writeModule new_env ⟨"/./home/yves/Desktop/CodeWorkspace/Lean4_General/LeanGrow/LeanGrow/Caches/mark2cache"⟩
         let source := String.join res.1.reverse
         let l := "def cluster_list : List pdata := [" ++ (String.intercalate ", " res.2.reverse) ++ "]"
-        IO.FS.writeFile ⟨"/./home/yves/Desktop/CodeWorkspace/Lean4_General/LeanGrow/LeanGrow/Caches/mark2cache_v2.lean"⟩ (source ++ l)
+        --IO.FS.writeFile ⟨"/./home/yves/Desktop/CodeWorkspace/Lean4_General/LeanGrow/LeanGrow/Caches/mark2cache_v2.lean"⟩ (source ++ l)
+        IO.FS.writeFile ⟨"/./home/yves/Desktop/CodeWorkspace/Lean4_General/LeanGrow/LeanGrow/Caches/mark2cache_v2_big.lean"⟩ (source ++ l)
         return ()
 
 
---cachData `Mathlib.Data.List.Basic
+--cachData `Mathlib.Data.List
 
 
 

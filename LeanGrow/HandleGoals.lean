@@ -74,8 +74,9 @@ elab "cachDataGoal" n:name : command =>
         -- writeModule new_env ⟨"/./home/yves/Desktop/CodeWorkspace/Lean4_General/LeanGrow/LeanGrow/Caches/mark2cache"⟩
         let source := String.join res.1.reverse
         let l := "def goal_cluster_list : List gdata := [" ++ (String.intercalate ", " res.2.reverse) ++ "]"
-        IO.FS.writeFile ⟨"/./home/yves/Desktop/CodeWorkspace/Lean4_General/LeanGrow/LeanGrow/Caches/mark1goalCache.lean"⟩ (source ++ l)
+        --IO.FS.writeFile ⟨"/./home/yves/Desktop/CodeWorkspace/Lean4_General/LeanGrow/LeanGrow/Caches/mark1goalCache.lean"⟩ (source ++ l)
+        IO.FS.writeFile ⟨"/./home/yves/Desktop/CodeWorkspace/Lean4_General/LeanGrow/LeanGrow/Caches/mark1goalCache_big.lean"⟩ (source ++ l)
         return ()
 
 
---cachDataGoal `Mathlib.Data.List.Basic
+--cachDataGoal `Mathlib.Data.List
