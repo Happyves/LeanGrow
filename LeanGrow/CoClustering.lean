@@ -242,3 +242,56 @@ elab "make_goalCoCluster2" : command => do
   IO.FS.writeFile ⟨"/./home/yves/Desktop/CodeWorkspace/Lean4_General/LeanGrow/LeanGrow/Caches/goalCoData.lean"⟩ (source)
 
 --make_goalCoCluster2
+
+
+
+elab "make_CoCluster2_qt" : command => do
+  let mut allnames := Trie.leaf .none
+  for pd in cluster_list do
+    allnames := Trie.merge_count (Trie.merge_count_initialise pd.sink_cst_names) allnames
+  let (indexing, count) := Trie.enumerate 0 allnames
+
+  -- let mut apps := Array.mkArray count 0
+  -- for pd in cluster_list do
+  --   let keys := (Trie.print_keys ⟨#[]⟩ pd.sink_cst_names)
+  --   let indices := ((keys.map (Trie.find? indexing)).reduceOption)
+  --   for x in indices do
+  --     apps := apps.modify x Nat.succ
+
+  let mut commons := Array.mkArray ((count*(count - 1) / 2)) 0
+  for pd in cluster_list do
+    let keys := (Trie.print_keys ⟨#[]⟩ pd.sink_cst_names)
+    let indices := ((keys.map (Trie.find? indexing)).reduceOption).pairs
+    for (x,y) in indices do
+      commons := commons.modify ((use_brain x y)) Nat.succ
+
+  let res_qt := QT_build 0 (count - 1) 0 (count - 1) (fun x y => if x == y then 0 else commons.get! (use_brain x y)) 3
+  let qt_source := s!"\n" ++ (String.intercalate "\n" (res_qt.map (fun (n,qt) => s!"def {n} : QT Nat Nat Wrap := {QT.toString instToStringNat.toString instToStringNat.toString ValPost.toStringTrick qt}")))
+
+  -- let split_param := 10
+  -- let num_splits_apps := count / split_param
+  -- let mut a_o_as := Array.mkArray (num_splits_apps + 1)  #[]
+  -- for ca in [0:(num_splits_apps)] do
+  --   let mut A := Array.mkArray (split_param) 0
+  --   for spc in [0:(split_param)] do
+  --     A := A.set! spc (apps.get! (split_param*ca + spc))
+  --   a_o_as := a_o_as.set! ca A
+  -- let mut A := Array.mkArray (count % split_param) 0
+  -- for spc in [0:(count % split_param)] do
+  --   A := A.set! spc (apps.get! (split_param*num_splits_apps + spc))
+  -- a_o_as := a_o_as.set! num_splits_apps A
+
+  -- let mut toSource_apps := ([] : List String)
+  -- let mut co := 0
+  -- for a in a_o_as do
+  --   toSource_apps := s!"\ndef apps_{co} : Array Nat:= {a}" :: toSource_apps
+  --   co := co+1
+  -- toSource_apps := toSource_apps.reverse
+  -- let source_apps := (String.join toSource_apps) ++ s!"\ndef joined_apps := {String.intercalate " ++ " ((List.range (num_splits_apps + 1)).map (s!"apps_{·}"))}"
+
+  -- let source_allnames := print_trie allnames
+  -- let source_indexing := print_trie indexing
+  let source := s!"import LeanGrow.Quadtree\nimport LeanGrow.NameListCompare\nimport LeanGrow.Caches.mark2cache_v2_big\nopen Lean Data\n{qt_source}"
+  IO.FS.writeFile ⟨"/./home/yves/Desktop/CodeWorkspace/Lean4_General/LeanGrow/LeanGrow/Caches/CoData_qt.lean"⟩ (source)
+
+--make_CoCluster2_qt
