@@ -67,7 +67,6 @@ def query_wSplits [Inhabited α] (i : Nat) (L : List (Array α)) : α :=
   | .none => default
   | .some a => a.get! (i % 10)
 
---#exit
 
 def Float.compare : Float → Float → Ordering :=
   fun a b => if a < b then .lt else (if a == b then .eq else .gt)
@@ -86,29 +85,49 @@ elab "test_Charikar" : command => do
       for i in (List.range joined_apps.size) do
         if !(i == v) && (constraints.get! i) then s := s + (query_wSplits (use_brain v i) co_float)
       return (s / (apps_float.get! v))
-    match Array.argmin?_with_constraints joined_apps constraints den Float.compare with
+    match Array.argmin?_with_constraints (Array.range joined_apps.size) constraints den Float.compare with
     | .none => throwError "aahh"
     | .some idx =>
         let mut D := (0 : Float)
         for x in (List.range joined_apps.size) do
           if (constraints.get! x)
           then
-            for y in (List.range (joined_apps.size - x - 1)).map (· + x + 1) do
-              if (constraints.get! y)
-              then D := D + (query_wSplits (use_brain x y) co_float)
+            for y in (List.range (joined_apps.size - x - 1)) do
+              if (constraints.get! (y + x + 1))
+              then D := D + (query_wSplits (use_brain x (y + x + 1)) co_float)
         let mut d := (0 : Float)
         for x in (List.range joined_apps.size) do
           if (constraints.get! x)
           then d := d + (apps_float.get! x)
-        densities := densities.set! idx (D / d)
+        densities := densities.set! del (D / (max d 1))
         constraints := constraints.set! idx false
         deletes := deletes.set! del idx
   let .some argm := densities.maxIdx? Float.compare | throwError "ahhh 2"
+  let full_density := Id.run do
+                        let mut D := (0 : Float)
+                        for x in (List.range joined_apps.size) do
+                            for y in (List.range (joined_apps.size - x - 1)) do
+                              D := D + (query_wSplits (use_brain x (y + x + 1)) co_float)
+                        let mut d := (0 : Float)
+                        for x in (List.range joined_apps.size) do
+                          d := d + (apps_float.get! x)
+                        return (D / d)
+  let argm' := if densities.get! argm < full_density then joined_apps.size else argm
   let sol := Id.run do
     let mut res := []
-    for i in List.range (joined_apps.size - argm) do
+    for i in List.range (argm') do
       res := (deletes.get! i) :: res
     return res
   IO.println (sol.map (Trie.get_key · ⟨#[]⟩ indexing)).reduceOption
 
 --test_Charikar
+
+/-
+After 20 min:
+
+[AList, List.IsRotated, Function.Involutive, List.Sublist, Relator.LeftUnique, List.IsInfix,
+Relator.RightUnique, WellFounded, String, Relator.BiUnique, Relation.ReflTransGen, List.chains,
+LevenshteinEstimator', Function.Surjective, Function.RightInverse, Function.LeftInverse,
+Function.Bijective, Cycle.Nontrivial, AList.Disjoint]
+
+-/
