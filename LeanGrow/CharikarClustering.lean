@@ -5,7 +5,7 @@ import LeanGrow.CoClustering
 import LeanGrow.AnalyseCoData
 
 
-open Lean
+open Lean Data
 
 
 
@@ -131,3 +131,76 @@ LevenshteinEstimator', Function.Surjective, Function.RightInverse, Function.Left
 Function.Bijective, Cycle.Nontrivial, AList.Disjoint]
 
 -/
+
+
+def Charikar (apps_float_init : Array Float) (co_float_init : List (Array Float)) (constraints_mut : Array Bool): Elab.Command.CommandElabM (List Nat) := do
+  let apps_float := apps_float_init --joined_apps.map Nat.toFloat
+  let co_float := co_float_init -- joined_co_pre.map (Array.map Nat.toFloat)
+  let mut densities := Array.mkArray joined_apps.size (0 : Float)
+  let mut constraints := constraints_mut -- Array.mkArray joined_apps.size true
+  let mut deletes := Array.mkArray joined_apps.size 0
+  for del in (List.range joined_apps.size) do
+    let den (v : Nat) := Id.run do
+      let mut s := (0 : Float)
+      for i in (List.range joined_apps.size) do
+        if !(i == v) && (constraints.get! i) then s := s + (query_wSplits (use_brain v i) co_float)
+      return (s / (apps_float.get! v))
+    match Array.argmin?_with_constraints (Array.range joined_apps.size) constraints den Float.compare with
+    | .none => throwError "aahh"
+    | .some idx =>
+        let mut D := (0 : Float)
+        for x in (List.range joined_apps.size) do
+          if (constraints.get! x)
+          then
+            for y in (List.range (joined_apps.size - x - 1)) do
+              if (constraints.get! (y + x + 1))
+              then D := D + (query_wSplits (use_brain x (y + x + 1)) co_float)
+        let mut d := (0 : Float)
+        for x in (List.range joined_apps.size) do
+          if (constraints.get! x)
+          then d := d + (apps_float.get! x)
+        densities := densities.set! del (D / (max d 1))
+        constraints := constraints.set! idx false
+        deletes := deletes.set! del idx
+  let .some argm := densities.maxIdx? Float.compare | throwError "ahhh 2"
+  let full_density := Id.run do
+                        let mut D := (0 : Float)
+                        for x in (List.range joined_apps.size) do
+                          if (constraints_mut.get! x)
+                          then
+                            for y in (List.range (joined_apps.size - x - 1)) do
+                              if (constraints_mut.get! y)
+                              then
+                                D := D + (query_wSplits (use_brain x (y + x + 1)) co_float)
+                        let mut d := (0 : Float)
+                        for x in (List.range joined_apps.size) do
+                          d := d + (apps_float.get! x)
+                        return (D / d)
+  let argm' := if densities.get! argm < full_density then joined_apps.size else argm
+  let sol := Id.run do
+    let mut res := []
+    for i in List.range (argm') do
+      res := (deletes.get! i) :: res
+    return res
+  return sol --(SortedTrieFormList' ((sol.map (Trie.get_key · ⟨#[]⟩ indexing)).reduceOption))
+
+
+
+elab "repeated_Charikar" : command => do
+  let apps_float := joined_apps.map Nat.toFloat
+  let co_float := joined_co_pre.map (Array.map Nat.toFloat)
+  let mut constraints := Array.mkArray joined_apps.size true
+  let mut toSource := []
+  for c in (List.range joined_apps.size) do
+    if constraints.contains true
+    then
+      let sol ← Charikar apps_float co_float constraints
+      let t := (SortedTrieFormList' ((sol.map (Trie.get_key · ⟨#[]⟩ indexing)).reduceOption))
+      toSource := s!"\ndef clusTrie_{c} : Trie Unit := {print_trie t}" :: toSource -- add pdata clusters, of course
+      for n in sol do
+        constraints := constraints.set! n false
+  let source := s!"import LeanGrow.NameListCompare\nimport LeanGrow.Caches.CoData\nopen Lean Data{String.join toSource}"
+  IO.FS.writeFile ⟨"/./home/yves/Desktop/CodeWorkspace/Lean4_General/LeanGrow/LeanGrow/Caches/CarikarClusters.lean"⟩ (source)
+
+--repeated_Charikar
+-- 10h +
