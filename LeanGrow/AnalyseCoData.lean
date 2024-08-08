@@ -1,7 +1,7 @@
 
 import LeanGrow.Caches.CoData
 import LeanGrow.Caches.goalCoData
-
+import LeanGrow.Caches.CarikarClusters_batch_o_0
 
 open Lean Data
 
@@ -115,3 +115,6 @@ elab "g_co_order": command => do
 --g_app_order
 
 --g_co_order
+
+#eval Trie.print_keys ⟨#[]⟩ clusTrie_1
+#eval Trie.print_keys ⟨#[]⟩ clusTrie_0

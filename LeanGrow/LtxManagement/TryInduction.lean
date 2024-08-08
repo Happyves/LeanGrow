@@ -79,6 +79,15 @@ elab "try_induciton" : tactic => do
 
 
 
+/-
+TODO:
+
+Look at API of Lean.MVarId.induction and Lean.MVarId.cases
+
+-/
+
+
+
 example (n : Nat) : n + n = 2*n := by
   try_induciton
   sorry

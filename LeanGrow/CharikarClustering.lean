@@ -163,6 +163,7 @@ def Charikar (apps_float_init : Array Float) (co_float_init : List (Array Float)
         constraints := constraints.set! idx false
         deletes := deletes.set! del idx
   let .some argm := densities.maxIdx? Float.compare | throwError "ahhh 2"
+  -- TODO : maxIdx with constraints
   let full_density := Id.run do
                         let mut D := (0 : Float)
                         for x in (List.range joined_apps.size) do
@@ -179,7 +180,7 @@ def Charikar (apps_float_init : Array Float) (co_float_init : List (Array Float)
   let argm' := if densities.get! argm < full_density then joined_apps.size else argm
   let sol := Id.run do
     let mut res := []
-    for i in List.range (argm') do
+    for i in List.range (argm' + 1) do
       res := (deletes.get! i) :: res
     return res
   return sol --(SortedTrieFormList' ((sol.map (Trie.get_key · ⟨#[]⟩ indexing)).reduceOption))
@@ -204,3 +205,46 @@ elab "repeated_Charikar" : command => do
 
 --repeated_Charikar
 -- 10h +
+
+def repeated_split_Charikar (constraints_init : Array Bool) (offset : Nat) := do
+  let apps_float := joined_apps.map Nat.toFloat
+  let co_float := joined_co_pre.map (Array.map Nat.toFloat)
+  let mut constraints := constraints_init
+  let mut toSource := []
+  for c in (List.range 2) do
+    if constraints.contains true
+    then
+      let sol ← Charikar apps_float co_float constraints
+      let t := (SortedTrieFormList' ((sol.map (Trie.get_key · ⟨#[]⟩ indexing)).reduceOption))
+      toSource := s!"\ndef clusTrie_{c + (2*offset)} : Trie Unit := {print_trie t}" :: toSource -- add pdata clusters, of course
+      for n in sol do
+        constraints := constraints.set! n false
+
+  let split_param := 10
+  let num_splits_apps := constraints.size / split_param
+  let mut a_o_as := Array.mkArray (num_splits_apps + 1)  #[]
+  for ca in [0:(num_splits_apps)] do
+    let mut A := Array.mkArray (split_param) 0
+    for spc in [0:(split_param)] do
+      A := A.set! spc (constraints.get! (split_param*ca + spc))
+    a_o_as := a_o_as.set! ca A
+  let mut A := Array.mkArray (constraints.size % split_param) 0
+  for spc in [0:(constraints.size % split_param)] do
+    A := A.set! spc (constraints.get! (split_param*num_splits_apps + spc))
+  a_o_as := a_o_as.set! num_splits_apps A
+
+  let mut toSource_constraints:= ([] : List String)
+  let mut co := 0
+  for a in a_o_as do
+    toSource_constraints := s!"\ndef constraints_split_{co}_{offset} : Array Bool := {a}" :: toSource_constraints
+    co := co+1
+  toSource_constraints := toSource_constraints.reverse
+  let source_apps := (String.join toSource_constraints) ++ s!"\ndef constriants_remaining_{offset} : Array Bool := {String.intercalate " ++ " ((List.range (num_splits_apps + 1)).map (s!"constraints_split_{·}_{offset}"))}"
+
+
+  let source := s!"import LeanGrow.NameListCompare\nimport LeanGrow.Caches.CoData\nopen Lean Data{String.join toSource}{source_apps}"
+  IO.FS.writeFile ⟨s!"/./home/yves/Desktop/CodeWorkspace/Lean4_General/LeanGrow/LeanGrow/Caches/CarikarClusters_batch_o_{offset}.lean"⟩ (source)
+
+-- 0th batch
+--#eval repeated_split_Charikar (Array.mkArray joined_apps.size true) 0
+-- ≈ 2h
