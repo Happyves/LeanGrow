@@ -116,5 +116,6 @@ elab "g_co_order": command => do
 
 --g_co_order
 
-#eval Trie.print_keys ⟨#[]⟩ clusTrie_1
 #eval Trie.print_keys ⟨#[]⟩ clusTrie_0
+#eval Trie.print_keys ⟨#[]⟩ clusTrie_1
+--#eval Trie.print_keys ⟨#[]⟩ clusTrie_2

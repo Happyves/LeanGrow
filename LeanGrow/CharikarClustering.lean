@@ -2,11 +2,25 @@
 
 import LeanGrow.Caches.CoData
 import LeanGrow.CoClustering
-import LeanGrow.AnalyseCoData
 
 
 open Lean Data
 
+partial def Trie.get_key [BEq α] (v : α) (cache : ByteArray) : Trie α → Option String
+| .leaf x => if x == .some v then .some (String.fromUTF8! cache) else .none
+| .node1 x a t =>
+    if x == .some v
+    then .some (String.fromUTF8! cache)
+    else Trie.get_key v (cache.push a) t
+| .node x as ts =>
+    if x == .some v
+    then .some (String.fromUTF8! cache)
+    else
+      Id.run do
+      for c in List.range (as.size) do
+        let res := Trie.get_key v (cache.push (as.get! c)) (ts.get! c)
+        if res.isSome then return res
+      return .none
 
 
 
@@ -42,6 +56,24 @@ def Array.maxIdx? [Inhabited α] (A : Array α)  (lt : α → α → Ordering) :
           I := i
         i := i+1
       return .some I
+
+def Array.maxIdx?_with_constraints [Inhabited α] (A : Array α) (C : Array Bool) (lt : α → α → Ordering) : Option Nat :=
+  Id.run do
+    if A.isEmpty
+    then return .none
+    else
+      let mut M := (A.get! 0)
+      let mut I := 0
+      let mut i := 0
+      for x in A do
+        if (C.get! i) && (lt M x == .lt)
+        then
+          M := x
+          I := i
+        i := i+1
+      return .some I
+
+--#exit
 
 def Array.argmin?_with_constraints [Inhabited α] (A : Array α) (C : Array Bool) (f : α → β) (lt : β → β → Ordering) : Option Nat :=
   Id.run do
@@ -121,6 +153,7 @@ elab "test_Charikar" : command => do
   IO.println (sol.map (Trie.get_key · ⟨#[]⟩ indexing)).reduceOption
 
 --test_Charikar
+-- has bugs, use version below
 
 /-
 After 20 min:
@@ -139,31 +172,32 @@ def Charikar (apps_float_init : Array Float) (co_float_init : List (Array Float)
   let mut densities := Array.mkArray joined_apps.size (0 : Float)
   let mut constraints := constraints_mut -- Array.mkArray joined_apps.size true
   let mut deletes := Array.mkArray joined_apps.size 0
+  let den (v : Nat) := Id.run do
+    let mut s := (0 : Float)
+    for i in (List.range joined_apps.size) do
+      if !(i == v) && (constraints.get! i) then s := s + (query_wSplits (use_brain v i) co_float)
+    return (s / (apps_float.get! v))
   for del in (List.range joined_apps.size) do
-    let den (v : Nat) := Id.run do
-      let mut s := (0 : Float)
-      for i in (List.range joined_apps.size) do
-        if !(i == v) && (constraints.get! i) then s := s + (query_wSplits (use_brain v i) co_float)
-      return (s / (apps_float.get! v))
-    match Array.argmin?_with_constraints (Array.range joined_apps.size) constraints den Float.compare with
-    | .none => throwError "aahh"
-    | .some idx =>
-        let mut D := (0 : Float)
-        for x in (List.range joined_apps.size) do
-          if (constraints.get! x)
-          then
-            for y in (List.range (joined_apps.size - x - 1)) do
-              if (constraints.get! (y + x + 1))
-              then D := D + (query_wSplits (use_brain x (y + x + 1)) co_float)
-        let mut d := (0 : Float)
-        for x in (List.range joined_apps.size) do
-          if (constraints.get! x)
-          then d := d + (apps_float.get! x)
-        densities := densities.set! del (D / (max d 1))
-        constraints := constraints.set! idx false
-        deletes := deletes.set! del idx
-  let .some argm := densities.maxIdx? Float.compare | throwError "ahhh 2"
-  -- TODO : maxIdx with constraints
+    if (constraints_mut.get! del)
+    then
+      match Array.argmin?_with_constraints (Array.range joined_apps.size) constraints den Float.compare with
+      | .none => throwError "aahh"
+      | .some idx =>
+          let mut D := (0 : Float)
+          for x in (List.range joined_apps.size) do
+            if (constraints.get! x)
+            then
+              for y in (List.range (joined_apps.size - x - 1)) do
+                if (constraints.get! (y + x + 1))
+                then D := D + (query_wSplits (use_brain x (y + x + 1)) co_float)
+          let mut d := (0 : Float)
+          for x in (List.range joined_apps.size) do
+            if (constraints.get! x)
+            then d := d + (apps_float.get! x)
+          densities := densities.set! del (D / (max d 1))
+          constraints := constraints.set! idx false
+          deletes := deletes.set! del idx
+  let .some argm := densities.maxIdx?_with_constraints constraints_mut Float.compare | throwError "ahhh 2"
   let full_density := Id.run do
                         let mut D := (0 : Float)
                         for x in (List.range joined_apps.size) do
