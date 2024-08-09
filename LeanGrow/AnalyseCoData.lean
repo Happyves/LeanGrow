@@ -118,4 +118,4 @@ elab "g_co_order": command => do
 
 #eval Trie.print_keys ⟨#[]⟩ clusTrie_0
 #eval Trie.print_keys ⟨#[]⟩ clusTrie_1
---#eval Trie.print_keys ⟨#[]⟩ clusTrie_2
+#eval Trie.print_keys ⟨#[]⟩ clusTrie_2

@@ -172,17 +172,20 @@ def Charikar (apps_float_init : Array Float) (co_float_init : List (Array Float)
   let mut densities := Array.mkArray joined_apps.size (0 : Float)
   let mut constraints := constraints_mut -- Array.mkArray joined_apps.size true
   let mut deletes := Array.mkArray joined_apps.size 0
-  let den (v : Nat) := Id.run do
-    let mut s := (0 : Float)
-    for i in (List.range joined_apps.size) do
-      if !(i == v) && (constraints.get! i) then s := s + (query_wSplits (use_brain v i) co_float)
-    return (s / (apps_float.get! v))
+  --dbg_trace s!"Entering main loop with constraints : {constraints}"
   for del in (List.range joined_apps.size) do
+    let den (v : Nat) := Id.run do
+      let mut s := (0 : Float)
+      for i in (List.range joined_apps.size) do
+        if !(i == v) && (constraints.get! i) then s := s + (query_wSplits (use_brain v i) co_float)
+      return (s / (apps_float.get! v))
     if (constraints_mut.get! del)
     then
       match Array.argmin?_with_constraints (Array.range joined_apps.size) constraints den Float.compare with
       | .none => throwError "aahh"
       | .some idx =>
+          --dbg_trace s!"On round {del}"
+          constraints := constraints.set! idx false
           let mut D := (0 : Float)
           for x in (List.range joined_apps.size) do
             if (constraints.get! x)
@@ -195,7 +198,6 @@ def Charikar (apps_float_init : Array Float) (co_float_init : List (Array Float)
             if (constraints.get! x)
             then d := d + (apps_float.get! x)
           densities := densities.set! del (D / (max d 1))
-          constraints := constraints.set! idx false
           deletes := deletes.set! del idx
   let .some argm := densities.maxIdx?_with_constraints constraints_mut Float.compare | throwError "ahhh 2"
   let full_density := Id.run do
@@ -214,10 +216,12 @@ def Charikar (apps_float_init : Array Float) (co_float_init : List (Array Float)
   let argm' := if densities.get! argm < full_density then joined_apps.size else argm
   let sol := Id.run do
     let mut res := []
-    for i in List.range (argm' + 1) do
-      res := (deletes.get! i) :: res
+    for i in (List.range (argm' + 1)) do
+      if (constraints_mut.get! i)
+      then
+        res := (deletes.get! i) :: res
     return res
-  return sol --(SortedTrieFormList' ((sol.map (Trie.get_key · ⟨#[]⟩ indexing)).reduceOption))
+  return sol
 
 
 
@@ -245,12 +249,12 @@ def repeated_split_Charikar (constraints_init : Array Bool) (offset : Nat) := do
   let co_float := joined_co_pre.map (Array.map Nat.toFloat)
   let mut constraints := constraints_init
   let mut toSource := []
-  for c in (List.range 2) do
+  for c in (List.range 3) do
     if constraints.contains true
     then
       let sol ← Charikar apps_float co_float constraints
       let t := (SortedTrieFormList' ((sol.map (Trie.get_key · ⟨#[]⟩ indexing)).reduceOption))
-      toSource := s!"\ndef clusTrie_{c + (2*offset)} : Trie Unit := {print_trie t}" :: toSource -- add pdata clusters, of course
+      toSource := s!"\ndef clusTrie_{c + (3*offset)} : Trie Unit := {print_trie t}" :: toSource -- add pdata clusters, of course
       for n in sol do
         constraints := constraints.set! n false
 
