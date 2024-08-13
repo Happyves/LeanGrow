@@ -1,8 +1,11 @@
 
 import LeanGrow.Caches.CoData
 import LeanGrow.Caches.goalCoData
-import LeanGrow.Caches.CarikarClusters_batch_o_0
+--import LeanGrow.Caches.CarikarClusters_batch_o_0 -- seems to have been corrupted when I did  the same for nomenclature .. should be rebuilt
 import LeanGrow.Caches.CarikarClustersGoal_batch_0
+import LeanGrow.Caches.CoData_nom
+import LeanGrow.Caches.CarikarClustersNom_batch_o_0
+
 
 open Lean Data
 
@@ -117,11 +120,51 @@ elab "g_co_order": command => do
 
 --g_co_order
 
-#eval Trie.print_keys ⟨#[]⟩ clusTrie_0
-#eval Trie.print_keys ⟨#[]⟩ clusTrie_1
-#eval Trie.print_keys ⟨#[]⟩ clusTrie_2
+-- #eval Trie.print_keys ⟨#[]⟩ clusTrie_0
+-- #eval Trie.print_keys ⟨#[]⟩ clusTrie_1
+-- #eval Trie.print_keys ⟨#[]⟩ clusTrie_2
 
 
 #eval Trie.print_keys ⟨#[]⟩ g_clusTrie_0
 #eval Trie.print_keys ⟨#[]⟩ g_clusTrie_1
 #eval Trie.print_keys ⟨#[]⟩ g_clusTrie_2
+
+
+
+elab "nom_app_order": command => do
+  let mut tag := Array.mkArray nom_joined_apps.size (0,0)
+  let mut c := 0
+  for x in nom_joined_apps do
+    tag := tag.set! c (c,x)
+    c := c+1
+  let stag := tag.qsort (fun (_,x) (_,y)=> x > y)
+  let pstag := (stag.map (fun (i,v) => ((·,v)) <$> (Trie.get_key i ⟨#[]⟩ nom_indexing))).reduceOption
+  IO.println pstag
+
+elab "nom_co_order": command => do
+  let mut tag := []
+  let mut cx := 0
+  for x in nom_joined_co_pre do
+    let mut cy := 0
+    for y in x do
+      if y ≥ 10 then tag := (((cx*10) + cy),y) :: tag -- the 10 here is the split_param for data
+      cy := cy +1
+    cx := cx +1
+  let stag := tag.mergeSort (fun (_,x) (_,y)=> x > y)
+  let pstag := (stag.map (fun (i,v) =>
+      match burnout i with
+      | .none => .none
+      | .some (f,s) =>
+          match (Trie.get_key (f) ⟨#[]⟩ nom_indexing), (Trie.get_key (s) ⟨#[]⟩ nom_indexing) with
+          | .some fn, .some sn => .some ((fn,sn),v)
+          | _, _ => .none
+      )).reduceOption
+  IO.println pstag
+
+-- nom_app_order
+
+-- nom_co_order
+
+#eval Trie.print_keys ⟨#[]⟩ nom_clusTrie_0
+#eval Trie.print_keys ⟨#[]⟩ nom_clusTrie_1
+#eval Trie.print_keys ⟨#[]⟩ nom_clusTrie_2
