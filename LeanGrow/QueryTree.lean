@@ -42,23 +42,69 @@ def QueryTree.split_on (k : String) (c : List (QueryTree)) : List (QueryTree) :=
   (.node (SortedTrieFormList' [k]) pos) :: neg
 
 
+-- to NameListCompare
+partial def Trie.clean : Trie α → Trie α
+| .leaf x => .leaf x
+| .node1 x a t =>
+      match t , x with
+      | .leaf .none, .some _ => .leaf x
+      | .leaf .none, .none => .leaf .none
+      | _ , _ => .node1 x a t
+| .node x as ts => -- **TODO** we can do better by deleting all entries that lead to .leaf .none
+  let cts := ts.map Trie.clean
+  let prune? := Id.run do
+    let mut b := true
+    for t in cts do
+      match t with
+      | .leaf .none => b := false
+      | _ => pure ()
+    return b
+  if prune?
+  then .leaf .none
+  else .node x as ts
+
+-- to NameListCompare
+partial def Trie.delete (k : List Char) : Trie α → Trie α
+| .leaf _ => .leaf .none
+| .node1 x a t =>
+      match k with
+      | [] => .node1 .none a t
+      | c :: rest => if c.toUInt8 == a then Trie.delete rest t else .node1 x a t
+| .node x as ts =>
+      match k with
+      | [] => .node .none as ts
+      | c :: rest =>
+          let idiomatic := c.toUInt8
+          let idx? := as.findIdx? (· == idiomatic)
+          match idx? with
+          | .some idx => .node x as (ts.modify idx (fun t => Trie.delete rest t))
+          | .none => .node x as ts
+
+def QueryTree.map_on_children (f : QueryTree → QueryTree) : QueryTree → QueryTree
+| .root (c : List (QueryTree)) => .root (c.map f)
+| .node (q : Trie Unit) (c : List (QueryTree)) => .node q (c.map f)
+| .leaf => .leaf
+
+def QueryTree.delete_key_or_leave (k : String) : QueryTree → QueryTree :=
+  let kd := k.data
+  fun t =>  match t with
+            | .node T r => .node (Trie.delete kd T) r
+            | x => x
+
+
+def QueryTree.lift_topmost_on (k : String) : QueryTree → QueryTree
+| .root (c : List (QueryTree)) => .root [.node (SortedTrieFormList' [k]) (c.map (QueryTree.delete_key_or_leave  k))]
+| .node (q : Trie Unit) (c : List (QueryTree)) => .node (sorted_insert q k ()) (c.map (QueryTree.delete_key_or_leave k))
+| .leaf => .leaf
+
+
 #exit
 
 -- TODO : clean Tries → process children ; if only leaves with none, replace node by leaf with none
 -- apply cleaning after deletes ; otherwise a lot of dead branches ...
 
-partial def Trie.cut (t : Trie Nat) (s : Nat) (ratio : Float) :  Trie Unit :=
-  let main_cut (x : Option Nat) : Option Unit :=
-    match x with
-    | .some y => if (Nat.toFloat y) / (Nat.toFloat s) ≥ ratio then .some () else .none
-    | .none => .none
-  let rec go : Trie Nat → Trie Unit
-    | .leaf x => .leaf (main_cut x)
-    | .node1 x ax cx => .node1 (main_cut x) ax (Trie.cut cx s ratio)
-    | .node x ax cx => .node (main_cut x) ax (cx.map (Trie.cut · s ratio))
-  go t
 
-def QueryTree.lift_on (k : String) (c : List (QueryTree)) : List (QueryTree) × List (QueryTree) :=
+def QueryTree.lift_topmost (k : String) (c : List (QueryTree)) : List (QueryTree) × List (QueryTree) :=
   match c with
   | [] => ([],[])
   | .root _ :: _ => ([],[]) -- ill formed tree, root shouldn't appear as child
