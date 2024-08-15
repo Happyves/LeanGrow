@@ -98,22 +98,48 @@ def QueryTree.lift_topmost_on (k : String) : QueryTree → QueryTree
 | .leaf => .leaf
 
 
-#exit
+-- to NameListCompare
+partial def Trie.find_max (cache : ByteArray) : Trie Nat → Option (String × Nat)
+| .leaf x =>
+      match x with
+      | .some v => .some (String.fromUTF8 cache (by sorry), v)
+      | .none => .none
+| .node1 x a t =>
+      match Trie.find_max (cache.push a) t with
+      | .some (s,v) =>
+          match x with
+          | .some w => if w > v then .some (String.fromUTF8 cache (by sorry), w) else .some (s,v)
+          | .none => .some (s,v)
+      | .none =>
+          match x with
+          | .some w => .some (String.fromUTF8 cache (by sorry), w)
+          | .none => .none
+| .node x as ts => Id.run do
+      let mut M := 0
+      let mut idx := Option.none
+      for i in Array.range as.size do
+        let a := as.get! i
+        let t := ts.get! i
+        match Trie.find_max (cache.push a) t with
+        | .some (s,v) =>
+            if v > M
+            then
+              M := v
+              idx := .some s
+        | .none => pure ()
+      match idx with
+      | .some s =>
+            match x with
+            | .some w => if w > M then .some (String.fromUTF8 cache (by sorry), w) else .some (s,M)
+            | .none => .some (s,M)
+      | .none =>
+            match x with
+            | .some w => .some (String.fromUTF8 cache (by sorry), w)
+            | .none => .none
 
--- TODO : clean Tries → process children ; if only leaves with none, replace node by leaf with none
--- apply cleaning after deletes ; otherwise a lot of dead branches ...
 
-
-def QueryTree.lift_topmost (k : String) (c : List (QueryTree)) : List (QueryTree) × List (QueryTree) :=
-  match c with
-  | [] => ([],[])
-  | .root _ :: _ => ([],[]) -- ill formed tree, root shouldn't appear as child
-  | .node t chi :: rest =>
-        let (sofar_pos, sofar_neg) := QueryTree.split_on_split k rest
-        let T := t.find? k
-        match T with
-        | .some _ => (.node t chi :: sofar_pos, sofar_neg)
-        | .none => (sofar_pos, .node t chi :: sofar_neg)
-  | .leaf :: rest =>
-        let (sofar_pos, sofar_neg) := QueryTree.split_on_split k rest
-        (sofar_pos, .leaf :: sofar_neg)
+#eval Trie.find_max ⟨#[]⟩ (.node .none ⟨#[(62 : UInt8),72]⟩ #[(.node (.some 3) ⟨#[(63 : UInt8),64]⟩ #[(.leaf (.some 2)), (.leaf (.some 2))]), (.node1 .none 73 (.leaf (.some 1)))])
+#eval Trie.find_max ⟨#[]⟩ (.node .none ⟨#[(62 : UInt8),72]⟩ #[(.node (.some 3) ⟨#[(63 : UInt8),64]⟩ #[(.leaf (.some 4)), (.leaf (.some 2))]), (.node1 .none 73 (.leaf (.some 1)))])
+#eval Trie.find_max ⟨#[]⟩ (.node .none ⟨#[(62 : UInt8),72]⟩ #[(.node (.some 3) ⟨#[(63 : UInt8),64]⟩ #[(.leaf (.some 2)), (.leaf (.some 4))]), (.node1 .none 73 (.leaf (.some 1)))])
+#eval Trie.find_max ⟨#[]⟩ (.node .none ⟨#[(62 : UInt8),72]⟩ #[(.node (.some 3) ⟨#[(63 : UInt8),64]⟩ #[(.leaf (.some 2)), (.leaf (.some 2))]), (.node1 .none 73 (.leaf (.some 4)))])
+#eval Trie.find_max ⟨#[]⟩ (.node .none ⟨#[(62 : UInt8),72]⟩ #[(.node (.some 4) ⟨#[(63 : UInt8),64]⟩ #[(.leaf (.some 2)), (.leaf (.some 2))]), (.node1 .none 73 (.leaf (.some 4)))])
