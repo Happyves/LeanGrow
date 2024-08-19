@@ -5,6 +5,7 @@ import LeanGrow.Caches.goalCoData
 import LeanGrow.Caches.CarikarClustersGoal_batch_0
 import LeanGrow.Caches.CoData_nom
 import LeanGrow.Caches.CarikarClustersNom_batch_o_0
+import LeanGrow.Caches.CarikarClustersSquared_batch_0
 
 
 open Lean Data
@@ -168,3 +169,7 @@ elab "nom_co_order": command => do
 #eval Trie.print_keys ⟨#[]⟩ nom_clusTrie_0
 #eval Trie.print_keys ⟨#[]⟩ nom_clusTrie_1
 #eval Trie.print_keys ⟨#[]⟩ nom_clusTrie_2
+
+#eval Trie.print_keys ⟨#[]⟩ sq_clusTrie_0
+#eval Trie.print_keys ⟨#[]⟩ sq_clusTrie_1
+#eval Trie.print_keys ⟨#[]⟩ sq_clusTrie_2

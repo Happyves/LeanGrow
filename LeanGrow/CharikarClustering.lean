@@ -506,3 +506,51 @@ def repeated_split_Charikar_on_nom (constraints_init : Array Bool) (offset : Nat
 -- 0th batch
 --#eval repeated_split_Charikar_on_nom (Array.mkArray nom_joined_apps.size true) 0
 -- ≈ 30 min
+
+
+-- # Charilar with squared appearances
+
+
+def repeated_split_Charikar' (constraints_init : Array Bool) (offset : Nat) := do
+  let apps_float := joined_apps.map (fun x => Nat.toFloat (x ^ 3))
+  let co_float := joined_co_pre.map (Array.map Nat.toFloat)
+  let mut constraints := constraints_init
+  let mut toSource := []
+  for c in (List.range 3) do
+    if constraints.contains true
+    then
+      --dbg_trace s!"Entering Charikar with constraints {constraints}"
+      let sol ← Charikar apps_float co_float constraints
+      let t := (SortedTrieFormList' ((sol.map (Trie.get_key · ⟨#[]⟩ indexing)).reduceOption))
+      toSource := s!"\ndef sq_clusTrie_{c + (3*offset)} : Trie Unit := {print_trie t}" :: toSource -- add pdata clusters, of course
+      for n in sol do
+        constraints := constraints.set! n false
+
+  let split_param := 10
+  let num_splits_apps := constraints.size / split_param
+  let mut a_o_as := Array.mkArray (num_splits_apps + 1)  #[]
+  for ca in [0:(num_splits_apps)] do
+    let mut A := Array.mkArray (split_param) 0
+    for spc in [0:(split_param)] do
+      A := A.set! spc (constraints.get! (split_param*ca + spc))
+    a_o_as := a_o_as.set! ca A
+  let mut A := Array.mkArray (constraints.size % split_param) 0
+  for spc in [0:(constraints.size % split_param)] do
+    A := A.set! spc (constraints.get! (split_param*num_splits_apps + spc))
+  a_o_as := a_o_as.set! num_splits_apps A
+
+  let mut toSource_constraints:= ([] : List String)
+  let mut co := 0
+  for a in a_o_as do
+    toSource_constraints := s!"\ndef sq_constraints_split_{co}_{offset} : Array Bool := {a}" :: toSource_constraints
+    co := co+1
+  toSource_constraints := toSource_constraints.reverse
+  let source_apps := (String.join toSource_constraints) ++ s!"\ndef sq_constriants_remaining_{offset} : Array Bool := {String.intercalate " ++ " ((List.range (num_splits_apps + 1)).map (s!"sq_constraints_split_{·}_{offset}"))}"
+
+
+  let source := s!"import LeanGrow.NameListCompare\nimport LeanGrow.Caches.CoData\nopen Lean Data{String.join toSource}{source_apps}"
+  IO.FS.writeFile ⟨s!"/./home/yves/Desktop/CodeWorkspace/Lean4_General/LeanGrow/LeanGrow/Caches/CarikarClustersSquared_batch_{offset}.lean"⟩ (source)
+
+-- 0th batch
+--#eval repeated_split_Charikar' (Array.mkArray joined_apps.size true) 0
+-- ≈ 10 min
