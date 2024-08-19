@@ -37,3 +37,11 @@ set_option maxHeartbeats 0
 -- crash
 
 --#eval cluster_list.length
+
+#eval (QueryTree.visualize 0 ((QueryTree.make_bd_iter_two_electric_boogaloo 0 ((((cluster_list.take 30).map pdata.sink_cst_names)))) : QueryTree Unit)).toFormat
+#eval (QueryTree.visualize 0 ((QueryTree.make_bd_iter_two_electric_boogaloo 1 ((((cluster_list.take 30).map pdata.sink_cst_names)))) : QueryTree Unit)).toFormat
+#eval (QueryTree.visualize 0 ((QueryTree.make_bd_iter_two_electric_boogaloo 2 ((((cluster_list.take 30).map pdata.sink_cst_names)))) : QueryTree Unit)).toFormat
+#eval (QueryTree.visualize 0 ((QueryTree.make_bd_iter_two_electric_boogaloo 3 ((((cluster_list.take 30).map pdata.sink_cst_names)))) : QueryTree Unit)).toFormat
+-- same from here
+#eval (QueryTree.visualize 0 ((QueryTree.make_bd_iter_two_electric_boogaloo 4 ((((cluster_list.take 30).map pdata.sink_cst_names)))) : QueryTree Unit)).toFormat
+#eval (QueryTree.visualize 0 ((QueryTree.make_bd_iter_two_electric_boogaloo 5 ((((cluster_list.take 30).map pdata.sink_cst_names)))) : QueryTree Unit)).toFormat

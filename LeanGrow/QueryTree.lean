@@ -180,14 +180,14 @@ partial def Trie.find_max (cache : ByteArray) : Trie Nat → Option (String × N
 
 
 partial def QueryTree.split_greedy_exact_hitting_set (c : List (QueryTree α)) : List (QueryTree α) :=
-      match c with
-      | [] => []
-      | _ =>
+      -- match c with
+      -- | [] => []
+      -- | _ =>
             let apps := QueryTree.find_keys c
             match Trie.find_max ⟨#[]⟩ apps with
             | .none => c
             | .some (name, M) =>
-                  if M > 1 --∧ (M < c.length)
+                  if M > 1
                   then  let (pos, neg) := QueryTree.split_on_split name c
                         let pos' := pos.map (fun qt => QueryTree.delete_key_or_leave name qt)
                         let proceed := QueryTree.split_greedy_exact_hitting_set neg
@@ -207,9 +207,10 @@ partial def QueryTree.lift (c : List (QueryTree α)) : Trie Unit × List (QueryT
                         else (Trie.empty,c)
 
 partial def QueryTree.build_main (c : List (QueryTree α)) : Trie Unit × List (QueryTree α) :=
-      match c with
-      | [] => (Trie.empty,[])
-      | _ => let (lifted_names, listed_children) := QueryTree.lift c
+      -- match c with
+      -- | [] => (Trie.empty,[])
+      -- | _ =>
+             let (lifted_names, listed_children) := QueryTree.lift c
              (lifted_names, QueryTree.split_greedy_exact_hitting_set listed_children)
 
 
@@ -236,7 +237,7 @@ def QueryTree.make [Inhabited α] (l : List (Trie Unit)) : QueryTree  α := (Que
 partial def QueryTree.toString (string_alpha : α → String) : QueryTree  α → String
 | .root (c : List (QueryTree α)) => s!"QueryTree.root ([{String.intercalate ", " (c.map (QueryTree.toString string_alpha))}])"
 | .node (q : Trie Unit) (c : List (QueryTree α)) => s!"QueryTree.node ({print_trie q}) ([{String.intercalate ", " (c.map (QueryTree.toString string_alpha))}])"
-| .leaf a => s!"QueryTree.leaf {string_alpha a}"
+| .leaf a => s!"QueryTree.leaf ({string_alpha a})"
 
 
 
@@ -280,3 +281,11 @@ def QueryTree.make_bd_iter_two_electric_boogaloo [Inhabited α] (count: Nat) (l 
 #eval (QueryTree.visualize 0 ((QueryTree.make_bd_iter_two_electric_boogaloo 1 ([["ban", "bon", "banana"], ["ban", "bon", "banal"], ["ban", "bandana"],["and","some","more","banana", "bon"]].map SortedTrieFormList')) : QueryTree Unit)).toFormat
 #eval (QueryTree.visualize 0 ((QueryTree.make_bd_iter_two_electric_boogaloo 2 ([["ban", "bon", "banana"], ["ban", "bon", "banal"], ["ban", "bandana"],["and","some","more","banana", "bon"]].map SortedTrieFormList')) : QueryTree Unit)).toFormat
 #eval (QueryTree.visualize 0 ((QueryTree.make_bd_iter_two_electric_boogaloo 3 ([["ban", "bon", "banana"], ["ban", "bon", "banal"], ["ban", "bandana"],["and","some","more","banana", "bon"]].map SortedTrieFormList')) : QueryTree Unit)).toFormat
+
+/-
+Possible solutions:
+
+- split cluster_list in parts, process parts, find ways to merge trees ?
+- loop one .dive and .build_bd_iter 0, where at each step we print to source, elabortae the source, and prooced with the same, but for that new tree as initial tree ?
+
+-/
