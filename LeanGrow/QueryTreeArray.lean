@@ -6,48 +6,48 @@ open Lean Data
 
 
 inductive QueryTree (α : Type _)  where
-| root (c : List (QueryTree α ))
-| node (q : Trie Unit) (c : List (QueryTree α ))
+| root (c : Array (QueryTree α ))
+| node (q : Trie Unit) (c : Array (QueryTree α ))
 | leaf (a : α)
 deriving Inhabited
 
 
 partial def QueryTree.visualize (count : Nat) : QueryTree α → String
-| .root (c : List (QueryTree α)) => s!"Root\n ({String.intercalate "\n" (c.map (QueryTree.visualize 1))})"
-| .node (q : Trie Unit) (c : List (QueryTree α)) => (String.replicate count ' ') ++ s!"Node ({Trie.print_keys ⟨#[]⟩ q})\n{(String.replicate count ' ')}({String.intercalate "\n" (c.map (QueryTree.visualize (count + 3)))})"
+| .root (c : Array (QueryTree α)) => s!"Root\n ({String.intercalate "\n" (c.map (QueryTree.visualize 1)).toList})"
+| .node (q : Trie Unit) (c : Array (QueryTree α)) => (String.replicate count ' ') ++ s!"Node ({Trie.print_keys ⟨#[]⟩ q})\n{(String.replicate count ' ')}({String.intercalate "\n" (c.map (QueryTree.visualize (count + 3))).toList})"
 | .leaf _ => (String.replicate count ' ') ++ "Leaf"
 
 -- to fix : remove inhabited and make use of actual data
-def QueryTree.init (l : List (Trie Unit)) [Inhabited α] : QueryTree α := .root (l.map (fun x => .node x [.leaf default]))
+def QueryTree.init (l : Array (Trie Unit)) [Inhabited α] : QueryTree α := .root (l.map (fun x => .node x #[.leaf default]))
 
-def QueryTree.find_keys (c : List (QueryTree α)) : Trie Nat :=
-  match c with
-  | [] => Trie.empty
-  | .root _ :: _ => Trie.empty -- ill formed tree, root shouldn't appear as child
-  | .node t _ :: rest =>
-        let sofar := QueryTree.find_keys rest
-        let T := Trie.merge_count_initialise t
-        Trie.merge_count T sofar
-  | .leaf _ :: rest => QueryTree.find_keys rest
-
-def QueryTree.split_on_split (k : String) (c : List (QueryTree α)) : List (QueryTree α) × List (QueryTree α) :=
-  match c with
-  | [] => ([],[])
-  | .root _ :: _ => ([],[]) -- ill formed tree, root shouldn't appear as child
-  | .node t chi :: rest =>
-        let (sofar_pos, sofar_neg) := QueryTree.split_on_split k rest
-        let T := t.find? k
-        match T with
-        | .some _ => (.node t chi :: sofar_pos, sofar_neg)
-        | .none => (sofar_pos, .node t chi :: sofar_neg)
-  | .leaf a :: rest =>
-        let (sofar_pos, sofar_neg) := QueryTree.split_on_split k rest
-        (sofar_pos, .leaf a :: sofar_neg)
+def QueryTree.find_keys (c : Array (QueryTree α)) : Trie Nat := Id.run do
+      let mut T := Trie.empty
+      for x in c do
+            match x with
+            | .root _  => return Trie.empty
+            | .node t _ => T := Trie.merge_count (Trie.merge_count_initialise t) T
+            | _ => pure ()
+      return T
 
 
-def QueryTree.split_on (k : String) (c : List (QueryTree α)) : List (QueryTree α) :=
+def QueryTree.split_on_split {α : Type u} (k : String) (c : Array (QueryTree α)) : Array (QueryTree α) × Array (QueryTree α) := Id.run do
+      let mut out := ((#[] : Array (QueryTree α)),#[]) -- not being explicit about universe has cause the worst bug I have ever seen
+      for x in c do
+            match x with
+            | .root _  => return (#[],#[])
+            | .node t chi =>
+                  let T := t.find? k
+                  match T with
+                  | .some _ => out := (out.1.push (.node t chi), out.2)
+                  | .none => out := (out.1, out.2.push (.node t chi))
+            | .leaf a => out := (out.1, out.2.push (.leaf a))
+      return out
+
+
+
+def QueryTree.split_on (k : String) (c : Array (QueryTree α)) : Array (QueryTree α) :=
   let (pos, neg) := QueryTree.split_on_split k c
-  (.node (SortedTrieFormList' [k]) pos) :: neg
+  neg.push (.node (SortedTrieFormList' [k]) pos)
 
 
 -- to NameListCompare
@@ -107,9 +107,10 @@ partial def Trie.delete (k : List Char) : Trie α → Trie α
 
 
 
+
 def QueryTree.map_on_children (f : QueryTree α → QueryTree α) : QueryTree α → QueryTree α
-| .root (c : List (QueryTree α)) => .root (c.map f)
-| .node (q : Trie Unit) (c : List (QueryTree α)) => .node q (c.map f)
+| .root (c : Array (QueryTree α)) => .root (c.map f)
+| .node (q : Trie Unit) (c : Array (QueryTree α)) => .node q (c.map f)
 | .leaf a => .leaf a
 
 def QueryTree.delete_key_or_leave (k : String) : QueryTree α → QueryTree α :=
@@ -119,17 +120,18 @@ def QueryTree.delete_key_or_leave (k : String) : QueryTree α → QueryTree α :
             | x => x
 
 
-def QueryTree.split_maintain_on (k : String) (c : List (QueryTree α)) : List (QueryTree α) :=
+def QueryTree.split_maintain_on (k : String) (c : Array (QueryTree α)) : Array (QueryTree α) :=
   let (pos, neg) := QueryTree.split_on_split k c
   let pos' := pos.map (fun qt => qt.delete_key_or_leave k)
-  (.node (SortedTrieFormList' [k]) pos') :: neg
+  neg.push (.node (SortedTrieFormList' [k]) pos')
 
 
 
 def QueryTree.lift_topmost_on (k : String) : QueryTree α → QueryTree α
-| .root (c : List (QueryTree α)) => .root [.node (SortedTrieFormList' [k]) (c.map (QueryTree.delete_key_or_leave  k))]
-| .node (q : Trie Unit) (c : List (QueryTree α)) => .node (sorted_insert q k ()) (c.map (QueryTree.delete_key_or_leave k))
+| .root (c : Array (QueryTree α)) => .root #[.node (SortedTrieFormList' [k]) (c.map (QueryTree.delete_key_or_leave  k))]
+| .node (q : Trie Unit) (c : Array (QueryTree α)) => .node (sorted_insert q k ()) (c.map (QueryTree.delete_key_or_leave k))
 | .leaf a => .leaf a
+
 
 
 -- to NameListCompare
@@ -179,75 +181,77 @@ partial def Trie.find_max (cache : ByteArray) : Trie Nat → Option (String × N
 #eval Trie.find_max ⟨#[]⟩ (.node .none ⟨#[(62 : UInt8),72]⟩ #[(.node (.some 4) ⟨#[(63 : UInt8),64]⟩ #[(.leaf (.some 2)), (.leaf (.some 2))]), (.node1 .none 73 (.leaf (.some 4)))])
 
 
-partial def QueryTree.split_greedy_exact_hitting_set (c : List (QueryTree α)) : List (QueryTree α) :=
-      -- match c with
-      -- | [] => []
-      -- | _ =>
-            let apps := QueryTree.find_keys c
-            match Trie.find_max ⟨#[]⟩ apps with
-            | .none => c
-            | .some (name, M) =>
-                  if M > 1
-                  then  let (pos, neg) := QueryTree.split_on_split name c
-                        let pos' := pos.map (fun qt => QueryTree.delete_key_or_leave name qt)
-                        let proceed := QueryTree.split_greedy_exact_hitting_set neg
-                        (.node (SortedTrieFormList' [name]) pos') :: proceed
-                  else  c
+
+partial def QueryTree.split_greedy_exact_hitting_set {α : Type u} (c : Array (QueryTree α)) : Array (QueryTree α) :=
+      let apps := QueryTree.find_keys c
+      match Trie.find_max ⟨#[]⟩ apps with
+      | .none => c
+      | .some (name, M) =>
+            if M > 1
+            then  let (pos, neg) := QueryTree.split_on_split name c
+                  let pos' := pos.map (fun qt => QueryTree.delete_key_or_leave name qt)
+                  let proceed := QueryTree.split_greedy_exact_hitting_set neg
+                  proceed.push (.node (SortedTrieFormList' [name]) pos')
+            else  c
 
 
-partial def QueryTree.lift (c : List (QueryTree α)) : Trie Unit × List (QueryTree α) :=
-                  let apps := QueryTree.find_keys c
-                  match Trie.find_max ⟨#[]⟩ apps with
-                  | .none => (Trie.empty,c)
-                  | .some (name, M) =>
-                        if M = c.length
-                        then  let c' := c.map (fun qt => QueryTree.delete_key_or_leave name qt)
-                              let (T,cf) := lift c'
-                              (sorted_insert T name (), cf)
-                        else (Trie.empty,c)
+partial def QueryTree.lift (c : Array (QueryTree α)) : Trie Unit × Array (QueryTree α) :=
+      let apps := QueryTree.find_keys c
+      match Trie.find_max ⟨#[]⟩ apps with
+      | .none => (Trie.empty,c)
+      | .some (name, M) =>
+            if M = c.size
+            then  let c' := c.map (fun qt => QueryTree.delete_key_or_leave name qt)
+                  let (T,cf) := lift c'
+                  (sorted_insert T name (), cf)
+            else (Trie.empty,c)
 
-partial def QueryTree.build_main (c : List (QueryTree α)) : Trie Unit × List (QueryTree α) :=
-      -- match c with
-      -- | [] => (Trie.empty,[])
-      -- | _ =>
-             let (lifted_names, listed_children) := QueryTree.lift c
-             (lifted_names, QueryTree.split_greedy_exact_hitting_set listed_children)
+
+partial def QueryTree.build_main (c : Array (QueryTree α)) : Trie Unit × Array (QueryTree α) :=
+      let (lifted_names, listed_children) := QueryTree.lift c
+      (lifted_names, QueryTree.split_greedy_exact_hitting_set listed_children)
+
 
 
 
 
 partial def QueryTree.build [Inhabited α] : QueryTree α → QueryTree α
-| .root c =>
+| .root c => --.leaf default
       let (l,cn) := QueryTree.build_main c
       match l with
       | .leaf .none => .root (cn.map (QueryTree.build))
-      | _=> .root [.node l (cn.map ((QueryTree.build)) )]
-| .node t c =>
+      | _=> .root #[.node l (cn.map ((QueryTree.build)))]
+| .node t c => --.leaf default
       let (l,cn) := QueryTree.build_main c
       if cn.isEmpty
-      then   .node (Trie.merge t l) [.leaf default]
+      then   .node (Trie.merge t l) #[.leaf default]
       else   .node (Trie.merge t l) (cn.map (QueryTree.build))
 | .leaf a =>  .leaf a
 
 
 
-def QueryTree.make [Inhabited α] (l : List (Trie Unit)) : QueryTree  α := (QueryTree.build (QueryTree.init l))
+
+
+
+def QueryTree.make [Inhabited α] (l : Array (Trie Unit)) : QueryTree  α := (QueryTree.build (QueryTree.init l))
 
 
 partial def QueryTree.toString (string_alpha : α → String) : QueryTree  α → String
-| .root (c : List (QueryTree α)) => s!"QueryTree.root ([{String.intercalate ", " (c.map (QueryTree.toString string_alpha))}])"
-| .node (q : Trie Unit) (c : List (QueryTree α)) => s!"QueryTree.node ({print_trie q}) ([{String.intercalate ", " (c.map (QueryTree.toString string_alpha))}])"
+| .root (c : Array (QueryTree α)) => s!"QueryTree.root (#[{String.intercalate ", " (c.map (QueryTree.toString string_alpha)).toList}])"
+| .node (q : Trie Unit) (c : Array (QueryTree α)) => s!"QueryTree.node ({print_trie q}) (#[{String.intercalate ", " (c.map (QueryTree.toString string_alpha)).toList}])"
 | .leaf a => s!"QueryTree.leaf ({string_alpha a})"
 
 
 
-def test_trees : QueryTree Unit := QueryTree.init ([["ban", "banana"], ["ban", "banal"], ["ban", "bandana"],["and","some","more","banana"]].map SortedTrieFormList')
+def test_trees : QueryTree Unit := QueryTree.init ([["ban", "banana"], ["ban", "banal"], ["ban", "bandana"],["and","some","more","banana"]].map SortedTrieFormList').toArray
 
 #eval (QueryTree.visualize 0 ((QueryTree.build test_trees))).toFormat
-#eval (QueryTree.visualize 0 ((QueryTree.make ([["ban", "banana"], ["ban", "banal"], ["ban", "bandana"],["and","some","more","banana"]].map SortedTrieFormList')) : QueryTree Unit)).toFormat
+#eval (QueryTree.visualize 0 ((QueryTree.make ([["ban", "banana"], ["ban", "banal"], ["ban", "bandana"],["and","some","more","banana"]].map SortedTrieFormList').toArray) : QueryTree Unit)).toFormat
 
-#eval (QueryTree.visualize 0 ((QueryTree.make ([["ban", "bon", "banana"], ["ban", "bon", "banal"], ["ban", "bandana"],["and","some","more","banana", "bon"]].map SortedTrieFormList')) : QueryTree Unit)).toFormat
+#eval (QueryTree.visualize 0 ((QueryTree.make ([["ban", "bon", "banana"], ["ban", "bon", "banal"], ["ban", "bandana"],["and","some","more","banana", "bon"]].map SortedTrieFormList').toArray) : QueryTree Unit)).toFormat
 
+
+#exit
 
 partial def QueryTree.build_bd_iter [Inhabited α] (count: Nat) : QueryTree α → QueryTree α
 | .root c =>
