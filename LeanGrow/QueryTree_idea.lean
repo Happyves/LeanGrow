@@ -198,7 +198,7 @@ partial def QueryTree.split_greedy_exact_hitting_set (c : List (QueryTree α)) :
 Make lifting more efficient as its the mass stackspace consumer in the crashes.
 
 - instead of recomputing apps:
-      - upsert the value at maximising key by decresing it ?
+      - upsert the value at maximising key by deacresing it ?
       - make a version of find_max that ignores branches of a tree that we iteraively megre the maximising keys to ?
 
 -/
@@ -216,11 +216,72 @@ partial def QueryTree.lift (c : List (QueryTree α)) : Trie Unit × List (QueryT
                         else (Trie.empty,c)
 
 
-#exit
+
+
+partial def Trie.find_maxes (cache : ByteArray) : Trie Nat → Option (Trie Unit × Nat)
+| .leaf x =>
+      match x with
+      | .some v => .some (SortedTrieFormList' [(String.fromUTF8 cache (by sorry))], v)
+      | .none => .none
+| .node1 x a t =>
+      match Trie.find_maxes (cache.push a) t with
+      | .some (s,v) =>
+          match x with
+          | .some w => match compare w v with
+                       | .gt => .some (SortedTrieFormList' [(String.fromUTF8 cache (by sorry))], w)
+                       | .eq => .some (sorted_insert s ((String.fromUTF8 cache (by sorry))) () ,v)
+                       | .lt => .some (s,v)
+          | .none => .some (s,v)
+      | .none =>
+          match x with
+          | .some w => .some (SortedTrieFormList' [(String.fromUTF8 cache (by sorry))], w)
+          | .none => .none
+| .node x as ts => Id.run do
+      let mut M := 0
+      let mut T := Trie.empty
+      for i in Array.range as.size do
+        let a := as.get! i
+        let t := ts.get! i
+        match Trie.find_maxes (cache.push a) t with
+        | .some (s,v) =>
+            match compare v M with
+            | .gt =>
+                  M := v
+                  T := s
+            | .eq =>
+                  T := Trie.merge T s
+            | .lt => pure ()
+        | .none => pure ()
+      match x with
+      | .some w => match compare w M with
+                   | .gt => .some (SortedTrieFormList' [(String.fromUTF8 cache (by sorry))], w)
+                   | .eq => .some (sorted_insert T ((String.fromUTF8 cache (by sorry))) () ,w)
+                   | .lt => .some (T,M)
+      | .none => .some (T,M)
+
+
+
+def QueryTree.delete_keyes_or_leave (k : Trie Unit) : QueryTree α → QueryTree α :=
+  fun t =>  match t with
+            | .node T r => .node ((Trie.filter T k)) r
+            | x => x
+
+partial def QueryTree.lift' (c : List (QueryTree α)) : Trie Unit × List (QueryTree α) :=
+                  let apps := QueryTree.find_keys c
+                  match Trie.find_maxes ⟨#[]⟩ apps with
+                  | .none => (Trie.empty,c)
+                  | .some (names, M) =>
+                        if M = c.length
+                        then  let c' := c.map (fun qt => QueryTree.delete_keyes_or_leave names qt)
+                              (names, c')
+                        else (Trie.empty,c)
+
+
+--#exit
 
 
 partial def QueryTree.build_main (c : List (QueryTree α)) : Trie Unit × List (QueryTree α) :=
-      let (lifted_names, listed_children) := QueryTree.lift c
+      let (lifted_names, listed_children) := QueryTree.lift' c
       (lifted_names, QueryTree.split_greedy_exact_hitting_set listed_children)
 
 
@@ -258,35 +319,80 @@ def test_trees : QueryTree Unit := QueryTree.init ([["ban", "banana"], ["ban", "
 #eval (QueryTree.visualize 0 ((QueryTree.make ([["ban", "bon", "banana"], ["ban", "bon", "banal"], ["ban", "bandana"],["and","some","more","banana", "bon"]].map SortedTrieFormList')) : QueryTree Unit)).toFormat
 
 
-partial def QueryTree.build_bd_iter [Inhabited α] (count: Nat) : QueryTree α → QueryTree α
-| .root c =>
-      let (l,cn) := QueryTree.build_main c
-      match l with
-      | .leaf .none => if count > 0 then .root (cn.map (QueryTree.build_bd_iter (count - 1))) else .root (cn)
-      | _=> if count > 0 then .root [.node l (cn.map (QueryTree.build_bd_iter (count - 1)))] else .root [.node l (cn)]
-| .node t c =>
-      let (l,cn) := QueryTree.build_main c
-      if cn.isEmpty
-      then   .node (Trie.merge t l) [.leaf default]
-      else   if count > 0 then .node (Trie.merge t l) (cn.map (QueryTree.build_bd_iter  (count - 1))) else .node (Trie.merge t l) (cn)
-| .leaf a =>  .leaf a
+def QueryTree.init_wData (l : List ((Trie Unit) × α)) : QueryTree α := .root (l.map (fun (t,d) => .node t [.leaf d]))
 
-def QueryTree.make_bd_iter [Inhabited α] ( count: Nat) (l : List (Trie Unit)) : QueryTree  α := (QueryTree.build_bd_iter  count (QueryTree.init l))
+def QueryTree.make_wData [Inhabited α]  (l : List ((Trie Unit) × α)) : QueryTree  α := (QueryTree.build (QueryTree.init_wData l))
 
-partial def QueryTree.dive [Inhabited α] (depth: Nat) (act : QueryTree α → QueryTree α) : QueryTree α → QueryTree α
-| .root c => if depth > 0 then .root (c.map (QueryTree.dive (depth - 1) act)) else act (.root c)
-| .node t c => if depth > 0 then .node t (c.map (QueryTree.dive (depth - 1) act)) else act (.node t c)
-| .leaf a =>  act (.leaf a)
 
-def QueryTree.make_bd_iter_two_electric_boogaloo [Inhabited α] (count: Nat) (l : List (Trie Unit)) : QueryTree  α :=
-      let fst :=  (QueryTree.init l)
-      Id.run do
-            let mut qt := fst
-            for x in (List.range count) do
-                  qt := QueryTree.dive x (QueryTree.build_bd_iter 0) qt
-            return qt
+-- # BS
 
-#eval (QueryTree.visualize 0 ((QueryTree.make_bd_iter_two_electric_boogaloo 0 ([["ban", "bon", "banana"], ["ban", "bon", "banal"], ["ban", "bandana"],["and","some","more","banana", "bon"]].map SortedTrieFormList')) : QueryTree Unit)).toFormat
-#eval (QueryTree.visualize 0 ((QueryTree.make_bd_iter_two_electric_boogaloo 1 ([["ban", "bon", "banana"], ["ban", "bon", "banal"], ["ban", "bandana"],["and","some","more","banana", "bon"]].map SortedTrieFormList')) : QueryTree Unit)).toFormat
-#eval (QueryTree.visualize 0 ((QueryTree.make_bd_iter_two_electric_boogaloo 2 ([["ban", "bon", "banana"], ["ban", "bon", "banal"], ["ban", "bandana"],["and","some","more","banana", "bon"]].map SortedTrieFormList')) : QueryTree Unit)).toFormat
-#eval (QueryTree.visualize 0 ((QueryTree.make_bd_iter_two_electric_boogaloo 3 ([["ban", "bon", "banana"], ["ban", "bon", "banal"], ["ban", "bandana"],["and","some","more","banana", "bon"]].map SortedTrieFormList')) : QueryTree Unit)).toFormat
+inductive BS (α : Type _) where
+| ofVal (_ : α)
+| ofPoint (_ : QueryTree (BS α))
+deriving Inhabited
+
+
+inductive preBS (α : Type _) where
+| ofVal (_ : α)
+| ofPoint (_ : Nat)
+
+partial def QueryTree.stratify (depth count idx : Nat) (T : QueryTree α ) : Nat × List (Nat × QueryTree (preBS α)) × (QueryTree (preBS α)) :=
+      match T with
+      | .node t c =>
+            if count = 0
+            then  let (idx_c, qts, pqt) := QueryTree.stratify depth depth idx (.root c)
+                  let link := .node t [.leaf (.ofPoint idx_c)]
+                  (idx_c + 1, (idx_c, pqt) :: qts, link)
+            else  Id.run do
+                        let mut i := idx
+                        let mut rev_pqt := []
+                        let mut qts_all := []
+                        for qt in c do
+                              let (idx_c, qts, pqt) := QueryTree.stratify depth (count-1) i qt
+                              i := idx_c + 1
+                              rev_pqt := pqt :: rev_pqt
+                              qts_all := qts ++ qts_all
+                        return (i, qts_all, .node t rev_pqt)
+      | .root c => -- shouldn't occure but I'll code anyway
+            if count = 0
+            then  let (idx_c, qts, pqt) := QueryTree.stratify depth depth idx (.root c)
+                  let link := .root [.leaf (.ofPoint idx_c)]
+                  (idx_c + 1, (idx_c, pqt) :: qts, link)
+            else  Id.run do
+                        let mut i := idx
+                        let mut rev_pqt := []
+                        let mut qts_all := []
+                        for qt in c do
+                              let (idx_c, qts, pqt) := QueryTree.stratify depth (count-1) i qt
+                              i := idx_c + 1
+                              rev_pqt := pqt :: rev_pqt
+                              qts_all := qts ++ qts_all
+                        return (i, qts_all, .root rev_pqt)
+      | .leaf a => (idx, [], .leaf (.ofVal a))
+
+
+def test_tree' := ((QueryTree.make ([["ban", "bon", "banana"], ["ban", "bon", "banal"], ["ban", "bandana"],["and","some","more","banana", "bon"]].map SortedTrieFormList')) : QueryTree Unit)
+
+partial def QueryTree.visualize' (count : Nat) : QueryTree (preBS α) → String
+| .root (c : List (QueryTree (preBS α))) => s!"Root\n ({String.intercalate "\n" (c.map (QueryTree.visualize' 1))})"
+| .node (q : Trie Unit) (c : List (QueryTree (preBS α))) => (String.replicate count ' ') ++ s!"Node ({Trie.print_keys ⟨#[]⟩ q})\n{(String.replicate count ' ')}({String.intercalate "\n" (c.map (QueryTree.visualize' (count + 3)))})"
+| .leaf bs => (String.replicate count ' ') ++ s!"Leaf {match bs with | .ofVal _ => "val" | .ofPoint x => s!"pointer {x}"}"
+
+
+#eval (QueryTree.visualize' 0 (QueryTree.stratify 1 1 0 test_tree').2.2).toFormat
+#eval (String.join (((QueryTree.stratify 1 1 0 test_tree').2.1).map (fun (n,t) => s!"\nTree {n}:\n" ++ (QueryTree.visualize' 0 t)))).toFormat
+#eval (QueryTree.stratify 1 1 0 test_tree').1
+
+def QueryTree.stratify_full (depth : Nat) (T : QueryTree α ) : Nat × List (Nat × QueryTree (preBS α)) :=
+      let (c,l,qt) := QueryTree.stratify depth depth 0 T
+      (c, (c,qt) :: l)
+
+#check QueryTree.toString
+
+
+def preBS.toString_trick {α : Type _} (string_alpha : α → String) : preBS α → String
+| .ofVal (a : α) => s!"(BS.ofVal ({string_alpha a}))"
+| .ofPoint (p : Nat) => s!"(BS.ofPoint qete_{p})"
+
+def QueryTree.toString_preBS (T : QueryTree (preBS α)) (string_alpha : α → String) : String :=
+      QueryTree.toString (preBS.toString_trick string_alpha) T

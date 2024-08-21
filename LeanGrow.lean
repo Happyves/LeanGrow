@@ -19,8 +19,9 @@ import LeanGrow.Test
 --import LeanGrow.Caches.mark2clusters
 
 import LeanGrow.Caches.mark2cache_v2_big
-import LeanGrow.Caches.mark1goalCache_big
-import LeanGrow.CoClustering
-import LeanGrow.Caches.CoData
-import LeanGrow.Caches.goalCoData
-import LeanGrow.Caches.CoData_qt
+-- import LeanGrow.Caches.mark1goalCache_big
+-- import LeanGrow.CoClustering
+-- import LeanGrow.Caches.CoData
+-- import LeanGrow.Caches.goalCoData
+-- import LeanGrow.Caches.CoData_qt
+import LeanGrow.Caches.Querytree

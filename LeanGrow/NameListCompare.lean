@@ -487,7 +487,7 @@ partial def Trie.print_keys (cache : ByteArray) : Trie α → List String
 
 #eval Trie.print_keys ⟨#[]⟩  (Trie.merge (SortedTrieFormList ["ban", "banana", "banal"]) (SortedTrieFormList ["ban", "banana", "bandana"]))
 
-/- in the sense l\r -/
+/-- in the sense l\r -/
 partial def Trie.filter [BEq α] (l r : Trie α) : Trie α :=
   match l with
   | .leaf x =>

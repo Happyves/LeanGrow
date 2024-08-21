@@ -1,19 +1,35 @@
 
 import LeanGrow.Caches.mark2cache_v2_big
-import LeanGrow.QueryTree
+--import LeanGrow.QueryTree
 --import LeanGrow.QueryTreeArray
-
+import LeanGrow.QueryTree_idea
 
 open Lean Data
 
--- elab "make_queryTree_clusters" : command => do
---   let trie_list := cluster_list.map pdata.sink_cst_names
---   let res := (QueryTree.make trie_list : QueryTree Unit)
---   let source := s!"import LeanGrow.QueryTree\nopen Lean Data\n def tha_tree : QueryTree := {QueryTree.toString (fun _ => "()") res}"
---   IO.FS.writeFile ⟨"/./home/yves/Desktop/CodeWorkspace/Lean4_General/LeanGrow/LeanGrow/Caches/Querytree.lean"⟩ (source)
+
+instance : Inhabited pdata where
+  default := {cst_name := `DUMMY, cst_level_params := [], dag := {dag := [], size := 0} , sink_cst_names := Trie.empty, goal_cst_names := Trie.empty}
+
+
+
+elab "make_queryTree_clusters" : command => do
+  let trie_list := cluster_list.map (fun x => (x.sink_cst_names, x))
+  let res := (QueryTree.make_wData trie_list : QueryTree pdata)
+  let (total, L) := QueryTree.stratify_full 2 res
+  let mut toSource := []
+  for (i,T) in L do
+    toSource := (s!"\ndef qete_{i} : QueryTree (BS pdata) := {QueryTree.toString_preBS T (fun pd => "PDATA." ++ pd.cst_name.toString)}") :: toSource
+  let source := s!"import LeanGrow.QueryTree_idea\nimport LeanGrow.Caches.mark2cache_v2_big\nopen Lean Data{String.join toSource}\n def tha_tree : QueryTree (BS pdata) := qete_{total}"
+  IO.FS.writeFile ⟨"/./home/yves/Desktop/CodeWorkspace/Lean4_General/LeanGrow/LeanGrow/Caches/Querytree.lean"⟩ (source)
 
 
 --make_queryTree_clusters
+
+
+
+-- **Moral of the story: learn how the backend works**
+#exit
+
 
 
 --#eval (QueryTree.visualize 0 (QueryTree.make ((cluster_list.take 1000).map pdata.sink_cst_names).toArray : QueryTree Unit)).toFormat
@@ -24,6 +40,10 @@ def uno' : QueryTree Unit := QueryTree.make ((cluster_list.take 300).map pdata.s
 def dos' : QueryTree Unit := QueryTree.make (((cluster_list.drop 300).take 300).map pdata.sink_cst_names)
 --#eval (QueryTree.visualize 0 (QueryTree.merge  [uno',dos'])).toFormat
 -- works for 100, crash for at east 300
+
+
+#eval (QueryTree.visualize 0 (QueryTree.make ((cluster_list).map pdata.sink_cst_names) : QueryTree Unit)).toFormat
+
 
 #exit
 
