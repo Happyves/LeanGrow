@@ -1,7 +1,7 @@
 
 import LeanGrow.Caches.mark2cache_v2_big
--- import LeanGrow.QueryTree
-import LeanGrow.QueryTreeArray
+import LeanGrow.QueryTree
+--import LeanGrow.QueryTreeArray
 
 
 open Lean Data
@@ -19,6 +19,11 @@ open Lean Data
 --#eval (QueryTree.visualize 0 (QueryTree.make ((cluster_list.take 1000).map pdata.sink_cst_names).toArray : QueryTree Unit)).toFormat
 -- Array version crashed too
 
+
+def uno' : QueryTree Unit := QueryTree.make ((cluster_list.take 300).map pdata.sink_cst_names)
+def dos' : QueryTree Unit := QueryTree.make (((cluster_list.drop 300).take 300).map pdata.sink_cst_names)
+--#eval (QueryTree.visualize 0 (QueryTree.merge  [uno',dos'])).toFormat
+-- works for 100, crash for at east 300
 
 #exit
 

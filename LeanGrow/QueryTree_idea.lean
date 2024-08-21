@@ -180,19 +180,28 @@ partial def Trie.find_max (cache : ByteArray) : Trie Nat → Option (String × N
 
 
 partial def QueryTree.split_greedy_exact_hitting_set (c : List (QueryTree α)) : List (QueryTree α) :=
-      -- match c with
-      -- | [] => []
-      -- | _ =>
-            let apps := QueryTree.find_keys c
-            match Trie.find_max ⟨#[]⟩ apps with
-            | .none => c
-            | .some (name, M) =>
-                  if M > 1
-                  then  let (pos, neg) := QueryTree.split_on_split name c
-                        let pos' := pos.map (fun qt => QueryTree.delete_key_or_leave name qt)
-                        let proceed := QueryTree.split_greedy_exact_hitting_set neg
-                        (.node (SortedTrieFormList' [name]) pos') :: proceed
-                  else  c
+      let apps := QueryTree.find_keys c
+      match Trie.find_max ⟨#[]⟩ apps with
+      | .none => c
+      | .some (name, M) =>
+            if M > 1
+            then  let (pos, neg) := QueryTree.split_on_split name c
+                  let pos' := pos.map (fun qt => QueryTree.delete_key_or_leave name qt)
+                  let proceed := QueryTree.split_greedy_exact_hitting_set neg
+                  (.node (SortedTrieFormList' [name]) pos') :: proceed
+            else  c
+
+
+
+/-
+
+Make lifting more efficient as its the mass stackspace consumer in the crashes.
+
+- instead of recomputing apps:
+      - upsert the value at maximising key by decresing it ?
+      - make a version of find_max that ignores branches of a tree that we iteraively megre the maximising keys to ?
+
+-/
 
 
 partial def QueryTree.lift (c : List (QueryTree α)) : Trie Unit × List (QueryTree α) :=
@@ -206,13 +215,13 @@ partial def QueryTree.lift (c : List (QueryTree α)) : Trie Unit × List (QueryT
                               (sorted_insert T name (), cf)
                         else (Trie.empty,c)
 
-partial def QueryTree.build_main (c : List (QueryTree α)) : Trie Unit × List (QueryTree α) :=
-      -- match c with
-      -- | [] => (Trie.empty,[])
-      -- | _ =>
-             let (lifted_names, listed_children) := QueryTree.lift c
-             (lifted_names, QueryTree.split_greedy_exact_hitting_set listed_children)
 
+#exit
+
+
+partial def QueryTree.build_main (c : List (QueryTree α)) : Trie Unit × List (QueryTree α) :=
+      let (lifted_names, listed_children) := QueryTree.lift c
+      (lifted_names, QueryTree.split_greedy_exact_hitting_set listed_children)
 
 
 
@@ -281,197 +290,3 @@ def QueryTree.make_bd_iter_two_electric_boogaloo [Inhabited α] (count: Nat) (l 
 #eval (QueryTree.visualize 0 ((QueryTree.make_bd_iter_two_electric_boogaloo 1 ([["ban", "bon", "banana"], ["ban", "bon", "banal"], ["ban", "bandana"],["and","some","more","banana", "bon"]].map SortedTrieFormList')) : QueryTree Unit)).toFormat
 #eval (QueryTree.visualize 0 ((QueryTree.make_bd_iter_two_electric_boogaloo 2 ([["ban", "bon", "banana"], ["ban", "bon", "banal"], ["ban", "bandana"],["and","some","more","banana", "bon"]].map SortedTrieFormList')) : QueryTree Unit)).toFormat
 #eval (QueryTree.visualize 0 ((QueryTree.make_bd_iter_two_electric_boogaloo 3 ([["ban", "bon", "banana"], ["ban", "bon", "banal"], ["ban", "bandana"],["and","some","more","banana", "bon"]].map SortedTrieFormList')) : QueryTree Unit)).toFormat
-
-
-
-
--- # BS
-
-inductive BS (α : Type _) where
-| ofVal (_ : α)
-| ofPoint (_ : QueryTree (BS α))
-deriving Inhabited
-
-
-inductive preBS (α : Type _) where
-| ofVal (_ : α)
-| ofPoint (_ : Nat)
-
-instance [Inhabited α] : Inhabited (preBS α) where
-      default := .ofVal default
-
-partial def BS.toString (alpha_toString : α → String) : BS α → String
-| .ofVal (x : α) => s!"BS.ofVal ({alpha_toString x})"
-| .ofPoint (x : QueryTree (BS α)) => s!"BS.ofPoint ({QueryTree.toString (BS.toString alpha_toString) x})"
-
-
-def preBS.toString (alpha_toString : α → String) : preBS α → String
-| .ofVal (x : α) => s!"preBS.ofVal ({alpha_toString x})"
-| .ofPoint (x : Nat) => s!"preBS.ofPoint {x}"
-
---#exit
-
-partial def QueryTree.split_greedy_exact_hitting_set_preBS (c : List (QueryTree (preBS α))) (start: Nat) : (List (Nat ×  List (QueryTree (preBS α)))) × List (QueryTree (preBS α)) :=
-      let apps := QueryTree.find_keys c
-      match Trie.find_max ⟨#[]⟩ apps with
-      | .none => ([(start, c)], c)
-      | .some (name, M) =>
-            if M > 1
-            then  let (pos, neg) := QueryTree.split_on_split name c
-                  let pos' := pos.map (fun qt => QueryTree.delete_key_or_leave name qt)
-                  let (proceed_real, proceed_pointers) := QueryTree.split_greedy_exact_hitting_set_preBS neg (start + 1)
-                  ( (start, pos') :: proceed_real, (.node (SortedTrieFormList' [name]) [.leaf (.ofPoint start)]) :: proceed_pointers)
-            else  ([(start, c)], c)
-
-partial def QueryTree.build_main_preBS (c : List (QueryTree (preBS α))) (start: Nat) : Trie Unit × List (Nat ×  List (QueryTree (preBS α))) × List (QueryTree (preBS α)) :=
-      let (lifted_names, listed_children) := QueryTree.lift c
-      let (split_children_real, split_children_pointer) := QueryTree.split_greedy_exact_hitting_set_preBS listed_children start
-      (lifted_names, split_children_real, split_children_pointer)
-
-
-partial def QueryTree.build_preBS  (start: Nat) : QueryTree (preBS α) → (QueryTree (preBS α) × List (Nat × (QueryTree (preBS α))) × Nat)
-| .root c =>
-      let (l,cnr,cnp) := QueryTree.build_main_preBS c start
-      match l with
-      | .leaf .none => (.root cnp, cnr.map (fun (n,L) => (n, .root L)), start + cnr.length)
-      | _=> (.root [.node l (cnp)], cnr.map (fun (n,L) => (n, .root L)), start + cnr.length)
-| .node t c =>
-      let (l,cnr,cnp) := QueryTree.build_main_preBS c start
-      (.node (Trie.merge t l) (cnp), cnr.map (fun (n,L) => (n, .root L)), start + cnr.length )
-| .leaf a =>  (.leaf a, [], start)
-
-
-
-partial def QueryTree.visualize' (count : Nat) : QueryTree (preBS α) → String
-| .root (c : List (QueryTree (preBS α))) => s!"Root\n ({String.intercalate "\n" (c.map (QueryTree.visualize' 1))})"
-| .node (q : Trie Unit) (c : List (QueryTree (preBS α))) => (String.replicate count ' ') ++ s!"Node ({Trie.print_keys ⟨#[]⟩ q})\n{(String.replicate count ' ')}({String.intercalate "\n" (c.map (QueryTree.visualize' (count + 3)))})"
-| .leaf bs => (String.replicate count ' ') ++ s!"Leaf {match bs with | .ofVal _ => "val" | .ofPoint x => s!"pointer {x}"}"
-
-
-def QueryTree.nonTerminal? : QueryTree α → Bool
-| .root c | .node _ c =>
-      match c with
-      | [.leaf _] => false
-      | [.node _ [.leaf _]] => false
-      | _ => true
-| _ => false
-
---#exit
-
-def QueryTree.make_preBS (depth : Nat) (l : List (Trie Unit)) : String := Id.run do
-      let mut process := [(0,(QueryTree.init l : QueryTree (preBS Unit)))]
-      let mut source := ""
-      let mut c := 1
-      for _ in List.range depth do
-            --dbg_trace s!"Iter {i}:\nCounter {c}\nPorcess [{String.intercalate ", " (process.map (fun (n,t) => s!"({n}, {(QueryTree.visualize' 0 t).toFormat})"))}]"
-            let mut process_inner := []
-            for (n,T) in process do
-                  if QueryTree.nonTerminal? T
-                  then  let (toPrint, toStack, count) := QueryTree.build_preBS c T
-                        --dbg_trace s!"Processing {n}, adding for print :  {(QueryTree.visualize' 0 toPrint).toFormat}\nToStack [{String.intercalate ", " (toStack.map (fun (n,t) => s!"({n}, {(QueryTree.visualize' 0 t).toFormat})"))}]"
-                        c := count
-                        process_inner := toStack :: process_inner
-                        source := s!"def qt_preBS_{n} : QueryTree (preBS Unit) := {QueryTree.toString (preBS.toString (fun _ => "()")) toPrint}\n" ++ source
-            process := process_inner.join
-      --dbg_trace s!"Iter final:\nCounter {c}\nPorcess [{String.intercalate ", " (process.map (fun (n,t) => s!"({n}, {(QueryTree.visualize' 0 t).toFormat})"))}]"
-      for (n,T) in process do
-            if QueryTree.nonTerminal? T
-            then  let toPrint := QueryTree.build T
-                  --dbg_trace s!"Processing {n}, adding for print :  {(QueryTree.visualize' 0 toPrint).toFormat}"
-                  source := s!"def qt_preBS_{n} : QueryTree (preBS Unit) := {QueryTree.toString (preBS.toString (fun _ => "()")) toPrint}\n" ++ source
-      return source
-
-
---#exit
-
-#eval (QueryTree.make_preBS 2 ([["ban", "bon", "banana"], ["ban", "bon", "banal"], ["ban", "bandana"],["and","some","more","banana", "bon"]].map SortedTrieFormList')).toFormat
-
-def qt_preBS_3 : QueryTree (preBS Unit) := QueryTree.root ([QueryTree.node (Lean.Data.Trie.node1 (none) 98 (Lean.Data.Trie.node (none) ⟨#[97,111]⟩ #[Lean.Data.Trie.node1 (none) 110 (Lean.Data.Trie.node1 (none) 97 (Lean.Data.Trie.node1 (none) 110 (Lean.Data.Trie.node1 (none) 97 (Lean.Data.Trie.leaf ((some ())))))),Lean.Data.Trie.node1 (none) 110 (Lean.Data.Trie.leaf (none))])) ([QueryTree.leaf (preBS.ofVal (()))]), QueryTree.node (Lean.Data.Trie.node1 (none) 98 (Lean.Data.Trie.node (none) ⟨#[97,111]⟩ #[Lean.Data.Trie.node1 (none) 110 (Lean.Data.Trie.node1 (none) 97 (Lean.Data.Trie.node1 (none) 108 (Lean.Data.Trie.leaf ((some ()))))),Lean.Data.Trie.node1 (none) 110 (Lean.Data.Trie.leaf (none))])) ([QueryTree.leaf (preBS.ofVal (()))])])
-def qt_preBS_1 : QueryTree (preBS Unit) := QueryTree.root ([QueryTree.node (Lean.Data.Trie.node1 (none) 98 (Lean.Data.Trie.node1 (none) 111 (Lean.Data.Trie.node1 (none) 110 (Lean.Data.Trie.leaf ((some ())))))) ([QueryTree.leaf (preBS.ofPoint 3)]), QueryTree.node (Lean.Data.Trie.node1 (none) 98 (Lean.Data.Trie.node1 (none) 97 (Lean.Data.Trie.node1 (none) 110 (Lean.Data.Trie.node1 (none) 100 (Lean.Data.Trie.node1 (none) 97 (Lean.Data.Trie.node1 (none) 110 (Lean.Data.Trie.node1 (none) 97 (Lean.Data.Trie.leaf ((some ())))))))))) ([QueryTree.leaf (preBS.ofVal (()))])])
-def qt_preBS_0 : QueryTree (preBS Unit) := QueryTree.root ([QueryTree.node (Lean.Data.Trie.node1 (none) 98 (Lean.Data.Trie.node1 (none) 97 (Lean.Data.Trie.node1 (none) 110 (Lean.Data.Trie.leaf ((some ())))))) ([QueryTree.leaf (preBS.ofPoint 1)]), QueryTree.node (Lean.Data.Trie.node (none) ⟨#[97,98,109,115]⟩ #[Lean.Data.Trie.node1 (none) 110 (Lean.Data.Trie.node1 (none) 100 (Lean.Data.Trie.leaf ((some ())))),Lean.Data.Trie.node (none) ⟨#[97,111]⟩ #[Lean.Data.Trie.node1 (none) 110 (Lean.Data.Trie.node1 (none) 97 (Lean.Data.Trie.node1 (none) 110 (Lean.Data.Trie.node1 (none) 97 (Lean.Data.Trie.leaf ((some ())))))),Lean.Data.Trie.node1 (none) 110 (Lean.Data.Trie.leaf ((some ())))],Lean.Data.Trie.node1 (none) 111 (Lean.Data.Trie.node1 (none) 114 (Lean.Data.Trie.node1 (none) 101 (Lean.Data.Trie.leaf ((some ()))))),Lean.Data.Trie.node1 (none) 111 (Lean.Data.Trie.node1 (none) 109 (Lean.Data.Trie.node1 (none) 101 (Lean.Data.Trie.leaf ((some ())))))]) ([QueryTree.leaf (preBS.ofVal (()))])])
-
-
-
-
-#eval QueryTree.visualize' 0 qt_preBS_0
-#eval QueryTree.visualize' 0 qt_preBS_1
---#eval QueryTree.visualize' 0 qt_preBS_2
-#eval QueryTree.visualize' 0 qt_preBS_3
---#eval QueryTree.visualize' 0 qt_preBS_4
---#eval QueryTree.visualize' 0 qt_preBS_5
-
-
-
-/-
-Possible solutions:
-
-- split cluster_list in parts, process parts, find ways to merge trees ?
-- loop one .dive and .build_bd_iter 0, where at each step we print to source, elabortae the source, and prooced with the same, but for that new tree as initial tree ?
-
--/
-
-
-
--- # Merge
-
-
-def QueryTree.split_on_trie (t : Trie Unit) (c : List (QueryTree α)) : (List (QueryTree α)) × List (QueryTree α) :=
-      match c with
-      | [] => ([], [])
-      | .leaf a :: rest =>
-            let (p,n) := QueryTree.split_on_trie t rest
-            (p , .leaf a :: n )
-      | .root _ :: _ => ([], [])
-      | .node T qt :: rest =>
-            let (p,n) := QueryTree.split_on_trie t rest
-            if Trie.CountCommon t T = max (Trie.size t) (Trie.size T) -- replace by BEq, implement BEq
-            then (qt ++ p, n)
-            else (p, (.node T qt) :: n)
-
-
--- partial def QueryTree.merge_children (c : List (QueryTree α)) : List (QueryTree α) :=
---       match c with
---       | [] => []
---       | .leaf a :: rest => .leaf a :: QueryTree.merge_children rest
---       | .root _ :: _ => [] -- shouldn't occur
---       | .node t qt :: rest =>
---             let (p,n) := QueryTree.split_on_trie t rest
---             let proceed := QueryTree.merge_children n
---             (.node t (qt ++ p)) :: proceed
-
-def QueryTree.has_only_leaves : List (QueryTree α) → Bool
-| [] => true
-| x :: l =>
-      match x with
-      | .leaf _ => QueryTree.has_only_leaves l
-      | .node (.leaf .none) _ => QueryTree.has_only_leaves l -- don't know if necessary...
-      | _ => false
-
-
-partial def QueryTree.merge_children! (c : List (QueryTree α)) : List (QueryTree α) :=
-      match c with
-      | [] => []
-      | .leaf a :: rest => .leaf a :: QueryTree.merge_children! rest
-      | .root _ :: _ => [] -- shouldn't occur
-      | .node t qt :: rest =>
-            let (p,n) := QueryTree.split_on_trie t rest
-            let proceed := QueryTree.merge_children! n
-            (.node t (QueryTree.merge_children! (qt ++ p))) :: proceed
-
-def QueryTree.merge_extract  : List (QueryTree α) → List (QueryTree α)
-| [] => []
-| x :: l =>
-      match x with
-      | .root c => c ++ QueryTree.merge_extract  l
-      | _ => [] -- shouldn't occur
-
-def QueryTree.merge  (c : List (QueryTree α)) : (QueryTree α) :=
-      let unpack := QueryTree.merge_extract  c
-      .root (QueryTree.merge_children! unpack)
-
-def uno := (((QueryTree.make (([["ban", "bon", "banana"], ["ban", "bon", "banal"], ["ban", "bandana"],["and","some","more","banana", "bon"]].take 2).map SortedTrieFormList')) : QueryTree Unit))
-def dos := (((QueryTree.make (([["ban", "bon", "banana"], ["ban", "bon", "banal"], ["ban", "bandana"],["and","some","more","banana", "bon"]].drop 2).map SortedTrieFormList')) : QueryTree Unit))
-
-#eval (QueryTree.visualize 0  uno).toFormat
-#eval (QueryTree.visualize 0  dos).toFormat
-#eval (QueryTree.visualize 0 (QueryTree.merge  [uno,dos])).toFormat
