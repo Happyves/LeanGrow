@@ -25,3 +25,4 @@ import LeanGrow.Caches.mark2cache_v2_big
 -- import LeanGrow.Caches.goalCoData
 -- import LeanGrow.Caches.CoData_qt
 import LeanGrow.Caches.Querytree
+import LeanGrow.Caches.QueryTreeSmoothClusters

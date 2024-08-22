@@ -27,6 +27,9 @@ elab "make_queryTree_clusters" : command => do
 
 
 
+#eval (QueryTree.visualize 0 (QueryTree.make ((cluster_list).map pdata.sink_cst_names) : QueryTree Unit)).toFormat
+
+
 -- **Moral of the story: learn how the backend works**
 #exit
 
