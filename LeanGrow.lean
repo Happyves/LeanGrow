@@ -19,10 +19,15 @@ import LeanGrow.Test
 --import LeanGrow.Caches.mark2clusters
 
 import LeanGrow.Caches.mark2cache_v2_big
--- import LeanGrow.Caches.mark1goalCache_big
+import LeanGrow.Caches.mark1goalCache_big
 -- import LeanGrow.CoClustering
 -- import LeanGrow.Caches.CoData
 -- import LeanGrow.Caches.goalCoData
 -- import LeanGrow.Caches.CoData_qt
 import LeanGrow.Caches.Querytree
-import LeanGrow.Caches.QueryTreeSmoothClusters
+import LeanGrow.Caches.QuerytreeGoal
+--import LeanGrow.Caches.QueryTreeSmoothClusters
+import LeanGrow.Caches.QueryTreeSmoothClusters_wL_col2
+import LeanGrow.Caches.QueryTreeSmoothClustersGoal_wL_col0
+
+import LeanGrow.Caches.SmolTransitionGraphs

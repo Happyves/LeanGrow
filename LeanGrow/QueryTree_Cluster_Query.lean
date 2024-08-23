@@ -1,6 +1,7 @@
 
 import LeanGrow.QueryTree_idea
 import LeanGrow.Caches.Querytree
+import LeanGrow.Caches.QuerytreeGoal
 import LeanGrow.CExpr
 
 open Lean Data Elab Tactic Meta
@@ -162,41 +163,174 @@ partial def QueryTree.controled_collapse (at_depth : Nat) : QueryTree (BS α) �
       for chi in o do
         let probe := QueryTree.depth chi
         if probe ≥ at_depth
-        then nc := (QueryTree.leaf (BS.ofVal (QueryTree.getVals chi))) :: nc
+        then nc := (QueryTree.leaf (BS.ofVal (QueryTree.getVals chi))) :: nc -- not withBrain ?!?
         else nc := (QueryTree.controled_collapse at_depth chi) :: nc
       return .node t (.leaf (.ofVal j) :: nc)
 | .leaf (.ofPoint P) =>
-      -- this part needs deep fixing
-      let hmm := QueryTree.controled_collapse at_depth P
-      -- doesn't even fix the problem
-      match hmm with
-      | .root c =>
-          let (j,o) := QueryTree.join_buggy_leaves_main c
-          .root (.leaf (.ofVal j.join) :: o )
-      | .node t c =>
-          let (j,o) := QueryTree.join_buggy_leaves_main c
-          .node t (.leaf (.ofVal j.join) :: o )
-      | .leaf x => .leaf x
+      .leaf (.ofPoint (QueryTree.controled_collapse at_depth P))
+      -- -- this part needs deep fixing
+      -- let hmm := QueryTree.controled_collapse at_depth P
+      -- -- doesn't even fix the problem
+      -- match hmm with
+      -- | .root c =>
+      --     let (j,o) := QueryTree.join_buggy_leaves_main c
+      --     .root (.leaf (.ofVal j.join) :: o )
+      -- | .node t c =>
+      --     let (j,o) := QueryTree.join_buggy_leaves_main c
+      --     .node t (.leaf (.ofVal j.join) :: o )
+      -- | .leaf x => .leaf x
 | .leaf (.ofVal a) => .leaf (.ofVal [a])
 
+--#exit
 
 elab "make_smooth_clusters_from_querytree" : command => do
-  let clustas := QueryTree.getVals_withBrain List.join (QueryTree.controled_collapse 0 tha_tree)
+  let col := 2
+  let clustas := QueryTree.getVals_withBrain List.join (QueryTree.controled_collapse col tha_tree)
   let mut presource := []
   let mut i := 0
   for c in clustas do
     presource := s!"\ndef sclu_from_qt_{i} : List pdata := [{String.intercalate ", " (c.map (fun x => s!"PDATA.{x.cst_name}"))}]" :: presource
     i := i+1
   let source := s!"import LeanGrow.Caches.mark2cache_v2_big\nopen Lean Data{String.join presource}\ndef sclu_from_qt_all : List (List pdata) := [{String.intercalate ", " ((List.range i).map (fun n => s!"sclu_from_qt_{n}"))}]"
-  IO.FS.writeFile ⟨s!"/./home/yves/Desktop/CodeWorkspace/Lean4_General/LeanGrow/LeanGrow/Caches/QueryTreeSmoothClusters.lean"⟩ (source)
+  IO.FS.writeFile ⟨s!"/./home/yves/Desktop/CodeWorkspace/Lean4_General/LeanGrow/LeanGrow/Caches/QueryTreeSmoothClusters_col{col}.lean"⟩ (source)
 
 --make_smooth_clusters_from_querytree
 
-#eval Trie.print_keys ⟨#[]⟩ PDATA.List.count_join'.sink_cst_names
-
---(fun v => s!"[{String.intercalate ", " (v.map (fun x => Name.toString x.cst_name))}]")
+#eval Trie.print_keys ⟨#[]⟩ PDATA.List.IsRotated.symm.sink_cst_names
 
 
+
+partial def QueryTree.depth_via_tries : QueryTree (BS α) → Nat
+| .root c => match List.maximum (c.map QueryTree.depth_via_tries) with | .some x => x+1 | .none => 1
+| .node t c => match List.maximum (c.map QueryTree.depth_via_tries) with | .some x => x + (Trie.size t) | .none => (Trie.size t)
+| .leaf (.ofPoint P) => QueryTree.depth_via_tries P
+| .leaf (.ofVal _) => 0
+
+
+partial def QueryTree.controled_collapse' (at_depth : Nat) : QueryTree (BS α) → QueryTree (BS (List α))
+| .root c =>
+    let (j,o) := QueryTree.join_buggy_leaves_main c
+    .root (.leaf (.ofVal j) :: (o.map (QueryTree.controled_collapse' at_depth)))
+| .node t c =>
+    let (j,o) := QueryTree.join_buggy_leaves_main c
+    Id.run do
+      let mut nc := []
+      for chi in o do
+        let probe := QueryTree.depth_via_tries chi
+        if probe ≥ at_depth
+        then nc := (QueryTree.leaf (BS.ofVal (QueryTree.getVals chi))) :: nc
+        else nc := (QueryTree.controled_collapse' at_depth chi) :: nc
+      return .node t (.leaf (.ofVal j) :: nc)
+| .leaf (.ofPoint P) => .leaf (.ofPoint (QueryTree.controled_collapse' at_depth P))
+| .leaf (.ofVal a) => .leaf (.ofVal [a])
+
+elab "make_smooth_clusters_from_querytree'" : command => do
+  let col := 3
+  let clustas := QueryTree.getVals_withBrain List.join (QueryTree.controled_collapse' col tha_tree)
+  let mut presource := []
+  let mut i := 0
+  for c in clustas do
+    presource := s!"\ndef sclu_from_qt_{i} : List pdata := [{String.intercalate ", " (c.map (fun x => s!"PDATA.{x.cst_name}"))}]" :: presource
+    i := i+1
+  let source := s!"import LeanGrow.Caches.mark2cache_v2_big\nopen Lean Data{String.join presource}\ndef sclu_from_qt_all : List (List pdata) := [{String.intercalate ", " ((List.range i).map (fun n => s!"sclu_from_qt_{n}"))}]"
+  IO.FS.writeFile ⟨s!"/./home/yves/Desktop/CodeWorkspace/Lean4_General/LeanGrow/LeanGrow/Caches/QueryTreeSmoothClusters'_col{col}.lean"⟩ (source)
+
+--make_smooth_clusters_from_querytree'
+
+
+elab "make_smooth_clusters_from_querytree_g" : command => do
+  let col := 3
+  let clustas := (QueryTree.getVals_withBrain List.join (QueryTree.controled_collapse col g_tha_tree)).filter (fun x => ! x.isEmpty)
+  let mut presource := []
+  let mut i := 0
+  for c in clustas do
+    presource := s!"\ndef g_sclu_from_qt_{i} : List gdata := [{String.intercalate ", " (c.map (fun x => s!"GDATA.{x.cst_name}"))}]" :: presource
+    i := i+1
+  let source := s!"import LeanGrow.Caches.mark1goalCache_big\nopen Lean Data{String.join presource}\ndef g_sclu_from_qt_all : List (List gdata) := [{String.intercalate ", " ((List.range i).map (fun n => s!"g_sclu_from_qt_{n}"))}]"
+  IO.FS.writeFile ⟨s!"/./home/yves/Desktop/CodeWorkspace/Lean4_General/LeanGrow/LeanGrow/Caches/QueryTreeSmoothClustersGoal_col{col}.lean"⟩ (source)
+
+--make_smooth_clusters_from_querytree_g
+
+#eval Trie.print_keys ⟨#[]⟩ GDATA.List.indexOf_cons_ne.name_list
+#eval Trie.print_keys ⟨#[]⟩ GDATA.List.Nodup.of_cons.name_list
+#eval Trie.print_keys ⟨#[]⟩ GDATA.List.Nodup.filter.name_list
+
+
+#check gdata
+
+
+
+
+
+
+partial def QueryTree.getVals_and_LinkTree (count : Nat) (f : List α → β) (T : QueryTree (BS (α))) : (List (Nat × β)) × QueryTree (BS (Nat)) × Nat :=
+  match T with
+  | .root c =>
+        let (j,o) := QueryTree.join_buggy_leaves_main c
+        Id.run do
+          let mut no := []
+          let mut cs := []
+          let mut k := count
+          for qt in o do
+            let (clusts, lt, K) := QueryTree.getVals_and_LinkTree k f qt
+            cs := clusts ++ cs
+            no := lt :: no
+            k := K+1
+          return (((k, (f j)) :: cs), .root (.leaf (.ofVal k) :: no), k+1)
+  | .node t c =>
+        let (j,o) := QueryTree.join_buggy_leaves_main c
+        Id.run do
+          let mut no := []
+          let mut cs := []
+          let mut k := count
+          for qt in o do
+            let (clusts, lt, K) := QueryTree.getVals_and_LinkTree k f qt
+            cs := clusts ++ cs
+            no := lt :: no
+            k := K+1
+          return (((k, (f j)) :: cs), .node t (.leaf (.ofVal k) :: no), k+1)
+  | .leaf (.ofPoint P) => QueryTree.getVals_and_LinkTree count f P
+        -- let (c,t,q) := QueryTree.getVals_and_LinkTree count f P
+        -- (c, .leaf (.ofPoint t), q)
+  | .leaf (.ofVal a) => ([(count, f [a])], .leaf (.ofVal count), count+1)
+
+
+def BS.toString_trick_2 : BS Nat → String
+| .ofVal (a) => s!"(BS.ofVal ({a}, Lsclu_from_qt_{a}))"
+| .ofPoint (_) => s!"FAIL" -- we expect to run this on the link tree, where there shoudl't be pointer leafs anymore, as we expect it to be small...
+
+def BS.toString_trick_2' : BS Nat → String
+| .ofVal (a) => s!"(BS.ofVal ({a}, g_Lsclu_from_qt_{a}))"
+| .ofPoint (_) => s!"FAIL" -- we expect to run this on the link tree, where there shoudl't be pointer leafs anymore, as we expect it to be small...
+
+
+elab "make_smooth_clusters_from_querytree_wL" : command => do
+  let col := 2
+  let (clustas, linkTree, _) := QueryTree.getVals_and_LinkTree 0 List.join (QueryTree.controled_collapse col tha_tree)
+  let mut presource := []
+  for (i,c) in clustas do
+    presource := s!"\ndef Lsclu_from_qt_{i} : List pdata := [{String.intercalate ", " (c.map (fun x => s!"PDATA.{x.cst_name}"))}]" :: presource
+  let pt := QueryTree.toString BS.toString_trick_2 linkTree
+  let source := s!"import LeanGrow.Caches.mark2cache_v2_big\nimport LeanGrow.QueryTree_idea\nopen Lean Data{String.join presource}\ndef Lsclu_from_qt_all : QueryTree (BS (Nat × (List pdata))) := {pt}"
+  IO.FS.writeFile ⟨s!"/./home/yves/Desktop/CodeWorkspace/Lean4_General/LeanGrow/LeanGrow/Caches/QueryTreeSmoothClusters_wL_col{col}.lean"⟩ (source)
+
+--make_smooth_clusters_from_querytree_wL
+
+
+elab "make_smooth_clusters_from_querytree_wL_g" : command => do
+  let col := 0
+  let (clustas, linkTree, _) := QueryTree.getVals_and_LinkTree 0 List.join (QueryTree.controled_collapse col g_tha_tree)
+  let mut presource := []
+  for (i,c) in clustas do
+    presource := s!"\ndef g_Lsclu_from_qt_{i} : List gdata := [{String.intercalate ", " (c.map (fun x => s!"GDATA.{x.cst_name}"))}]" :: presource
+  let pt := QueryTree.toString BS.toString_trick_2' linkTree
+  let source := s!"import LeanGrow.Caches.mark1goalCache_big\nimport LeanGrow.QueryTree_idea\nopen Lean Data{String.join presource}\ndef g_Lsclu_from_qt_all : QueryTree (BS (Nat × (List gdata))) := {pt}"
+  IO.FS.writeFile ⟨s!"/./home/yves/Desktop/CodeWorkspace/Lean4_General/LeanGrow/LeanGrow/Caches/QueryTreeSmoothClustersGoal_wL_col{col}.lean"⟩ (source)
+
+--make_smooth_clusters_from_querytree_wL_g
+
+
+#exit
 
 partial def QueryTree.visualizeM (count : Nat) : QueryTree (BS (List pdata)) → String
 | .root c => s!"Root\n ({String.intercalate "\n" (c.map (QueryTree.visualizeM 1))})"
@@ -206,12 +340,16 @@ partial def QueryTree.visualizeM (count : Nat) : QueryTree (BS (List pdata)) →
 
 --#exit
 
-#eval ((QueryTree.visualizeM 0 (QueryTree.controled_collapse 0 tha_tree) )).toFormat
+-- #eval ((QueryTree.visualizeM 0 (QueryTree.controled_collapse 0 tha_tree) )).toFormat
+
+-- #eval ((QueryTree.visualizeM 0 (QueryTree.controled_collapse 2 tha_tree) )).toFormat
+
+-- #eval ((QueryTree.visualizeM 0 (QueryTree.controled_collapse 3 tha_tree) )).toFormat
+
+-- #eval (QueryTree.visualize 0 tha_tree).toFormat
 
 
 
 
-
-#check List.Forall₂
 
 -- # Query collapsed tree from Ltx

@@ -1,5 +1,6 @@
 
 import LeanGrow.Caches.mark2cache_v2_big
+import LeanGrow.Caches.mark1goalCache_big
 --import LeanGrow.QueryTree
 --import LeanGrow.QueryTreeArray
 import LeanGrow.QueryTree_idea
@@ -27,7 +28,31 @@ elab "make_queryTree_clusters" : command => do
 
 
 
-#eval (QueryTree.visualize 0 (QueryTree.make ((cluster_list).map pdata.sink_cst_names) : QueryTree Unit)).toFormat
+--#eval (QueryTree.visualize 0 (QueryTree.make ((cluster_list).map pdata.sink_cst_names) : QueryTree Unit)).toFormat
+
+
+def preBS.toString_trick_g {α : Type _} (string_alpha : α → String) : preBS α → String
+| .ofVal (a : α) => s!"(BS.ofVal ({string_alpha a}))"
+| .ofPoint (p : Nat) => s!"(BS.ofPoint g_qete_{p})"
+
+def QueryTree.toString_preBS_g (T : QueryTree (preBS α)) (string_alpha : α → String) : String :=
+      QueryTree.toString (preBS.toString_trick_g string_alpha) T
+
+
+
+elab "make_queryTree_clusters_g" : command => do
+  let trie_list := goal_cluster_list.map (fun x => (x.name_list, x))
+  let res := (QueryTree.make_wData trie_list : QueryTree gdata)
+  let (total, L) := QueryTree.stratify_full 2 res
+  let mut toSource := []
+  for (i,T) in L do
+    toSource := (s!"\ndef g_qete_{i} : QueryTree (BS gdata) := {QueryTree.toString_preBS_g T (fun pd => "GDATA." ++ pd.cst_name.toString)}") :: toSource
+  let source := s!"import LeanGrow.QueryTree_idea\nimport LeanGrow.Caches.mark1goalCache_big\nopen Lean Data{String.join toSource}\n def g_tha_tree : QueryTree (BS gdata) := g_qete_{total}"
+  IO.FS.writeFile ⟨"/./home/yves/Desktop/CodeWorkspace/Lean4_General/LeanGrow/LeanGrow/Caches/QuerytreeGoal.lean"⟩ (source)
+
+
+--make_queryTree_clusters_g
+
 
 
 -- **Moral of the story: learn how the backend works**
