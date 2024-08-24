@@ -13,10 +13,11 @@ def RBNode.update {β : Type v} (cmp : α → α → Ordering) (f : β → β)  
   | .leaf,             _ => .leaf
   | .node z a ky vy b, x =>
     match cmp x ky with
-    | Ordering.lt => RBNode.update cmp f a x
-    | Ordering.gt => RBNode.update cmp f b x
+    | Ordering.lt => .node z (RBNode.update cmp f a x) ky vy b
+    | Ordering.gt => .node z a ky vy (RBNode.update cmp f b x)
     | Ordering.eq => .node z a ky (f vy) b
 
+--#exit
 
 def Clus_Nei_inner (clus : List pdata) : RBNode Nat (fun _ => Nat) :=
   match clus with
@@ -115,6 +116,8 @@ elab "make_large_transition_graphs" : command => do
 --make_large_transition_graphs
 -- 5 to 8 min
 
+
+
 def getTotalWeight : RBNode ℕ (fun _ ↦ ℕ) → Nat :=
   RBNode.fold (fun sofar _ v => sofar + v) 0
 
@@ -122,27 +125,49 @@ def getTotalWeight : RBNode ℕ (fun _ ↦ ℕ) → Nat :=
 def RBNode.upsert {β : Type v} (cmp : α → α → Ordering) (f : β → β) (val : β) : RBNode α (fun _ => β) → α → RBNode α (fun _ => β) :=
   fun t k =>
     match t.find cmp k with
-    | .some _ => RBNode.update cmp f t k
-    | .none => RBNode.insert cmp t k val
+    | .some _ =>
+        RBNode.update cmp f t k
+    | .none =>
+        RBNode.insert cmp t k val
+
+def RBNode.getKeyVals : RBNode α (fun _ => β)  → List (α × β)
+| .leaf => []
+| .node _ l k v r => (k, v) :: ((RBNode.getKeyVals l) ++ ( RBNode.getKeyVals r))
+
 
 
 -- computes total weights along all walks
-def n_step_closure_rbt (N : Nat) (inner outer : List (Nat × (RBNode ℕ (fun _ ↦ ℕ)))) (key : Nat) : Option (RBNode ℕ (fun _ ↦ ℕ)) :=
+def n_step_closure_rbt' (N : Nat) (inner outer : List (Nat × (RBNode ℕ (fun _ ↦ ℕ)))) (key : Nat) : Option (RBNode ℕ (fun _ ↦ (ℕ × ℕ))) :=
   match N with
-  | 0 => Prod.snd <$> (outer.find? (Prod.fst · = key))
+  | 0 =>
+      dbg_trace s!"0th closure queried on {key}, returning { (RBNode.toString (fun x => s!"{x}") (fun x => s!"{x}")) <$> (Prod.snd <$> (outer.find? (Prod.fst · = key)))}"
+      (RBNode.map (fun _ v => (v,1))) <$> ((Prod.snd) <$> (outer.find? (Prod.fst · = key)))
   | n+1 => Id.run do
+      --dbg_trace s!""
+      dbg_trace s!"Call on {n+1} with key {key}"
       let .some nei := Prod.snd <$> inner.find? (Prod.fst · = key) | return .none
+      dbg_trace s!"Found neighbourhood : {(RBNode.toString (fun x => s!"{x}") (fun x => s!"{x}")) nei}\nStart recursive calls in fold"
       let res := RBNode.fold
           (fun sofar k v => Id.run do
               let .some sofar' := sofar | return .none
+              dbg_trace s!"In fold of call {n+1} with key {key}, start fold loop with sofar : {(RBNode.toString (fun x => s!"{x}") (fun x => s!"{x}")) sofar'}"
               let .some fromhere := Id.run do
-                let .some clos := n_step_closure_rbt n inner outer k | return Option.none
-                return .some (RBNode.map (fun _ x => x+v) clos) | return Option.none
+                dbg_trace s!"In fold of call {n+1} with key {key}, make recursive call on key {k}"
+                let .some clos := n_step_closure_rbt' n inner outer k | return Option.none
+                dbg_trace s!"In fold of call {n+1} with key {key}, update entries by adding edge weight {v}, so as to get: {(RBNode.toString (fun x => s!"{x}") (fun x => s!"{x}")) (RBNode.map (fun _ (total_weight, num_paths) => (total_weight+(v*num_paths), num_paths)) clos)}"
+                return .some (RBNode.map (fun _ (total_weight, num_paths) => (total_weight+(v*num_paths), num_paths)) clos) | return Option.none
+              dbg_trace s!"In fold of call {n+1} with key {key}, merge it to main  entry, so as to get: {(RBNode.toString (fun x => s!"{x}") (fun x => s!"{x}")) (RBNode.fold (fun S K V => RBNode.upsert instOrdNat.compare (fun x => x + V) V S K) sofar' fromhere)}"
               return .some (RBNode.fold (fun S K V => RBNode.upsert instOrdNat.compare (fun x => x + V) V S K) sofar' fromhere)
               )
           (Option.some RBNode.leaf) nei
+      dbg_trace s!"Folds on call {n+1} with key {key} terminated, returning: {(RBNode.toString (fun x => s!"{x}") (fun x => s!"{x}")) <$> res}"
       return res
 
+def n_step_closure_rbt (N : Nat) (inner outer : List (Nat × (RBNode ℕ (fun _ ↦ ℕ)))) (key : Nat) : Option (RBNode ℕ (fun _ ↦ (ℕ))) :=
+  (RBNode.map (fun _ v => v.1)) <$> (n_step_closure_rbt' N inner outer key)
+
+
+--#exit
 
 def RBNode.fromList (l : List (Nat × Nat)) : RBNode ℕ (fun _ ↦ ℕ) :=
   l.foldl (fun s (k,v) => RBNode.insert instOrdNat.compare s k v ) RBNode.leaf
@@ -151,20 +176,39 @@ def RBNode.fromList (l : List (Nat × Nat)) : RBNode ℕ (fun _ ↦ ℕ) :=
 def C4 : List (Nat × (RBNode ℕ (fun _ ↦ ℕ))) :=
   [(0, RBNode.fromList [(1,1), (3,1)]), (1, RBNode.fromList [(0,1), (2,1)]), (2, RBNode.fromList [(1,1), (3,1)]), (3, RBNode.fromList [(0,1), (2,1)]) ]
 
+--#exit
+#eval do
+  let .some res := n_step_closure_rbt 0 C4 C4 0 | IO.println "aaahh"
+  IO.println (RBNode.toString (fun x => s!"{x}") (fun x => s!"{x}") res)
+  -- just the neighbourhood
+
 #eval do
   let .some res := n_step_closure_rbt 1 C4 C4 0 | IO.println "aaahh"
   IO.println (RBNode.toString (fun x => s!"{x}") (fun x => s!"{x}") res)
+  -- For example, 0 can gets weight 4 for 1 step because there are 2 paths of length
+  -- less or equal to 2 that reach 0 from 0,each with wieght 2 : 0,1,0 and 0,3,0
 
 #eval do
-  let .some res := n_step_closure_rbt 1 C4 C4 1 | IO.println "aaahh"
+  let .some res := n_step_closure_rbt 2 C4 C4 0 | IO.println "aaahh"
   IO.println (RBNode.toString (fun x => s!"{x}") (fun x => s!"{x}") res)
+  -- For example, 1 can gets weight 10 for 2 steps because there are 4 paths of length
+  -- equal to 3 that reach 1 from 0, 4 wieght 3  :
+  -- 0,1,0,1 and 0,1,2,1 and 0,3,2,1 and 0,3,0,1
 
 #eval do
-  let .some res := n_step_closure_rbt 1 C4 C4 2 | IO.println "aaahh"
+  let .some res := n_step_closure_rbt 2 C4 C4 1 | IO.println "aaahh"
   IO.println (RBNode.toString (fun x => s!"{x}") (fun x => s!"{x}") res)
 
 
-#exit
+#eval do
+  let .some res := n_step_closure_rbt 3 C4 C4 0 | IO.println "aaahh"
+  IO.println (RBNode.toString (fun x => s!"{x}") (fun x => s!"{x}") res)
+  -- For example, 0 can gets weight 22 due to:
+  -- 0,1,0,1,0 for 4 ; 0,1,0,3,0 for 4 ; 0,3,0,1,0 for 4 ; 0,3,0,3,0 for 4 ;
+  -- 0,1,2,1,0 for 4 ; 0,3,2,3,0 for 4 ; 0,1,2,3,0 for 4 ; 0,3,2,1,0 for 4 ;
+  --and 8*4 = 32
+
+--#exit
 
 /-- requires no BEq on α-/
 def List.hasNone? : List (Option α) → Bool
@@ -191,10 +235,19 @@ partial def QueryTree.mapBS_Opt (f : α → Option β) : QueryTree (BS α) → O
     | _ => .none
 
 
+/-
+TODO:
+
+For given n, compute closures for all k ≤ n, then get their total weight with getTotalWeight,
+use RBNode.map to get update the closures so that the values now hold the frequencies (Float). Finally,
+merge all these RBNodes to a single one. This last one is the one we want to store.
+-/
+
 def n_step_closure (N : Nat) (inner outer : QueryTree (BS (Nat × (RBNode ℕ (fun _ ↦ ℕ))))) : Option (QueryTree (BS (Nat × (RBNode ℕ (fun _ ↦ ℕ))))) :=
   let inner' := QueryTree.getVals inner
   let outer' := QueryTree.getVals outer
   QueryTree.mapBS_Opt (fun (k,_) => (k, · ) <$> n_step_closure_rbt N inner' outer' k) inner
+
 
 
 elab "make_smol_transition_graph_closure" : command => do
