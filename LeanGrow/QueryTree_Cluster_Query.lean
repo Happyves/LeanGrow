@@ -311,7 +311,7 @@ elab "make_smooth_clusters_from_querytree_wL" : command => do
   for (i,c) in clustas do
     presource := s!"\ndef Lsclu_from_qt_{i} : List pdata := [{String.intercalate ", " (c.map (fun x => s!"PDATA.{x.cst_name}"))}]" :: presource
   let pt := QueryTree.toString BS.toString_trick_2 linkTree
-  let source := s!"import LeanGrow.Caches.mark2cache_v2_big\nimport LeanGrow.QueryTree_idea\nopen Lean Data{String.join presource}\ndef Lsclu_from_qt_all : QueryTree (BS (Nat × (List pdata))) := {pt}"
+  let source := s!"import LeanGrow.Caches.mark2cache_v2_big\nimport LeanGrow.QueryTree_idea\nopen Lean Data{String.join presource}\ndef sclu_from_qt_all : List (Nat × (List pdata)) := [{String.intercalate ", " ((clustas.map Prod.fst).map (fun n => s!"({n},Lsclu_from_qt_{n})"))}]\ndef Lsclu_from_qt_all : QueryTree (BS (Nat × (List pdata))) := {pt}"
   IO.FS.writeFile ⟨s!"/./home/yves/Desktop/CodeWorkspace/Lean4_General/LeanGrow/LeanGrow/Caches/QueryTreeSmoothClusters_wL_col{col}.lean"⟩ (source)
 
 --make_smooth_clusters_from_querytree_wL
@@ -324,7 +324,7 @@ elab "make_smooth_clusters_from_querytree_wL_g" : command => do
   for (i,c) in clustas do
     presource := s!"\ndef g_Lsclu_from_qt_{i} : List gdata := [{String.intercalate ", " (c.map (fun x => s!"GDATA.{x.cst_name}"))}]" :: presource
   let pt := QueryTree.toString BS.toString_trick_2' linkTree
-  let source := s!"import LeanGrow.Caches.mark1goalCache_big\nimport LeanGrow.QueryTree_idea\nopen Lean Data{String.join presource}\ndef g_Lsclu_from_qt_all : QueryTree (BS (Nat × (List gdata))) := {pt}"
+  let source := s!"import LeanGrow.Caches.mark1goalCache_big\nimport LeanGrow.QueryTree_idea\nopen Lean Data{String.join presource}\ndef g_sclu_from_qt_all : List (Nat × (List gdata)) := [{String.intercalate ", " ((clustas.map Prod.fst).map (fun n => s!"({n},g_Lsclu_from_qt_{n})"))}]\ndef g_Lsclu_from_qt_all : QueryTree (BS (Nat × (List gdata))) := {pt}"
   IO.FS.writeFile ⟨s!"/./home/yves/Desktop/CodeWorkspace/Lean4_General/LeanGrow/LeanGrow/Caches/QueryTreeSmoothClustersGoal_wL_col{col}.lean"⟩ (source)
 
 --make_smooth_clusters_from_querytree_wL_g

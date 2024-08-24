@@ -31,3 +31,4 @@ import LeanGrow.Caches.QueryTreeSmoothClusters_wL_col2
 import LeanGrow.Caches.QueryTreeSmoothClustersGoal_wL_col0
 
 import LeanGrow.Caches.SmolTransitionGraphs
+import LeanGrow.Caches.LargeTransitionGraphs
