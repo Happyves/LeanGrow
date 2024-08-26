@@ -140,27 +140,27 @@ def RBNode.getKeyVals : RBNode α (fun _ => β)  → List (α × β)
 def n_step_closure_rbt' (N : Nat) (inner outer : List (Nat × (RBNode ℕ (fun _ ↦ ℕ)))) (key : Nat) : Option (RBNode ℕ (fun _ ↦ (ℕ × ℕ))) :=
   match N with
   | 0 =>
-      dbg_trace s!"0th closure queried on {key}, returning { (RBNode.toString (fun x => s!"{x}") (fun x => s!"{x}")) <$> (Prod.snd <$> (outer.find? (Prod.fst · = key)))}"
+      --dbg_trace s!"0th closure queried on {key}, returning { (RBNode.toString (fun x => s!"{x}") (fun x => s!"{x}")) <$> (Prod.snd <$> (outer.find? (Prod.fst · = key)))}"
       (RBNode.map (fun _ v => (v,1))) <$> ((Prod.snd) <$> (outer.find? (Prod.fst · = key)))
   | n+1 => Id.run do
       --dbg_trace s!""
-      dbg_trace s!"Call on {n+1} with key {key}"
+      --dbg_trace s!"Call on {n+1} with key {key}"
       let .some nei := Prod.snd <$> inner.find? (Prod.fst · = key) | return .none
-      dbg_trace s!"Found neighbourhood : {(RBNode.toString (fun x => s!"{x}") (fun x => s!"{x}")) nei}\nStart recursive calls in fold"
+      --dbg_trace s!"Found neighbourhood : {(RBNode.toString (fun x => s!"{x}") (fun x => s!"{x}")) nei}\nStart recursive calls in fold"
       let res := RBNode.fold
           (fun sofar k v => Id.run do
               let .some sofar' := sofar | return .none
-              dbg_trace s!"In fold of call {n+1} with key {key}, start fold loop with sofar : {(RBNode.toString (fun x => s!"{x}") (fun x => s!"{x}")) sofar'}"
+              --dbg_trace s!"In fold of call {n+1} with key {key}, start fold loop with sofar : {(RBNode.toString (fun x => s!"{x}") (fun x => s!"{x}")) sofar'}"
               let .some fromhere := Id.run do
-                dbg_trace s!"In fold of call {n+1} with key {key}, make recursive call on key {k}"
+                --dbg_trace s!"In fold of call {n+1} with key {key}, make recursive call on key {k}"
                 let .some clos := n_step_closure_rbt' n inner outer k | return Option.none
-                dbg_trace s!"In fold of call {n+1} with key {key}, update entries by adding edge weight {v}, so as to get: {(RBNode.toString (fun x => s!"{x}") (fun x => s!"{x}")) (RBNode.map (fun _ (total_weight, num_paths) => (total_weight+(v*num_paths), num_paths)) clos)}"
+                --dbg_trace s!"In fold of call {n+1} with key {key}, update entries by adding edge weight {v}, so as to get: {(RBNode.toString (fun x => s!"{x}") (fun x => s!"{x}")) (RBNode.map (fun _ (total_weight, num_paths) => (total_weight+(v*num_paths), num_paths)) clos)}"
                 return .some (RBNode.map (fun _ (total_weight, num_paths) => (total_weight+(v*num_paths), num_paths)) clos) | return Option.none
-              dbg_trace s!"In fold of call {n+1} with key {key}, merge it to main  entry, so as to get: {(RBNode.toString (fun x => s!"{x}") (fun x => s!"{x}")) (RBNode.fold (fun S K V => RBNode.upsert instOrdNat.compare (fun x => x + V) V S K) sofar' fromhere)}"
+              --dbg_trace s!"In fold of call {n+1} with key {key}, merge it to main  entry, so as to get: {(RBNode.toString (fun x => s!"{x}") (fun x => s!"{x}")) (RBNode.fold (fun S K V => RBNode.upsert instOrdNat.compare (fun x => x + V) V S K) sofar' fromhere)}"
               return .some (RBNode.fold (fun S K V => RBNode.upsert instOrdNat.compare (fun x => x + V) V S K) sofar' fromhere)
               )
           (Option.some RBNode.leaf) nei
-      dbg_trace s!"Folds on call {n+1} with key {key} terminated, returning: {(RBNode.toString (fun x => s!"{x}") (fun x => s!"{x}")) <$> res}"
+      --dbg_trace s!"Folds on call {n+1} with key {key} terminated, returning: {(RBNode.toString (fun x => s!"{x}") (fun x => s!"{x}")) <$> res}"
       return res
 
 def n_step_closure_rbt (N : Nat) (inner outer : List (Nat × (RBNode ℕ (fun _ ↦ ℕ)))) (key : Nat) : Option (RBNode ℕ (fun _ ↦ (ℕ))) :=
@@ -235,13 +235,7 @@ partial def QueryTree.mapBS_Opt (f : α → Option β) : QueryTree (BS α) → O
     | _ => .none
 
 
-/-
-TODO:
 
-For given n, compute closures for all k ≤ n, then get their total weight with getTotalWeight,
-use RBNode.map to get update the closures so that the values now hold the frequencies (Float). Finally,
-merge all these RBNodes to a single one. This last one is the one we want to store.
--/
 
 def n_step_closure (N : Nat) (inner outer : QueryTree (BS (Nat × (RBNode ℕ (fun _ ↦ ℕ))))) : Option (QueryTree (BS (Nat × (RBNode ℕ (fun _ ↦ ℕ))))) :=
   let inner' := QueryTree.getVals inner
@@ -249,18 +243,91 @@ def n_step_closure (N : Nat) (inner outer : QueryTree (BS (Nat × (RBNode ℕ (f
   QueryTree.mapBS_Opt (fun (k,_) => (k, · ) <$> n_step_closure_rbt N inner' outer' k) inner
 
 
+def QueryTree.getChildren : QueryTree (BS α) → List (QueryTree (BS α))
+| .root c => c
+| .node _ c => c
+| .leaf (.ofVal _) => []
+| .leaf (.ofPoint p) => QueryTree.getChildren p
+
+
+def QueryTree.get_vals_of_valLeaves : List (QueryTree (BS α)) → List α
+| [] => []
+| x :: l =>
+      match x with
+      | .leaf (.ofVal a) => a :: (QueryTree.get_vals_of_valLeaves l)
+      | .node (.leaf .none) [.leaf (.ofVal a)] => a :: (QueryTree.get_vals_of_valLeaves l) -- don't know if necessary...
+      | _ => [] --fail (aka. early return)
+
+
+def QueryTree.get_tree_of_pointLeaves : List (QueryTree (BS α)) → List (QueryTree (BS α))
+| [] => []
+| x :: l =>
+      match x with
+      | .leaf (.ofPoint a) => a :: (QueryTree.get_tree_of_pointLeaves l)
+      | .node (.leaf .none) [.leaf (.ofPoint a)] => a :: (QueryTree.get_tree_of_pointLeaves l) -- don't know if necessary...
+      | _ => [] --fail (aka. early return)
+
+
+partial def List.process_Lists (m : List α → Option α) (l : List (List α)) : Option (List α) :=
+  let hds := l.map List.head?
+  if hds.hasNone?
+  then
+    --dbg_trace "fail at List.process_Lists 1"
+    .some [] -- maybe due to the anoying .node [] [.leaf] phenomenon ??
+  else
+    match m hds.reduceOption with
+    | .some y => (y :: ·) <$> (List.process_Lists m (l.map List.tail))
+    | .none =>
+        --dbg_trace "fail at List.process_Lists 2"
+        .none
+
+/-- assumes that the trees of the list are the same , excpet of the leaf-values-/
+partial def QueryTree.merge (m : List α → Option α)  (data : List (QueryTree (BS α))) : Option (QueryTree (BS α)) :=
+  match QueryTree.get_vals_of_valLeaves data with
+  | [] =>
+      match QueryTree.get_tree_of_pointLeaves data with
+      | [] =>
+          let chi := data.map QueryTree.getChildren
+          let res := List.process_Lists (QueryTree.merge m) chi
+          match data with
+          | .root _ :: _ => (.root) <$> res
+          | .node t _ :: _ => (.node t) <$> res
+          | _ =>
+             dbg_trace "fail at  QueryTree.merge"
+            .none
+      | l => QueryTree.merge m l -- since we expect the pointed trees to start with roots ; note that this de-pointers the tree ...
+  | l =>  (fun x => QueryTree.leaf (BS.ofVal x)) <$> (m l)
+
+
+
+def merge_rbt (l : List (Nat × (RBNode ℕ (fun _ ↦ ℕ)))) : Option (Nat × (RBNode ℕ (fun _ ↦ ℕ))) :=
+  match l.head? with
+  | .some (n,_) =>
+      let rbts := l.map Prod.snd
+      .some (n, rbts.foldl (fun S rbt => (rbt.fold (fun s k v => s.insert instOrdNat.compare k v) S) ) RBNode.leaf)
+  | _ =>
+      dbg_trace "fail at merge_rbt"
+      .none
+
+
+
+-- we can probably do better, since the closers are recomputed for larger steps ...
+def n_step_closure_full (N : Nat) (inner outer : QueryTree (BS (Nat × (RBNode ℕ (fun _ ↦ ℕ))))) : Option (QueryTree (BS (Nat × (RBNode ℕ (fun _ ↦ ℕ))))) :=
+  let ouf := ((List.range N).map (n_step_closure · inner outer)).reduceOption
+  QueryTree.merge merge_rbt ouf
+
 
 elab "make_smol_transition_graph_closure" : command => do
-  let clos_step := 1
-  let .some res := n_step_closure clos_step inner_trans outer_trans | throwError "Fail :<"
+  let clos_step := 3
+  let .some res := n_step_closure_full clos_step inner_trans outer_trans | throwError "Fail :<"
   let source := s!"\nimport LeanGrow.QueryTree_idea\nopen Lean Data\ndef smol_closure : QueryTree (BS (Nat × (RBNode ℕ (fun _ ↦ ℕ)))) := {QueryTree.toString BS.toString_trick_more res}"
   IO.FS.writeFile ⟨s!"/./home/yves/Desktop/CodeWorkspace/Lean4_General/LeanGrow/LeanGrow/Caches/SmolTransitionGraphClosure_clos_{clos_step}.lean"⟩ (source)
 
 --make_smol_transition_graph_closure
 
 elab "make_large_transition_graph_closure" : command => do
-  let clos_step := 2
-  let .some res := n_step_closure clos_step inner_trans_large outer_trans_large | throwError "Fail :<"
+  let clos_step := 3
+  let .some res := n_step_closure_full clos_step inner_trans_large outer_trans_large | throwError "Fail :<"
   let source := s!"\nimport LeanGrow.QueryTree_idea\nopen Lean Data\ndef smol_closure : QueryTree (BS (Nat × (RBNode ℕ (fun _ ↦ ℕ)))) := {QueryTree.toString BS.toString_trick_more res}"
   IO.FS.writeFile ⟨s!"/./home/yves/Desktop/CodeWorkspace/Lean4_General/LeanGrow/LeanGrow/Caches/LargeTransitionGraphClosure_clos_{clos_step}.lean"⟩ (source)
 
