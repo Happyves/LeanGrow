@@ -1,9 +1,10 @@
 
 import LeanGrow.Caches.QueryTreeSmoothClusters_wL_col2
-import LeanGrow.Caches.QueryTreeSmoothClustersGoal_wL_col0
-import LeanGrow.QueryTree_Cluster_Query
-import LeanGrow.Caches.SmolTransitionGraphs
---import LeanGrow.Caches.LargeTransitionGraphs
+import LeanGrow.Caches.QueryTreeSmoothClustersGoal_wL_col2
+import LeanGrow.QueryTree_clean
+--import LeanGrow.Caches.SmolTransitionGraphs
+-- don't import ↑ and ↓ together
+import LeanGrow.Caches.LargeTransitionGraphs
 -- import LeanGrow.Caches.SmolTransitionGraphClosure_clos_3
 -- import LeanGrow.Caches.LargeTransitionGraphClosure_clos_3
 -- import LeanGrow.Caches.SmolTransitionGraphClosure_rbt_clos_3
@@ -12,7 +13,12 @@ import LeanGrow.Caches.SmolTransitionGraphs
 
 open Lean Data
 
-#check RBNode
+partial def QueryTree.query (Q : Trie Unit) (T : QueryTree (BS α)) : List α :=
+  match T with
+  | .root c => (c.map (QueryTree.query Q)).join
+  | .node t c => if Trie.CountCommon t Q = Trie.size t then (c.map (QueryTree.query Q)).join else []
+  | .leaf (.ofVal a) => [a]
+  | .leaf (.ofPoint t) => QueryTree.query Q t
 
 def RBNode.update {β : Type v} (cmp : α → α → Ordering) (f : β → β)  : RBNode α (fun _ => β) → α → RBNode α (fun _ => β)
   | .leaf,             _ => .leaf
@@ -37,7 +43,7 @@ def Clus_Nei_inner (clus : List pdata) : RBNode Nat (fun _ => Nat) :=
   match clus with
   | [] => .leaf
   | d :: ds =>
-      let nei := QueryTree.query d.goal_cst_names Lsclu_from_qt_all
+      let nei := QueryTree.query d.goal_cst_names LinkTreeTop
       Id.run do
         let mut rbn := Clus_Nei_inner ds
         for (n,_) in nei do
@@ -49,7 +55,7 @@ def Clus_Nei_outer (clus : List pdata) : RBNode Nat (fun _ => Nat) :=
   match clus with
   | [] => .leaf
   | d :: ds =>
-      let nei := QueryTree.query d.goal_cst_names g_Lsclu_from_qt_all
+      let nei := QueryTree.query d.goal_cst_names g_LinkTreeTop
       Id.run do
         let mut rbn := Clus_Nei_outer ds
         for (n,_) in nei do
@@ -82,25 +88,42 @@ def BS.toString_trick_more : BS (ℕ × RBNode ℕ (fun _ ↦ ℕ)) → String
 | .ofVal (n,a) => s!"(BS.ofVal ({n}, {RBNode.toString (fun x => s!"{x}") (fun x => s!"{x}") a}))"
 | .ofPoint (_) => s!"FAIL" -- we expect to run this on the link tree, where there shoudl't be pointer leafs anymore, as we expect it to be small...
 
-
+def printRBT := RBNode.toString (fun x : Nat => s!"{x}") (fun x : Nat => s!"{x}")
 
 elab "make_smol_transition_graphs" : command => do
-  let inner := QueryTree.mapBS (fun (n,l) => (n, Clus_Nei_inner l)) Lsclu_from_qt_all
-  let outer := QueryTree.mapBS (fun (n,l) => (n, Clus_Nei_outer l)) Lsclu_from_qt_all
-  let pti := QueryTree.toString BS.toString_trick_more inner
-  let pto := QueryTree.toString BS.toString_trick_more outer
-  let source := s!"\nimport LeanGrow.QueryTree_idea\nopen Lean Data\ndef inner_trans : QueryTree (BS (Nat × (RBNode ℕ (fun _ ↦ ℕ)))) := {pti}\ndef outer_trans : QueryTree (BS (Nat × (RBNode ℕ (fun _ ↦ ℕ)))) := {pto}"
+  let .some deT := (QueryTree.deStratify true LinkTreeTop).head? | throwError "aaahhh"
+  let inner := QueryTree.map (fun (n,l) => (n, Clus_Nei_inner l)) deT
+  let outer := QueryTree.map (fun (n,l) => (n, Clus_Nei_outer l)) deT
+  let IV := QueryTree.getVals inner
+  let OV := QueryTree.getVals inner
+  let (_ , sITs, sITtop) := QueryTree.stratify 2 2 0 inner
+  let (_ , sOTs, sOTtop) := QueryTree.stratify 2 2 0 outer
+  let mut presource := []
+  for (i,nei) in IV do
+    presource := s!"\ndef i_nei_{i} : RBNode ℕ (fun _ ↦ ℕ) := {printRBT nei}" :: presource
+  presource := s!"\ndef i_nei_all : List (Nat × (RBNode ℕ (fun _ ↦ ℕ))) := [{String.intercalate ", " ((IV.map Prod.fst).map (fun n => s!"({n}, i_nei_{n})"))}]" :: presource
+  for (i,nei) in OV do
+    presource := s!"\ndef o_nei_{i} : RBNode ℕ (fun _ ↦ ℕ) := {printRBT nei}" :: presource
+  presource := s!"\ndef o_nei_all : List (Nat × (RBNode ℕ (fun _ ↦ ℕ))) := [{String.intercalate ", " ((IV.map Prod.fst).map (fun n => s!"({n}, o_nei_{n})"))}]" :: presource
+  for (i,t) in sITs.reverse do
+    presource := s!"\ndef it_{i} : QueryTree (BS (Nat × (RBNode ℕ (fun _ ↦ ℕ)))) := {QueryTree.toString_preBS' t (fun (n,_) => s!"({n}, i_nei_{n})") (fun n => s!"it_{n}")}" :: presource
+  presource := s!"\ndef ITreeTop : QueryTree (BS (Nat × (RBNode ℕ (fun _ ↦ ℕ)))) := {QueryTree.toString_preBS' sITtop (fun (n, _) => s!"({n}, i_nei_{n})") (fun n => s!"it_{n}")}" :: presource
+  for (i,t) in sOTs.reverse do
+    presource := s!"\ndef ot_{i} : QueryTree (BS (Nat × (RBNode ℕ (fun _ ↦ ℕ)))) := {QueryTree.toString_preBS' t (fun (n,_) => s!"({n}, o_nei_{n})") (fun n => s!"ot_{n}")}" :: presource
+  presource := s!"\ndef OTreeTop : QueryTree (BS (Nat × (RBNode ℕ (fun _ ↦ ℕ)))) := {QueryTree.toString_preBS' sOTtop (fun (n, _) => s!"({n}, o_nei_{n})") (fun n => s!"ot_{n}")}" :: presource
+  let source := s!"\nimport LeanGrow.QueryTree_idea\nopen Lean Data{String.join presource.reverse}"
   IO.FS.writeFile ⟨s!"/./home/yves/Desktop/CodeWorkspace/Lean4_General/LeanGrow/LeanGrow/Caches/SmolTransitionGraphs.lean"⟩ (source)
 
 --make_smol_transition_graphs
 
+--#exit
 
 def Clus_Nei_inner_large (clus : List pdata) : RBNode Nat (fun _ => Nat) :=
   match clus with
   | [] => .leaf
   | d :: ds => Id.run do
       let mut rbn := Clus_Nei_inner_large ds
-      for (n,c) in sclu_from_qt_all do
+      for (n,c) in Lsclu_from_qt_all do
         let mut hits := 0
         for pd in c do
           if Trie.CountCommon pd.sink_cst_names d.goal_cst_names ≠ 0 then hits := hits +1
@@ -112,7 +135,7 @@ def Clus_Nei_outer_large (clus : List pdata) : RBNode Nat (fun _ => Nat) :=
   | [] => .leaf
   | d :: ds => Id.run do
       let mut rbn := Clus_Nei_outer_large ds
-      for (n,c) in g_sclu_from_qt_all do
+      for (n,c) in g_Lsclu_from_qt_all do
         let mut hits := 0
         for pd in c do
           if Trie.CountCommon pd.name_list d.goal_cst_names ≠ 0 then hits := hits +1
@@ -123,26 +146,38 @@ def Clus_Nei_outer_large (clus : List pdata) : RBNode Nat (fun _ => Nat) :=
 
 
 elab "make_large_transition_graphs" : command => do
-  let inner := QueryTree.mapBS (fun (n,l) => (n, Clus_Nei_inner_large l)) Lsclu_from_qt_all
-  let outer := QueryTree.mapBS (fun (n,l) => (n, Clus_Nei_outer_large l)) Lsclu_from_qt_all
-  let pti := QueryTree.toString BS.toString_trick_more inner
-  let pto := QueryTree.toString BS.toString_trick_more outer
-  let source := s!"\nimport LeanGrow.QueryTree_idea\nopen Lean Data\nset_option maxRecDepth 100000000\nset_option maxHeartbeats 0\ndef inner_trans_large : QueryTree (BS (Nat × (RBNode ℕ (fun _ ↦ ℕ)))) := {pti}\ndef outer_trans_large : QueryTree (BS (Nat × (RBNode ℕ (fun _ ↦ ℕ)))) := {pto}"
+  let .some deT := (QueryTree.deStratify true LinkTreeTop).head? | throwError "aaahhh"
+  let inner := QueryTree.map (fun (n,l) => (n, Clus_Nei_inner_large l)) deT
+  let outer := QueryTree.map (fun (n,l) => (n, Clus_Nei_outer_large l)) deT
+  let IV := QueryTree.getVals inner
+  let OV := QueryTree.getVals inner
+  let (_ , sITs, sITtop) := QueryTree.stratify 2 2 0 inner
+  let (_ , sOTs, sOTtop) := QueryTree.stratify 2 2 0 outer
+  let mut presource := []
+  for (i,nei) in IV do
+    presource := s!"\ndef i_nei_{i} : RBNode ℕ (fun _ ↦ ℕ) := {printRBT nei}" :: presource
+  presource := s!"\ndef i_nei_all : List (Nat × (RBNode ℕ (fun _ ↦ ℕ))) := [{String.intercalate ", " ((IV.map Prod.fst).map (fun n => s!"({n}, i_nei_{n})"))}]" :: presource
+  for (i,nei) in OV do
+    presource := s!"\ndef o_nei_{i} : RBNode ℕ (fun _ ↦ ℕ) := {printRBT nei}" :: presource
+  presource := s!"\ndef o_nei_all : List (Nat × (RBNode ℕ (fun _ ↦ ℕ))) := [{String.intercalate ", " ((IV.map Prod.fst).map (fun n => s!"({n}, o_nei_{n})"))}]" :: presource
+  for (i,t) in sITs.reverse do
+    presource := s!"\ndef it_{i} : QueryTree (BS (Nat × (RBNode ℕ (fun _ ↦ ℕ)))) := {QueryTree.toString_preBS' t (fun (n,_) => s!"({n}, i_nei_{n})") (fun n => s!"it_{n}")}" :: presource
+  presource := s!"\ndef ITreeTop : QueryTree (BS (Nat × (RBNode ℕ (fun _ ↦ ℕ)))) := {QueryTree.toString_preBS' sITtop (fun (n, _) => s!"({n}, i_nei_{n})") (fun n => s!"it_{n}")}" :: presource
+  for (i,t) in sOTs.reverse do
+    presource := s!"\ndef ot_{i} : QueryTree (BS (Nat × (RBNode ℕ (fun _ ↦ ℕ)))) := {QueryTree.toString_preBS' t (fun (n,_) => s!"({n}, o_nei_{n})") (fun n => s!"ot_{n}")}" :: presource
+  presource := s!"\ndef OTreeTop : QueryTree (BS (Nat × (RBNode ℕ (fun _ ↦ ℕ)))) := {QueryTree.toString_preBS' sOTtop (fun (n, _) => s!"({n}, o_nei_{n})") (fun n => s!"ot_{n}")}" :: presource
+  let source := s!"\nimport LeanGrow.QueryTree_idea\nopen Lean Data{String.join presource.reverse}"
   IO.FS.writeFile ⟨s!"/./home/yves/Desktop/CodeWorkspace/Lean4_General/LeanGrow/LeanGrow/Caches/LargeTransitionGraphs.lean"⟩ (source)
+
 
 --make_large_transition_graphs
 -- 2 min
---
 
-
-
-#exit
+--#exit
 
 
 def getTotalWeight : RBNode ℕ (fun _ ↦ ℕ) → Nat :=
   RBNode.fold (fun sofar _ v => sofar + v) 0
-
-
 
 
 def RBNode.getKeyVals : RBNode α (fun _ => β) → List (α × β)
@@ -151,7 +186,7 @@ def RBNode.getKeyVals : RBNode α (fun _ => β) → List (α × β)
 
 
 
--- computes total weights along all walks
+-- computes total weights along all walks of length N exactly
 def n_step_closure_rbt' (N : Nat) (inner outer : List (Nat × (RBNode ℕ (fun _ ↦ ℕ)))) (key : Nat) : Option (RBNode ℕ (fun _ ↦ (ℕ × ℕ))) :=
   match N with
   | 0 =>
@@ -218,7 +253,7 @@ def C4 : List (Nat × (RBNode ℕ (fun _ ↦ ℕ))) :=
 #eval do
   let .some res := n_step_closure_rbt 3 C4 C4 0 | IO.println "aaahh"
   IO.println (RBNode.toString (fun x => s!"{x}") (fun x => s!"{x}") res)
-  -- For example, 0 can gets weight 22 due to:
+  -- For example, 0 can gets weight 32 due to:
   -- 0,1,0,1,0 for 4 ; 0,1,0,3,0 for 4 ; 0,3,0,1,0 for 4 ; 0,3,0,3,0 for 4 ;
   -- 0,1,2,1,0 for 4 ; 0,3,2,3,0 for 4 ; 0,1,2,3,0 for 4 ; 0,3,2,1,0 for 4 ;
   --and 8*4 = 32
@@ -249,28 +284,39 @@ partial def QueryTree.mapBS_Opt (f : α → Option β) : QueryTree (BS α) → O
     | .some P => .some (.leaf (.ofPoint P))
     | _ => .none
 
+partial def QueryTree.map_Opt (f : α → Option β) : QueryTree α → Option (QueryTree β)
+| .root c =>
+    let cn := (c.map (QueryTree.map_Opt f))
+    if cn.hasNone? then .none else .some (.root (cn.reduceOption))
+| .node t c =>
+    let cn := (c.map (QueryTree.map_Opt f))
+    if cn.hasNone? then .none else .some (.node t (cn.reduceOption))
+| .leaf x =>
+    match f x with
+    | .some fx => .some (.leaf fx)
+    | _ => .none
 
 
 
-def n_step_closure (N : Nat) (inner outer : QueryTree (BS (Nat × (RBNode ℕ (fun _ ↦ ℕ))))) : Option (QueryTree (BS (Nat × (RBNode ℕ (fun _ ↦ ℕ))))) :=
+
+def n_step_closure (N : Nat) (inner outer : QueryTree (Nat × (RBNode ℕ (fun _ ↦ ℕ)))) : Option (QueryTree (Nat × (RBNode ℕ (fun _ ↦ ℕ)))) :=
   let inner' := QueryTree.getVals inner
   let outer' := QueryTree.getVals outer
-  QueryTree.mapBS_Opt (fun (k,_) => (k, · ) <$> n_step_closure_rbt N inner' outer' k) inner
+  QueryTree.map_Opt (fun (k,_) => (k, · ) <$> n_step_closure_rbt N inner' outer' k) inner
 
 
-def QueryTree.getChildren : QueryTree (BS α) → List (QueryTree (BS α))
+def QueryTree.getChildren : QueryTree α → List (QueryTree  α)
 | .root c => c
 | .node _ c => c
-| .leaf (.ofVal _) => []
-| .leaf (.ofPoint p) => QueryTree.getChildren p
+| .leaf _ => []
 
 
-def QueryTree.get_vals_of_valLeaves : List (QueryTree (BS α)) → List α
+def QueryTree.get_vals_of_valLeaves : List (QueryTree α) → List α
 | [] => []
 | x :: l =>
       match x with
-      | .leaf (.ofVal a) => a :: (QueryTree.get_vals_of_valLeaves l)
-      | .node (.leaf .none) [.leaf (.ofVal a)] => a :: (QueryTree.get_vals_of_valLeaves l) -- don't know if necessary...
+      | .leaf a => a :: (QueryTree.get_vals_of_valLeaves l)
+      | .node (.leaf .none) [.leaf a] => a :: (QueryTree.get_vals_of_valLeaves l) -- don't know if necessary...
       | _ => [] --fail (aka. early return)
 
 
@@ -297,21 +343,16 @@ partial def List.process_Lists (m : List α → Option α) (l : List (List α)) 
         .none
 
 /-- assumes that the trees of the list are the same , excpet of the leaf-values-/
-partial def QueryTree.merge (m : List α → Option α)  (data : List (QueryTree (BS α))) : Option (QueryTree (BS α)) :=
+partial def QueryTree.merge (m : List α → Option α)  (data : List (QueryTree  α)) : Option (QueryTree α) :=
   match QueryTree.get_vals_of_valLeaves data with
   | [] =>
-      match QueryTree.get_tree_of_pointLeaves data with
-      | [] =>
-          let chi := data.map QueryTree.getChildren
-          let res := List.process_Lists (QueryTree.merge m) chi
-          match data with
-          | .root _ :: _ => (.root) <$> res
-          | .node t _ :: _ => (.node t) <$> res
-          | _ =>
-             dbg_trace "fail at  QueryTree.merge"
-            .none
-      | l => QueryTree.merge m l -- since we expect the pointed trees to start with roots ; note that this de-pointers the tree ...
-  | l =>  (fun x => QueryTree.leaf (BS.ofVal x)) <$> (m l)
+      let chi := data.map QueryTree.getChildren
+      let res := List.process_Lists (QueryTree.merge m) chi
+      match data with
+      | .root _ :: _ => (.root) <$> res
+      | .node t _ :: _ => (.node t) <$> res
+      | _ => .none
+  | l =>  (fun x => QueryTree.leaf x) <$> (m l)
 
 
 
@@ -327,61 +368,68 @@ def merge_rbt (l : List (Nat × (RBNode ℕ (fun _ ↦ ℕ)))) : Option (Nat × 
 
 
 -- we can probably do better, since the closers are recomputed for larger steps ...
-def n_step_closure_full (N : Nat) (inner outer : QueryTree (BS (Nat × (RBNode ℕ (fun _ ↦ ℕ))))) : Option (QueryTree (BS (Nat × (RBNode ℕ (fun _ ↦ ℕ))))) :=
+def n_step_closure_full (N : Nat) (inner outer : QueryTree (Nat × (RBNode ℕ (fun _ ↦ ℕ)))) : Option (QueryTree (Nat × (RBNode ℕ (fun _ ↦ ℕ)))) :=
   let ouf := ((List.range N).map (n_step_closure · inner outer)).reduceOption
   QueryTree.merge merge_rbt ouf
 
 
-elab "make_smol_transition_graph_closure" : command => do
-  let clos_step := 3
-  let .some res := n_step_closure_full clos_step inner_trans outer_trans | throwError "Fail :<"
-  let source := s!"\nimport LeanGrow.QueryTree_idea\nopen Lean Data\ndef smol_closure : QueryTree (BS (Nat × (RBNode ℕ (fun _ ↦ ℕ)))) := {QueryTree.toString BS.toString_trick_more res}"
-  IO.FS.writeFile ⟨s!"/./home/yves/Desktop/CodeWorkspace/Lean4_General/LeanGrow/LeanGrow/Caches/SmolTransitionGraphClosure_clos_{clos_step}.lean"⟩ (source)
-
---make_smol_transition_graph_closure
 
 elab "make_large_transition_graph_closure" : command => do
   let clos_step := 3
+  let .some inner_trans_large := (QueryTree.deStratify true ITreeTop).head? | throwError "aaahhh"
+  let .some outer_trans_large := (QueryTree.deStratify true OTreeTop).head? | throwError "aaahhh"
   let .some res := n_step_closure_full clos_step inner_trans_large outer_trans_large | throwError "Fail :<"
-  let source := s!"\nimport LeanGrow.QueryTree_idea\nopen Lean Data\ndef large_closure : QueryTree (BS (Nat × (RBNode ℕ (fun _ ↦ ℕ)))) := {QueryTree.toString BS.toString_trick_more res}"
+  let RV := QueryTree.getVals res
+  let (_ , sRTs, sRTtop) := QueryTree.stratify 2 2 0 res
+  let mut presource := []
+  for (i,nei) in RV do
+    presource := s!"\ndef r_nei_{i} : RBNode ℕ (fun _ ↦ ℕ) := {printRBT nei}" :: presource
+  presource := s!"\ndef r_nei_all : List (Nat × (RBNode ℕ (fun _ ↦ ℕ))) := [{String.intercalate ", " ((RV.map Prod.fst).map (fun n => s!"({n}, r_nei_{n})"))}]" :: presource
+  for (i,t) in sRTs.reverse do
+    presource := s!"\ndef rt_{i} : QueryTree (BS (Nat × (RBNode ℕ (fun _ ↦ ℕ)))) := {QueryTree.toString_preBS' t (fun (n,_) => s!"({n}, r_nei_{n})") (fun n => s!"rt_{n}")}" :: presource
+  presource := s!"\ndef RTreeTop : QueryTree (BS (Nat × (RBNode ℕ (fun _ ↦ ℕ)))) := {QueryTree.toString_preBS' sRTtop (fun (n, _) => s!"({n}, r_nei_{n})") (fun n => s!"rt_{n}")}" :: presource
+  let source := s!"\nimport LeanGrow.QueryTree_idea\nopen Lean Data{String.join presource.reverse}"
   IO.FS.writeFile ⟨s!"/./home/yves/Desktop/CodeWorkspace/Lean4_General/LeanGrow/LeanGrow/Caches/LargeTransitionGraphClosure_clos_{clos_step}.lean"⟩ (source)
 
 --make_large_transition_graph_closure
+-- ≤ 20 min
+
+-- #exit
 
 
-def merge_rbt' (rbts : List ((RBNode ℕ (fun _ ↦ ℕ)))) :  ((RBNode ℕ (fun _ ↦ ℕ))) :=
-  match rbts.head? with
-  | .some _ =>
-      (rbts.foldl (fun S rbt => (rbt.fold (fun s k v => s.insert instOrdNat.compare k v) S) ) RBNode.leaf)
-  | _ =>
-      .leaf
+-- def merge_rbt' (rbts : List ((RBNode ℕ (fun _ ↦ ℕ)))) :  ((RBNode ℕ (fun _ ↦ ℕ))) :=
+--   match rbts.head? with
+--   | .some _ =>
+--       (rbts.foldl (fun S rbt => (rbt.fold (fun s k v => s.insert instOrdNat.compare k v) S) ) RBNode.leaf)
+--   | _ =>
+--       .leaf
 
 
-def n_step_closure_to_rbt (N : Nat) (inner outer : QueryTree (BS (Nat × (RBNode ℕ (fun _ ↦ ℕ))))) :  (RBNode ℕ (fun _ ↦ ((RBNode ℕ (fun _ ↦ ℕ))))) :=
-  let inner' := QueryTree.getVals inner
-  let outer' := QueryTree.getVals outer
-  (inner'.map Prod.fst).foldl (fun S k => S.insert instOrdNat.compare k (merge_rbt' ((List.range N).map (fun n => match n_step_closure_rbt n inner' outer' k with | .some x => x | _ => dbg_trace "here" ; .leaf))) ) RBNode.leaf
-
-
-
-elab "make_smol_transition_graph_closure_rbt" : command => do
-  let clos_step := 3
-  let res := n_step_closure_to_rbt clos_step inner_trans outer_trans
-  let source := s!"\nimport LeanGrow.QueryTree_idea\nopen Lean Data\ndef smol_closure_rbt : (RBNode ℕ (fun _ ↦ ((RBNode ℕ (fun _ ↦ ℕ))))) := {RBNode.toString (fun x => s!"{x}") (RBNode.toString (fun x => s!"{x}") (fun x => s!"{x}"))  res}"
-  IO.FS.writeFile ⟨s!"/./home/yves/Desktop/CodeWorkspace/Lean4_General/LeanGrow/LeanGrow/Caches/SmolTransitionGraphClosure_rbt_clos_{clos_step}.lean"⟩ (source)
-
---make_smol_transition_graph_closure_rbt
-
-elab "make_large_transition_graph_closure_rbt" : command => do
-  let clos_step := 3
-  let res := n_step_closure_to_rbt clos_step inner_trans_large outer_trans_large
-  let source := s!"\nimport LeanGrow.QueryTree_idea\nopen Lean Data\ndef large_closure_rbt : (RBNode ℕ (fun _ ↦ ((RBNode ℕ (fun _ ↦ ℕ))))) := {RBNode.toString (fun x => s!"{x}") (RBNode.toString (fun x => s!"{x}") (fun x => s!"{x}"))  res}"
-  IO.FS.writeFile ⟨s!"/./home/yves/Desktop/CodeWorkspace/Lean4_General/LeanGrow/LeanGrow/Caches/LargeTransitionGraphClosure_rbt_clos_{clos_step}.lean"⟩ (source)
-
---make_large_transition_graph_closure_rbt
+-- def n_step_closure_to_rbt (N : Nat) (inner outer : QueryTree (BS (Nat × (RBNode ℕ (fun _ ↦ ℕ))))) :  (RBNode ℕ (fun _ ↦ ((RBNode ℕ (fun _ ↦ ℕ))))) :=
+--   let inner' := QueryTree.getVals inner
+--   let outer' := QueryTree.getVals outer
+--   (inner'.map Prod.fst).foldl (fun S k => S.insert instOrdNat.compare k (merge_rbt' ((List.range N).map (fun n => match n_step_closure_rbt n inner' outer' k with | .some x => x | _ => dbg_trace "here" ; .leaf))) ) RBNode.leaf
 
 
 
+-- elab "make_smol_transition_graph_closure_rbt" : command => do
+--   let clos_step := 3
+--   let res := n_step_closure_to_rbt clos_step inner_trans outer_trans
+--   let source := s!"\nimport LeanGrow.QueryTree_idea\nopen Lean Data\ndef smol_closure_rbt : (RBNode ℕ (fun _ ↦ ((RBNode ℕ (fun _ ↦ ℕ))))) := {RBNode.toString (fun x => s!"{x}") (RBNode.toString (fun x => s!"{x}") (fun x => s!"{x}"))  res}"
+--   IO.FS.writeFile ⟨s!"/./home/yves/Desktop/CodeWorkspace/Lean4_General/LeanGrow/LeanGrow/Caches/SmolTransitionGraphClosure_rbt_clos_{clos_step}.lean"⟩ (source)
+
+-- --make_smol_transition_graph_closure_rbt
+
+-- elab "make_large_transition_graph_closure_rbt" : command => do
+--   let clos_step := 3
+--   let res := n_step_closure_to_rbt clos_step inner_trans_large outer_trans_large
+--   let source := s!"\nimport LeanGrow.QueryTree_idea\nopen Lean Data\ndef large_closure_rbt : (RBNode ℕ (fun _ ↦ ((RBNode ℕ (fun _ ↦ ℕ))))) := {RBNode.toString (fun x => s!"{x}") (RBNode.toString (fun x => s!"{x}") (fun x => s!"{x}"))  res}"
+--   IO.FS.writeFile ⟨s!"/./home/yves/Desktop/CodeWorkspace/Lean4_General/LeanGrow/LeanGrow/Caches/LargeTransitionGraphClosure_rbt_clos_{clos_step}.lean"⟩ (source)
+
+-- --make_large_transition_graph_closure_rbt
+
+
+-- #exit
 
 
 -- # Analysis of clusters and graphs
@@ -394,7 +442,7 @@ def print_cluster_goal_names (L : List pdata) : List String :=
   ((L.map pdata.goal_cst_names).map (Trie.print_keys ⟨#[]⟩)).join
 
 def get_cluster_list_from_index (i : Nat) : List pdata :=
-  match sclu_from_qt_all.find? (fun (j,_) => i=j) with
+  match Lsclu_from_qt_all.find? (fun (j,_) => i=j) with
   | .some l => l.2
   | _ => []
 
@@ -403,33 +451,14 @@ def RBNode.getVals : RBNode α (fun _ => β) → List (α × β)
 | .node _ l k v r => (k,v) :: ((RBNode.getVals l) ++ (RBNode.getVals r))
 
 
-elab "one_step_cluster_study_smol" : command => do
-  let mut toPrint := [""]
-  let cluster_index := 96 --110 --106 --96
-  let data := get_cluster_list_from_index cluster_index
-  toPrint := s!"Analysis on cluster nr. {cluster_index}.\nIts hyp-names: {print_cluster_hyp_names data}\n\n" :: toPrint
-  let .some nei := smol_closure_rbt.find instOrdNat.compare cluster_index | throwError "aaaahhh"
-  let nei! := RBNode.getVals nei
-  for (idx, hits) in nei! do
-    toPrint := s!"Suggests moving to cluster nr. {idx}, with score {hits}.\nIts hyp-names: {print_cluster_hyp_names (get_cluster_list_from_index idx)}\n\n" :: toPrint
-  IO.println (String.join toPrint.reverse)
-
---one_step_cluster_study_smol
-
-/-
-- 96 :  nice small cluster, with coherence arround List.Nodup
-- 106 : mega cluster arround Nat and Nat's ≤  and < instances ...
-- 110 : empty hyp names... but not actually empty
-
--/
-
+#exit
 
 elab "one_step_cluster_study_large" : command => do
   let mut toPrint := [""]
   let cluster_index := 110 --110 --106 --96
   let data := get_cluster_list_from_index cluster_index
   toPrint := s!"Analysis on cluster nr. {cluster_index}.\nIts hyp-names: {print_cluster_hyp_names data}\n\n" :: toPrint
-  let .some nei := large_closure_rbt.find instOrdNat.compare cluster_index | throwError "aaaahhh"
+  let .some nei := (QueryTree.query RTreeTop) instOrdNat.compare cluster_index | throwError "aaaahhh"
   let nei! := RBNode.getVals nei
   for (idx, hits) in nei! do
     toPrint := s!"Suggests moving to cluster nr. {idx}, with score {hits}.\nIts hyp-names: {print_cluster_hyp_names (get_cluster_list_from_index idx)}\n\n" :: toPrint
@@ -443,6 +472,9 @@ elab "one_step_cluster_study_large" : command => do
 - 110 : empty hyp names... but not actually empty
 
 -/
+
+
+#exit
 
 --#eval  QueryTree.toString BS.toString_trick_more (QueryTree.mapBS (fun (n,l) => (n, Clus_Nei_inner l)) Lsclu_from_qt_all)
 #check (QueryTree.mapBS (fun (n,l) => (n, Clus_Nei_inner l)) Lsclu_from_qt_all)
