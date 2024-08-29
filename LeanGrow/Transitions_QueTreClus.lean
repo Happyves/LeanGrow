@@ -41,7 +41,7 @@ def Clus_Nei_inner (clus : List pdata) : RBNode Nat (fun _ => Nat) :=
   match clus with
   | [] => .leaf
   | d :: ds =>
-      let nei := QueryTree.query d.goal_cst_names LinkTreeTop
+      let nei := QueryTree.query d.goal_cst_names LinkTreeTop -- shouldn't it be sink names here ?
       Id.run do
         let mut rbn := Clus_Nei_inner ds
         for (n,_) in nei do

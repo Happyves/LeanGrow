@@ -3,11 +3,15 @@ import LeanGrow.ProcessLocalCtx
 
 import LeanGrow.Caches.QueryTreeSmoothClusters_wL_col2
 import LeanGrow.Caches.QueryTreeSmoothClustersGoal_wL_col2
-import LeanGrow.Caches.LargeTransitionGraphClosure_clos_3
+-- import LeanGrow.Caches.LargeTransitionGraphClosure_clos_3
 
-import LeanGrow.Transitions_QueTreClus
+import LeanGrow.Caches.SmolTransitionGraphs
 
-open Lean
+--import LeanGrow.Transitions_QueTreClus
+
+import LeanGrow.NameListCompare
+
+open Lean Data
 
 def embed_to_expr (embed : Array (Option NodeCst)) --(impInfo : List miniBind)
   (size : Nat) (dict : PersistentHashMap ℕ FVarId) (n_info : Name) (l_info : List Name) : MetaM Expr := do
@@ -46,32 +50,32 @@ def Lean.Meta.Tactic.TryThis.addEmbellishedTermSuggestions (ref : Syntax) (es : 
 --#exit
 
 
-elab "grow"  : tactic => do
-  let ref ← getRef
-  Elab.Tactic.withMainContext do
-    let ltx ←  getLCtx
-    let (ltx_dag, _, ltx_dict') := orderHyps_fromLocalCtx ltx
-    let sink_names := (((DAG.find_sinks ltx_dag true).map DAGnode.data).map CExpr.getConstNames).join.map Name.toString
-    let psn := SortedTrieFormList' sink_names
-    let qch := QueryTree.query psn LinkTreeTop
-    let qcg := QueryTree.query psn g_LinkTreeTop
-    let qt := QueryTree.query psn RTreeTop
-    let mut final : List (Nat × pdata) := []
-    for (nr, clust) in qch do
-      let .some (_,nei) := qt.find? (fun (n,_) => n == nr) | throwError "aahh 1"
-      for (gnr, _) in qcg do
-        let score := match nei.find instOrdNat.compare gnr with | .some v => v | _ => 0
-        final := (clust.map (score, ·)) ++ final
-    let finaly := List.mergeSort (fun n m => n.1 ≥ m.1) final
-    for (sc, dag) in finaly do
-      let embeds := matcher dag.dag (SizeDAG.sinks_fst ltx_dag)
-      match embeds with
-      | [] => pure ()
-      | _ =>  do
-              let P ← (embeds.mapM (fun e => embed_to_expr e --(hyps.map Prod.snd)
-                dag.dag.size ltx_dict' dag.cst_name  dag.cst_level_params))
-              addEmbellishedTermSuggestions ref P.toArray
-                (depPostInfo := fun e => do return s!"\nScore {sc}\n{← ppExpr (← inferType e)}")
+-- elab "grow"  : tactic => do
+--   let ref ← getRef
+--   Elab.Tactic.withMainContext do
+--     let ltx ←  getLCtx
+--     let (ltx_dag, _, ltx_dict') := orderHyps_fromLocalCtx ltx
+--     let sink_names := (((DAG.find_sinks ltx_dag true).map DAGnode.data).map CExpr.getConstNames).join.map Name.toString
+--     let psn := SortedTrieFormList' sink_names
+--     let qch := QueryTree.query psn LinkTreeTop
+--     let qcg := QueryTree.query psn g_LinkTreeTop
+--     let qt := QueryTree.query psn RTreeTop
+--     let mut final : List (Nat × pdata) := []
+--     for (nr, clust) in qch do
+--       let .some (_,nei) := qt.find? (fun (n,_) => n == nr) | throwError "aahh 1"
+--       for (gnr, _) in qcg do
+--         let score := match nei.find instOrdNat.compare gnr with | .some v => v | _ => 0
+--         final := (clust.map (score, ·)) ++ final
+--     let finaly := List.mergeSort (fun n m => n.1 ≥ m.1) final
+--     for (sc, dag) in finaly do
+--       let embeds := matcher dag.dag (SizeDAG.sinks_fst ltx_dag)
+--       match embeds with
+--       | [] => pure ()
+--       | _ =>  do
+--               let P ← (embeds.mapM (fun e => embed_to_expr e --(hyps.map Prod.snd)
+--                 dag.dag.size ltx_dict' dag.cst_name  dag.cst_level_params))
+--               addEmbellishedTermSuggestions ref P.toArray
+--                 (depPostInfo := fun e => do return s!"\nScore {sc}\n{← ppExpr (← inferType e)}")
 
 
 
@@ -97,6 +101,68 @@ example (l : List ℕ) (a : ℕ) (h : a ∈ l) : l[List.indexOf a l]? = some a :
   sorry
 
 #check List.getElem?_indexOf
+
+
+partial def QueryTree.query (Q : Trie Unit) (T : QueryTree (BS α)) : List α :=
+  match T with
+  | .root c => (c.map (QueryTree.query Q)).join
+  | .node t c => if Trie.CountCommon t Q = Trie.size t then (c.map (QueryTree.query Q)).join else []
+  | .leaf (.ofVal a) => [a]
+  | .leaf (.ofPoint t) => QueryTree.query Q t
+
+
+elab "grow_mini"  : tactic => do
+  let ref ← getRef
+  Elab.Tactic.withMainContext do
+    let ltx ←  getLCtx
+    let (ltx_dag, _, ltx_dict') := orderHyps_fromLocalCtx ltx
+    let sink_names := (((DAG.find_sinks ltx_dag true).map DAGnode.data).map CExpr.getConstNames).join.map Name.toString
+    let psn := SortedTrieFormList' sink_names
+    let qch := QueryTree.query psn LinkTreeTop
+    let qcg := QueryTree.query psn g_LinkTreeTop
+    let qt := QueryTree.query psn OTreeTop
+    let mut final : List (Nat × pdata) := []
+    for (nr, clust) in qch do
+      let .some (_,nei) := qt.find? (fun (n,_) => n == nr) | throwError "aahh 1"
+      for (gnr, _) in qcg do
+        let score := match nei.find instOrdNat.compare gnr with | .some v => v | _ => 0
+        final := (clust.map (score, ·)) ++ final
+    let finaly := List.mergeSort (fun n m => n.1 ≥ m.1) final
+    for (sc, dag) in finaly do
+      let embeds := matcher dag.dag (SizeDAG.sinks_fst ltx_dag)
+      match embeds with
+      | [] => pure ()
+      | _ =>  do
+              let P ← (embeds.mapM (fun e => embed_to_expr e --(hyps.map Prod.snd)
+                dag.dag.size ltx_dict' dag.cst_name  dag.cst_level_params))
+              addEmbellishedTermSuggestions ref P.toArray
+                (depPostInfo := fun e => do return s!"\nScore {sc}\n{← ppExpr (← inferType e)}")
+
+
+example (l : List ℕ) (a : ℕ) (h : a ∈ l) : insert a l = l :=
+  by
+  grow_mini
+  sorry
+
+#check List.insert_pos
+
+#eval Trie.print_keys ⟨ #[]⟩  PDATA.List.insert_pos.goal_cst_names
+
+example (l : List ℕ) (a : ℕ) (h : a ∈ l) :  (l.erase a).length + 1 = l.length :=
+  by
+  --grow_mini
+  sorry
+
+#check List.length_erase_add_one
+
+example (l : List ℕ) (a : ℕ) (h : a ∈ l) : l[List.indexOf a l]? = some a :=
+  by
+  --grow_mini
+  sorry
+
+#check List.getElem?_indexOf
+
+
 
 #exit
 
