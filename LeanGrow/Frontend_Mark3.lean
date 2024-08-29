@@ -141,7 +141,7 @@ elab "grow_mini"  : tactic => do
 
 example (l : List ℕ) (a : ℕ) (h : a ∈ l) : insert a l = l :=
   by
-  grow_mini
+  --grow_mini
   sorry
 
 #check List.insert_pos
@@ -158,6 +158,69 @@ example (l : List ℕ) (a : ℕ) (h : a ∈ l) :  (l.erase a).length + 1 = l.len
 example (l : List ℕ) (a : ℕ) (h : a ∈ l) : l[List.indexOf a l]? = some a :=
   by
   --grow_mini
+  sorry
+
+#check List.getElem?_indexOf
+
+
+
+elab "grow_screw_transions"  : tactic => do
+  let ref ← getRef
+  Elab.Tactic.withMainContext do
+    let ltx ←  getLCtx
+    let (ltx_dag, _, ltx_dict') := orderHyps_fromLocalCtx ltx
+    let sink_names := (((DAG.find_sinks ltx_dag true).map DAGnode.data).map CExpr.getConstNames).join.map Name.toString
+    let psn := SortedTrieFormList' sink_names
+    let gcn := SortedTrieFormList' (List.dedup ((Expr.getConstNames (← getMainTarget)).map Name.toString))
+    IO.println ("DBG  " ++ s!"{List.dedup  ((Expr.getConstNames (← getMainTarget)).map Name.toString)}")
+    let qch := QueryTree.query psn LinkTreeTop
+    let qcg := (QueryTree.query gcn g_LinkTreeTop).map Prod.fst
+    let mut final : List (Float × pdata) := []
+    for (_, clust) in qch do
+      for pd in clust do
+        let gcs := (QueryTree.query pd.goal_cst_names g_LinkTreeTop).map Prod.fst
+        let score : Float := Id.run do
+          let mut inter := 0
+          for n in qcg do
+            if gcs.contains n then inter := inter + 1
+          return (Nat.toFloat inter) / (Nat.toFloat gcs.length)
+        final := ((score, pd)) :: final
+    let finaly := List.mergeSort (fun n m => n.1 ≥ m.1) final
+    for (sc, dag) in finaly do
+      let embeds := matcher dag.dag (SizeDAG.sinks_fst ltx_dag)
+      match embeds with
+      | [] => pure ()
+      | _ =>  do
+              let P ← (embeds.mapM (fun e => embed_to_expr e --(hyps.map Prod.snd)
+                dag.dag.size ltx_dict' dag.cst_name  dag.cst_level_params))
+              addEmbellishedTermSuggestions ref P.toArray
+                (depPostInfo := fun e => do return s!"\nScore {sc}\n{Trie.print_keys ⟨#[]⟩ dag.goal_cst_names}\n{← ppExpr (← inferType e)}")
+
+
+
+
+example (l : List α) [DecidableEq α] (a : α) (h : a ∈ l) : insert a l = l :=
+  by
+  grow_screw_transions
+  sorry
+  -- Eq, List, Insert.insert, List, List.instInsertOfDecidableEq_mathlib
+
+#eval List.dedup ["Eq", "List", "Insert.insert", "List", "List.instInsertOfDecidableEq_mathlib"]
+
+#check List.insert_pos
+
+#eval Trie.print_keys ⟨ #[]⟩  PDATA.List.insert_pos.goal_cst_names
+
+example (l : List ℕ) (a : ℕ) (h : a ∈ l) :  (l.erase a).length + 1 = l.length :=
+  by
+  --grow_screw_transions
+  sorry
+
+#check List.length_erase_add_one
+
+example (l : List ℕ) (a : ℕ) (h : a ∈ l) : l[List.indexOf a l]? = some a :=
+  by
+  --grow_screw_transions
   sorry
 
 #check List.getElem?_indexOf
