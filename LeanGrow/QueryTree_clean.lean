@@ -215,6 +215,42 @@ elab "make_smooth_clusters_from_querytree_wL_g" : command => do
 
 --make_smooth_clusters_from_querytree_wL_g
 
+
+
+elab "make_huge_clusters_from_querytree_wL" : command => do
+  let col := 2
+  let .some deT := (QueryTree.deStratify true tha_tree).head? | throwError "aaahhh"
+  let (_, LT, clustas) := QueryTree.enumVals 0 deT
+  let (_ , sLTs, sLTtop) := QueryTree.stratify 2 2 0 LT
+  let mut presource := []
+  for (i,c) in clustas do
+    presource := s!"\ndef hLsclu_from_qt_{i} : pdata := PDATA.{c.cst_name}" :: presource
+  presource := s!"\ndef hLsclu_from_qt_all : List (Nat × pdata) := [{String.intercalate ", " ((clustas.map Prod.fst).map (fun n => s!"({n},hLsclu_from_qt_{n})"))}]" :: presource
+  for (i,t) in sLTs.reverse do
+    presource := s!"\ndef hlt_{i} : QueryTree (BS (Nat × pdata)) := {QueryTree.toString_preBS' t (fun n => s!"({n}, hLsclu_from_qt_{n})") (fun n => s!"hlt_{n}")}" :: presource
+  presource := s!"\ndef hLinkTreeTop : QueryTree (BS (Nat × pdata)) := {QueryTree.toString_preBS' sLTtop (fun n => s!"({n}, hLsclu_from_qt_{n})") (fun n => s!"hlt_{n}")}" :: presource
+  let source := s!"import LeanGrow.Caches.mark2cache_v2_big\nimport LeanGrow.QueryTree_idea\nopen Lean Data{String.join (presource.reverse)}"
+  IO.FS.writeFile ⟨s!"/./home/yves/Desktop/CodeWorkspace/Lean4_General/LeanGrow/LeanGrow/Caches/QueryTreeSmoothClustersHuge_wL_col{col}.lean"⟩ (source)
+
+--make_huge_clusters_from_querytree_wL
+
+elab "make_huge_clusters_from_querytree_wL_g" : command => do
+  let col := 2
+  let .some deT := (QueryTree.deStratify true g_tha_tree).head? | throwError "aaahhh"
+  let (_, LT, clustas) := QueryTree.enumVals 0 deT
+  let (_ , sLTs, sLTtop) := QueryTree.stratify 2 2 0 LT
+  let mut presource := []
+  for (i,c) in clustas do
+    presource := s!"\ndef g_hLsclu_from_qt_{i} : gdata := GDATA.{c.cst_name}" :: presource
+  presource := s!"\ndef g_hLsclu_from_qt_all : List (Nat × gdata) := [{String.intercalate ", " ((clustas.map Prod.fst).map (fun n => s!"({n}, g_hLsclu_from_qt_{n})"))}]" :: presource
+  for (i,t) in sLTs.reverse do
+    presource := s!"\ndef g_hlt_{i} : QueryTree (BS (Nat × gdata)) := {QueryTree.toString_preBS' t (fun n => s!"({n}, g_hLsclu_from_qt_{n})") (fun n => s!"g_hlt_{n}")}" :: presource
+  presource := s!"\ndef g_hLinkTreeTop : QueryTree (BS (Nat × gdata)) := {QueryTree.toString_preBS' sLTtop (fun n => s!"({n}, g_hLsclu_from_qt_{n})") (fun n => s!"g_hlt_{n}")}" :: presource
+  let source := s!"import LeanGrow.Caches.mark1goalCache_big\nimport LeanGrow.QueryTree_idea\nopen Lean Data{String.join (presource.reverse)}"
+  IO.FS.writeFile ⟨s!"/./home/yves/Desktop/CodeWorkspace/Lean4_General/LeanGrow/LeanGrow/Caches/QueryTreeSmoothClustersHuge_g_wL_col{col}.lean"⟩ (source)
+
+--make_huge_clusters_from_querytree_wL_g
+
 #exit
 
 elab "make_smooth_clusters_from_querytree_wL" : command => do

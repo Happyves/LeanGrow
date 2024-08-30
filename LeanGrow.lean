@@ -8,7 +8,7 @@ import LeanGrow.DAGembed
 import LeanGrow.DAGstruct
 -- import LeanGrow.Frontend_Mark1
 -- import LeanGrow.Frontend_Mark2
-import LeanGrow.Frontend_Nomeclature
+--import LeanGrow.Frontend_Nomeclature
 import LeanGrow.NameListCompare
 import LeanGrow.Nomeclature
 import LeanGrow.ProcessDecl
@@ -40,3 +40,8 @@ import LeanGrow.Caches.LargeTransitionGraphClosure_clos_3
 
 -- import LeanGrow.Caches.SmolTransitionGraphClosure_rbt_clos_3
 -- import LeanGrow.Caches.LargeTransitionGraphClosure_rbt_clos_3
+
+-- import LeanGrow.Caches.QueryTreeSmoothClustersHuge_g_wL_col2
+-- import LeanGrow.Caches.QueryTreeSmoothClustersHuge_wL_col2
+
+import LeanGrow.Frontend_Mark3

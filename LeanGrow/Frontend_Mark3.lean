@@ -3,11 +3,11 @@ import LeanGrow.ProcessLocalCtx
 
 import LeanGrow.Caches.QueryTreeSmoothClusters_wL_col2
 import LeanGrow.Caches.QueryTreeSmoothClustersGoal_wL_col2
--- import LeanGrow.Caches.LargeTransitionGraphClosure_clos_3
+import LeanGrow.Caches.LargeTransitionGraphClosure_clos_3
 
-import LeanGrow.Caches.SmolTransitionGraphs
+--import LeanGrow.Caches.SmolTransitionGraphs
 
---import LeanGrow.Transitions_QueTreClus
+import LeanGrow.Transitions_QueTreClus
 
 import LeanGrow.NameListCompare
 
@@ -49,35 +49,54 @@ def Lean.Meta.Tactic.TryThis.addEmbellishedTermSuggestions (ref : Syntax) (es : 
 
 --#exit
 
+def RBNode.getTotalWeight (rbt : RBNode ℕ (fun _ ↦ ℕ)) : ℕ :=
+  rbt.fold (fun s _ v => s + v) 0
 
--- elab "grow"  : tactic => do
---   let ref ← getRef
---   Elab.Tactic.withMainContext do
---     let ltx ←  getLCtx
---     let (ltx_dag, _, ltx_dict') := orderHyps_fromLocalCtx ltx
---     let sink_names := (((DAG.find_sinks ltx_dag true).map DAGnode.data).map CExpr.getConstNames).join.map Name.toString
---     let psn := SortedTrieFormList' sink_names
---     let qch := QueryTree.query psn LinkTreeTop
---     let qcg := QueryTree.query psn g_LinkTreeTop
---     let qt := QueryTree.query psn RTreeTop
---     let mut final : List (Nat × pdata) := []
---     for (nr, clust) in qch do
---       let .some (_,nei) := qt.find? (fun (n,_) => n == nr) | throwError "aahh 1"
---       for (gnr, _) in qcg do
---         let score := match nei.find instOrdNat.compare gnr with | .some v => v | _ => 0
---         final := (clust.map (score, ·)) ++ final
---     let finaly := List.mergeSort (fun n m => n.1 ≥ m.1) final
---     for (sc, dag) in finaly do
---       let embeds := matcher dag.dag (SizeDAG.sinks_fst ltx_dag)
---       match embeds with
---       | [] => pure ()
---       | _ =>  do
---               let P ← (embeds.mapM (fun e => embed_to_expr e --(hyps.map Prod.snd)
---                 dag.dag.size ltx_dict' dag.cst_name  dag.cst_level_params))
---               addEmbellishedTermSuggestions ref P.toArray
---                 (depPostInfo := fun e => do return s!"\nScore {sc}\n{← ppExpr (← inferType e)}")
+def RBNode.normalisze (rbt : RBNode ℕ (fun _ ↦ ℕ)) : RBNode ℕ (fun _ ↦ Float) :=
+  let totalWeight := Nat.toFloat (RBNode.getTotalWeight rbt)
+  RBNode.map (fun _ v => (Nat.toFloat v) / totalWeight) rbt
+
+partial def QueryTree.query_big_subset (Q : Trie Unit) (pre_computed_query_size count : Nat) (T : QueryTree (BS α)) : List α :=
+  match T with
+  | .root c => (c.map (QueryTree.query_big_subset Q pre_computed_query_size count)).join
+  | .node t c => if Trie.CountCommon t Q = Trie.size t then (c.map (QueryTree.query_big_subset Q pre_computed_query_size (count + Trie.size t))).join else []
+  | .leaf (.ofVal a) => if (Nat.toFloat count) / (Nat.toFloat pre_computed_query_size) ≥ 0.5 then [a] else []
+                          -- for a ratio of 0.66 the first test used to not return anything
+  | .leaf (.ofPoint t) => QueryTree.query_big_subset Q pre_computed_query_size count t
 
 
+
+elab "grow"  : tactic => do
+  let ref ← getRef
+  Elab.Tactic.withMainContext do
+    let ltx ←  getLCtx
+    let (ltx_dag, _, ltx_dict') := orderHyps_fromLocalCtx ltx
+    let sink_names := (((DAG.find_sinks ltx_dag true).map DAGnode.data).map CExpr.getConstNames).join.map Name.toString
+    let psn := SortedTrieFormList' sink_names
+    let gcn := SortedTrieFormList' (List.dedup ((Expr.getConstNames (← getMainTarget)).map Name.toString))
+    let qch := QueryTree.query psn LinkTreeTop
+    let qcg := QueryTree.query_big_subset gcn (Trie.size gcn) 0 g_LinkTreeTop
+    let qt := QueryTree.query psn RTreeTop
+    let mut final : List (Float × pdata) := []
+    for (nr, clust) in qch do
+      dbg_trace "wtf 1"
+      let .some (_,nei) := qt.find? (fun (n,_) => n == nr) | throwError "aahh 1"
+      for (gnr, _) in qcg do
+        let score := match (RBNode.normalisze nei).find instOrdNat.compare gnr with | .some v => v | _ => 0
+        final := (clust.map (score, ·)) ++ final
+    --let finaly := List.mergeSort (fun n m => n.1 ≥ m.1) final
+    for (sc, dag) in final do
+      dbg_trace "wtf"
+      let embeds := matcher dag.dag (SizeDAG.sinks_fst ltx_dag)
+      match embeds with
+      | [] => pure ()
+      | _ =>  do
+              let P ← (embeds.mapM (fun e => embed_to_expr e --(hyps.map Prod.snd)
+                dag.dag.size ltx_dict' dag.cst_name  dag.cst_level_params))
+              addEmbellishedTermSuggestions ref P.toArray
+                (depPostInfo := fun e => do return s!"\nScore {sc}\n{← ppExpr (← inferType e)}")
+
+--#exit
 
 set_option linter.unusedTactic false
 
@@ -87,6 +106,7 @@ example (l : List ℕ) (a : ℕ) (h : a ∈ l) : insert a l = l :=
   sorry
 
 #check List.insert_pos
+-- found with highest cluster score !
 
 example (l : List ℕ) (a : ℕ) (h : a ∈ l) :  (l.erase a).length + 1 = l.length :=
   by
@@ -94,14 +114,18 @@ example (l : List ℕ) (a : ℕ) (h : a ∈ l) :  (l.erase a).length + 1 = l.len
   sorry
 
 #check List.length_erase_add_one
+--found with subobtimal score 0.009577 with best score 0.011353
 
 example (l : List ℕ) (a : ℕ) (h : a ∈ l) : l[List.indexOf a l]? = some a :=
   by
   --grow
   sorry
 
+-- No clue what is going on here ; first I got stack overflows due to merge sort, then the infoview freezes and refuses to print the score part
 #check List.getElem?_indexOf
 
+
+#exit
 
 partial def QueryTree.query (Q : Trie Unit) (T : QueryTree (BS α)) : List α :=
   match T with
@@ -118,8 +142,9 @@ elab "grow_mini"  : tactic => do
     let (ltx_dag, _, ltx_dict') := orderHyps_fromLocalCtx ltx
     let sink_names := (((DAG.find_sinks ltx_dag true).map DAGnode.data).map CExpr.getConstNames).join.map Name.toString
     let psn := SortedTrieFormList' sink_names
+    let gcn := SortedTrieFormList' (List.dedup ((Expr.getConstNames (← getMainTarget)).map Name.toString))
     let qch := QueryTree.query psn LinkTreeTop
-    let qcg := QueryTree.query psn g_LinkTreeTop
+    let qcg := QueryTree.query gcn g_LinkTreeTop
     let qt := QueryTree.query psn OTreeTop
     let mut final : List (Nat × pdata) := []
     for (nr, clust) in qch do
@@ -162,7 +187,7 @@ example (l : List ℕ) (a : ℕ) (h : a ∈ l) : l[List.indexOf a l]? = some a :
 
 #check List.getElem?_indexOf
 
-
+#exit
 
 elab "grow_screw_transions"  : tactic => do
   let ref ← getRef
