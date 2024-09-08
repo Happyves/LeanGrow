@@ -42,6 +42,6 @@ import LeanGrow.Caches.LargeTransitionGraphClosure_clos_3
 -- import LeanGrow.Caches.LargeTransitionGraphClosure_rbt_clos_3
 
 -- import LeanGrow.Caches.QueryTreeSmoothClustersHuge_g_wL_col2
--- import LeanGrow.Caches.QueryTreeSmoothClustersHuge_wL_col2
+import LeanGrow.Caches.QueryTreeSmoothClustersHuge_wL_col2
 
 import LeanGrow.Frontend_Mark3

@@ -217,6 +217,36 @@ elab "make_smooth_clusters_from_querytree_wL_g" : command => do
 
 
 
+
+partial def List.split_on_length_aux (len count : Nat) (cache : List α) : List α → List (List α)
+| [] => match cache with | [] => [] | _ => [cache]
+| x :: l => if count < len then List.split_on_length_aux len (count + 1) (x :: cache) l else cache :: (List.split_on_length_aux len 0 [] (x :: l))
+
+def List.split_on_length (len : Nat) (l : List α) : List (List α) :=
+  List.split_on_length_aux len 0 [] l
+
+#eval List.split_on_length 2 [1,2,3,4,5,6,7,8,9]
+
+open Lean Data
+
+partial def QueryTree.toString_wTries (signature : String) (string_alpha : α → String) (count : Nat) : QueryTree α → (Nat × List (Nat × String) × (String))
+| .root (c : List (QueryTree α)) =>
+    let L := c.foldl (fun sofar now => let (nc, nL, ncl) := QueryTree.toString_wTries signature string_alpha sofar.1 now ; (nc, nL ++ sofar.2.1, ncl :: sofar.2.2) ) ((count, [], []) : Nat × List (Nat × String) × List String)
+    let Ltree := s!"QueryTree.root ([{String.intercalate ", " (L.2.2)}])"
+    (L.1, L.2.1 ,Ltree)
+| .node (q : Trie Unit) (c : List (QueryTree α)) =>
+    let L := c.foldl (fun sofar now => let (nc, nL, ncl) := QueryTree.toString_wTries signature string_alpha sofar.1 now ; (nc, nL ++ sofar.2.1, ncl :: sofar.2.2) ) ((count, [], []) : Nat × List (Nat × String) × List String)
+    let Ltree := s!"QueryTree.node {signature}_qtbsTrie_{L.1} ([{String.intercalate ", " (L.2.2)}])"
+    let trie := s!"\ndef {signature}_qtbsTrie_{L.1} : Trie Unit := {print_trie q}"
+    (L.1 + 1, (L.1, trie) :: L.2.1 , Ltree)
+| .leaf a => (count, [], s!"QueryTree.leaf ({string_alpha a})")
+
+
+def QueryTree.toString_preBS_wAuxTries (signature : String)  (T : QueryTree (preBS α)) (string_alpha : α → String) (string_pointer : Nat → String) : Nat × List (Nat × String) × (String) :=
+      QueryTree.toString_wTries signature (preBS.toString_core string_alpha string_pointer) 0 T
+
+
+
 elab "make_huge_clusters_from_querytree_wL" : command => do
   let col := 2
   let .some deT := (QueryTree.deStratify true tha_tree).head? | throwError "aaahhh"
@@ -225,14 +255,24 @@ elab "make_huge_clusters_from_querytree_wL" : command => do
   let mut presource := []
   for (i,c) in clustas do
     presource := s!"\ndef hLsclu_from_qt_{i} : pdata := PDATA.{c.cst_name}" :: presource
-  presource := s!"\ndef hLsclu_from_qt_all : List (Nat × pdata) := [{String.intercalate ", " ((clustas.map Prod.fst).map (fun n => s!"({n},hLsclu_from_qt_{n})"))}]" :: presource
+  let tmp := List.split_on_length 42 ((clustas.map Prod.fst).map (fun n => s!"({n},hLsclu_from_qt_{n})"))
+  let mut countsplit := 0
+  for sl in tmp do
+    presource := s!"\ndef hLsclu_from_qt_all_split_{countsplit} : List (Nat × pdata) := {sl}" :: presource
+    countsplit := countsplit + 1
+  presource := s!"\ndef hLsclu_from_qt_all : List (List (Nat × pdata)) := [{String.intercalate ", " ((List.range countsplit).map (fun n => s!"hLsclu_from_qt_all_split_{n}"))}]" :: presource
   for (i,t) in sLTs.reverse do
     presource := s!"\ndef hlt_{i} : QueryTree (BS (Nat × pdata)) := {QueryTree.toString_preBS' t (fun n => s!"({n}, hLsclu_from_qt_{n})") (fun n => s!"hlt_{n}")}" :: presource
-  presource := s!"\ndef hLinkTreeTop : QueryTree (BS (Nat × pdata)) := {QueryTree.toString_preBS' sLTtop (fun n => s!"({n}, hLsclu_from_qt_{n})") (fun n => s!"hlt_{n}")}" :: presource
+  let (_, tries, mainT) := QueryTree.toString_preBS_wAuxTries "hugeHyp" sLTtop (fun n => s!"({n}, hLsclu_from_qt_{n})") (fun n => s!"hlt_{n}")
+  for (_,prtr) in tries do
+    presource := prtr :: presource
+  presource := s!"\ndef hLinkTreeTop : QueryTree (BS (Nat × pdata)) := {mainT}" :: presource
   let source := s!"import LeanGrow.Caches.mark2cache_v2_big\nimport LeanGrow.QueryTree_idea\nopen Lean Data{String.join (presource.reverse)}"
   IO.FS.writeFile ⟨s!"/./home/yves/Desktop/CodeWorkspace/Lean4_General/LeanGrow/LeanGrow/Caches/QueryTreeSmoothClustersHuge_wL_col{col}.lean"⟩ (source)
 
 --make_huge_clusters_from_querytree_wL
+
+#exit
 
 elab "make_huge_clusters_from_querytree_wL_g" : command => do
   let col := 2

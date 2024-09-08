@@ -84,8 +84,8 @@ elab "grow"  : tactic => do
       for (gnr, _) in qcg do
         let score := match (RBNode.normalisze nei).find instOrdNat.compare gnr with | .some v => v | _ => 0
         final := (clust.map (score, ·)) ++ final
-    --let finaly := List.mergeSort (fun n m => n.1 ≥ m.1) final
-    for (sc, dag) in final do
+    let finaly := List.mergeSort (fun n m => n.1 ≥ m.1) final
+    for (sc, dag) in finaly do
       dbg_trace "wtf"
       let embeds := matcher dag.dag (SizeDAG.sinks_fst ltx_dag)
       match embeds with
