@@ -82,7 +82,7 @@ example : True :=
 
 
 
-def loadDecls (d : List (Name × Expr)) : MetaM (List (Expr) × Context) := do
+def loadDecls (d : Array (Name × Expr)) : MetaM (List (Expr) × Context) := do
   let ctx ← read
   let loop := fun (sofar_vars, sofar_ctx) (n,t) => do
     let fvarId ← mkFreshFVarId
@@ -94,7 +94,7 @@ def loadDecls (d : List (Name × Expr)) : MetaM (List (Expr) × Context) := do
 
 
 elab "test_2" : tactic => do
-  let (_,c) ← loadDecls [(`A, (.const `Nat [])), (`B, (.const `Int []))]
+  let (_,c) ← loadDecls #[(`A, (.const `Nat [])), (`B, (.const `Int []))]
   let new_goal ← mkFreshExprMVarAt c.lctx c.localInstances (← Elab.Tactic.getMainTarget)
   MVarId.assign (← Elab.Tactic.getMainGoal) new_goal
   Elab.Tactic.setGoals [new_goal.mvarId!]
@@ -109,7 +109,7 @@ example : True :=
   exact True.intro
 
 
-def instantiateL (fvs : List (Expr)) (b : Expr) : Expr :=
+def instantiateL (fvs : Array (Expr)) (b : Expr) : Expr :=
   fvs.foldl (fun s fv => s.instantiate1 fv) b
 
 def get_body_hyps (proof : Expr) : Expr × List (Name × Expr) :=
@@ -117,10 +117,10 @@ def get_body_hyps (proof : Expr) : Expr × List (Name × Expr) :=
   | .lam n t b _ => (get_body_hyps b).map id (List.cons (n,t))
   | e => (e,[])
 
-def load_body_hyps (proof : Expr) : MetaM (Expr × List (Expr) × Context) := do
+def load_body_hyps (proof : Expr) : MetaM (Expr × Array (Expr) × Context) := do
   let (b,l) := get_body_hyps proof
-  let (L,C) ← loadDecls l
-  return (b,L,C)
+  let (L,C) ← loadDecls l.toArray
+  return (b,L.toArray,C)
 
 #print Nat.add_comm
 
@@ -145,7 +145,91 @@ elab "test_4" : command => do
   let s ← Elab.Command.liftTermElabM (ppExpr r)
   logInfo s
 
+-- set_option pp.all true in
+-- set_option pp.instances false in
 test_4
+
+elab "test_5" t:term : command => do
+  let T ← Elab.Command.liftTermElabM  (Elab.Term.elabTermAndSynthesize t .none)
+  let r ← Elab.Command.liftTermElabM (@Lean.Meta.reduce T false false false)
+  let s ← Elab.Command.liftTermElabM (ppExpr r)
+  logInfo s
+
+set_option pp.all true in
+test_5 (fun n : Nat => (n+n))
+-- replace printed r with T in `test_5` and note that instances get replaced !
+
+elab "test_6" : command => do
+  let info := (← getEnv).constants.find! `Nat.brecOn
+  logInfo s!"{info.isThm}"
+
+test_6
+
+
+structure sampleType where
+  thm_name : Name
+  goal_type : Expr
+  hyp_types : Array Expr
+  ctx : Meta.Context
+
+def isThmApp (proof : Expr) : MetaM (Option (Name × Array Expr)) := do
+  let args := proof.getAppArgs
+  if args.isEmpty
+  then
+    return .none
+  else
+    let .some (n,_) := proof.getAppFn.const? | return .none
+    let .thmInfo _ := (← getEnv).constants.find! n |  return .none
+    return (n,args)
+
+
+def sample_finisher (proof : Expr) : MetaM (Option sampleType) := do
+  let (g,_,c) ← load_body_hyps proof
+  let .some (n,args) ← isThmApp g | return .none
+  let gt ← withLCtx c.lctx c.localInstances (inferType g)
+  let argst ← args.mapM (fun x => withLCtx c.lctx c.localInstances (inferType x))
+  return .some ⟨n, gt, argst, c⟩
+
+def Expr.getFunBody : Expr → Expr
+| .lam _ _ b _ => Expr.getFunBody b
+| x => x
+
+def Expr.isAtom : Expr → MetaM Bool
+| .fvar _ | .bvar _ | .mvar _ | .sort _ | .lit _ => return true
+| .mdata _ e => Expr.isAtom e
+| .proj _ _ e => Expr.isAtom e
+| .app l r => return (← Expr.isAtom l) && (← Expr.isAtom r)
+| .const n l => do
+      let T ← inferType (.const n l)
+      let Th := Expr.getFunBody T
+      if (← inferType Th).isProp then return false else return true
+| _ => return false
+
+
+def Expr.isStarter (e : Expr) : MetaM (Option (Name × Array Expr)) := do
+  let .some (n,args) ← isThmApp e | return .none
+  let arg_atoms? := (← args.mapM Expr.isAtom).contains false
+  if arg_atoms? then return .some (n,args) else return .none
+
+partial def Expr.findStarters : Expr →  MetaM (Array (Name × Array Expr))
+| .mdata _ e => Expr.findStarters e
+| .proj _ _ e => Expr.findStarters  e
+| e => do
+    if let .some (n,args) ← Expr.isStarter e
+    then
+      return #[(n,args)]
+    -- if not, search starters among args, and return nothing if fun appli (as these would require a different context)
+    else
+      let args := e.getAppArgs
+      let res ← args.mapM Expr.findStarters
+      return res.join
+
+-- def sample_starters (proof : Expr) : MetaM (List sampleType) := do
+--   let (g,_,c) ← load_body_hyps proof
+
+-- don't forget to reduce proof
+
+
 
 #exit
 
@@ -154,9 +238,7 @@ test_4
 
 #check Expr.getAppFn
 
-def Expr.getFunBody : Expr → Expr
-| .lam _ _ b _ => Expr.getFunBody b
-| x => x
+
 
 open Meta
 
