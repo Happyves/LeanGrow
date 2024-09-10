@@ -54,6 +54,102 @@ partial def Trie.merge_with [BEq α] [Inhabited α] (l r : Trie α) (f : α → 
           .node (mini_merge x y) uni_b uni_t
 
 
+
+open Meta
+
+
+def myWithDecl (n : Name) (type : Expr) (k : Expr → MetaM α ) : Expr → MetaM (α × Context)  := fun b => do
+    let fvarId ← mkFreshFVarId
+    let ctx ← read
+    let lctx := ctx.lctx.mkLocalDecl fvarId n type
+    let fvar := mkFVar fvarId
+    withReader (fun ctx => { ctx with lctx := lctx }) do
+      (if let .some c := (← isClass? type)
+       then withNewLocalInstance c fvar (do let res ← k (b.instantiate1 fvar) ; return (res,← read))
+       else (do let res ← k (b.instantiate1 fvar) ; return (res,← read))
+        )
+
+elab "test_1" : tactic => do
+  let k : Expr → MetaM Unit := fun e => do let s ← ppExpr e ; let s' ← ppExpr (← inferType e) ; logInfo s!"{s} of type {s'}"
+  let K := myWithDecl `test (.const `Nat []) k
+  let _ ← K (.bvar 0)
+
+set_option linter.unusedTactic false in
+example : True :=
+  by
+  test_1
+  exact True.intro
+
+
+
+def loadDecls (d : List (Name × Expr)) : MetaM (List (Expr) × Context) := do
+  let ctx ← read
+  let loop := fun (sofar_vars, sofar_ctx) (n,t) => do
+    let fvarId ← mkFreshFVarId
+    let lctx := sofar_ctx.mkLocalDecl fvarId n t
+    let fvar := mkFVar fvarId
+    return(fvar :: sofar_vars, lctx)
+  let (L,lC) ← d.foldlM loop ([],ctx.lctx)
+  return (L.reverse, {ctx with lctx := lC})
+
+
+elab "test_2" : tactic => do
+  let (_,c) ← loadDecls [(`A, (.const `Nat [])), (`B, (.const `Int []))]
+  let new_goal ← mkFreshExprMVarAt c.lctx c.localInstances (← Elab.Tactic.getMainTarget)
+  MVarId.assign (← Elab.Tactic.getMainGoal) new_goal
+  Elab.Tactic.setGoals [new_goal.mvarId!]
+
+#check Elab.Tactic.TacticM
+
+set_option linter.unusedTactic false in
+example : True :=
+  by
+  test_2
+  -- note the new hyps
+  exact True.intro
+
+
+def instantiateL (fvs : List (Expr)) (b : Expr) : Expr :=
+  fvs.foldl (fun s fv => s.instantiate1 fv) b
+
+def get_body_hyps (proof : Expr) : Expr × List (Name × Expr) :=
+  match proof with
+  | .lam n t b _ => (get_body_hyps b).map id (List.cons (n,t))
+  | e => (e,[])
+
+def load_body_hyps (proof : Expr) : MetaM (Expr × List (Expr) × Context) := do
+  let (b,l) := get_body_hyps proof
+  let (L,C) ← loadDecls l
+  return (b,L,C)
+
+#print Nat.add_comm
+
+#print List.append_cons
+
+lemma test_3 (as : List α) (b : α) (bs : List α) : as ++ b :: bs = as ++ [b] ++ bs :=
+  by
+  have beta? := List.append_cons as b
+  exact beta? bs
+
+--set_option pp.all true in
+#print test_3
+
+#check Lean.isBRecOnRecursor
+
+#check Lean.Meta.reduce
+
+
+elab "test_4" : command => do
+  let .thmInfo proof := (← getEnv).constants.find! `Nat.add_comm | throwError "ahh 1"
+  let r ← Elab.Command.liftTermElabM (@Lean.Meta.reduce proof.value false true false)
+  let s ← Elab.Command.liftTermElabM (ppExpr r)
+  logInfo s
+
+test_4
+
+#exit
+
+
 #check Trie.upsert
 
 #check Expr.getAppFn
@@ -145,7 +241,7 @@ partial def sample_goal_and_hyps (proof : Expr) : MetaM (Option (Name × (Expr �
 
 
 elab "testing_sample_goal_and_hyps" : command => do
-  let thm_name := `Nat.add_comm
+  let thm_name := `List.append_cons
   let info := ((← getEnv).constants.find! thm_name)
   match info with
   | .thmInfo v =>
@@ -155,7 +251,7 @@ elab "testing_sample_goal_and_hyps" : command => do
       IO.println s!"Sampleted: {N}\nGoal: {← Elab.Command.liftTermElabM  (ppExpr T.1)}\nAssumptions: {X}"
   | _ => throwError "aaahh 2"
 
-testing_sample_goal_and_hyps
+--testing_sample_goal_and_hyps
 
 #exit
 
