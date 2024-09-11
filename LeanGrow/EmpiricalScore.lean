@@ -127,7 +127,7 @@ partial def load_body_hyps_aux (proof : Expr) (c : Context) : MetaM (Expr × Lis
         let fvar := mkFVar fvarId
         let B := b.instantiate1 fvar
         let (g,L,C) ← load_body_hyps_aux B {c with lctx := new_lctx}
-        return (g, t :: L, C)
+        return (g, fvar :: L, C)
   | e => return (e,[],c)
 
 
@@ -183,7 +183,7 @@ test_6
 structure sampleType where
   thm_name : Name
   goal_type : Expr
-  hyp_types : Array Expr
+  hyps : Array Expr
   ctx : Meta.Context
 
 def isThmApp (proof : Expr) : MetaM (Option (Name × Array Expr)) := do
@@ -201,8 +201,18 @@ def sample_finisher (proof : Expr) : MetaM (Option sampleType) := do
   let (g,_,c) ← load_body_hyps proof
   let .some (n,args) ← isThmApp g | return .none
   let gt ← withLCtx c.lctx c.localInstances (inferType g)
-  let argst ← args.mapM (fun x => withLCtx c.lctx c.localInstances (inferType x))
-  return .some ⟨n, gt, argst, c⟩
+  --let argst ← args.mapM (fun x => withLCtx c.lctx c.localInstances (inferType x))
+  return .some ⟨n, gt, args, c⟩
+
+def sample_finisher_wC (proof : Expr) (k : Context) (As : Array Expr) : MetaM (Option sampleType) := do
+  let (g,_,c) ← load_body_hyps_aux proof k
+  let .some (n,args) ← isThmApp g | return .none
+  let gt ← withLCtx c.lctx c.localInstances (inferType g)
+  --let argst ← args.mapM (fun x => withLCtx c.lctx c.localInstances (inferType x))
+  return .some ⟨n, gt, As ++ args, c⟩
+
+
+
 
 def Expr.getFunBody : Expr → Expr
 | .lam _ _ b _ => Expr.getFunBody b
@@ -243,8 +253,15 @@ def sample_starters (proof : Expr) : MetaM (Array sampleType) := do
   let (g,_,c) ← load_body_hyps proof
   let A ← Expr.findStarters g
   let gt ← withLCtx c.lctx c.localInstances (inferType g)
-  let AT ←  A.mapM (fun (n,x) => do let ts ← x.mapM (fun y => withLCtx c.lctx c.localInstances (inferType y)) ; return (n,ts))
-  return AT.map (fun h => ⟨h.1,gt,h.2,c⟩)
+  --let AT ←  A.mapM (fun (n,x) => do let ts ← x.mapM (fun y => withLCtx c.lctx c.localInstances (inferType y)) ; return (n,ts))
+  return A.map (fun h => ⟨h.1,gt,h.2,c⟩)
+
+def sample_starters_wC (proof : Expr) (k : Context) (As : Array Expr) : MetaM (Array sampleType) := do
+  let (g,_,c) ← load_body_hyps_aux proof k
+  let A ← Expr.findStarters g
+  let gt ← withLCtx c.lctx c.localInstances (inferType g)
+  --let AT ←  A.mapM (fun (n,x) => do let ts ← x.mapM (fun y => withLCtx c.lctx c.localInstances (inferType y)) ; return (n,ts))
+  return A.map (fun h => ⟨h.1,gt,As ++ h.2,c⟩)
 
 
 def sample_self (proof : Expr) (name : Name) : MetaM (sampleType) := do
@@ -254,7 +271,7 @@ def sample_self (proof : Expr) (name : Name) : MetaM (sampleType) := do
 
 def dsiplay_sample (s : sampleType) : MetaM String := do
   let g ← (withLCtx s.ctx.lctx s.ctx.localInstances (ppExpr s.goal_type))
-  let hs ← (withLCtx s.ctx.lctx s.ctx.localInstances (s.hyp_types.mapM  ppExpr))
+  let hs ← (withLCtx s.ctx.lctx s.ctx.localInstances (s.hyps.mapM  ppExpr))
   return s!"Thm: {s.thm_name}\nGoal {g}\nHyps {hs}"
 
 def lifting_sucks (proof : TheoremVal) (N : Name) : MetaM String := do
@@ -283,114 +300,70 @@ elab "test_sampling" : command => do
 
 #eval ppExpr (.bvar 0)
 
-#exit
 
 
-#check Trie.upsert
-
-#check Expr.getAppFn
-
-
-
-open Meta
-
-partial def count_thms : Expr → MetaM Nat
-| .lam n t b _ => do
-    let fvarId ← mkFreshFVarId
-    let ctx ← read
-    let lctx := ctx.lctx.mkLocalDecl fvarId n t
-    let fvar := mkFVar fvarId
-    withReader (fun ctx => { ctx with lctx := lctx }) do
-      (if
-        let .some c := (← isClass? t)
+partial def get_topmost_potential_subproofs (proof : Expr) (d : Nat) : (List (Expr × Bool)) :=
+match proof with
+| .proj _ _ e | .mdata _ e => get_topmost_potential_subproofs e d
+| _ =>
+  let args := proof.getAppArgs
+  let h := proof.getAppFn
+  if d == 0 || args.isEmpty
+  then
+    [(proof, false)]
+  else
+    Id.run do
+      let mut toAdd := []
+      for a in args do
+        if !(a.getAppFn).isLambda
         then
-        withNewLocalInstance c fvar <| count_thms (b.instantiate1 fvar)
+          let res := get_topmost_potential_subproofs a (d-1)
+          toAdd := res :: toAdd
         else
-        count_thms (b.instantiate1 fvar)
-          )
-| .mdata _ e | .proj _ _ e => count_thms e
-| .app l r => do
-      let cl ← count_thms l
-      let cr ← count_thms r
-      return cl+cr
-| .const c l => do --const and fvar
-      if (← inferType (.const c l)).isProp then return 1 else return 0
-| _ => return 0
+          toAdd := [(a,true)] :: toAdd
+      if !(h.getAppFn).isLambda -- for cases when head is a projection, for example
+      then
+        let res := get_topmost_potential_subproofs h (d-1)
+        toAdd := res :: toAdd
+      else
+        toAdd := [(h,true)] :: toAdd
+      return ((proof, false) :: toAdd.join)
+
+--#exit
+
+def sample_hard (proof : TheoremVal) (name : Name) (d : Nat) : MetaM (sampleType × Array sampleType) := do
+  let proofR ←  (@Lean.Meta.reduce proof.value false true false)
+  let ss ← sample_self proofR name
+  let mut out := []
+  let (g,as,c) ← load_body_hyps proofR
+  let sp := get_topmost_potential_subproofs g d
+  for (p,_) in sp do -- bool wasn't needed
+    let sf ← sample_finisher_wC p c as
+    let sS ← sample_starters_wC p c as
+    match sf with
+    | .some S => out := #[S] :: sS :: out
+    | _ => out := sS :: out
+  return (ss,out.toArray.join)
+
+def lifting_sucks_2 (proof : TheoremVal) (N : Name) (d : Nat) : MetaM String := do
+  let res ← sample_hard proof N d
+  let sS ← dsiplay_sample res.1
+  let os := (← res.2.mapM dsiplay_sample).toList
+  return s!"Self:\n{sS}\n\nOthers:\n{String.intercalate "\n" os}"
 
 
+elab "test_sampling_2" : command => do
+  let N := `Nat.add_comm
+  let .thmInfo proof := (← getEnv).constants.find! N | throwError "ahh 1"
+  let print ← Elab.Command.liftTermElabM (lifting_sucks_2 proof N 5)
+  logInfo print
 
-partial def sample_goal_and_hyps (proof : Expr) : MetaM (Option (Name × (Expr × Context) × List (Expr × Context))) :=
-  match proof with
-  | .lam n t b _ => do
-      let fvarId ← mkFreshFVarId
-      let ctx ← read
-      let lctx := ctx.lctx.mkLocalDecl fvarId n t
-      let fvar := mkFVar fvarId
-      withReader (fun ctx => { ctx with lctx := lctx }) do
-        (if
-          let .some c := (← isClass? t)
-         then
-          withNewLocalInstance c fvar ((Option.map (fun (s,g,h) => (s,g, (t,ctx) :: h))) <$> (sample_goal_and_hyps (b.instantiate1 fvar)))
-         else
-          ((Option.map (fun (s,g,h) => (s,g, (t,ctx) :: h))) <$> (sample_goal_and_hyps (b.instantiate1 fvar)))
-           )
-  | .mdata _ e | .proj _ _ e => sample_goal_and_hyps e
-  | e => do
-      let args := e.getAppArgs
-      let h := e.getAppFn
-      match h with
-      | .const n _ =>
-            if (← inferType h).isProp
-            then
-              let appears ← args.mapM count_thms
-              let total := appears.foldl (fun s x => s+x) 0
-              if total = 0
-              then
-                return .some (n,((← inferType e), (← read)),[])
-              else
-                let r ← IO.rand 0 (total + 1)
-                if r = total + 1
-                then
-                  return .some (n,(← inferType e, (← read)),[])
-                else
-                  let mut sum := 0
-                  let mut idx := 0
-                  for w in appears do
-                    if r > sum then sum := sum + w ; idx := idx + 1
-                  let .some (N, goal, _) ← sample_goal_and_hyps (args.get! idx) | return .none
-                  let mut hyps := []
-                  let mut idx2 := 0
-                  for a in args do
-                    if idx2 ≠ idx
-                    then
-                      let .some (_,_, hyp) ← sample_goal_and_hyps a | pure ()
-                      hyps := hyp :: hyps
-                      idx2 := idx2 + 1
-                    else
-                      idx2 := idx2 + 1
-                  return .some (N, goal, hyps.join)
-            else
-              return .none
-      | _ => return .some (`Dummy ,(.const `DUMMY [], {}) ,[(← inferType e, (← read))])
+test_sampling_2
+-- Notes wrt ↓↑ : proofs can be wrap in wierd stuff due to tactics ; for `Nat.add_comm` , the induction steps are in a product with PUnit (?!?), so we need to dig dow (high depth at `sample_hard`) to get to them
+test_4
 
+#print List.append_cons
+#print Nat.add_comm
+#print test_3
 
-elab "testing_sample_goal_and_hyps" : command => do
-  let thm_name := `List.append_cons
-  let info := ((← getEnv).constants.find! thm_name)
-  match info with
-  | .thmInfo v =>
-      let .some (N,T,H) ←  (sample_goal_and_hyps v.value) | throwError "aaahh 1"
-      --let TT := ← withLCtx T.2.lctx T.2.localInstances (inferType T.1)
-      let X ←   ((H.map Prod.fst).mapM (ppExpr) : MetaM (List Format))
-      IO.println s!"Sampleted: {N}\nGoal: {←   (ppExpr T.1)}\nAssumptions: {X}"
-  | _ => throwError "aaahh 2"
-
---testing_sample_goal_and_hyps
-
-#exit
-
-#check IO.rand
-#check Meta.transform
-
-def sample_data (proof : Expr) : MetaM (Trie (List ((List Nat) × (List Nat)))) := do
-  sorry
+#check 1
