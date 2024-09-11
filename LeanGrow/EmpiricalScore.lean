@@ -109,18 +109,32 @@ example : True :=
   exact True.intro
 
 
-def instantiateL (fvs : Array (Expr)) (b : Expr) : Expr :=
-  fvs.foldl (fun s fv => s.instantiate1 fv) b
 
 def get_body_hyps (proof : Expr) : Expr × List (Name × Expr) :=
   match proof with
   | .lam n t b _ => (get_body_hyps b).map id (List.cons (n,t))
   | e => (e,[])
 
+
+#check Meta.lambdaTelescope
+
+
+partial def load_body_hyps_aux (proof : Expr) (c : Context) : MetaM (Expr × List (Expr) × Context) := do
+  match proof with
+  | .lam n t b _ => do
+        let fvarId ← mkFreshFVarId
+        let new_lctx := c.lctx.mkLocalDecl fvarId n t
+        let fvar := mkFVar fvarId
+        let B := b.instantiate1 fvar
+        let (g,L,C) ← load_body_hyps_aux B {c with lctx := new_lctx}
+        return (g, t :: L, C)
+  | e => return (e,[],c)
+
+
 def load_body_hyps (proof : Expr) : MetaM (Expr × Array (Expr) × Context) := do
-  let (b,l) := get_body_hyps proof
-  let (L,C) ← loadDecls l.toArray
-  return (b,L.toArray,C)
+  let (g,L,C) ← load_body_hyps_aux proof (← read)
+  return (g,L.toArray,C)
+
 
 #print Nat.add_comm
 
@@ -150,7 +164,7 @@ elab "test_4" : command => do
 test_4
 
 elab "test_5" t:term : command => do
-  let T ← Elab.Command.liftTermElabM  (Elab.Term.elabTermAndSynthesize t .none)
+  let T ← Elab.Command.liftTermElabM (Elab.Term.elabTermAndSynthesize t .none)
   let r ← Elab.Command.liftTermElabM (@Lean.Meta.reduce T false false false)
   let s ← Elab.Command.liftTermElabM (ppExpr r)
   logInfo s
@@ -195,7 +209,7 @@ def Expr.getFunBody : Expr → Expr
 | x => x
 
 def Expr.isAtom : Expr → MetaM Bool
-| .fvar _ | .bvar _ | .mvar _ | .sort _ | .lit _ => return true
+| .fvar _ | .sort _ | .lit _ => return true
 | .mdata _ e => Expr.isAtom e
 | .proj _ _ e => Expr.isAtom e
 | .app l r => return (← Expr.isAtom l) && (← Expr.isAtom r)
@@ -209,7 +223,7 @@ def Expr.isAtom : Expr → MetaM Bool
 def Expr.isStarter (e : Expr) : MetaM (Option (Name × Array Expr)) := do
   let .some (n,args) ← isThmApp e | return .none
   let arg_atoms? := (← args.mapM Expr.isAtom).contains false
-  if arg_atoms? then return .some (n,args) else return .none
+  if arg_atoms? then return .none else return .some (n,args)
 
 partial def Expr.findStarters : Expr →  MetaM (Array (Name × Array Expr))
 | .mdata _ e => Expr.findStarters e
@@ -224,12 +238,50 @@ partial def Expr.findStarters : Expr →  MetaM (Array (Name × Array Expr))
       let res ← args.mapM Expr.findStarters
       return res.join
 
--- def sample_starters (proof : Expr) : MetaM (List sampleType) := do
---   let (g,_,c) ← load_body_hyps proof
 
--- don't forget to reduce proof
+def sample_starters (proof : Expr) : MetaM (Array sampleType) := do
+  let (g,_,c) ← load_body_hyps proof
+  let A ← Expr.findStarters g
+  let gt ← withLCtx c.lctx c.localInstances (inferType g)
+  let AT ←  A.mapM (fun (n,x) => do let ts ← x.mapM (fun y => withLCtx c.lctx c.localInstances (inferType y)) ; return (n,ts))
+  return AT.map (fun h => ⟨h.1,gt,h.2,c⟩)
 
 
+def sample_self (proof : Expr) (name : Name) : MetaM (sampleType) := do
+  let (g,as,c) ← load_body_hyps proof
+  let gt ← withLCtx c.lctx c.localInstances (inferType g)
+  return ⟨name,gt,as,c⟩
+
+def dsiplay_sample (s : sampleType) : MetaM String := do
+  let g ← (withLCtx s.ctx.lctx s.ctx.localInstances (ppExpr s.goal_type))
+  let hs ← (withLCtx s.ctx.lctx s.ctx.localInstances (s.hyp_types.mapM  ppExpr))
+  return s!"Thm: {s.thm_name}\nGoal {g}\nHyps {hs}"
+
+def lifting_sucks (proof : TheoremVal) (N : Name) : MetaM String := do
+  let p ←  (@Lean.Meta.reduce proof.value false true false)
+  let ss ←  (Array.mapM dsiplay_sample (← (sample_starters p)))
+  let sf' ← sample_finisher p
+  let mut pain := "none"
+  if let .some sf := sf' then pain ← dsiplay_sample sf
+  let sS ←  (dsiplay_sample (←  (sample_self p N)))
+  return s!"Self:\n{sS}\nStarters:\n{String.intercalate "\n" (ss).toList}\nFinisher:\n{pain}"
+
+
+elab "test_sampling" : command => do
+  let N := `List.append_cons
+  let .thmInfo proof := (← getEnv).constants.find! N | throwError "ahh 1"
+  let print ← Elab.Command.liftTermElabM (lifting_sucks proof N)
+  logInfo print
+
+--test_sampling
+
+#print List.append_cons
+#print Nat.add_comm
+#print test_3
+
+#check 1
+
+#eval ppExpr (.bvar 0)
 
 #exit
 
@@ -327,10 +379,10 @@ elab "testing_sample_goal_and_hyps" : command => do
   let info := ((← getEnv).constants.find! thm_name)
   match info with
   | .thmInfo v =>
-      let .some (N,T,H) ← Elab.Command.liftTermElabM (sample_goal_and_hyps v.value) | throwError "aaahh 1"
+      let .some (N,T,H) ←  (sample_goal_and_hyps v.value) | throwError "aaahh 1"
       --let TT := ← withLCtx T.2.lctx T.2.localInstances (inferType T.1)
-      let X ← Elab.Command.liftTermElabM  ((H.map Prod.fst).mapM (ppExpr) : MetaM (List Format))
-      IO.println s!"Sampleted: {N}\nGoal: {← Elab.Command.liftTermElabM  (ppExpr T.1)}\nAssumptions: {X}"
+      let X ←   ((H.map Prod.fst).mapM (ppExpr) : MetaM (List Format))
+      IO.println s!"Sampleted: {N}\nGoal: {←   (ppExpr T.1)}\nAssumptions: {X}"
   | _ => throwError "aaahh 2"
 
 --testing_sample_goal_and_hyps
