@@ -3,59 +3,9 @@ import LeanGrow.Caches.QueryTreeSmoothClusters_wL_col2
 import LeanGrow.Caches.QueryTreeSmoothClustersGoal_wL_col2
 import LeanGrow.Transitions_QueTreClus
 
-open Lean Data
 
 
-#check LinkTreeTop
-#check g_LinkTreeTop
-
-
-
-partial def Trie.merge_with [BEq α] [Inhabited α] (l r : Trie α) (f : α → α → α) : Trie α  :=
-  let mini_merge (x y : Option α) : Option α :=
-    (match x, y with
-     | .some X , .some Y => .some (f X Y)
-     | .some X , .none => .some X
-     | .none,  .some Y => .some Y
-     | _, _ => .none)
-  match l with
-  | .leaf x =>
-      match r with
-      | .leaf y => .leaf (mini_merge x y)
-      | .node1 y ay cy => .node1 (mini_merge x y) ay cy
-      | .node y ay cy => .node (mini_merge x y) ay cy
-  | .node1 x ax cx =>
-      match r with
-      | .leaf y => .node1 (mini_merge x y) ax cx
-      | .node1 y ay cy =>
-          match Ord.compare ax ay with
-          | .lt => .node (mini_merge x y) ⟨#[ax, ay]⟩  #[cx, cy]
-          | .eq => .node1 (mini_merge x y) ax  (Trie.merge cx cy)
-          | .gt => .node (mini_merge x y) ⟨#[ay, ax]⟩  #[cy, cx]
-      | .node y ay cy =>
-          match ay.has? ax with
-          | .none =>
-                let (cs',n) := Array.orderedInsertWithIndex (· ≤ ·) ax ay.data
-                .node (mini_merge x y) (⟨cs'⟩) (cy.insertAt! n cx)
-          | .some i =>
-                .node (mini_merge x y) ay (cy.modify i (Trie.merge cx))
-  | .node x ax cx =>
-      match r with
-      | .leaf y => .node (mini_merge x y) ax cx
-      | .node1 y ay cy =>
-          match ax.has? ay with
-          | .none =>
-                let (cs',n) := Array.orderedInsertWithIndex (· ≤ ·) ay ax.data
-                .node (mini_merge x y) (⟨cs'⟩) (cx.insertAt! n cy)
-          | .some i =>
-                .node (mini_merge x y) ax (cx.modify i (Trie.merge cy))
-      | .node y ay cy =>
-          let (uni_b, uni_t) := ByteArray.merge_extra ax ay cx cy
-          .node (mini_merge x y) uni_b uni_t
-
-
-
-open Meta
+open Lean Data Meta
 
 
 def myWithDecl (n : Name) (type : Expr) (k : Expr → MetaM α ) : Expr → MetaM (α × Context)  := fun b => do
@@ -345,6 +295,7 @@ def sample_hard (proof : TheoremVal) (name : Name) (d : Nat) : MetaM (sampleType
     | _ => out := sS :: out
   return (ss,out.toArray.join)
 
+
 def lifting_sucks_2 (proof : TheoremVal) (N : Name) (d : Nat) : MetaM String := do
   let res ← sample_hard proof N d
   let sS ← dsiplay_sample res.1
@@ -355,7 +306,7 @@ def lifting_sucks_2 (proof : TheoremVal) (N : Name) (d : Nat) : MetaM String := 
 elab "test_sampling_2" : command => do
   let N := `Nat.add_comm
   let .thmInfo proof := (← getEnv).constants.find! N | throwError "ahh 1"
-  let print ← Elab.Command.liftTermElabM (lifting_sucks_2 proof N 5)
+  let print ← Elab.Command.liftTermElabM (lifting_sucks_2 proof N 10)
   logInfo print
 
 test_sampling_2
@@ -367,3 +318,96 @@ test_4
 #print test_3
 
 #check 1
+
+
+partial def get_potential_subproofs (proof : Expr) (d : Nat) (c : Context) : MetaM (List (Expr × Context)) :=
+match proof with
+| .proj _ _ e | .mdata _ e => get_potential_subproofs e d c
+| _ => do
+  let args := proof.getAppArgs
+  let h := proof.getAppFn
+  if d == 0 || args.isEmpty
+  then
+    return [(proof, c)]
+  else
+    let mut toAdd := []
+    for a in args do
+      if !(a.getAppFn).isLambda
+      then
+        let res ← get_potential_subproofs a (d-1) c
+        toAdd := res :: toAdd
+      else
+        let (g,_,nc) ← load_body_hyps_aux a c
+        let res ← get_potential_subproofs g (d-1) nc
+        toAdd := res :: toAdd
+    if !(h.getAppFn).isLambda -- for cases when head is a projection, for example
+    then
+      let res ← get_potential_subproofs h (d-1) c
+      toAdd := res :: toAdd
+    else
+      let (g,_,nc) ← load_body_hyps_aux h c
+      let res ← get_potential_subproofs g (d-1) nc
+      toAdd := res :: toAdd
+    return ((proof, c) :: toAdd.join)
+
+def sample_harder (proof : TheoremVal) (name : Name) (d : Nat) : MetaM (sampleType × Array sampleType) := do
+  let proofR ←  (@Lean.Meta.reduce proof.value false true false)
+  let ss ← sample_self proofR name
+  let mut out := []
+  let (g,as,c) ← load_body_hyps proofR
+  let sp ←  get_potential_subproofs g d c
+  for (p,pc) in sp do -- bool wasn't needed
+    let sf ← sample_finisher_wC p pc as
+    let sS ← sample_starters_wC p pc as
+    match sf with
+    | .some S => out := #[S] :: sS :: out
+    | _ => out := sS :: out
+  return (ss,out.toArray.join)
+
+
+def lifting_sucks_3 (proof : TheoremVal) (N : Name) (d : Nat) : MetaM String := do
+  let res ← sample_harder proof N d
+  let sS ← dsiplay_sample res.1
+  let os := (← res.2.mapM dsiplay_sample).toList
+  return s!"Self:\n{sS}\n\nOthers:\n{String.intercalate "\n" os}"
+
+
+elab "test_sampling_3" : command => do
+  let N := `Nat.add_comm
+  let .thmInfo proof := (← getEnv).constants.find! N | throwError "ahh 1"
+  let print ← Elab.Command.liftTermElabM (lifting_sucks_3 proof N 10)
+  logInfo print
+
+test_sampling_3
+
+
+def samples_clean (S : Array sampleType) : Array sampleType := Id.run do
+  let mut ignore : Trie Expr := Trie.empty
+  let mut cs := []
+  for s in S do
+    let sn := s.thm_name.toString
+    if let .some e := ignore.find? sn
+    then
+      if !(e == s.goal_type)
+      then
+        cs := s :: cs
+        ignore := ignore.insert sn s.goal_type
+    else
+      cs := s :: cs
+      ignore := ignore.insert sn s.goal_type
+  return cs.toArray
+
+def lifting_sucks_4 (proof : TheoremVal) (N : Name) (d : Nat) : MetaM String := do
+  let res ← sample_harder proof N d
+  let sS ← dsiplay_sample res.1
+  let os := (← (samples_clean res.2).mapM dsiplay_sample).toList
+  return s!"Self:\n{sS}\n\nOthers:\n{String.intercalate "\n" os}"
+
+
+elab "test_sampling_4" : command => do
+  let N := `Nat.add_comm
+  let .thmInfo proof := (← getEnv).constants.find! N | throwError "ahh 1"
+  let print ← Elab.Command.liftTermElabM (lifting_sucks_4 proof N 10)
+  logInfo print
+
+test_sampling_4
