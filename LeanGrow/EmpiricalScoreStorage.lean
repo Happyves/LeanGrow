@@ -54,9 +54,7 @@ partial def Trie.merge_with [BEq α] [Inhabited α] (l r : Trie α) (f : α → 
           .node (mini_merge x y) uni_b uni_t
 
 
-structure empiricalScores where
-  hyp_cl : RBNode Nat (fun _ => Nat)
-  g_cl : RBNode Nat (fun _ => Nat)
+
 
 
 #check Expr.getConstNames
@@ -81,10 +79,10 @@ def update_score_trie (T : Trie empiricalScores) (s : sampleType) : Trie empiric
     | .none => ⟨{},{}⟩
   let mut nhs := current.hyp_cl
   for h in hcs do
-    nhs := RBNode.upsert instOrdNat.compare Nat.succ 0 nhs h
+    nhs := RBNode.upsert instOrdNat.compare Nat.succ 1 nhs h
   let mut ngs := current.hyp_cl
   for g in gcs do
-    ngs := RBNode.upsert instOrdNat.compare Nat.succ 0 ngs g
+    ngs := RBNode.upsert instOrdNat.compare Nat.succ 1 ngs g
   return Trie.insert T ns ⟨nhs,ngs⟩ -- overrides, according to docs
 
 def update_score_trie_self (T : Trie empiricalScores) (s : sampleType) (inc : Nat) : Trie empiricalScores := Id.run do
@@ -102,9 +100,11 @@ def update_score_trie_self (T : Trie empiricalScores) (s : sampleType) (inc : Na
     ngs := RBNode.upsert instOrdNat.compare Nat.succ 0 ngs g
   return Trie.insert T ns ⟨nhs,ngs⟩ -- overrides, according to docs
 
+def empiricalScores.toString : empiricalScores → String :=
+  fun ⟨h,g⟩ => s!"empiricalScores.mk ({RBNode.toString (fun n => s!"{n}") (fun n => s!"{n}") h}) ({RBNode.toString (fun n => s!"{n}") (fun n => s!"{n}") g})"
 
 instance : ToString empiricalScores where
-  toString := fun ⟨h,g⟩ => s!"empiricalScores.mk ({RBNode.toString (fun n => s!"{n}") (fun n => s!"{n}") h}) ({RBNode.toString (fun n => s!"{n}") (fun n => s!"{n}") g})"
+  toString := empiricalScores.toString
 
 
 partial def Trie.enumVals (count : Nat): Trie α → (Nat × (Trie Nat) × List (Nat × α))
@@ -170,7 +170,179 @@ elab "cachEmpiricalScores" n:name : command =>
 
 --cachEmpiricalScores `Mathlib.Data.List.Basic
 -- 1 min for Mathlib.Data.List.Basic
+-- Note : do again and rebuild with lake, i had 0 instead of 1 for fst appearances in rbt ..
 
 #check 1
 -- Trie still too fat ; TODO tomorow : BS Tries, visualisation of cluster weight for given thms, front-end for this score
 -- Note do visual stuff in new file as this will be imported by cache, hence shouldn't be touched so as to trigger recompilation
+
+#check QueryTree.stratify
+
+
+partial def Trie.stratify (depth count idx : Nat) : Trie α → (Nat × List (Nat × Trie (preBS α)) × Trie (preBS α))
+| .leaf  a => (idx, [], .leaf (preBS.ofVal <$> a))
+| .node1 x a t =>
+      if count = 0
+      then
+        let (nidx, tsf, tt) := Trie.stratify depth depth idx (.node1 x a t)
+        (nidx+1, (nidx, tt) :: tsf, (.leaf (.some (.ofPoint nidx))))
+      else
+        let (nidx, tsf, tt) := Trie.stratify depth (count-1) idx t
+        (nidx, tsf, .node1 (preBS.ofVal <$> x) a tt)
+| .node x as ts =>
+      if count = 0
+      then
+        let (nidx, tsf, tt) := Trie.stratify depth depth idx (.node x as ts)
+        (nidx+1, (nidx, tt) :: tsf, (.leaf (.some (.ofPoint nidx))))
+      else Id.run do
+              let mut i := idx
+              let mut nts := Array.mkArray ts.size {}
+              let mut ts_all := []
+              for I in (List.range ts.size) do
+                let (idx_c, qts, pqt) := Trie.stratify depth (count-1) i (ts.get! I)
+                nts := nts.set! I pqt
+                i := idx_c
+                ts_all := qts ++ ts_all
+              return (i, ts_all, .node ((preBS.ofVal <$> x)) as nts)
+
+
+
+-- correct version in visualize file
+partial def Trie.destratify : Trie (tBS α) → Trie α
+| .leaf x =>
+      match x with
+      | .some (.ofPoint p) => Trie.destratify p
+      | .some (.ofVal x) => .leaf (.some x)
+      | _ => .leaf .none
+| .node1 x a t =>
+      match x with
+      | .some (.ofVal x) => .node1 (.some x) a (Trie.destratify t)
+      | _ => .leaf .none
+| .node x as ts =>
+      match x with
+      | .some (.ofVal x) => .node (.some x) as (ts.map Trie.destratify)
+      | _ => .leaf .none
+
+def preBS.toString_coret {α : Type _} (string_alpha : α → String) (string_pointer : Nat → String) : preBS α → String
+| .ofVal (a : α) => s!"(tBS.ofVal ({string_alpha a}))"
+| .ofPoint (p : Nat) => s!"(tBS.ofPoint ({string_pointer p}))"
+
+def preBS.toString_trie {α : Type _} (string_alpha : α → String) :=
+  preBS.toString_coret string_alpha (fun n => s!"emT_{n}")
+
+partial def Trie.toString (string_alpha : α → String) : Trie α → String
+| .leaf x => s!"Trie.leaf ({string_alpha <$> x})"
+| .node1 x a t => s!"Trie.node1 ({string_alpha <$> x}) {a} ({Trie.toString string_alpha t})"
+| .node x as ts => s!"Trie.node ({string_alpha <$> x}) {print_bytearray as} #[{String.intercalate "," (ts.map (Trie.toString string_alpha)).toList}]"
+
+
+def Trie.toString_preBS (string_alpha : α → String) (t : Trie (preBS α)) : String := Trie.toString (preBS.toString_trie string_alpha) t
+
+
+elab "cachEmpiricalScores_2" n:name : command =>
+  match (Lean.Syntax.isNameLit? n.raw) with
+  | none => throwError s!"Error : please enter the correct name of a module to search theorems in."
+  | some N => do
+        let env ← getEnv
+        let modules := env.header.moduleNames.map (N.isPrefixOf ·)
+        let res ← env.constants.map₁.foldM (fun hmm decName decInfo => do
+                    let na ← Loogle.isBlackListed decName
+                    if modules[env.const2ModIdx[decName].get! (α := Nat)]! && (! na)
+                    then match decInfo with
+                          | .thmInfo v => do
+                                let (sS, os) ← Elab.Command.liftTermElabM (sample_harder v v.name 10)
+                                let cos := samples_clean os
+                                let mut OT := hmm
+                                OT := update_score_trie_self OT sS 100
+                                for sam in cos do
+                                  OT := update_score_trie OT sam
+                                return OT
+                          | _ => return hmm
+                      else return hmm) (Trie.empty)
+        let (_, Top, rbts) := Trie.enumVals 0 res
+        let p_rbts := rbts.map (fun (n,T) => s!"def rbt_empSc_{n}_h : RBNode Nat (fun _ => Nat) := {RBNode.toString (fun n => s!"{n}") (fun n => s!"{n}") T.hyp_cl}\ndef rbt_empSc_{n}_g : RBNode Nat (fun _ => Nat) := {RBNode.toString (fun n => s!"{n}") (fun n => s!"{n}") T.g_cl}\ndef rbt_empSc_{n} : empiricalScores := ⟨rbt_empSc_{n}_h ,rbt_empSc_{n}_g⟩")
+        let (_ , ts, top) := Trie.stratify 3 0 0 Top
+        let p_ts := ts.map (fun (n,T) => s!"def emT_{n} : Trie (tBS empiricalScores) := {Trie.toString_preBS (fun n => s!"rbt_empSc_{n}") T}")
+        let p_top := Trie.toString_preBS (fun n => s!"rbt_empSc_{n}") top
+        let source := s!"import LeanGrow.NameListCompare\nimport LeanGrow.EmpiricalScore\nopen Lean Data\n{String.intercalate "\n" p_rbts}\n{String.intercalate "\n" p_ts.reverse}\ndef empirical_score_data : Trie (tBS empiricalScores) := {p_top}"
+        IO.FS.writeFile ⟨"/./home/yves/Desktop/CodeWorkspace/Lean4_General/LeanGrow/LeanGrow/Caches/EmpScoreSmol.lean"⟩ (source)
+        return ()
+
+--cachEmpiricalScores_2 `Mathlib.Data.List.Basic
+-- 1 min for Mathlib.Data.List.Basic
+
+
+-- Are also in frontend 3
+def RBNode.getTotalWeight (rbt : RBNode ℕ (fun _ ↦ ℕ)) : ℕ :=
+  rbt.fold (fun s _ v => s + v) 0
+
+-- modified to aacount for div by 0
+def RBNode.normalisze (rbt : RBNode ℕ (fun _ ↦ ℕ)) : RBNode ℕ (fun _ ↦ Float) :=
+  let totalWeight := Nat.toFloat (RBNode.getTotalWeight rbt)
+  RBNode.map (fun _ v => if totalWeight == 0 then 0 else (Nat.toFloat v) / totalWeight) rbt
+
+
+
+def preBS.toString_trie' {α : Type _} (string_alpha : α → String) :=
+  preBS.toString_coret string_alpha (fun n => s!"aemT_{n}")
+
+
+def Trie.toString_preBS' (string_alpha : α → String) (t : Trie (preBS α)) : String := Trie.toString (preBS.toString_trie' string_alpha) t
+
+def empiricalScores.normalise : empiricalScores → empiricalScores' :=
+  fun ⟨h,g⟩ => ⟨RBNode.normalisze h , RBNode.normalisze g⟩
+
+partial def Trie.map (f : α → β) : Trie α → Trie β
+| .leaf x => .leaf (f <$> x)
+| .node1 x a t => .node1 (f <$> x) a (Trie.map f t)
+| .node x as ts => .node (f <$> x) as (ts.map (Trie.map f))
+
+partial def Trie.get_total_weight : Trie Nat → Nat
+| .leaf x => match x with | .some y => y | _ => 0
+| .node1 x _ t =>
+      let l := match x with | .some y => y | _ => 0
+      l + (Trie.get_total_weight t)
+| .node x _ ts =>
+      let l := match x with | .some y => y | _ => 0
+      l + ((ts.map Trie.get_total_weight).foldl (fun s x => s+x) 0)
+
+
+
+
+elab "cachEmpiricalScores_3" n:name : command =>
+  match (Lean.Syntax.isNameLit? n.raw) with
+  | none => throwError s!"Error : please enter the correct name of a module to search theorems in."
+  | some N => do
+        let env ← getEnv
+        let modules := env.header.moduleNames.map (N.isPrefixOf ·)
+        let res ← env.constants.map₁.foldM (fun hmm decName decInfo => do
+                    let na ← Loogle.isBlackListed decName
+                    if modules[env.const2ModIdx[decName].get! (α := Nat)]! && (! na)
+                    then match decInfo with
+                          | .thmInfo v => do
+                                let (sS, os) ← Elab.Command.liftTermElabM (sample_harder v v.name 10)
+                                let cos := samples_clean os
+                                let mut OT := hmm.1
+                                OT := update_score_trie_self OT sS 100
+                                for sam in cos do
+                                  OT := update_score_trie OT sam
+                                let AT := hmm.2.upsert v.name.toString (fun x => match x with | .some y => Nat.succ y | _ => 1)
+                                return (OT, AT)
+                          | _ => return hmm
+                      else return hmm) (Trie.empty, Trie.empty)
+        let (_, Top, rbts) := Trie.enumVals 0 (Trie.map empiricalScores.normalise res.1)
+        let p_rbts := rbts.map (fun (n,T) => s!"def rbt_empSc_{n}_h : RBNode Nat (fun _ => Float) := {RBNode.toString (fun n => s!"{n}") (fun n => s!"{n}") T.hyp_cl}\ndef rbt_empSc_{n}_g : RBNode Nat (fun _ => Float) := {RBNode.toString (fun n => s!"{n}") (fun n => s!"{n}") T.g_cl}\ndef rbt_empSc_{n} : empiricalScores' := ⟨rbt_empSc_{n}_h ,rbt_empSc_{n}_g⟩")
+        let (_ , ts, top) := Trie.stratify 3 0 0 Top
+        let p_ts := ts.map (fun (n,T) => s!"def emT_{n} : Trie (tBS empiricalScores') := {Trie.toString_preBS (fun n => s!"rbt_empSc_{n}") T}")
+        let p_top := Trie.toString_preBS (fun n => s!"rbt_empSc_{n}") top
+        let W := Trie.get_total_weight res.2
+        let fW := Nat.toFloat W
+        let (_ , ats, atop) := Trie.stratify 3 0 0 (Trie.map (fun x => (Nat.toFloat x) / fW) res.2)
+        let p_ats := ats.map (fun (n,T) => s!"def aemT_{n} : Trie (tBS Float) := {Trie.toString_preBS' (fun n => s!"{n}") T}")
+        let p_atop := Trie.toString_preBS' (fun n => s!"{n}") atop
+        let source := s!"import LeanGrow.NameListCompare\nimport LeanGrow.EmpiricalScore\nopen Lean Data\n{String.intercalate "\n" p_rbts}\n{String.intercalate "\n" p_ts.reverse}\ndef empirical_score_data : Trie (tBS empiricalScores') := {p_top}\n{String.intercalate "\n" p_ats.reverse}\ndef thm_appearances : Trie (tBS Float) := {p_atop}"
+        IO.FS.writeFile ⟨"/./home/yves/Desktop/CodeWorkspace/Lean4_General/LeanGrow/LeanGrow/Caches/EmpScoreSmol.lean"⟩ (source)
+        return ()
+
+
+--cachEmpiricalScores_3 `Mathlib.Data.List.Basic

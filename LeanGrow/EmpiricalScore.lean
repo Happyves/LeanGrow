@@ -411,3 +411,19 @@ elab "test_sampling_4" : command => do
   logInfo print
 
 test_sampling_4
+
+
+-- here so as to avoid import pain
+structure empiricalScores where
+  hyp_cl : RBNode Nat (fun _ => Nat)
+  g_cl : RBNode Nat (fun _ => Nat)
+
+inductive tBS (α : Type _) where
+| ofVal (_ : α)
+| ofPoint (_ : Trie (tBS α))
+deriving Inhabited
+
+-- make it polymorphic during fix
+structure empiricalScores' where
+  hyp_cl : RBNode Nat (fun _ => Float)
+  g_cl : RBNode Nat (fun _ => Float)
