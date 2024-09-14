@@ -99,9 +99,9 @@ elab "visualize" : command => do
 
 #check List.append_eq_has_append
 
-visualize
+--visualize
 
-#eval Trie.print_keys ⟨#[]⟩ empirical_score_data
+--#eval Trie.print_keys ⟨#[]⟩ empirical_score_data
 
 partial def Trie.print_keys_tBS (cache : ByteArray) : Trie (tBS α) → List String
 | .leaf x =>
@@ -127,6 +127,40 @@ partial def Trie.print_keys_tBS (cache : ByteArray) : Trie (tBS α) → List Str
     | .some (.ofVal _) => (String.fromUTF8 cache (by sorry)) :: (List.join go)
     | _ => (List.join go)
 
-#eval Trie.print_keys_tBS ⟨#[]⟩ empirical_score_data
+-- #eval Trie.print_keys_tBS ⟨#[]⟩ empirical_score_data
 
-#eval Trie.print_keys ⟨#[]⟩ (Trie.destratify empirical_score_data)
+-- #eval Trie.print_keys ⟨#[]⟩ (Trie.destratify empirical_score_data)
+
+
+#check thm_appearances
+
+#check hyp_clust_appearances
+
+#check goal_clust_appearances
+
+partial def Trie.toList_wKeys (cache : ByteArray) : Trie α → List (String × α)
+| .leaf x =>
+    match x with
+    | .some a => [(String.fromUTF8 cache (by sorry), a)]
+    | _ => []
+| .node1 x a c =>
+    let go := Trie.toList_wKeys (cache.push a) c
+    match x with
+    | .some a => (String.fromUTF8 cache (by sorry), a) :: go
+    | _ => go
+| .node x as cs =>
+    let go :=
+      Id.run do
+        let mut res := []
+        for z in (List.range as.size) do
+          res :=  (Trie.toList_wKeys (cache.push (as.get! z)) (cs.get! z)) :: res
+        return res
+    match x with
+    | .some a => (String.fromUTF8 cache (by sorry), a) :: (List.join go)
+    | _ => (List.join go)
+
+elab "visualize_thm_apps" : command => do
+  let L := List.mergeSort (fun n m => n.2 ≥ m.2) (Trie.toList_wKeys ⟨#[]⟩ (Trie.destratify thm_appearances))
+  logInfo (String.intercalate "\n" (L.map (fun (n,s) => s!"{n} → {s}")))
+
+--visualize_thm_apps

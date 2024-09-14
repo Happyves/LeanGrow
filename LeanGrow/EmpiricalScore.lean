@@ -423,6 +423,19 @@ inductive tBS (α : Type _) where
 | ofPoint (_ : Trie (tBS α))
 deriving Inhabited
 
+-- rainses kernel issues:
+-- inductive rBS (β : Type _) where
+-- | ofVal (_ : β)
+-- | ofPoint (_ : RBNode α (fun _ => rBS β ))
+-- deriving Inhabited
+
+-- doesn't XD ; pray that a potential fix doesn break the preBS-BS technique :/
+inductive rBS (α β : Type _) where
+| ofVal (_ : β)
+| ofPoint (_ : RBNode α (fun _ => rBS α β ))
+deriving Inhabited
+
+
 -- make it polymorphic during fix
 structure empiricalScores' where
   hyp_cl : RBNode Nat (fun _ => Float)
