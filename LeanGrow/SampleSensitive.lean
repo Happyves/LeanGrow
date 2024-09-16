@@ -16,9 +16,13 @@ def Expr.isSensitiveType (e : Expr) : MetaM Bool := do
 
 def Expr.isSensitiveType_inC (c : Context) (e : Expr) : MetaM Bool := do
   let T ← withLCtx c.lctx c.localInstances (inferType e)
-  match T with
+  let H ← withLCtx c.lctx c.localInstances (inferType (Expr.getForallBody T))
+  match H with
   | .sort .zero => return false
   | _ => return true
+
+#check Expr.getForallBody
+--#exit
 
 def showConstInfo : ConstantInfo → String
   | .axiomInfo    _ => "axiom"
@@ -106,6 +110,28 @@ def getSensitiveTypeArgs (e : Expr) (c : Context) : MetaM (Option (Name × List 
   let res ← getSensitiveTypeArgs_main args T c 0
   return .some (n,res)
 
+
+def getSensitiveTypeArgs' (e : Expr) (c : Context) : MetaM (Option (Name × List (Nat × Expr))) := do
+  let h := Expr.getAppFn e
+  let .some (n, _) := h.const? | return .none
+  let args := Expr.getAppArgs e
+  let mut idx := 0
+  let mut out := []
+  for a in args do
+    if ← Expr.isSensitiveType_inC c a
+    then
+      out := (idx, a) :: out
+      idx := idx + 1
+    else
+      idx := idx + 1
+  if out.isEmpty
+  then
+    return .none
+  else
+    return .some (n, out)
+
+
+
 --#exit
 
 #check get_potential_subproofs
@@ -120,7 +146,7 @@ def sample_Recs_Sensitives (proof : Expr) (d : Nat) (c : Context) : MetaM (List 
     if let .some (n,_) ← isRecApp p
     then
       R := ⟨n,G,C⟩ :: R
-    let .some ls ← getSensitiveTypeArgs p C | pure ()
+    let .some ls ← getSensitiveTypeArgs' p C | pure ()
     ST := ⟨ls.1,G,ls.2,C⟩ :: ST
   return (R,ST)
 
@@ -180,8 +206,23 @@ def lifting_sucks_5 (proof : TheoremVal) (d : Nat) : MetaM String := do
     P := s!"{s.thm_name} at goal {g} with sensitive types\n{String.intercalate "\n" (sts.map (fun (n,f) => s!"   Arg {n} as {f}"))}" :: P
   return (String.intercalate "\n" P.reverse)
 
+
+lemma why (a b : Nat) : a+b=b+a :=
+  @Nat.rec (fun x => x+b=b+x) (Nat.zero_add b) (fun n ih => (by dsimp at * ; rw [Nat.succ_add, ih, ← Nat.add_assoc])) a
+
+--#print why
+-- stackoverflow bug of 4.10
+
+lemma more_test (a b : List Nat) : List.map (fun x => x^2) (a ++ b) = List.map (fun x => x^2) a ++ List.map (fun x => x^2) b :=
+  List.map_append _ a b
+-- in test, the power actually gets reduced so as to become (Nat.mul 1 x).mul x
+-- ins't a propri a problem, as its coherent if theis is always reduced, but will produce memroisation of unnecessarily big terms
+
+#check 1
+
+
 elab "test_sampling_5" : command => do
-  let N := `Nat.add_comm
+  let N := `more_test
   let .thmInfo proof := (← getEnv).constants.find! N | throwError "ahh 1"
   let print ← Elab.Command.liftTermElabM (lifting_sucks_5 proof 10)
   logInfo print
@@ -189,10 +230,14 @@ elab "test_sampling_5" : command => do
 
 
 test_sampling_5
-
+--
 #check PUnit
 #check PProd
 
 #check (fun n => n+0 = 0+n)
 #check Nat → Prop
 #check Nat → Nat
+#check Nat.zero_add 1
+#check Eq.rec
+
+#check List.map_append
