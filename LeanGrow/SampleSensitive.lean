@@ -47,9 +47,20 @@ test_7 `Nat.recOn
 test_7 `Nat.rec
 test_7 `Eq.rec
 test_7 `List.noConfusion
+test_7 `Decidable.casesOn
+test_7 `Decidable.rec
+
 
 #check List.noConfusion
 -- not a def though
+
+test_7 `Decidable.casesOn
+--test_7 `Decidable.cases -- doesn't it exist ?
+#check Decidable.casesOn
+#check_failure Decidable.cases
+
+
+--#exit
 
 structure sampleType_Recursor where
   rec_name : Name
@@ -129,6 +140,7 @@ def getSensitiveTypeArgs' (e : Expr) (c : Context) : MetaM (Option (Name × List
     return .none
   else
     return .some (n, out)
+
 
 
 
@@ -221,8 +233,29 @@ lemma more_test (a b : List Nat) : List.map (fun x => x^2) (a ++ b) = List.map (
 #check 1
 
 
+lemma more_test_2 : True := @Bool.rec (fun _ => True) True.intro True.intro true
+-- nothing gather, as it seems to be reduced ; if reduction is turned of, we recover the motive and `true` as sensitives
+
+set_option pp.all true in
+#print by_cases
+
+set_option pp.all true in
+#print dite
+
+#check 1
+
+#check Decidable.casesOn
+
+lemma more_test_3 : True := @Decidable.casesOn (2+2=4) (fun _ => True) (.isTrue (by rfl)) (fun _ => True.intro) (fun _ => True.intro)
+-- also gets fully reduced ...
+
+lemma more_test_4 (n : Nat) : n ≥ 0 := @Or.rec (Nat.Prime n) (¬ Nat.Prime n) (fun _ => n ≥ 0) (fun _ => Nat.zero_le n) (fun _ => Nat.zero_le n) (em _)
+
+
+--#exit
+
 elab "test_sampling_5" : command => do
-  let N := `more_test
+  let N := `more_test_4 -- Nat.add_comm
   let .thmInfo proof := (← getEnv).constants.find! N | throwError "ahh 1"
   let print ← Elab.Command.liftTermElabM (lifting_sucks_5 proof 10)
   logInfo print
@@ -241,3 +274,6 @@ test_sampling_5
 #check Eq.rec
 
 #check List.map_append
+
+
+#check congrArg
