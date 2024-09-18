@@ -22,7 +22,7 @@ def scoring_by_module (env : Environment) (scores : List (Name × Nat)) : Array 
 
 -- only last name that is prefix of mudule matters
 def test_scores : List (Name × Nat) :=
-  [(`Mathlib.Data.Finset, 20), (`Mathlib.Data.Fin, 20), (`Mathlib.Data.Nat, 10), (`Mathlib.Combinatorics, 50), (`Mathlib.Combinatorics.SetFamily, 70), (`Mathlib.Order, 10), (`Init.Core, 5), (`Init.Data, 5)]
+  [(`Mathlib.Data.Finset, 20), (`Mathlib.Data.Fin, 20), (`Mathlib.Data.Nat, 10), (`Mathlib.Combinatorics, 50), (`Mathlib.Combinatorics.SetFamily, 70), (`Mathlib.Order, 10), (`Init.Prelude, 5), (`Init.Core, 5), (`Init.Data, 5)]
 
 
 #check matcher
@@ -145,3 +145,125 @@ def getIffHead (thm_type : Expr) : Option (Expr × Expr) :=
     .some (as[0]!, as[1]!)
   else
     .none
+
+
+def scoring_by_cst_names (scores : List (Name × Nat)) (thm_type : Expr) : Nat :=
+  let H := Expr.getForallBody thm_type
+  let nz := Expr.getConstNames H
+  Id.run do
+    let mut out := 0
+    for n in nz do
+      let .some (_,s) := scores.find? (fun x => x.1 == n) | pure ()
+      out := s + out
+    return out
+
+
+
+open Lean Elab Meta Command Tactic TryThis
+
+def get_consts_allowed_scored (env : Environment) (scores : List (Name × Nat)) : TacticM ((HashMap Name ConstantInfo) × (PersistentHashMap Name Nat)) := do
+  let csts := env.constants.map₁
+  let sz := scoring_by_module env scores
+  HashMap.foldM
+    (fun (nEnv, Scores) decName decInfo => do
+        let na ← Loogle.isBlackListed decName
+        match sz[env.const2ModIdx[decName].get! (α := Nat)]! with
+        | .some sc =>
+            if (! na) && (ConstantInfo.isThm decInfo)
+            then
+              return (nEnv.insert decName decInfo, Scores.insert decName sc)
+            else
+              return (nEnv, Scores)
+        | _ => return (nEnv, Scores)
+        )
+    ({},{})
+    csts
+
+
+
+#check HashMap.fold
+
+#check ConstMap
+#check SMap
+
+
+inductive iffManage where
+| no | left | right
+deriving Repr, Inhabited, BEq
+
+
+def main_loop (ltx : LocalContext) (cumul_scores : PersistentHashMap FVarId ℕ) (cst_infos : HashMap Name ConstantInfo) (module_scores : PersistentHashMap Name Nat) : TacticM Unit := do
+      let (ltx_dag, ltx_dict, ltx_dict') := orderHyps_fromLocalCtx ltx
+      let mut best_module_score_embeds : Nat × List ((ConstantInfo × iffManage) × List (Array (Option NodeCst))) := (0,[])
+      let mut best_depth_score_embeds : Nat × List ((ConstantInfo × iffManage) × List (Array (Option NodeCst))) := (0,[])
+      let mut best_cumul_score_embeds : Nat × List ((ConstantInfo × iffManage) × List (Array (Option NodeCst))) := (0,[])
+      for (decName, decInfo) in cst_infos do
+        match decInfo with
+        | .thmInfo v => do
+            let iff? := getIffHead v.type
+            match iff? with
+            | .none =>
+                let hyps := naiveGetHyps v.type
+                let thm_dag := SizeDAG.sinks_fst (orderHyps_wBvar hyps)
+                let embeds := matcher thm_dag (SizeDAG.sinks_fst ltx_dag)
+                if embeds.isEmpty
+                then
+                  pure ()
+                else
+                  -- score by module
+                  let mod_sco := module_scores.find! decName
+                  if mod_sco > best_module_score_embeds.1
+                  then
+                    best_module_score_embeds := (mod_sco,[((decInfo,.no),embeds)])
+                  else
+                    if mod_sco = best_module_score_embeds.1
+                    then
+                      best_module_score_embeds := (mod_sco,((decInfo,.no),embeds) :: best_module_score_embeds.2)
+                  -- score by depth
+                  let depths := DAG.getLevelz thm_dag.dag
+                  let mut max_d := 0
+                  let mut best_ds := ([] : List (Array (Option NodeCst)))
+                  for e in embeds do
+                    let S := score_embed_by_applis_depths e depths 1 (fun x => x^2) List.sum
+                    if S > max_d
+                    then
+                      best_ds := [e]
+                    else
+                      if S = max_d
+                      then
+                        best_ds := e :: best_ds
+                  if max_d > best_depth_score_embeds.1
+                  then
+                    best_depth_score_embeds := (max_d,[((decInfo,.no),best_ds)])
+                  else
+                    if max_d = best_depth_score_embeds.1
+                    then
+                      best_depth_score_embeds := (max_d,((decInfo,.no),best_ds) :: best_depth_score_embeds.2)
+                  -- score by cumul
+                  let mut max_c := 0
+                  let mut best_cs := ([] : List (Array (Option NodeCst)))
+                  for e in embeds do
+                    let S := score_embed_by_applis_scores e cumul_scores ltx_dict' 1 id List.sum
+                    if S > max_c
+                    then
+                      best_cs := [e]
+                    else
+                      if S = max_c
+                      then
+                        best_cs := e :: best_cs
+                  if max_c > best_cumul_score_embeds.1
+                  then
+                    best_cumul_score_embeds := (max_c,[((decInfo,.no),best_cs)])
+                  else
+                    if max_c = best_cumul_score_embeds.1
+                    then
+                      best_cumul_score_embeds := (max_c,((decInfo,.no),best_cs) :: best_cumul_score_embeds.2)
+            | .some (L,R) =>
+                sorry -- same as ↑, but for both, and
+        | _ => pure ()
+        -- final step : add to ltx, update cumul scores
+
+
+
+#check ConstMap
+#check SMap
