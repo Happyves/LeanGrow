@@ -26,7 +26,7 @@ def embed_to_expr (embed : Array (Option NodeCst)) --(impInfo : List miniBind)
                       | .some ex => return .some ex
                 | .some (.ofNode im) => return .some (Expr.fvar (dict.find! im))
       )
-  dbg_trace s!"Ready for Printing ; proArgg: {proArg}"
+  --dbg_trace s!"Ready for Printing ; proArgg: {proArg}"
   --let args : List Expr := ((List.map₂ (proArg) impInfo (fun x i => match i with | .inst => .none | _ => x)).reduceOption).reverse
   -- TODO : replace instances with mvars, without fucking up, which is gonna be hard
   let args : List Expr := ((proArg).reduceOption).reverse
@@ -56,27 +56,27 @@ elab "grow" n:name : tactic =>
   match (Lean.Syntax.isNameLit? n.raw) with
   | none => throwError s!"Error : please enter the correct name of a module to search theorems in."
   | some N => do
-        dbg_trace "running 1 !"
+        --dbg_trace "running 1 !"
         let env ← getEnv
         let ref ← getRef
-        dbg_trace "running 2 !"
+        --dbg_trace "running 2 !"
         let modules := env.header.moduleNames.map (N.isPrefixOf ·)
         Elab.Tactic.withMainContext do
-          dbg_trace "running 3 !"
+          --dbg_trace "running 3 !"
           let ltx ←  getLCtx
           let (ltx_dag, ltx_dict, ltx_dict') := orderHyps_fromLocalCtx ltx
-          dbg_trace s!"Local context dag :\n{instToStringFormat.toString (repr ltx_dag)}\n"
+          --dbg_trace s!"Local context dag :\n{instToStringFormat.toString (repr ltx_dag)}\n"
           env.constants.map₁.forM (fun decName decInfo => do
               let na ← Loogle.isBlackListed decName
               if modules[env.const2ModIdx[decName].get! (α := Nat)]! && (! na)
               then match decInfo with
                    | .thmInfo v | .defnInfo v | .axiomInfo v | .ctorInfo v | .quotInfo v | .recInfo v => do
-                        dbg_trace s!"Looking at {v.name}"
+                        --dbg_trace s!"Looking at {v.name}"
                         let hyps := naiveGetHyps v.type
                         let thm_dag := SizeDAG.sinks_fst (orderHyps_wBvar hyps)
-                        dbg_trace s!"Thm dag :\n{instToStringFormat.toString (repr thm_dag)}\n"
+                        --dbg_trace s!"Thm dag :\n{instToStringFormat.toString (repr thm_dag)}\n"
                         let embeds := matcher thm_dag (SizeDAG.sinks_fst ltx_dag)
-                        dbg_trace s!"Embeddings : {embeds}\n"
+                        --dbg_trace s!"Embeddings : {embeds}\n"
                         match embeds with
                         | [] => pure ()
                         | _ =>  do
@@ -145,7 +145,7 @@ example (l : List ℕ) (a : ℕ) (h : a ∈ l) : True :=
 
 #check List.length_erase_add_one
 
-#exit
+--#exit
 
 example (l L : List ℕ) (h : 0 < l.length) : True :=
   by
@@ -156,12 +156,24 @@ example (l L : List ℕ) (h : 0 < l.length) : True :=
 #check List.instIsTransSubset
 
 
-#exit
+--#exit
+
+set_option linter.all false
+
+
+
+
+
+
 
 example (l L : List ℕ) (h : 0 < l.length) : True :=
   by
   grow `Mathlib.Data.List.Basic
   trivial
+
+
+
+
 
 
 
