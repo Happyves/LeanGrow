@@ -1,0 +1,24 @@
+
+import Lean.Expr
+
+open Lean
+
+inductive OriginalData where
+| missing
+| ofBvar : Nat → OriginalData
+| ofFvar (fvarId : FVarId)
+deriving Inhabited, BEq, Repr
+
+inductive CExpr where
+| node : Nat → OriginalData → CExpr
+| bvar : Nat → CExpr
+| sort : Level → CExpr
+| const : Name → List Level → CExpr
+| app : CExpr → CExpr → CExpr
+| lam : Name → CExpr → CExpr → BinderInfo → CExpr
+| forallE : Name → CExpr → CExpr → BinderInfo → CExpr
+| letE : Name → CExpr → CExpr → CExpr → Bool → CExpr
+| lit : Literal → CExpr
+| proj : Name → Nat → CExpr → CExpr
+| failed : CExpr
+deriving Inhabited, BEq, Repr
