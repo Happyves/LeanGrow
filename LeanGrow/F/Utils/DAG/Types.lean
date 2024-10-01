@@ -1,22 +1,25 @@
 
 
+import Lean.Data.RBMap
+
+
 -- # preDAG
 
-structure preDAGnode (α β : Type _) where
+structure pDAGnode (α β : Type _) where
   label : β
   data : α
   parents : List β
 deriving Repr, Inhabited, BEq
 
-def preDAG (α β : Type _) := List (preDAGnode α β )
+def pDAG (α β : Type _) := List (pDAGnode α β )
 
-instance (α β : Type _) [Repr α] [Repr β]: Repr (preDAG α β) where
+instance (α β : Type _) [Repr α] [Repr β]: Repr (pDAG α β) where
   reprPrec := fun d i => List.repr d i
 
-instance (α β : Type _) : Inhabited (preDAG α β) where
+instance (α β : Type _) : Inhabited (pDAG α β) where
   default := []
 
-instance (α β : Type _) [BEq α] [BEq β]: BEq (preDAG α β) where
+instance (α β : Type _) [BEq α] [BEq β]: BEq (pDAG α β) where
   beq := fun l r => List.instBEq.beq l r
 
 
@@ -54,9 +57,17 @@ structure sDAGnode (α β : Type _) where
   children : Array Nat
 deriving Repr, Inhabited, BEq
 
+
+
+class ToIdx (β : Type _) (store : Type _ → Type _) where
+  toIdx : (dataStruc : store β) → (label : β) → Option Nat
+  extend : (dataStruc : store β) → (label : β) → (idx : Nat) → store β
+  empty : store β
+
+
 /-- `store` should be a data structure that will associate `β` to `Nat`,
 for example `fun x => List (x × Nat)` or if `β` is `Nat`, `RBNode` or just `Nat → Nat`-/
-structure sDAG (α β : Type _) (store : Type _ → Type _)
+structure sDAG (α β : Type _) (store : Type _ → Type _) [ToIdx β store]
   [Repr (store β)] [Inhabited (store β)] [BEq (store β)] where
   size : Nat
   dag : Array (sDAGnode α β)
@@ -65,16 +76,18 @@ structure sDAG (α β : Type _) (store : Type _ → Type _)
 deriving Repr, Inhabited, BEq
 
 
+instance ListToIdx (β : Type _) [BEq β] : ToIdx β (fun x => List (x × Nat)) where
+  toIdx := fun D l => Prod.snd <$> (List.find? (fun x => (Prod.fst x) == l) D)
+  extend := fun D l i => (l,i) :: D
+  empty := []
 
+open Lean in
+instance RBNodeToIdx : ToIdx Nat (fun _ => RBNode Nat (fun _ => Nat)) where
+  toIdx := fun D l => RBNode.find instOrdNat.compare D l
+  extend := fun D l i => RBNode.insert instOrdNat.compare D l i
+  empty := {}
 
-#exit
-
--- Work on cachung and the stratification API before working on ↓
-
-def DAG.toString (e : α → String) : DAG α Nat → String
-| [] => "[]"
-| ⟨n, d, p⟩ :: rest => s!"⟨{n},{e d},{p}⟩ :: " ++ (DAG.toString e rest)
-
-
-def SizedDAG.toString (e : α → String) : SizedDAG α Nat → String :=
- fun ⟨s, d⟩ => s!"⟨{s},{DAG.toString e d}⟩"
+instance IdToIdx : ToIdx Nat (fun _ => Nat → Nat) where
+  toIdx := fun D l => D l
+  extend := fun D _ _ => D
+  empty := id
