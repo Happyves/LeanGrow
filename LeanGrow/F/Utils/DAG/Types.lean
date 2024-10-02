@@ -22,6 +22,10 @@ instance (α β : Type _) : Inhabited (pDAG α β) where
 instance (α β : Type _) [BEq α] [BEq β]: BEq (pDAG α β) where
   beq := fun l r => List.instBEq.beq l r
 
+/-- Assumes distict labels-/
+def pDAGnode.lbeq [BEq β] (a b : pDAGnode α β) : Bool :=
+ BEq.beq a.label b.label
+
 
 
 -- # DAG
@@ -44,6 +48,9 @@ instance (α β : Type _) : Inhabited (DAG α β) where
 instance (α β : Type _) [BEq α] [BEq β]: BEq (DAG α β) where
   beq := fun l r => List.instBEq.beq l r
 
+/-- Assumes distict labels-/
+def DAGnode.lbeq [BEq β] (a b : DAGnode α β) : Bool :=
+ BEq.beq a.label b.label
 
 
 
@@ -57,6 +64,9 @@ structure sDAGnode (α β : Type _) where
   children : Array Nat
 deriving Repr, Inhabited, BEq
 
+/-- Assumes distict labels-/
+def sDAGnode.lbeq (a b : sDAGnode α β) : Bool :=
+ BEq.beq a.cache_label b.cache_label
 
 
 class ToIdx (β : Type _) (store : Type _ → Type _) where

@@ -13,7 +13,7 @@ def CExpr : Type := sorry
 
 structure ForwardState where
   cexprs : sorry -- store hyps and derived facts ; probably a discrimination tree is best
-  deps : preDAG sorry sorry -- same as ↑, but store dependenices : which fact was derived from which hyps ; use dag notion that is easily extensible
+  deps : pDAG sorry sorry -- same as ↑, but store dependenices : which fact was derived from which hyps ; use dag notion that is easily extensible
   fakes : sorry -- if a thm was applied backwards, and its subgoal is ∀, we should introduce the ∀ hyps to the forward-state, but track them with this field, so as to know that they may only be sed to prove a specific subgoal
   rankings : sorry -- should link to another structure storing the rankings of the curretly derived facts
 
@@ -26,7 +26,8 @@ structure BackwardState where
   rankings : sorry
 
 structure TriggerState where
-  todo : sorry
+  algebra : sorry
+  SAT : sorry
 
 structure SpecialSupportState where
   todo : sorry

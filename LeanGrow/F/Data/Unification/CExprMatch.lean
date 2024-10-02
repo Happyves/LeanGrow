@@ -1,12 +1,12 @@
 
 import LeanGrow.F.Data.CExpr.API
-import Lean.Data.HashMap
+--import Lean.Data.HashMap
 
 open Lean
 
 
-def HashMap.merge [BEq α] [Hashable α] (a b : HashMap α β) : HashMap α β :=
-      a.fold (init := b) fun r k v => r.insert k v
+-- def HashMap.merge [BEq α] [Hashable α] (a b : HashMap α β) : HashMap α β :=
+--       a.fold (init := b) fun r k v => r.insert k v
 
 
 inductive NodeCst where

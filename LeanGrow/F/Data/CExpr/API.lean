@@ -1,5 +1,6 @@
 
 import LeanGrow.F.Data.CExpr.Types
+import LeanGrow.F.Utils.List
 
 open Lean
 
@@ -30,25 +31,25 @@ partial def Lean.Expr.toCExprF (E : Expr) : CExpr :=
             | .const n ll => .const n ll :: (go L)
             | .app f a =>
                   let r := go (f :: a :: L)
-                  let F := List.headD r .failed
-                  let A := List.headD (List.drop 1 r) .failed
-                  (.app F A) :: (List.drop 2 r)
+                  let (F,r2) := List.headD_tail r .failed
+                  let (A,r3) := List.headD_tail r2 .failed
+                  (.app F A) :: r3
             | .lam n t b i =>
                   let r := go (t :: b :: L)
-                  let T := List.headD r .failed
-                  let B := List.headD (List.drop 1 r) .failed
-                  (.lam n T B i) :: (List.drop 2 r)
+                  let (T,r2) := List.headD_tail r .failed
+                  let (B,r3) := List.headD_tail r2 .failed
+                  (.lam n T B i) :: r3
             | .forallE n t b i =>
                   let r := go (t :: b :: L)
-                  let T := List.headD r .failed
-                  let B := List.headD (List.drop 1 r) .failed
-                  (.forallE n T B i) :: (List.drop 2 r)
+                  let (T,r2) := List.headD_tail r .failed
+                  let (B,r3) := List.headD_tail r2 .failed
+                  (.forallE n T B i) :: r3
             | .letE n t v b i =>
                   let r := go (t :: v :: b :: L)
-                  let T := List.headD r .failed
-                  let V := List.headD (List.drop 1 r) .failed
-                  let B := List.headD (List.drop 2 r) .failed
-                  (.letE n T V B i) :: (List.drop 3 r)
+                  let (T,r2) := List.headD_tail r .failed
+                  let (V,r3) := List.headD_tail r2 .failed
+                  let (B,r4) := List.headD_tail r3 .failed
+                  (.letE n T V B i) :: r4
             | .lit l => .lit l :: (go L)
             | .proj t i b =>
                   let r := go (b :: L)
@@ -56,7 +57,6 @@ partial def Lean.Expr.toCExprF (E : Expr) : CExpr :=
                   (.proj t i B) :: (List.drop 1 r)
             | .mdata _ e => go (e :: L)
   List.headD (go [E]) .failed
-
 
 
 
@@ -83,6 +83,7 @@ partial def CExpr.hasNodesF (E : CExpr) : Bool :=
             | .proj _ _ b => go (b :: L)
             | _ => go L
       go [E]
+
 
 
 def CExpr.toExpr : CExpr → Option Expr
@@ -122,42 +123,43 @@ partial def CExpr.toExprF (E : CExpr) : Option Expr :=
             | .const n ll => .some (.const n ll) :: (go L)
             | .app f a =>
                   let r := go (f :: a :: L)
-                  let F := List.headD r .none
-                  let A := List.headD (List.drop 1 r) .none
+                  let (F,r2) := List.headD_tail r .none
+                  let (A,r3) := List.headD_tail r2 .none
                   match F, A with
-                  | .some f', .some a' => .some (.app f' a') :: (List.drop 2 r)
+                  | .some f', .some a' => .some (.app f' a') :: r3
                   | _ , _ => [.none]
             | .lam n t b i =>
                   let r := go (t :: b :: L)
-                  let T := List.headD r .none
-                  let B := List.headD (List.drop 1 r) .none
-                  match T, B with
-                  | .some t', .some b' => .some (.lam n t' b' i) :: (List.drop 2 r)
+                  let (F,r2) := List.headD_tail r .none
+                  let (A,r3) := List.headD_tail r2 .none
+                  match F, A with
+                  | .some t', .some b' => .some (.lam n t' b' i) :: r3
                   | _ , _ => [.none]
             | .forallE n t b i =>
                   let r := go (t :: b :: L)
-                  let T := List.headD r .none
-                  let B := List.headD (List.drop 1 r) .none
-                  match T, B with
-                  | .some t', .some b' => .some (.forallE n t' b' i) :: (List.drop 2 r)
+                  let (F,r2) := List.headD_tail r .none
+                  let (A,r3) := List.headD_tail r2 .none
+                  match F, A with
+                  | .some t', .some b' => .some (.forallE n t' b' i) :: r3
                   | _ , _ => [.none]
             | .letE n t v b i =>
                   let r := go (t :: v :: b :: L)
-                  let T := List.headD r .none
-                  let V := List.headD (List.drop 1 r) .none
-                  let B := List.headD (List.drop 2 r) .none
+                  let (T,r2) := List.headD_tail r .none
+                  let (V,r3) := List.headD_tail r2 .none
+                  let (B,r4) := List.headD_tail r3 .none
                   match T, V, B with
-                  | .some t', .some v', .some b' => .some (.letE n t' v' b' i) :: (List.drop 2 r)
+                  | .some t', .some v', .some b' => .some (.letE n t' v' b' i) :: r4
                   | _ , _, _ => [.none]
             | .lit l => .some (.lit l) :: (go L)
             | .proj t i b =>
                   let r := go (b :: L)
-                  let B := List.headD r .none
+                  let (B,r2) := List.headD_tail r .none
                   match B with
-                  | .some b' => .some (.proj t i b') :: (List.drop 1 r)
+                  | .some b' => .some (.proj t i b') :: r2
                   | _ => [.none]
             | .failed => [.none]
       List.headD (go [E]) .none
+
 
 
 
@@ -194,37 +196,37 @@ partial def CExpr.getNodesMaxIdxF (E : CExpr) : Option Nat :=
             | .node i _ => i :: (go L)
             | .app f a =>
                   let r := go (f :: a :: L)
-                  let F := List.headD r 0
-                  let A := List.headD (List.drop 1 r) 0
+                  let (F,r2) := List.headD_tail r 0
+                  let (A,r3) := List.headD_tail r2 0
                   if F > A
-                  then F :: (List.drop 2 r)
-                  else A :: (List.drop 2 r)
+                  then F :: r3
+                  else A :: r3
             | .lam _ t b _ =>
                   let r := go (t :: b :: L)
-                  let F := List.headD r 0
-                  let A := List.headD (List.drop 1 r) 0
+                  let (F,r2) := List.headD_tail r 0
+                  let (A,r3) := List.headD_tail r2 0
                   if F > A
-                  then F :: (List.drop 2 r)
-                  else A :: (List.drop 2 r)
+                  then F :: r3
+                  else A :: r3
             | .forallE _ t b _ =>
                   let r := go (t :: b :: L)
-                  let F := List.headD r 0
-                  let A := List.headD (List.drop 1 r) 0
+                  let (F,r2) := List.headD_tail r 0
+                  let (A,r3) := List.headD_tail r2 0
                   if F > A
-                  then F :: (List.drop 2 r)
-                  else A :: (List.drop 2 r)
+                  then F :: r3
+                  else A :: r3
             | .letE _ t v b _ =>
                   let r := go (t :: v :: b :: L)
-                  let T := List.headD r 0
-                  let V := List.headD (List.drop 1 r) 0
-                  let B := List.headD (List.drop 2 r) 0
+                  let (T,r2) := List.headD_tail r 0
+                  let (V,r3) := List.headD_tail r2 0
+                  let (B,r4) := List.headD_tail r3 0
                   if T > V
                   then  if B > T
-                        then B :: (List.drop 3 r)
-                        else T :: (List.drop 3 r)
+                        then B :: r4
+                        else T :: r4
                   else  if B > V
-                        then B :: (List.drop 3 r)
-                        else V :: (List.drop 3 r)
+                        then B :: r4
+                        else V :: r4
             | .proj _ _ b => go (b :: L)
             | _ => go L
       match (go [E]) with

@@ -1,8 +1,77 @@
 
-import LeanGrow.F.Utils.DAG.Query
-import Lean.Data.RBTree -- for RBTree ; delete if not used
+import LeanGrow.F.Utils.DAG.Types
+import Mathlib.Data.List.Sort
+import LeanGrow.F.Utils.List
 
 open Lean
+
+-- # Sinks
+
+
+def pDAG.find_sinks (d : pDAG α β) [BEq β] [BEq α] [Inhabited α] (r : β → β → Prop) [DecidableRel r] : List (pDAGnode α β) :=
+  let R := fun a b : pDAGnode α β =>  r a.label b.label
+  let rec go (candidates blacklist : List (pDAGnode α β)): List (pDAGnode α β) → List (pDAGnode α β)
+  | [] => candidates
+  | node :: more =>
+      let pass? := List.orderedContains R node blacklist
+      if pass?
+      then
+        let nb := node.parents.foldl (fun s n => List.orderedInsertOrLeave R ⟨n, default, []⟩ s) blacklist
+        let nc := node.parents.foldl (fun s n => List.orderedEraseOrLeave R ⟨n, default, []⟩  s) candidates
+        go nc nb more
+      else
+        let nb := node.parents.foldl (fun s n => List.orderedInsertOrLeave R ⟨n, default, []⟩  s) blacklist
+        let nc := node.parents.foldl (fun s n => List.orderedEraseOrLeave R ⟨n, default, []⟩  s) candidates
+        go (node :: nc) nb more
+  go [] [] d
+
+def pDAG.find_sinks_noOrder (d : pDAG α β) [BEq β] [BEq α] [Inhabited α] : List (pDAGnode α β) :=
+  let rec go (candidates blacklist : List (pDAGnode α β)): List (pDAGnode α β) → List (pDAGnode α β)
+  | [] => candidates
+  | node :: more =>
+      let pass? := List.contains blacklist node
+      if pass?
+      then
+        let nb := node.parents.foldl (fun s n => List.insertOrLeave ⟨n, default, []⟩ s) blacklist
+        let nc := node.parents.foldl (fun s n => List.eraseOrLeave  ⟨n, default, []⟩  s) candidates
+        go nc nb more
+      else
+        let nb := node.parents.foldl (fun s n => List.insertOrLeave ⟨n, default, []⟩ s) blacklist
+        let nc := node.parents.foldl (fun s n => List.eraseOrLeave  ⟨n, default, []⟩  s) candidates
+        go (node :: nc) nb more
+  go [] [] d
+
+
+
+def pDAG.find_sinks_uniqLabels (d : pDAG α β) [BEq β] [Inhabited α] (r : β → β → Prop) [DecidableRel r] : List (pDAGnode α β) :=
+  let R := fun a b : pDAGnode α β =>  r a.label b.label
+  let rec go (candidates blacklist : List (pDAGnode α β)): List (pDAGnode α β) → List (pDAGnode α β)
+  | [] => candidates
+  | node :: more =>
+      let pass? := @List.orderedContains _ ⟨pDAGnode.lbeq⟩ R _ node blacklist
+      if pass?
+      then
+        let nb := node.parents.foldl (fun s n => @List.orderedInsertOrLeave _ ⟨pDAGnode.lbeq⟩ R _  ⟨n, default, []⟩ s) blacklist
+        let nc := node.parents.foldl (fun s n => @List.orderedEraseOrLeave _ ⟨pDAGnode.lbeq⟩ R _ ⟨n, default, []⟩  s) candidates
+        go nc nb more
+      else
+        let nb := node.parents.foldl (fun s n => @List.orderedInsertOrLeave _ ⟨pDAGnode.lbeq⟩ R _  ⟨n, default, []⟩ s) blacklist
+        let nc := node.parents.foldl (fun s n => @List.orderedEraseOrLeave _ ⟨pDAGnode.lbeq⟩ R _ ⟨n, default, []⟩  s) candidates
+        go (node :: nc) nb more
+  go [] [] d
+
+
+def DAG.find_sinks (d : DAG α β) : List (DAGnode α β) :=
+  List.filter (fun node => node.children.isEmpty) d
+
+
+def sDAG.find_sinks {store : Type _ → Type _} [ToIdx β store] [Inhabited α] [Inhabited β]
+  [Repr (store β)] [Inhabited (store β)] [BEq (store β)] (d : sDAG α β store) : List (sDAGnode α β) :=
+  (List.range d.size).foldl
+    (fun s i =>
+      let node := d.dag.get! i
+      if node.children.isEmpty then node :: s else s
+    ) []
 
 
 
