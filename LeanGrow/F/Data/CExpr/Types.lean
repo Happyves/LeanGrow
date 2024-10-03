@@ -22,3 +22,13 @@ inductive CExpr where
 | proj : Name → Nat → CExpr → CExpr
 | failed : CExpr
 deriving Inhabited, BEq, Repr
+
+
+inductive EmbedData where
+| nonInst (t : CExpr)
+| inst (t : CExpr)
+deriving BEq, Inhabited, Repr
+
+def EmbedData.cexpr : EmbedData → CExpr
+| .nonInst ce => ce
+| .inst ce => ce

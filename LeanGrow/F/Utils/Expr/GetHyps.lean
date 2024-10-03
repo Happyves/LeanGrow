@@ -17,3 +17,6 @@ def naiveGetHyps (ty : Expr) : (List (Expr × miniBind)) :=
         | _ => (h, .impl)  :: H
   | .mdata  _ e => naiveGetHyps e
   | _ => []
+
+
+#check Expr.getForallBody

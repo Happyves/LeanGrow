@@ -101,3 +101,27 @@ instance IdToIdx : ToIdx Nat (fun _ => Nat → Nat) where
   toIdx := fun D l => D l
   extend := fun D _ _ => D
   empty := id
+
+
+-- # aDAG
+
+structure aDAGnode (α : Type _) where
+  label : Nat
+  data : α
+  parents : Array Nat
+deriving Repr, Inhabited, BEq
+
+def aDAG (α : Type _) := Array (aDAGnode α)
+
+instance (α : Type _) [Repr α] : Repr (aDAG α) where
+  reprPrec := fun d i => Array.instRepr.reprPrec d i
+
+instance (α : Type _) : Inhabited (aDAG α) where
+  default := Array.mkEmpty 0
+
+instance (α  : Type _) [BEq α] : BEq (aDAG α) where
+  beq := fun l r => Array.instBEq.beq l r
+
+/-- Assumes distict labels-/
+def aDAGnode.lbeq [BEq β] (a b : aDAGnode α) : Bool :=
+ BEq.beq a.label b.label
