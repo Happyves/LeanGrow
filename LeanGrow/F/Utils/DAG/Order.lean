@@ -75,6 +75,21 @@ def sDAG.find_sinks {store : Type _ → Type _} [ToIdx β store] [Inhabited α] 
 
 
 
+
+-- # Sorting
+
+/-
+We consider it to be good to sort nodes in the optic of easily emebdding them.
+The idea here is that for long strains of assumptions, it is easy to discover that
+
+
+-/
+
+
+
+
+
+
 #exit
 
 -- haven't really tested this

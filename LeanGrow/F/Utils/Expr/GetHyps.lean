@@ -3,20 +3,12 @@ import Lean.Expr
 
 open Lean
 
-inductive miniBind where
-| default | inst | impl
-
-
-def naiveGetHyps (ty : Expr) : (List (Expr × miniBind)) :=
-  match ty with
-  | .forallE _ h b i =>
-        let H := (naiveGetHyps b)
-        match i with
-        | .instImplicit => (h , .inst) :: H
-        | .default => (h, .default)  :: H
-        | _ => (h, .impl)  :: H
-  | .mdata  _ e => naiveGetHyps e
-  | _ => []
-
-
-#check Expr.getForallBody
+def Lean.Expr.getHypsGoal (ty : Expr) : (List (Expr × Bool)) × Expr :=
+  let rec go (cache : List (Expr × Bool)) : Expr → (List (Expr × Bool)) × Expr
+    | .forallE _ h b i =>
+          match i with
+          | .instImplicit => go ((h , true) :: cache) b
+          | _ => go ((h , false) :: cache) b
+    | .mdata  _ e => go cache e
+    | e => (cache, e)
+  go [] ty
