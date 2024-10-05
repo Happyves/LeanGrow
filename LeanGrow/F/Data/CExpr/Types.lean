@@ -25,10 +25,10 @@ deriving Inhabited, BEq, Repr
 
 
 inductive EmbedData where
-| nonInst (t : CExpr)
-| inst (t : CExpr)
+| nonInst (t : CExpr) (parents : Array Nat)
+| inst (t : CExpr) (parents : Array Nat)
 deriving BEq, Inhabited, Repr
 
 def EmbedData.cexpr : EmbedData → CExpr
-| .nonInst ce => ce
-| .inst ce => ce
+| .nonInst ce _ => ce
+| .inst ce _ => ce

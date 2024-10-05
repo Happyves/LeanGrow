@@ -39,11 +39,12 @@ def merge_if_compatible (embed : Array (Option EmbedData)) (assignOutput : List 
 
 
 
-def pDAG.embed_next (thm  : pDAG EmbedData Nat) (ltx_L : List (Nat × EmbedData)) -- will be ltx.labelDataList
-  (embedSofar : Array (Option EmbedData)) (todo_idx : Nat) (todo_data : EmbedData) :
-  List ((Array (Option EmbedData)) × (List (Nat × EmbedData))) :=
+def pDAG.embed_next (thm_data  : Array EmbedData) (ltx_L : List (Nat × CExpr × List Nat))
+  -- actually, ltx_l should be a structure from Search (discrimi tree) ? should make search for nex embed easier then trying all options
+  (embedSofar : Array (Option NodeExpr)) (todo_idx : Nat) (todo_data : EmbedData) :
+  List ((Array (Option NodeExpr)) × (List (Nat × NodeExpr))) :=
   let candidates := ltx_L.foldl (init := []) (fun r (k, v) =>
-      match EmbedData.MatchAssignLFF todo_data v with
+      match CExpr.MatchAssignLFF todo_data.cexpr v.1 with
       | .none => r
       | .some l => (k,l) :: r
       )
@@ -59,7 +60,7 @@ def pDAG.embed_next (thm  : pDAG EmbedData Nat) (ltx_L : List (Nat × EmbedData)
 
 
 
-
+#check Array.set!
 
 
 
