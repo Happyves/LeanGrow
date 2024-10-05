@@ -44,3 +44,8 @@ def List.reduceOptionOrFail : List (Option α) →  Option (List α)
 | [] => .some []
 | .some x :: l => (x :: ·) <$> (List.reduceOptionOrFail l)
 | .none :: _ => .none
+
+
+def List.findModify (p : α → Bool) (modify : α → α) : List α → List α
+| [] => []
+| x :: l => if p x then (modify x) :: l else x :: (List.findModify p modify l)
