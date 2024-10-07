@@ -2,12 +2,8 @@
 
 import LeanGrow.F.Utils.DAG.Query
 import LeanGrow.F.Data.Unification.CExprMatch
-import Mathlib.Data.List.Basic
-
-#check 1
-
--- return partial embeedings too, this time ; this time, handle instances differently 8maybe report them as missing args, but distinct from actual missing args)
-
+import Mathlib.Data.List.Sort
+import LeanGrow.F.Utils.List
 
 
 
@@ -98,10 +94,48 @@ partial def full_matcher (thm_data : Array EmbedData) (thm_order : Array Nat) (l
         let nd := thm_data.get! n
         match propagate_raw ltx embedSofar n nd.cexpr with
         | .none => []
-        | .some (emb, toFront) => main emb instances ((n :: toFront).foldl (fun r e => r.filter (fun x => !(x == e))) unassignedNodes) (List.union toFront l) -- no duplicates
+        | .some (emb, toFront) => main emb instances ((n :: toFront).foldl (fun r e => r.erase e) unassignedNodes) (List.union toFront l) -- no duplicates
   main (Array.mkArray thm_data.size .none) [] thm_order.toList []
 
 
+private structure Data where
+  embedSofar :  Array (Option NodeExpr)
+  instances : List Nat
+  unassignedNodes : List Nat
+  assignedFrontier : List Nat
+
+partial def full_matcherF (thm_data : Array EmbedData) (thm_order : Array Nat) (ltx : List (Nat × CExpr)) : List EmbedStruct :=
+  let rec main (todo : List Data) (done : List EmbedStruct) : List EmbedStruct :=
+    match todo with
+    | [] => done
+    | ⟨embedSofar, instances, unassignedNodes, assignedFrontier⟩ :: more =>
+        match assignedFrontier with
+        | [] =>
+            match unassignedNodes with
+            | [] => main more (⟨embedSofar,instances⟩ :: done)
+            | n :: l =>
+              let nd := thm_data.get! n
+              match nd with
+              | .inst _ _ =>
+                    let L := embed_next_raw ltx embedSofar n nd
+                    match L with
+                    | [] => main (⟨embedSofar, (n :: instances), unassignedNodes, assignedFrontier⟩ :: more) done
+                            -- if we fail to embed an instance, we proceed
+                    | _ =>  let add := L.map (fun (embed, front) => ⟨embed, instances, (l.filter (fun x => !(front.contains x))), front.mergeSort (· ≤ ·)⟩ )
+                            main (add ++ more) done
+              | .nonInst _ _ =>
+                    let L := embed_next_raw ltx embedSofar n nd
+                    let add := L.map (fun (embed, front) => ⟨embed, instances, (l.filter (fun x => !(front.contains x))), front.mergeSort (· ≤ ·)⟩ )
+                    main (add ++ more) done
+        | n :: l =>
+            let nd := thm_data.get! n
+            match propagate_raw ltx embedSofar n nd.cexpr with
+            | .none => []
+            | .some (emb, toFront) => main (⟨emb, instances, ((n :: toFront).foldl (fun r e => r.erase e) unassignedNodes), (toFront.foldl (fun x y => List.orderedInsertOrLeave (· ≤ ·) y x) l)⟩ :: more) done  -- no duplicates
+      main [⟨(Array.mkArray thm_data.size .none), [], thm_order.toList, []⟩] []
+
+
+-- TODO: partial embeddings ; ltx is ExprTrie
 
 
 /-
