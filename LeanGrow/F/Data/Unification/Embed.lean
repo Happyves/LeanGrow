@@ -2,6 +2,7 @@
 
 import LeanGrow.F.Utils.DAG.Query
 import LeanGrow.F.Data.Unification.CExprMatch
+import Mathlib.Data.List.Basic
 
 #check 1
 
@@ -26,49 +27,79 @@ def merge_if_compatible_A (embed : Array (Option NodeExpr)) (assignOutput : Arra
       (.some embed)
 
 
-def merge_if_compatible (embed : Array (Option EmbedData)) (assignOutput : List (Nat × NodeExpr)) :
-  Option (Array (Option EmbedData)) :=
-    match assignOutput with
-    | [] => .some embed
+def merge_if_compatible (embed : Array (Option NodeExpr)) (assignOutput : List (Nat × NodeExpr)) :
+  Option (Array (Option NodeExpr) × List Nat) :=
+  let rec go (embed : Array (Option NodeExpr)) (toPropagate : List Nat) : List (Nat × NodeExpr) → Option (Array (Option NodeExpr) × List Nat)
+    | [] => .some (embed, toPropagate)
     | (t,l) :: rest =>
         let im := embed.get! t
         match im with
-        | .none => merge_if_compatible (embed.set! t l) rest
+        | .none => go (embed.set! t l) (t :: toPropagate) rest
         | .some i => if i == l then merge_if_compatible embed rest else .none
-                    -- do efficient == here for EmbedData ??
+  go embed [] assignOutput
 
 
-
-def pDAG.embed_next (thm_data  : Array EmbedData) (ltx_L : List (Nat × CExpr × List Nat))
+def embed_next_raw (ltx : List (Nat × CExpr)) -- sofar, parents not needed
   -- actually, ltx_l should be a structure from Search (discrimi tree) ? should make search for nex embed easier then trying all options
   (embedSofar : Array (Option NodeExpr)) (todo_idx : Nat) (todo_data : EmbedData) :
-  List ((Array (Option NodeExpr)) × (List (Nat × NodeExpr))) :=
-  let candidates := ltx_L.foldl (init := []) (fun r (k, v) =>
-      match CExpr.MatchAssignLFF todo_data.cexpr v.1 with
+  List ((Array (Option NodeExpr)) × (List Nat)) :=
+  -- find matchinf ltx expressions
+  let candidates := ltx.foldl (init := []) (fun r (k, v) =>
+      match CExpr.MatchAssignLFF todo_data.cexpr v with
       | .none => r
       | .some l => (k,l) :: r
       )
-  candidates.foldl (fun L e =>
-    match merge_if_compatible embedSofar ((todo_idx , ( .ofNode e.1)) :: e.2) with
-    | .none => L
-    | .some E =>
-        (E, (e.2.map Prod.fst).zip ((e.2.map (fun p => thm.dataName p.1)).reduceOption)) :: L
-    ) []
-
-
-#check Array.foldl
-
-
-
-#check Array.set!
+  -- find those that are compatible with the embedding so far
+  (candidates.map (fun (e, tp) => merge_if_compatible (embedSofar.set! todo_idx (.some (.ofNode e))) tp)).reduceOption
 
 
 
 
+def propagate_raw (ltx : List (Nat × CExpr)) -- sofar, parents not needed
+  (embedSofar :  Array (Option NodeExpr)) (todo_idx : Nat) (todo_thm_type : CExpr) : Option ((Array (Option NodeExpr)) × (List Nat)) :=
+  match embedSofar.get! todo_idx with
+  | .none => .none
+  | .some (.ofCExpr _) =>
+        .some (embedSofar, [])
+  | .some (.ofNode im) =>
+      match ltx.find? (fun x => x.1 == im) with
+      | .none => .none
+      | .some (_, ce) =>
+          match CExpr.MatchAssignLFF todo_thm_type ce with
+          | .none => .none
+          | .some l => merge_if_compatible embedSofar l
 
 
+structure EmbedStruct where
+  embed : Array (Option NodeExpr)
+  unassigned_instances : List Nat
+deriving BEq, Inhabited, Repr
 
 
+partial def full_matcher (thm_data : Array EmbedData) (thm_order : Array Nat) (ltx : List (Nat × CExpr)) : List EmbedStruct :=
+  let rec main (embedSofar :  Array (Option NodeExpr)) (instances : List Nat) (unassignedNodes : List Nat) (assignedFrontier : List Nat) : List EmbedStruct :=
+    match assignedFrontier with
+    | [] =>
+        match unassignedNodes with
+        | [] => [⟨embedSofar,instances⟩]
+        | n :: l =>
+          let nd := thm_data.get! n
+          match nd with
+          | .inst _ _ =>
+                let L := embed_next_raw ltx embedSofar n nd
+                match L with
+                | [] => main embedSofar (n :: instances) unassignedNodes assignedFrontier
+                        -- if we fail to embed an intance, we proceed
+                | _ => (L.map (fun (embed, front) => main embed instances (l.filter (fun x => !(front.contains x))) front)).join
+          | .nonInst _ _ =>
+                let L := embed_next_raw ltx embedSofar n nd
+                (L.map (fun (embed, front) => main embed instances (l.filter (fun x => !(front.contains x))) front)).join
+    | n :: l =>
+        let nd := thm_data.get! n
+        match propagate_raw ltx embedSofar n nd.cexpr with
+        | .none => []
+        | .some (emb, toFront) => main emb instances ((n :: toFront).foldl (fun r e => r.filter (fun x => !(x == e))) unassignedNodes) (List.union toFront l) -- no duplicates
+  main (Array.mkArray thm_data.size .none) [] thm_order.toList []
 
 
 
