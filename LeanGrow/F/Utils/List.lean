@@ -49,3 +49,19 @@ def List.reduceOptionOrFail : List (Option α) →  Option (List α)
 def List.findModify (p : α → Bool) (modify : α → α) : List α → List α
 | [] => []
 | x :: l => if p x then (modify x) :: l else x :: (List.findModify p modify l)
+
+
+-- # intersect
+
+def List.orderedIntersect [BEq α] (r : α → α → Prop) [DecidableRel r] (a b : List α) : List α :=
+  let rec go (inter : List α) : List α → List α → List α
+    | [], _ => inter
+    | _, [] => inter
+    | ah :: aT , bh :: bT =>
+        if r ah bh
+        then
+          if ah == bh
+          then go (ah :: inter) aT bT
+          else go inter aT (bh :: bT)
+        else go inter (ah :: aT) bT
+  go [] a b
