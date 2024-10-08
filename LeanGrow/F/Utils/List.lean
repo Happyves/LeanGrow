@@ -64,4 +64,4 @@ def List.orderedIntersect [BEq α] (r : α → α → Prop) [DecidableRel r] (a 
           then go (ah :: inter) aT bT
           else go inter aT (bh :: bT)
         else go inter (ah :: aT) bT
-  go [] a b
+  (go [] a b).reverse
