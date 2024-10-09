@@ -65,3 +65,10 @@ def List.orderedIntersect [BEq α] (r : α → α → Prop) [DecidableRel r] (a 
           else go inter aT (bh :: bT)
         else go inter (ah :: aT) bT
   (go [] a b).reverse
+
+
+-- # findD
+
+def List.findD (p : α → Bool) (default : α) : List α → α
+| [] => default
+| x :: l => if p x then x else l.findD p default

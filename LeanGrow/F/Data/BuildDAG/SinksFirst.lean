@@ -16,18 +16,14 @@ def raw_beq := fun a b : Nat × CExpr × Bool × List Nat => a.1 == b.1
 
 def SinksFirst_getSinkRest (raw : List (Nat × CExpr × Bool × List Nat)) : List (Nat × CExpr × Bool × List Nat) × List (Nat × CExpr × Bool × List Nat)  :=
   let R := fun a b : Nat × CExpr × Bool × List Nat => a.1 ≤ b.1
-  let dummy := fun n => ⟨n, default, false, []⟩
+  let getData := fun n => raw.findD (fun x => x.1 == n) ⟨n, default, false, []⟩
   let rec go (candidates blacklist : List (Nat × CExpr × Bool × List Nat)) : List (Nat × CExpr × Bool × List Nat) → (List (Nat × CExpr × Bool × List Nat) × List (Nat × CExpr × Bool × List Nat))
   | [] =>
-      dbg_trace "done"
       (candidates, blacklist)
   | node :: more =>
-      dbg_trace s!"node {node.1} with parent {node.2.2.2}"
       let pass? := List.orderedContains R node blacklist
-      dbg_trace s!"pass : {pass?}"
-      let nb := node.2.2.2.foldl (fun s n => @List.orderedInsertOrLeave _ ⟨raw_beq⟩ R _ (dummy n) s) blacklist
-      let nc := node.2.2.2.foldl (fun s n => @List.orderedEraseOrLeave _ ⟨raw_beq⟩ R _  (dummy n) s) candidates
-      dbg_trace s!"new bl : {repr nb}\n new can {repr nc}"
+      let nb := node.2.2.2.foldl (fun s n => @List.orderedInsertOrLeave _ ⟨raw_beq⟩ R _ (getData n) s) blacklist
+      let nc := node.2.2.2.foldl (fun s n => @List.orderedEraseOrLeave _ ⟨raw_beq⟩ R _  (getData n) s) candidates
       if pass?
       then
         go nc nb more

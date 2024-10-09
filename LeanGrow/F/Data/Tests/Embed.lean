@@ -11,7 +11,7 @@ open Lean
 def fake_ltx : List (Nat × CExpr) :=
   [(0, .const `Nat []),
    (1, .const `Nat []),
-   (2, .app (.app (.app (.const `Eq [1]) (.const `Nat [])) (.node 0 (.ofBvar 37))) (.node 1 (.ofBvar 37)))
+   --(2, .app (.app (.app (.const `Eq [1]) (.const `Nat [])) (.node 0 (.ofBvar 37))) (.node 1 (.ofBvar 37)))
   ]
 
 def fake_thm (n m : Nat) (h : n = m) : n = 42 := sorry
@@ -32,7 +32,8 @@ def test_1 (n : Name) : CoreM Unit := do
   let (order, thmdata) := DAG_RawToFormat sorted hs.length
   -- IO.println s!"{repr order}\n"
   -- IO.println s!"{repr thmdata}\n"
-  let embeds := full_matcher_raw thmdata order fake_ltx
+  --let embeds := full_matcher_rawF thmdata order fake_ltx
+  let embeds := partial_matcher_rawF' thmdata order fake_ltx
   IO.println s!"{repr embeds}"
 
 #eval test_1 `fake_thm
