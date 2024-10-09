@@ -1,6 +1,6 @@
 
 
-import LeanGrow.F.Utils.DAG.Query
+import LeanGrow.F.Utils.ExprTrie.Build
 import LeanGrow.F.Data.Unification.CExprMatch
 import Mathlib.Data.List.Sort
 import LeanGrow.F.Utils.List
@@ -10,71 +10,54 @@ import LeanGrow.F.Utils.Tracing
 
 
 
-def merge_if_compatible_A (embed : Array (Option NodeExpr)) (assignOutput : Array (Nat × NodeExpr)) :
-  Option (Array (Option NodeExpr)) :=
-    assignOutput.foldl
-      (fun A (t,l) =>
-        match A with
-        | .some a =>
-            let im := embed.get! t
-            match im with
-            | .none => .some (a.set! t l)
-            | .some i => if i == l then .some a else .none
-        | _ => .none
-        )
-      (.some embed)
 
-
-def merge_if_compatible (embed : Array (Option NodeExpr)) (assignOutput : List (Nat × NodeExpr)) :
-  Option (Array (Option NodeExpr) × List Nat) :=
-  let rec go (embed : Array (Option NodeExpr)) (toPropagate : List Nat) : List (Nat × NodeExpr) → Option (Array (Option NodeExpr) × List Nat)
+def merge_if_compatible (embed : Array (Option CExpr)) (assignOutput : List (Nat × CExpr)) :
+  Option (Array (Option CExpr) × List (Nat × CExpr)) :=
+  let rec go (embed : Array (Option CExpr)) (toPropagate : List (Nat × CExpr)) : List (Nat × CExpr) → Option (Array (Option CExpr) × List (Nat × CExpr))
     | [] => .some (embed, toPropagate)
     | (t,l) :: rest =>
         let im := embed.get! t
         match im with
-        | .none => go (embed.set! t l) (t :: toPropagate) rest
+        | .none => go (embed.set! t l) ((t,l) :: toPropagate) rest
         | .some i => if i == l then go embed toPropagate rest else .none
   with_lTrace [TraceFlags.zero] in
   let res := go embed [] assignOutput
   lTrace TraceFlags.zero & s!"Running merge_if_compatible.\nOn embed:{repr embed}\nOn assignOuput:{repr assignOutput}\nReturn:{repr res}\n\n" & res
 
 
-def embed_next_raw (ltx : List (Nat × CExpr))
-  -- actually, ltx_l should be a structure from Search (discrimi tree) ? should make search for nex embed easier then trying all options
-  (embedSofar : Array (Option NodeExpr)) (todo_idx : Nat) (todo_data : EmbedData) :
-  List ((Array (Option NodeExpr)) × (List Nat)) :=
+
+def embed_next_smooth (ltx : CExprTrie Nat)
+  (embedSofar : Array (Option CExpr)) (todo_idx : Nat) (todo_data : EmbedData) :
+  List ((Array (Option CExpr)) × (List (Nat × CExpr))) :=
   with_lTrace [TraceFlags.zero, .one] in
   -- find matching ltx expressions
-  let candidates := ltx.foldl (init := []) (fun r (k, v) =>
-      match CExpr.MatchAssignLFF todo_data.cexpr v with
-      | .none => r
-      | .some l => (k,l) :: r
-      )
+  let candidates := CExprTrie.unify_reconstruct (· ≤ ·) (ltx.unify_candidates (· ≤ ·) todo_data.cexpr)
   -- find those that are compatible with the embedding so far
   let res := ((lTrace TraceFlags.zero & s!"Intermediate candidates in embed_next_raw: {repr candidates}" & candidates).map
-      (fun (e, tp) => merge_if_compatible (embedSofar.set! todo_idx (.some (.ofNode e))) tp)).reduceOption
+      (fun (e, tp) => merge_if_compatible (embedSofar.set! todo_idx (.some (.node e (.ofBvar 42)))) tp)).reduceOption
   lTrace TraceFlags.one & s!"Ran embed_next_raw.\nOn embed:{repr embedSofar}\nOn todo id {todo_idx} with cexpr {repr todo_data.cexpr}\nReturn:{repr res}\n\n" & res
+-- **Big Pitfall** the `(.ofBvar 42)` might come back to haunt me at some point!!!
 
 
 
-def propagate_raw (ltx : List (Nat × CExpr))
-  (embedSofar :  Array (Option NodeExpr)) (todo_idx : Nat) (todo_thm_type : CExpr) : Option ((Array (Option NodeExpr)) × (List Nat)) :=
+def propagate_smooth (ltx : CExprTrie Nat)
+  (embedSofar :  Array (Option CExpr)) (todo_idx : Nat) (todo_thm_type : CExpr) : Option ((Array (Option CExpr)) × (List (Nat × CExpr))) :=
   let res :=
     match embedSofar.get! todo_idx with
     | .none => .none
-    | .some (.ofCExpr _) =>
-          .some (embedSofar, [])
-    | .some (.ofNode im) =>
+    | .some (.node im _) =>
         match ltx.find? (fun x => x.1 == im) with
         | .none => .none
         | .some (_, ce) =>
             match CExpr.MatchAssignLFF todo_thm_type ce with
             | .none => .none
             | .some l => merge_if_compatible embedSofar l
+    | .some _ =>
+          .some (embedSofar, [])
   with_lTrace [TraceFlags.zero] in
   lTrace TraceFlags.zero & s!"Ran embed_next_raw.\nOn embed:{repr embedSofar}\nOn todo id {todo_idx} with cexpr {repr todo_thm_type}\nReturn:{repr res}\n\n" & res
 
-
+#exit
 
 structure EmbedStruct where
   embed : Array (Option NodeExpr)
@@ -170,40 +153,6 @@ private structure PartialData where
 
 
 partial def partial_matcher_rawF (thm_data : Array EmbedData) (thm_order : Array Nat) (ltx : List (Nat × CExpr)) : List PartialEmbedStruct :=
-  let rec main (todo : List PartialData) (done : List PartialEmbedStruct) : List PartialEmbedStruct :=
-    match todo with
-    | [] => done
-    | ⟨embedSofar, instances, unembedable, unassignedNodes, assignedFrontier⟩ :: more =>
-        match assignedFrontier with
-        | [] =>
-            match unassignedNodes with
-            | [] => main more (⟨embedSofar,instances,unembedable⟩ :: done)
-            | n :: l =>
-              let nd := thm_data.get! n
-              match nd with
-              | .inst _ _ =>
-                    let L := embed_next_raw ltx embedSofar n nd
-                    match L with
-                    | [] => main (⟨embedSofar, (n :: instances), unembedable, l, assignedFrontier⟩ :: more) done
-                            -- if we fail to embed an instance, we proceed
-                    | _ =>  let add := L.map (fun (embed, front) => ⟨embed, instances, unembedable, l, front.mergeSort (· ≤ ·)⟩)
-                            main (add ++ more) done
-              | .nonInst _ _ =>
-                    let L := embed_next_raw ltx embedSofar n nd
-                    match L with
-                    | [] => main (⟨embedSofar, instances, (n :: unembedable), l, assignedFrontier⟩ :: more) done
-                            -- if we fail to embed, we take note of it and proceed
-                    | _ =>  let add := L.map (fun (embed, front) => ⟨embed, instances, unembedable, l, front.mergeSort (· ≤ ·)⟩)
-                            main (add ++ more) done
-        | n :: l =>
-            let nd := thm_data.get! n
-            match propagate_raw ltx embedSofar n nd.cexpr with
-            | .none => main more done
-            | .some (emb, toFront) => main (⟨emb, instances, unembedable, (unassignedNodes.filter (fun x => x ∈ (n :: toFront))), (toFront.foldl (fun x y => List.orderedInsertOrLeave (· ≤ ·) y x) l)⟩ :: more) done  -- no duplicates
-      main [⟨(Array.mkArray thm_data.size .none), [], [], thm_order.toList, []⟩] []
-
-
-partial def partial_matcher_rawF' (thm_data : Array EmbedData) (thm_order : Array Nat) (ltx : List (Nat × CExpr)) : List PartialEmbedStruct :=
   let rec main (todo : List PartialData) (propagationFlag : Option (Nat × Nat × PartialData)) (done : List PartialEmbedStruct) : List PartialEmbedStruct :=
     match todo with
     | [] => done

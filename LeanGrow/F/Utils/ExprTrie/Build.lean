@@ -520,7 +520,7 @@ partial def CExprTrie.unify_candidates [BEq α] [Repr α] (T : CExprTrie α) (r 
             | _ => go (done) more
   go [] [(ce,0)]
 
--- #eval CExprTrie.unify_candidates (CExprTrie.ofList (· ≤ ·) test_list) (· ≤ ·) (.app (.node 0 (.ofBvar 42)) (.node 1 (.ofBvar 42)))
+#eval CExprTrie.unify_candidates (CExprTrie.ofList (· ≤ ·) test_list) (· ≤ ·) (.app (.node 0 (.ofBvar 42)) (.node 1 (.ofBvar 42)))
 
 -- #eval CExprTrie.uniunify_candidatesfy (CExprTrie.ofList (· ≤ ·) test_list) (· ≤ ·) (.forallE `dummy (.node 0 (.ofBvar 42)) (.node 1 (.ofBvar 42)) .default)
 
@@ -541,3 +541,14 @@ Then modify the a priori embeddings at 1 and 4 where we set 0 to `a b`.
 And so one. If conflicts arise, give up on the embedding at the index entirely ...
 
 -/
+
+def CExprTrie.unify_reconstruct [BEq α] [Repr α] (r : α → α → Prop) [DecidableRel r] (candidates : List (Nat × List (CExpr × List α))) : List (α × List (Nat × CExpr)) :=
+    let rec go (node_idx : Nat) (sofar : List (α × List (Nat × CExpr))) : List (CExpr × List α) → List (α × List (Nat × CExpr))
+        | [] => sofar
+        | (assign, ind) :: rest =>
+                let step := ind.foldl (fun out i => List.findModifyAdd (fun x => x.1 == i) (fun (idx, matchInfo) => (idx, (node_idx,assign) :: matchInfo)) (i, [(node_idx,assign)]) out) sofar
+                go node_idx step rest
+    candidates.foldl (fun out (node_idx, assign_data) => go node_idx out assign_data) []
+
+
+#eval CExprTrie.unify_reconstruct (· ≤ ·) (CExprTrie.unify_candidates (CExprTrie.ofList (· ≤ ·) test_list) (· ≤ ·) (.app (.node 0 (.ofBvar 42)) (.node 1 (.ofBvar 42))))

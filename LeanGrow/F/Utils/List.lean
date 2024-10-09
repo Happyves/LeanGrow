@@ -17,6 +17,12 @@ def List.orderedEraseOrLeave [BEq α] (r : α → α → Prop) [DecidableRel r] 
   | [] => []
   | b :: l => if r a b then (if a == b then l else b :: l) else b :: List.orderedEraseOrLeave r a l
 
+def List.orderedModifyOrLeave [BEq α] (r : α → α → Prop) [DecidableRel r] (a : α) (f : α → α) : List α → List α
+  | [] => []
+  | b :: l => if r a b then (if a == b then (f b) :: l else b :: l) else b :: List.orderedModifyOrLeave r a f l
+
+
+
 
 -- # noOrder
 
@@ -49,6 +55,11 @@ def List.reduceOptionOrFail : List (Option α) →  Option (List α)
 def List.findModify (p : α → Bool) (modify : α → α) : List α → List α
 | [] => []
 | x :: l => if p x then (modify x) :: l else x :: (List.findModify p modify l)
+
+
+def List.findModifyAdd (p : α → Bool) (modify : α → α) (add : α) : List α → List α
+| [] => [add]
+| x :: l => if p x then (modify x) :: l else x :: (List.findModifyAdd p modify add l)
 
 
 -- # intersect

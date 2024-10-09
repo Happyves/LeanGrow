@@ -1,7 +1,7 @@
 import LeanGrow.F.Utils.Expr.GetHyps
 import LeanGrow.F.Data.BuildDAG.ofTypeExpr
 import LeanGrow.F.Data.BuildDAG.SinksFirst
-import LeanGrow.F.Data.Unification.Embed
+import LeanGrow.F.Data.Unification.EmbedRaw
 import Lean
 import Mathlib.Data.Nat.Factorization.Basic
 
@@ -33,7 +33,7 @@ def test_1 (n : Name) : CoreM Unit := do
   -- IO.println s!"{repr order}\n"
   -- IO.println s!"{repr thmdata}\n"
   --let embeds := full_matcher_rawF thmdata order fake_ltx
-  let embeds := partial_matcher_rawF' thmdata order fake_ltx
+  let embeds := partial_matcher_rawF thmdata order fake_ltx
   IO.println s!"{repr embeds}"
 
 #eval test_1 `fake_thm
