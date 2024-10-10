@@ -88,24 +88,29 @@ def List.assignOrFail [BEq α] (A? : Option (List (Nat × α))) (i : Nat) (val :
       | _ => .none
 
 
+-- TODO add proper tail call optimizaiton to all versions
 partial def CExpr.MatchAssignLFF (l r : CExpr) : Option (List (Nat × NodeExpr)) :=
-      let rec go (Aout : Option (List (Nat × NodeExpr))) : List (CExpr × CExpr) → Option (List (Nat × NodeExpr))
-      | [] => Aout
-      | nx :: L =>
-            match nx with
-            | (.node i _ , .node j _) => let Aup := List.assignOrFail Aout i (.ofNode j) ; go Aup L
-            | (.node i _ , e) => let Aup := List.assignOrFail Aout i (.ofCExpr e) ; go Aup L
-            | (.bvar i , .bvar j) =>  if i == j then go Aout L else .none
-            | (.sort _, .sort _) => go Aout L
-            | (.const n _, .const n' _) => if (n == n') then go Aout L else .none
-            | (.app f a, .app f' a') => go Aout ((f,f') :: (a,a') :: L)
-            | (.lam _ t b _, .lam _ t' b' _) => go Aout ((t,t') :: (b,b') :: L)
-            | (.forallE _ t b _, .forallE _ t' b' _) => go Aout ((t,t') :: (b,b') :: L)
-            | (.letE _ t v b _, .letE _ t' v' b' _) => go Aout ((t,t') :: (v,v') :: (b,b') :: L)
-            | (.lit l, .lit l') => if l == l' then go Aout L else .none
-            | (.proj t i b, .proj t' i' b') => if (t == t') && (i == i') then go Aout ((b, b') :: L) else .none
-            | (_ , _) => .none
-      go (.some []) [(l,r)]
+      let rec go (go? : Bool) (Aout : Option (List (Nat × NodeExpr))) (todo : List (CExpr × CExpr)) : Option (List (Nat × NodeExpr)) :=
+      if go?
+      then
+            match todo with
+            | [] => Aout
+            | nx :: L =>
+                  match nx with
+                  | (.node i _ , .node j _) => let Aup := List.assignOrFail Aout i (.ofNode j) ; go true Aup L
+                  | (.node i _ , e) => let Aup := List.assignOrFail Aout i (.ofCExpr e) ; go true Aup L
+                  | (.bvar i , .bvar j) => go (i == j) Aout L
+                  | (.sort _, .sort _) => go true Aout L
+                  | (.const n _, .const n' _) =>  go (n == n')  Aout L
+                  | (.app f a, .app f' a') => go true Aout ((f,f') :: (a,a') :: L)
+                  | (.lam _ t b _, .lam _ t' b' _) => go true Aout ((t,t') :: (b,b') :: L)
+                  | (.forallE _ t b _, .forallE _ t' b' _) => go true Aout ((t,t') :: (b,b') :: L)
+                  | (.letE _ t v b _, .letE _ t' v' b' _) => go true Aout ((t,t') :: (v,v') :: (b,b') :: L)
+                  | (.lit l, .lit l') => go (l == l') Aout L
+                  | (.proj t i b, .proj t' i' b') => go ((t == t') && (i == i')) Aout ((b, b') :: L)
+                  | (_ , _) => .none
+      else .none
+      go true (.some []) [(l,r)]
 
 
 

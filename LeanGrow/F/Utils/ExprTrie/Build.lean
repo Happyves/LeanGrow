@@ -347,13 +347,11 @@ partial def CExprTrie.find_candidates? [BEq α] (T : CExprTrie α) (ce : CExpr) 
 -- #eval CExprTrie.find_candidates? (CExprTrie.ofList (· ≤ ·) test_list) (.app (.app (.const `a []) (.const `e [])) (.const `c [])) (· ≤ ·)
 
 
-def CExprTrie.find? [BEq α] (T : CExprTrie α) (ce : CExpr) (r : α → α → Prop) [DecidableRel r] : Option α :=
+def CExprTrie.find? [BEq α] (T : CExprTrie α) (ce : CExpr) (r : α → α → Prop) [DecidableRel r] : List α :=
   let cand := CExprTrie.find_candidates? T ce r
   match cand with
-  | [] => .none
-  | h :: t =>
-      let inter := t.foldl (fun x y => List.orderedIntersect r x y ) h
-      inter.head?
+  | [] => []
+  | h :: t => t.foldl (fun x y => List.orderedIntersect r x y ) h
 
 
 -- #eval CExprTrie.find? (CExprTrie.ofList (· ≤ ·) test_list) (.app (.app (.const `a []) (.const `e [])) (.const `c [])) (· ≤ ·)
