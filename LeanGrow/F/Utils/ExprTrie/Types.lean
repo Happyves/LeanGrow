@@ -6,7 +6,8 @@ open Lean
 
 
 inductive CExprTrie.Branch (α : Type _) where
-| ofNode (idx : Nat) (indices : List α)
+| ofLNode (idx : Nat) (indices : List α)
+| ofGNode (idx : Nat) (indices : List α)
 | ofBvar (idx : Nat) (indices : List α)
 | ofSort (l : Level) (indices : List α)
 | ofConst (n : Name) (indices : List α) -- (ll : List Level)

@@ -60,22 +60,36 @@ partial def Lean.Expr.toCExprF (E : Expr) : CExpr :=
 
 
 
-def CExpr.hasNodes : CExpr → Bool
-| .node _ _ => true
-| .app f a => (CExpr.hasNodes f) || (CExpr.hasNodes a)
-| .lam _ t b _ => (CExpr.hasNodes t) || (CExpr.hasNodes b)
-| .forallE _ t b _ => (CExpr.hasNodes t) || (CExpr.hasNodes b)
-| .letE _ t v b _ => (CExpr.hasNodes t) || (CExpr.hasNodes b) || (CExpr.hasNodes v)
-| .proj _ _ b => (CExpr.hasNodes b)
+def CExpr.hasLNodes : CExpr → Bool
+| .lnode _ _ => true
+| .app f a => (CExpr.hasLNodes f) || (CExpr.hasLNodes a)
+| .lam _ t b _ => (CExpr.hasLNodes t) || (CExpr.hasLNodes b)
+| .forallE _ t b _ => (CExpr.hasLNodes t) || (CExpr.hasLNodes b)
+| .letE _ t v b _ => (CExpr.hasLNodes t) || (CExpr.hasLNodes b) || (CExpr.hasLNodes v)
+| .proj _ _ b => (CExpr.hasLNodes b)
 | _ => false
 
 
-partial def CExpr.hasNodesF (E : CExpr) : Bool :=
+partial def CExpr.hasLNodesF (E : CExpr) : Bool :=
       let rec go : List CExpr → Bool
       | [] => false
       | nx :: L =>
             match nx with
-            | .node _ _ => true
+            | .lnode _ _ => true
+            | .app f a => go (f :: a :: L)
+            | .lam _ t b _ => go (t :: b :: L)
+            | .forallE _ t b _ => go (t :: b :: L)
+            | .letE _ t v b _ => go (t :: v :: b :: L)
+            | .proj _ _ b => go (b :: L)
+            | _ => go L
+      go [E]
+
+partial def CExpr.hasGNodesF (E : CExpr) : Bool :=
+      let rec go : List CExpr → Bool
+      | [] => false
+      | nx :: L =>
+            match nx with
+            | .gnode _ _ => true
             | .app f a => go (f :: a :: L)
             | .lam _ t b _ => go (t :: b :: L)
             | .forallE _ t b _ => go (t :: b :: L)
@@ -85,9 +99,11 @@ partial def CExpr.hasNodesF (E : CExpr) : Bool :=
       go [E]
 
 
+partial def CExpr.hasNodesF (E : CExpr) : Bool :=
+      E.hasLNodes || E.hasGNodesF
 
 def CExpr.toExpr : CExpr → Option Expr
-| .node _ _ => .none
+| .lnode _ _ | .gnode _ _ => .none
 | .bvar i => .some (.bvar i)
 | .sort l => .some (.sort l)
 | .const n ll => .some (.const n ll)
@@ -117,7 +133,7 @@ partial def CExpr.toExprF (E : CExpr) : Option Expr :=
       | [] => []
       | nx :: L =>
             match nx with
-            | .node _ _ => [.none]
+            | .lnode _ _ | .gnode _ _ => [.none]
             | .bvar i => .some (.bvar i) :: (go L)
             | .sort l => .some (.sort l) :: (go L)
             | .const n ll => .some (.const n ll) :: (go L)
@@ -188,12 +204,58 @@ partial def CExpr.getConstNamesF (e : CExpr) : List Name :=
   go [e]
 
 
-partial def CExpr.getNodesMaxIdxF (E : CExpr) : Option Nat :=
+partial def CExpr.getLNodesMaxIdxF (E : CExpr) : Option Nat :=
       let rec go : List CExpr → List Nat
       | [] => []
       | nx :: L =>
             match nx with
-            | .node i _ => i :: (go L)
+            | .lnode i _ => i :: (go L)
+            | .app f a =>
+                  let r := go (f :: a :: L)
+                  let (F,r2) := List.headD_tail r 0
+                  let (A,r3) := List.headD_tail r2 0
+                  if F > A
+                  then F :: r3
+                  else A :: r3
+            | .lam _ t b _ =>
+                  let r := go (t :: b :: L)
+                  let (F,r2) := List.headD_tail r 0
+                  let (A,r3) := List.headD_tail r2 0
+                  if F > A
+                  then F :: r3
+                  else A :: r3
+            | .forallE _ t b _ =>
+                  let r := go (t :: b :: L)
+                  let (F,r2) := List.headD_tail r 0
+                  let (A,r3) := List.headD_tail r2 0
+                  if F > A
+                  then F :: r3
+                  else A :: r3
+            | .letE _ t v b _ =>
+                  let r := go (t :: v :: b :: L)
+                  let (T,r2) := List.headD_tail r 0
+                  let (V,r3) := List.headD_tail r2 0
+                  let (B,r4) := List.headD_tail r3 0
+                  if T > V
+                  then  if B > T
+                        then B :: r4
+                        else T :: r4
+                  else  if B > V
+                        then B :: r4
+                        else V :: r4
+            | .proj _ _ b => go (b :: L)
+            | _ => go L
+      match (go [E]) with
+      | [M] => .some M
+      | _ => .none
+
+
+partial def CExpr.getGNodesMaxIdxF (E : CExpr) : Option Nat :=
+      let rec go : List CExpr → List Nat
+      | [] => []
+      | nx :: L =>
+            match nx with
+            | .gnode i _ => i :: (go L)
             | .app f a =>
                   let r := go (f :: a :: L)
                   let (F,r2) := List.headD_tail r 0

@@ -24,7 +24,7 @@ partial def ThmType_ToDAG (hyps : List (Expr × Bool)) (l_len : Nat) (goal : Exp
                 match d? with
                 | .none =>
                     let (re,rp) := go1 offset (List.orderedInsertOrLeave (· ≤ · ) (offset (i+1)) cache_pars) ndi more
-                    (((CExpr.node (offset (i+1))) (.ofBvar i)) :: re, rp)
+                    (((CExpr.lnode (offset (i+1))) (.ofBvar i)) :: re, rp)
                 | .some d =>
                     if i ≤ d
                     then
@@ -32,7 +32,7 @@ partial def ThmType_ToDAG (hyps : List (Expr × Bool)) (l_len : Nat) (goal : Exp
                       ((.bvar i) :: re, rp)
                     else
                       let (re,rp) := go1 offset (List.orderedInsertOrLeave (· ≤ · ) (offset (i - d)) cache_pars) ndi more
-                      (((CExpr.node (offset (i - d))) (.ofBvar i)) :: re, rp)
+                      (((CExpr.lnode (offset (i - d))) (.ofBvar i)) :: re, rp)
           | .app l r => let d? := List.headD dinfo .none
                         let (re,rp) := go1 offset cache_pars (d? :: dinfo) (l :: r :: more)
                         let (L,re2) := List.headD_tail re .failed

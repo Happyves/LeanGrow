@@ -26,7 +26,8 @@ def merge_if_compatible (embed : Array (Option NodeExpr)) (assignOutput : List (
 
 
 def CExpr.toNodeExpr : CExpr → NodeExpr
-| .node i _ => .ofNode i
+| .lnode i _ => .ofLNode i
+| .gnode i _ => .ofGNode i
 | ce => .ofCExpr ce
 
 
@@ -38,10 +39,10 @@ def embed_next_smooth (ltx : CExprTrie Nat)
   match candidates with
   | [] => -- maybe merge this with `unify_candidates` somehow ?
       let cst_embed := ltx.find? todo_data.cexpr (· ≤ ·)
-      cst_embed.map (fun n => ((embedSofar.set! todo_idx (.some (.ofNode n))), []))
+      cst_embed.map (fun n => ((embedSofar.set! todo_idx (.some (.ofGNode n))), []))
   | _ =>
       let res := ((lTrace TraceFlags.zero & s!"Intermediate candidates in embed_next_raw: {repr candidates}" & candidates).map
-          (fun (e, tp) => merge_if_compatible (embedSofar.set! todo_idx (.some (.ofNode e))) (tp.map (fun (n,ce) => (n, ce.toNodeExpr))))).reduceOption
+          (fun (e, tp) => merge_if_compatible (embedSofar.set! todo_idx (.some (.ofGNode e))) (tp.map (fun (n,ce) => (n, ce.toNodeExpr))))).reduceOption
       lTrace TraceFlags.one & s!"Ran embed_next_raw.\nOn embed:{repr embedSofar}\nOn todo id {todo_idx} with cexpr {repr todo_data.cexpr}\nReturn:{repr res}\n\n" & res
 
 
@@ -50,7 +51,7 @@ def propagate_smooth (ltx : List (Array CExpr)) (ltx_handler : Nat → (Nat × N
   let res :=
     match embedSofar.get! todo_idx with
     | .none => .none
-    | .some (.ofNode im) =>
+    | .some (.ofGNode im) =>
         let (page, idx) := ltx_handler im
         match ltx.get? page with
         | .none => .none

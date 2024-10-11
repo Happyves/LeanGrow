@@ -52,7 +52,7 @@ def embed_next_raw (ltx : List (Nat × CExpr))
       )
   -- find those that are compatible with the embedding so far
   let res := ((lTrace TraceFlags.zero & s!"Intermediate candidates in embed_next_raw: {repr candidates}" & candidates).map
-      (fun (e, tp) => merge_if_compatible (embedSofar.set! todo_idx (.some (.ofNode e))) tp)).reduceOption
+      (fun (e, tp) => merge_if_compatible (embedSofar.set! todo_idx (.some (.ofGNode e))) tp)).reduceOption
   lTrace TraceFlags.one & s!"Ran embed_next_raw.\nOn embed:{repr embedSofar}\nOn todo id {todo_idx} with cexpr {repr todo_data.cexpr}\nReturn:{repr res}\n\n" & res
 
 
@@ -62,9 +62,9 @@ def propagate_raw (ltx : List (Nat × CExpr))
   let res :=
     match embedSofar.get! todo_idx with
     | .none => .none
-    | .some (.ofCExpr _) =>
+    | .some (.ofCExpr _) | .some (.ofLNode _) => -- shouldn't happen as ltx cexprs should only have gnodes
           .some (embedSofar, [])
-    | .some (.ofNode im) =>
+    | .some (.ofGNode im) =>
         match ltx.find? (fun x => x.1 == im) with
         | .none => .none
         | .some (_, ce) =>

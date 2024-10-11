@@ -30,7 +30,7 @@ def propagate_smooth (ltx : List (Array CExpr)) (ltx_handler : Nat → (Nat × N
   let res :=
     match embedSofar.get! todo_idx with
     | .none => .none
-    | .some (.ofNode im) =>
+    | .some (.ofGNode im) =>
         let (page, idx) := ltx_handler im
         match ltx.get? page with
         | .none => .none

@@ -1,10 +1,9 @@
 
-import LeanGrow.F.Utils.DAG.Types
+import LeanGrow.F.Data.Unification.EmbedExprTrie
 
 
 -- # Dummies
 
-def CExpr : Type := sorry
 
 
 
@@ -12,22 +11,28 @@ def CExpr : Type := sorry
 -- # State
 
 structure ForwardState where
-  cexprs : sorry -- store hyps and derived facts ; probably a discrimination tree is best
-  deps : pDAG sorry sorry -- same as ↑, but store dependenices : which fact was derived from which hyps ; use dag notion that is easily extensible
-  fakes : sorry -- if a thm was applied backwards, and its subgoal is ∀, we should introduce the ∀ hyps to the forward-state, but track them with this field, so as to know that they may only be sed to prove a specific subgoal
-  rankings : sorry -- should link to another structure storing the rankings of the curretly derived facts
+  ltx_cexpr_idx : CExprTrie Nat
+  ltx_handler : Nat → (Nat × Nat)
+  ltx_idx_cexpr : List (Array CExpr)
+  ltx_idx_deps : List (Array (List Nat)) -- lists should be parents indices
+  fakes : sorry -- if a thm was applied backwards, and its subgoal is ∀, we should introduce the ∀ hyps to the forward-state, but track them with this field, so as to know that they may only be used to prove a specific subgoal
+  static_rankings : sorry -- should link to another structure storing the rankings of the curretly derived facts
+  learned_rankings : sorry -- maybe ← and ↑ should be `List (Array (X → Float))` where X encodes data of the targeted goal
+
 
 
 structure BackwardState where
-  cexprs : sorry -- store goal ; probably a discrimination tree is best
+  goals_expr : CExprTrie Nat
   inner_deps : sorry -- should store a list of dags that represent depedndecies among goals
   polyutility : sorry-- to handle the fact that multiple goals may be the same, up to different CExpr-nodes, we use this field to manage this ; refer to note 3
   global_deps : sorry -- should be used to handle whish subgoals are considered as solved ; refer to note 2
-  rankings : sorry
+  static_rankings : sorry
+  learned_rankings : sorry
 
 structure TriggerState where
   algebra : sorry
   SAT : sorry
+  egg : sorry
 
 structure SpecialSupportState where
   todo : sorry
@@ -37,6 +42,7 @@ structure SearchState where
   backward : BackwardState
   trigger : TriggerState
   spesup : SpecialSupportState
+  forall_hyps : sorry -- hypotheses with foralls, whcih should be treated as theorems
   tech : sorry -- decide on whether to make forward or backward step or both; maybe to manage when to do stuff as new `Task`s ?
   learning : sorry -- should store/manage datat for RL when we train grow ; add option to turn modfications this off for performance
 

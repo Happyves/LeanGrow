@@ -42,7 +42,7 @@ it then returns the rules. Then, we flue the rest of the relevant arguments back
 #print Nat.add
 
 elab "test_4" : command => do
-  let .defnInfo v := (← getEnv).constants.find! `Nat.add | throwError "ahh 1"
+  let .defnInfo v := (← getEnv).constants.find! `Option.map | throwError "ahh 1" -- `Nat.add
   let r ← Elab.Command.liftTermElabM (@Lean.Meta.reduce v.value false true false)
   let s := (repr r)
   logInfo s
@@ -50,3 +50,6 @@ elab "test_4" : command => do
 -- set_option pp.all true in
 -- set_option pp.instances false in
 test_4
+
+set_option pp.all true in
+#print Option.map

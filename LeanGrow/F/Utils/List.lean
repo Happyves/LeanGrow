@@ -23,7 +23,6 @@ def List.orderedModifyOrLeave [BEq α] (r : α → α → Prop) [DecidableRel r]
 
 
 
-
 -- # noOrder
 
 def List.insertOrLeave [BEq α] (a : α) : List α → List α

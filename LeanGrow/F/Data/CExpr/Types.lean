@@ -10,7 +10,8 @@ inductive OriginalData where
 deriving Inhabited, BEq, Repr
 
 inductive CExpr where
-| node : Nat → OriginalData → CExpr
+| lnode : Nat → OriginalData → CExpr
+| gnode : Nat → OriginalData → CExpr
 | bvar : Nat → CExpr
 | sort : Level → CExpr
 | const : Name → List Level → CExpr

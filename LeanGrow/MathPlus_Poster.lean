@@ -49,3 +49,24 @@ example (n : ℕ) : Even (∑ n in ((Finset.range n).filter Even), n) :=
       exact ih
 
 #check Finset.range_zero
+
+
+variables (X Y Z : Type)
+    [TopologicalSpace X]
+    [TopologicalSpace Y]
+    [TopologicalSpace Z]
+
+variables (f : X → Y) (g : Y → Z)
+
+example
+    (hf : Continuous f)
+    (hg : Continuous g) :
+    Continuous (g ∘ f) :=
+    by
+    constructor
+    intros U hU
+    let V := g⁻¹' U
+    have hV : IsOpen V := by
+      apply hg.isOpen_preimage
+      assumption
+    exact hf.isOpen_preimage V hV
