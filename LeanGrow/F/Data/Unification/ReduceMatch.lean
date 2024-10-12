@@ -16,6 +16,22 @@ def CExpr.ReduceMatchAssign (l r : CExpr) : Option (List (Nat × NodeExpr)) :=
 
 
 /-
+# Notes
+
+- reducing Exprs, both for caching thms and on query, should handle many annoying cases ...
+
+- reductions may apply after rw's for example in `(h₁ : x = y z) (h₂ : y = (fun t => w t))`
+
+- maybe add all versions (with more or less reductions) to the CExprTrie, with the same index ?
+
+- write CExprTrie function that finds all occurences of a cexpr, possibly within others.
+
+- maybe solution to reductions-after-rewrites is to post-process after rewrite, depending on what was
+  rewritten. For example, in `(h₁ : x = y z) (h₂ : y = (fun t => w t))`, if for some reason the expression
+  `(fun t => w t) z` comes to be, then we would have to note that a post-process is necessary by recognizing
+  that the rewritten object is a lambda, and that it was rewriten into an applicaiton.
+  Then, we should add a beta-constructor on top of `(fun t => w t) z` somehow.
+
 Add stuff to CExpr
 
 - **beta** constructor that wraps two CExpr, one beta-reduced and the other not. When matching at that constructor, try to match with both options.
