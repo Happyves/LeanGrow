@@ -61,7 +61,7 @@ partial def Lean.Expr.toCExprF (E : Expr) : CExpr :=
 
 
 def CExpr.hasLNodes : CExpr → Bool
-| .lnode _ _ => true
+| .lnode _ _ _ => true
 | .app f a => (CExpr.hasLNodes f) || (CExpr.hasLNodes a)
 | .lam _ t b _ => (CExpr.hasLNodes t) || (CExpr.hasLNodes b)
 | .forallE _ t b _ => (CExpr.hasLNodes t) || (CExpr.hasLNodes b)
@@ -75,7 +75,7 @@ partial def CExpr.hasLNodesF (E : CExpr) : Bool :=
       | [] => false
       | nx :: L =>
             match nx with
-            | .lnode _ _ => true
+            | .lnode _ _ _ => true
             | .app f a => go (f :: a :: L)
             | .lam _ t b _ => go (t :: b :: L)
             | .forallE _ t b _ => go (t :: b :: L)
@@ -103,7 +103,7 @@ partial def CExpr.hasNodesF (E : CExpr) : Bool :=
       E.hasLNodes || E.hasGNodesF
 
 def CExpr.toExpr : CExpr → Option Expr
-| .lnode _ _ | .gnode _ _ => .none
+| .lnode _ _ _ | .gnode _ _ => .none
 | .bvar i => .some (.bvar i)
 | .sort l => .some (.sort l)
 | .const n ll => .some (.const n ll)
@@ -133,7 +133,7 @@ partial def CExpr.toExprF (E : CExpr) : Option Expr :=
       | [] => []
       | nx :: L =>
             match nx with
-            | .lnode _ _ | .gnode _ _ => [.none]
+            | .lnode _ _ _ | .gnode _ _ => [.none]
             | .bvar i => .some (.bvar i) :: (go L)
             | .sort l => .some (.sort l) :: (go L)
             | .const n ll => .some (.const n ll) :: (go L)
@@ -209,7 +209,7 @@ partial def CExpr.getLNodesMaxIdxF (E : CExpr) : Option Nat :=
       | [] => []
       | nx :: L =>
             match nx with
-            | .lnode i _ => i :: (go L)
+            | .lnode i _ _ => i :: (go L)
             | .app f a =>
                   let r := go (f :: a :: L)
                   let (F,r2) := List.headD_tail r 0

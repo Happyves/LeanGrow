@@ -5,7 +5,7 @@ import LeanGrow.F.Data.Unification.CExprMatch
 import Mathlib.Data.List.Sort
 import LeanGrow.F.Utils.List
 import LeanGrow.F.Utils.Tracing
-
+import LeanGrow.F.Utils.ExprTrie.Build
 
 
 
@@ -60,3 +60,21 @@ partial def match_goal (thm_data : Array EmbedData) (ltx_idx_cexpr : List (Array
     | .some l =>
           let emb := l.foldl (fun A (i,v) => (A.set! i (Option.some v))) (Array.mkArray thm_hyp_num .none)
           gop emb (l.map Prod.fst)
+
+
+
+/-
+↓ should be similar to ↑
+thm_goal_trie should be an ExprTrie made of thm types, so that we may
+efficiently query which thms apply
+-/
+partial def match_goal_wCExprTrie (ltx_idx_cexpr : List (Array CExpr)) (ltx_handler : Nat → (Nat × Nat))
+  (thm_goal_trie : CExprTrie sorry) (real_goal : CExpr) : Option (Array (Option NodeExpr)) :=
+    let rec gop (embed : Array (Option NodeExpr)) (thm_data : Array EmbedData) : List Nat → Option (Array (Option NodeExpr))
+      | [] => .some embed
+      | n :: l =>
+            let nd := thm_data.get! n
+            match propagate_smooth ltx_idx_cexpr ltx_handler embed n nd.cexpr with
+            | .none => .none
+            | .some (emb, toFront) => gop emb thm_data (toFront ++ l)
+    sorry

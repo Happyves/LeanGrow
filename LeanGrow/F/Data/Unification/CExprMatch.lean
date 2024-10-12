@@ -7,7 +7,7 @@ open Lean
 
 
 inductive NodeExpr where
-| ofLNode (i : Nat)
+| ofLNode (i : Nat) (tag : Option Nat)
 | ofGNode (i : Nat)
 | ofCExpr (c : CExpr)
 deriving Inhabited, Repr, BEq
@@ -39,9 +39,9 @@ partial def CExpr.MatchAssignAF (l r : CExpr) : Option (Array (Option NodeExpr))
             | [] => .some Aout
             | nx :: L =>
                   match nx with
-                  | (.lnode i _ , .lnode j _) => Array.assignOrFail (go L) i (.ofLNode j)
-                  | (.lnode i _ , .gnode j _) => Array.assignOrFail (go L) i (.ofGNode j)
-                  | (.lnode i _ , e) => Array.assignOrFail (go L) i (.ofCExpr e)
+                  | (.lnode i _ .none , .lnode j _ t) => Array.assignOrFail (go L) i (.ofLNode j t)
+                  | (.lnode i _ .none , .gnode j _) => Array.assignOrFail (go L) i (.ofGNode j)
+                  | (.lnode i _ .none , e) => Array.assignOrFail (go L) i (.ofCExpr e)
                   | (.bvar i , .bvar j) =>  if i == j then go L else .none
                   | (.sort _, .sort _) => go L
                   | (.const n _, .const n' _) => if (n == n') then go L else .none
@@ -64,9 +64,9 @@ partial def CExpr.MatchAssignAFF (l r : CExpr) : Option (Array (Option NodeExpr)
             | [] => Aout
             | nx :: L =>
                   match nx with
-                  | (.lnode i _ , .lnode j _) => let Aup := Array.assignOrFail Aout i (.ofLNode j) ; go Aup L
-                  | (.lnode i _ , .gnode j _) => let Aup := Array.assignOrFail Aout i (.ofGNode j) ; go Aup L
-                  | (.lnode i _ , e) => let Aup := Array.assignOrFail Aout i (.ofCExpr e) ; go Aup L
+                  | (.lnode i _ .none, .lnode j _ t) => let Aup := Array.assignOrFail Aout i (.ofLNode j t) ; go Aup L
+                  | (.lnode i _ .none, .gnode j _) => let Aup := Array.assignOrFail Aout i (.ofGNode j) ; go Aup L
+                  | (.lnode i _ .none, e) => let Aup := Array.assignOrFail Aout i (.ofCExpr e) ; go Aup L
                   | (.bvar i , .bvar j) =>  if i == j then go Aout L else .none
                   | (.sort _, .sort _) => go Aout L
                   | (.const n _, .const n' _) => if (n == n') then go Aout L else .none
@@ -100,9 +100,9 @@ partial def CExpr.MatchAssignLFF (l r : CExpr) : Option (List (Nat × NodeExpr))
             | [] => Aout
             | nx :: L =>
                   match nx with
-                  | (.lnode i _ , .lnode j _) => let Aup := List.assignOrFail Aout i (.ofLNode j) ; go true Aup L
-                  | (.lnode i _ , .gnode j _) => let Aup := List.assignOrFail Aout i (.ofGNode j) ; go true Aup L
-                  | (.lnode i _ , e) => let Aup := List.assignOrFail Aout i (.ofCExpr e) ; go true Aup L
+                  | (.lnode i _ .none, .lnode j _ t) => let Aup := List.assignOrFail Aout i (.ofLNode j t) ; go true Aup L
+                  | (.lnode i _ .none, .gnode j _) => let Aup := List.assignOrFail Aout i (.ofGNode j) ; go true Aup L
+                  | (.lnode i _ .none, e) => let Aup := List.assignOrFail Aout i (.ofCExpr e) ; go true Aup L
                   | (.bvar i , .bvar j) => go (i == j) Aout L
                   | (.sort _, .sort _) => go true Aout L
                   | (.const n _, .const n' _) =>  go (n == n')  Aout L

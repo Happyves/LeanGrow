@@ -10,7 +10,7 @@ inductive OriginalData where
 deriving Inhabited, BEq, Repr
 
 inductive CExpr where
-| lnode : Nat → OriginalData → CExpr
+| lnode : Nat → OriginalData → Option Nat → CExpr
 | gnode : Nat → OriginalData → CExpr
 | bvar : Nat → CExpr
 | sort : Level → CExpr
@@ -33,20 +33,3 @@ deriving BEq, Inhabited, Repr
 def EmbedData.cexpr : EmbedData → CExpr
 | .nonInst ce _ => ce
 | .inst ce _ => ce
-
-
-#exit
-
-inductive LCExpr where
-| node : LCExpr
-| bvar : Nat → LCExpr
-| sort : Level → LCExpr
-| const : Name  → LCExpr
-| app : Nat → LCExpr
-| lam : Name → CExpr → CExpr → BinderInfo → CExpr
-| forallE : Name → CExpr → CExpr → BinderInfo → CExpr
-| letE : Name → CExpr → CExpr → CExpr → Bool → CExpr
-| lit : Literal → CExpr
-| proj : Name → Nat → CExpr → CExpr
-| failed : CExpr
-deriving Inhabited, BEq, Repr

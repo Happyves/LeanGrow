@@ -85,19 +85,19 @@ def CExprTrie.modifyAsLeaf_Lit [BEq α] (l : Literal) (idx : α) (r : α → α 
 
 
 
-def CExprTrie.modifyAsLeaf_lNode [BEq α]  (l : Nat) (idx : α) (r : α → α → Prop) [DecidableRel r] : List (CExprTrie.Branch α) → List (CExprTrie.Branch α)
-| [] => [.ofLNode l [idx]]
+def CExprTrie.modifyAsLeaf_lNode [BEq α]  (l : Nat) (tag : Option Nat) (idx : α) (r : α → α → Prop) [DecidableRel r] : List (CExprTrie.Branch α) → List (CExprTrie.Branch α)
+| [] => [.ofLNode l tag [idx]]
 | x :: xs =>
     match x with
-    | .ofLNode L ind =>
-        if L == l
-        then (.ofLNode L (List.orderedInsertOrLeave r idx ind)) :: xs
-        else (.ofLNode L ind) :: (CExprTrie.modifyAsLeaf_lNode l idx r xs)
-    | _ => x :: (CExprTrie.modifyAsLeaf_lNode l idx r xs)
+    | .ofLNode L t ind =>
+        if L == l && t == tag
+        then (.ofLNode L t (List.orderedInsertOrLeave r idx ind)) :: xs
+        else (.ofLNode L t ind) :: (CExprTrie.modifyAsLeaf_lNode l tag idx r xs)
+    | _ => x :: (CExprTrie.modifyAsLeaf_lNode l tag idx r xs)
 
 
 def CExprTrie.modifyAsLeaf_gNode [BEq α]  (l : Nat) (idx : α) (r : α → α → Prop) [DecidableRel r] : List (CExprTrie.Branch α) → List (CExprTrie.Branch α)
-| [] => [.ofLNode l [idx]]
+| [] => [.ofGNode l [idx]]
 | x :: xs =>
     match x with
     | .ofGNode L ind =>
@@ -105,6 +105,8 @@ def CExprTrie.modifyAsLeaf_gNode [BEq α]  (l : Nat) (idx : α) (r : α → α �
         then (.ofGNode L (List.orderedInsertOrLeave r idx ind)) :: xs
         else (.ofGNode L ind) :: (CExprTrie.modifyAsLeaf_gNode l idx r xs)
     | _ => x :: (CExprTrie.modifyAsLeaf_gNode l idx r xs)
+
+
 
 
 def CExprTrie.modifyAsLeaf_Bvar [BEq α]  (l : Nat) (idx : α) (r : α → α → Prop) [DecidableRel r] : List (CExprTrie.Branch α) → List (CExprTrie.Branch α)
@@ -207,9 +209,9 @@ def CExprTrie.insert [BEq α] (T : CExprTrie α) (idx : α) (ce : CExpr) (r : α
             let lb := CExprTrie.getAtLink T link
             let nlb := CExprTrie.modifyAsLeaf_Lit l idx r lb
             (count, CExprTrie.modifyAtLink T link (fun _ => nlb))
-    | .lnode l _ =>
+    | .lnode l _ t =>
             let lb := CExprTrie.getAtLink T link
-            let nlb := CExprTrie.modifyAsLeaf_lNode l idx r lb
+            let nlb := CExprTrie.modifyAsLeaf_lNode l t idx r lb
             (count, CExprTrie.modifyAtLink T link (fun _ => nlb))
     | .gnode l _ =>
             let lb := CExprTrie.getAtLink T link
@@ -228,6 +230,7 @@ def CExprTrie.insert [BEq α] (T : CExprTrie α) (idx : α) (ce : CExpr) (r : α
             let nlb := CExprTrie.modifyAsLeaf_Const l idx r lb
             (count, CExprTrie.modifyAtLink T link (fun _ => nlb))
   (go T idx 0 T.size ce).2
+
 
 
 
@@ -258,15 +261,16 @@ def CExprTrie.getIndices_Lit (l : Literal) : List (CExprTrie.Branch α) → List
         else (CExprTrie.getIndices_Lit l  xs)
     | _ => (CExprTrie.getIndices_Lit l  xs)
 
-def CExprTrie.getIndices_lNode (l : Nat) : List (CExprTrie.Branch α) → List α
+def CExprTrie.getIndices_lNode (l : Nat) (t : Option Nat) : List (CExprTrie.Branch α) → List α
 | [] => []
 | x :: xs =>
     match x with
-    | .ofLNode L ind =>
-        if L == l
+    | .ofLNode L tag ind =>
+        if L == l && t == tag
         then ind
-        else (CExprTrie.getIndices_lNode l xs)
-    | _ => (CExprTrie.getIndices_lNode l xs)
+        else (CExprTrie.getIndices_lNode l t xs)
+    | _ => (CExprTrie.getIndices_lNode l t xs)
+
 
 
 def CExprTrie.getIndices_gNode (l : Nat) : List (CExprTrie.Branch α) → List α
@@ -355,9 +359,9 @@ partial def CExprTrie.find_candidates? [BEq α] (T : CExprTrie α) (ce : CExpr) 
             let lb := CExprTrie.getAtLink T link
             let nlb := CExprTrie.getIndices_Lit l lb
             go (nlb :: done) more
-        | .lnode l _ =>
+        | .lnode l _ t =>
             let lb := CExprTrie.getAtLink T link
-            let nlb := CExprTrie.getIndices_lNode l lb
+            let nlb := CExprTrie.getIndices_lNode l t lb
             go (nlb :: done) more
         | .gnode l _ =>
             let lb := CExprTrie.getAtLink T link
@@ -470,8 +474,8 @@ partial def CExprTrie.buildAtLink [BEq α] [Repr α] (T : CExprTrie α) (link : 
     |.ofLit l ind =>
           let res := [(.lit l, ind)]
           lTrace TraceFlags.zero & s!"Building lit:\n{repr res}\n\n" & res
-    |.ofLNode l ind =>
-          let res := [(.lnode l (.ofBvar 42), ind)] --fix
+    |.ofLNode l t ind =>
+          let res := [(.lnode l (.ofBvar 42) t, ind)] --fix
           lTrace TraceFlags.zero & s!"Building lit:\n{repr res}\n\n" & res
     |.ofGNode l ind =>
           let res := [(.gnode l (.ofBvar 42), ind)] --fix
@@ -534,9 +538,15 @@ partial def CExprTrie.unify_candidates [BEq α] [Repr α] (T : CExprTrie α) (r 
             match nlb with
             | [] => []
             | _ => go (done) more
-        | .lnode l _ =>
+        | .lnode l _ .none => -- tag .none means it does't originate from backward propagation
             let builds := CExprTrie.buildAtLink T link r
             go ((l, builds) :: done) more
+        | .lnode l _ t =>
+            let lb := CExprTrie.getAtLink T link
+            let nlb := CExprTrie.getIndices_lNode l t lb
+            match nlb with
+            | [] => []
+            | _ => go (done) more
         | .gnode l _ =>
             let lb := CExprTrie.getAtLink T link
             let nlb := CExprTrie.getIndices_gNode l lb
@@ -562,6 +572,8 @@ partial def CExprTrie.unify_candidates [BEq α] [Repr α] (T : CExprTrie α) (r 
             | [] => []
             | _ => go (done) more
   go [] [(ce,0)]
+
+
 
 
 -- #eval CExprTrie.unify_candidates (CExprTrie.ofList (· ≤ ·) test_list) (· ≤ ·) (.app (.node 0 (.ofBvar 42)) (.node 1 (.ofBvar 42)))
@@ -595,4 +607,4 @@ def CExprTrie.unify_reconstruct [BEq α] [Repr α] (r : α → α → Prop) [Dec
     candidates.foldl (fun out (node_idx, assign_data) => go node_idx out assign_data) []
 
 
-#eval CExprTrie.unify_reconstruct (· ≤ ·) (CExprTrie.unify_candidates (CExprTrie.ofList (· ≤ ·) test_list) (· ≤ ·) (.app (.lnode 0 (.ofBvar 42)) (.lnode 1 (.ofBvar 42))))
+#eval CExprTrie.unify_reconstruct (· ≤ ·) (CExprTrie.unify_candidates (CExprTrie.ofList (· ≤ ·) test_list) (· ≤ ·) (.app (.lnode 0 (.ofBvar 42) .none) (.lnode 1 (.ofBvar 42) .none)))

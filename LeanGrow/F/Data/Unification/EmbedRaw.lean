@@ -62,7 +62,7 @@ def propagate_raw (ltx : List (Nat × CExpr))
   let res :=
     match embedSofar.get! todo_idx with
     | .none => .none
-    | .some (.ofCExpr _) | .some (.ofLNode _) => -- shouldn't happen as ltx cexprs should only have gnodes
+    | .some (.ofCExpr _) | .some (.ofLNode _ _) => -- shouldn't happen as ltx cexprs should only have gnodes
           .some (embedSofar, [])
     | .some (.ofGNode im) =>
         match ltx.find? (fun x => x.1 == im) with

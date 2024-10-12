@@ -26,7 +26,7 @@ def merge_if_compatible (embed : Array (Option NodeExpr)) (assignOutput : List (
 
 
 def CExpr.toNodeExpr : CExpr → NodeExpr
-| .lnode i _ => .ofLNode i
+| .lnode i _ t => .ofLNode i t
 | .gnode i _ => .ofGNode i
 | ce => .ofCExpr ce
 
