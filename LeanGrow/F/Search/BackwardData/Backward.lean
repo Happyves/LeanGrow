@@ -42,7 +42,6 @@ def propagate_lnode_and_tag (thm_data : Array EmbedData) (backwardId : Nat)
   (assigned, fixed)
 
 
-#check 1
 
 /-
 Situation:
@@ -67,13 +66,78 @@ Idea:
 
 -/
 
+
+partial def compute_subgoal_deps (e : CExpr) : List (Nat × Nat) :=
+  let rec go (cache : List (Nat × Nat)) : List CExpr → List (Nat × Nat)
+    | [] => cache
+    | nx :: more =>
+        match nx with
+        | .lnode i _ (.some tag) => go ((tag, i) :: cache) more
+        | .app l r => go cache (l :: r :: more)
+        | .lam _ l r _ => go cache (l :: r :: more)
+        | .forallE _ l r _ => go cache (l :: r :: more)
+        | .letE _ l r z _ => go cache (l :: r :: z :: more)
+        | .proj _ _ r => go cache (r :: more)
+        | _ => go cache more
+  go [] [e]
+
+
+
+def List.Icc (n m : Nat) :=
+  let rec go (cache : List Nat) : Nat → List Nat
+    | 0 => cache
+    | k+1 => go ((k+n) :: cache) k
+  go [] (m - n + 1)
+
 def integrate_backward_outcome (goalIdCounter backStepIdCounter : Nat)
   (assigned nextGoals: List (Nat × CExpr)) :
   BackStepData × List GoalData × Nat :=
   let gd :=
     nextGoals.foldl
       (fun (L,c) (n,ce) =>
-          (⟨c, backStepIdCounter, n, ce⟩ :: L,c+1)
+          (⟨c, backStepIdCounter, n, ce, compute_subgoal_deps ce⟩ :: L,c+1)
       )
       ([], goalIdCounter)
-  (⟨backStepIdCounter, assigned, sorry ⟩,gd)
+  (⟨backStepIdCounter, assigned, List.Icc goalIdCounter gd.2⟩,gd)
+
+
+#check 1
+
+
+/-
+A goal is solved, if we :
+- have a forward type (containing only gnodes), that unifies with the goal,
+  in the sense where all (!) lnodes are considered for unification!
+  **Important**: make unification version that unify with all .lnodes :
+  current ones only unify with .lnode _ .none ?!?
+- The solution of one goal implies that of another, of the firsts type
+  depended on the seconds, and unification succesfully assigned it
+
+
+Assume that a goal is solved. We have to:
+- propagate solutions ; here we should be careful ... it may theoretically be possible that
+  multiple forward type can serve as solution for the same goal. At propagation,
+  we should store the fact that the solution by propagation depends on the choice
+  of using another solution!
+  Ex: for an application of le_trans, we solved 1 ≤ .lnode b t with 1 ≤ 2
+    → for thm-appli t, node b should gain solution 2
+  Ex multiple sol: goal `L.get? n = .none` and we derived `L.get? 37 = .none`
+    and `L.get? 42 = .none` ; yields two different propagation solutions for `n`
+- propagate assignements ; other goals may have depended on the one we just solved
+  Ex: for an application of le_trans, we solved 1 ≤ .lnode b t with 1 ≤ 2
+    → for goal .lnode b ≤ 3, we should spawn the new goal 2 ≤ 3
+
+
+Solutions:
+- To correctly propagate, we should reinstore storing the children in the
+  EmbedData, so that propagations as in le_trans are easier to perform
+- maybe use a spearate and new tag for solutions and goals ; tag should be a
+  Nat. For example, if we solved the goal 1 ≤ .lnode b by le_trans with 1 ≤ 2,
+  a solution we store with the tage (counter) 37. the the solution 2 for goal
+  Nat corresponding to .lnode b should be taged 37 ; also, the new goal 2 ≤ 3
+  (other goal of le_trans) should be tagged 37 → note that we must now have
+  a system that understands the the goal shown with le_trans is proven,
+  if  the new goal is proven, and not the initial corresponding goal .lnode b ≤ 3,
+  which is still open and could get solutions which assigne other vals to .lnode b
+
+-/

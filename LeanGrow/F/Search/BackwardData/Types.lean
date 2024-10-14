@@ -1,8 +1,6 @@
 
 import LeanGrow.F.Data.CExpr.Types
 
-#check 1
-
 
 
 structure GoalData where
@@ -10,6 +8,7 @@ structure GoalData where
   backStepOrigin : Nat
   posi : Nat
   type : CExpr
+  deps : List (Nat × Nat)
 
 structure BackStepData where
   backStepId : Nat
