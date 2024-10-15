@@ -25,7 +25,7 @@ def merge_if_compatible (embed : Array (Option NodeExpr)) (assignOutput : List (
   lTrace TraceFlags.zero & s!"Running merge_if_compatible.\nOn embed:{repr embed}\nOn assignOuput:{repr assignOutput}\nReturn:{repr res}\n\n" & res
 
 
-def propagate_smooth (ltx : List (Array CExpr)) (ltx_handler : Nat → (Nat × Nat))
+def propagate_goal (ltx : List (Array CExpr)) (ltx_handler : Nat → (Nat × Nat))
   (embedSofar :  Array (Option NodeExpr)) (todo_idx : Nat) (todo_thm_type : CExpr) : Option ((Array (Option NodeExpr)) × (List Nat)) :=
   let res :=
     match embedSofar.get! todo_idx with
@@ -52,7 +52,7 @@ partial def match_goal (thm_data : Array EmbedData) (ltx_idx_cexpr : List (Array
       | [] => .some embed
       | n :: l =>
             let nd := thm_data.get! n
-            match propagate_smooth ltx_idx_cexpr ltx_handler embed n nd.cexpr with
+            match propagate_goal ltx_idx_cexpr ltx_handler embed n nd.cexpr with
             | .none => .none
             | .some (emb, toFront) => gop emb (toFront ++ l)
     match CExpr.MatchAssignLFF thm_goal real_goal with -- real_goal is a cexpr wrt. ltx
@@ -74,7 +74,7 @@ partial def match_goal_wCExprTrie (ltx_idx_cexpr : List (Array CExpr)) (ltx_hand
       | [] => .some embed
       | n :: l =>
             let nd := thm_data.get! n
-            match propagate_smooth ltx_idx_cexpr ltx_handler embed n nd.cexpr with
+            match propagate_goal ltx_idx_cexpr ltx_handler embed n nd.cexpr with
             | .none => .none
             | .some (emb, toFront) => gop emb thm_data (toFront ++ l)
     sorry

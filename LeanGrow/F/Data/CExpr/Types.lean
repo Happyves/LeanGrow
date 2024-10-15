@@ -22,6 +22,7 @@ inductive CExpr where
 | lit : Literal → CExpr
 | proj : Name → Nat → CExpr → CExpr
 | failed : CExpr
+| hole : CExpr
 deriving Inhabited, BEq, Repr
 
 
@@ -33,3 +34,11 @@ deriving BEq, Inhabited, Repr
 def EmbedData.cexpr : EmbedData → CExpr
 | .nonInst ce _ => ce
 | .inst ce _ => ce
+
+
+
+inductive NodeExpr where
+| ofLNode (i : Nat) (tag : Option Nat)
+| ofGNode (i : Nat)
+| ofCExpr (c : CExpr)
+deriving Inhabited, Repr, BEq

@@ -62,7 +62,8 @@ def propagate_raw (ltx : List (Nat × CExpr))
   let res :=
     match embedSofar.get! todo_idx with
     | .none => .none
-    | .some (.ofCExpr _) | .some (.ofLNode _ _) => -- shouldn't happen as ltx cexprs should only have gnodes
+    | .some (.ofCExpr _) | .some (.ofLNode _ _) =>
+    -- Goal may have contained lnodes inherited from previous thm applications ; we'll propogate them later
           .some (embedSofar, [])
     | .some (.ofGNode im) =>
         match ltx.find? (fun x => x.1 == im) with
@@ -73,7 +74,6 @@ def propagate_raw (ltx : List (Nat × CExpr))
             | .some l => merge_if_compatible embedSofar l
   with_lTrace [TraceFlags.zero] in
   lTrace TraceFlags.zero & s!"Ran embed_next_raw.\nOn embed:{repr embedSofar}\nOn todo id {todo_idx} with cexpr {repr todo_thm_type}\nReturn:{repr res}\n\n" & res
-
 
 
 structure EmbedStruct where

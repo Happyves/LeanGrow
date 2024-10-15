@@ -125,7 +125,7 @@ def CExpr.toExpr : CExpr → Option Expr
       | _ , _, _ => .none
 | .lit l => .some (.lit l)
 | .proj t i b => (.proj t i) <$> (CExpr.toExpr b)
-| .failed => .none
+| .failed | .hole  => .none
 
 
 partial def CExpr.toExprF (E : CExpr) : Option Expr :=
@@ -173,7 +173,7 @@ partial def CExpr.toExprF (E : CExpr) : Option Expr :=
                   match B with
                   | .some b' => .some (.proj t i b') :: r2
                   | _ => [.none]
-            | .failed => [.none]
+            | .failed | .hole => [.none]
       List.headD (go [E]) .none
 
 

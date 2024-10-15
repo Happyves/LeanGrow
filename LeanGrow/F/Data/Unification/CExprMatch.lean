@@ -6,12 +6,6 @@ open Lean
 
 
 
-inductive NodeExpr where
-| ofLNode (i : Nat) (tag : Option Nat)
-| ofGNode (i : Nat)
-| ofCExpr (c : CExpr)
-deriving Inhabited, Repr, BEq
-
 
 def match_helper (l r : Option (List (Nat × NodeExpr))) : Option (List (Nat × NodeExpr)) :=
       match l, r with
@@ -91,7 +85,6 @@ def List.assignOrFail [BEq α] (A? : Option (List (Nat × α))) (i : Nat) (val :
       | _ => .none
 
 
--- TODO add proper tail call optimizaiton to all versions
 partial def CExpr.MatchAssignLFF (l r : CExpr) : Option (List (Nat × NodeExpr)) :=
       let rec go (go? : Bool) (Aout : Option (List (Nat × NodeExpr))) (todo : List (CExpr × CExpr)) : Option (List (Nat × NodeExpr)) :=
       if go?
@@ -115,6 +108,7 @@ partial def CExpr.MatchAssignLFF (l r : CExpr) : Option (List (Nat × NodeExpr))
                   | (_ , _) => .none
       else .none
       go true (.some []) [(l,r)]
+
 
 
 

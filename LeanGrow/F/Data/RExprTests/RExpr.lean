@@ -27,6 +27,7 @@ inductive RExpr where
 | proj : Name → Nat → RExpr → RExpr
 | struc : List RExpr → RExpr -- for constants of a structure type ?!? projections as list
 | failed : RExpr
+| hole : RExpr
 | beta : Name → RExpr → RExpr → BinderInfo → RExpr → RExpr -- probably best to keep a local context at unification to see which bvars to replace by what
 | nabla : RExpr → RExpr --should be wraped around constants (technically also lambdas ?!?) that have a function type
 | pRec : RecursorVal → RExpr
