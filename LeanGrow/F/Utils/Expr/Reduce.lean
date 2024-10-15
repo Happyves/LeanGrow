@@ -101,6 +101,8 @@ open Lean Meta
 #check_failure cleanupNatOffsetMajor
 -- Next, we attempt to reduce possible structures, or pass majot to future steps, with
 #check_failure toCtorWhenStructure
+-- The purpose of ↑, as the docs suggest is to make the constructor explicit in these cases,
+-- so that we can perform the reuduction with  the further parts of `reduceRec`.
 -- First we check that eta is configurated, and we're not dealing with a class, via
 #check useEtaStruct
 -- or that it is a applicaiton with a constructor head
@@ -120,7 +122,6 @@ open Lean Meta
 #check StructureInfo.getProjFn?
 -- otherwise, we return `.proj _ _ major` as before
 
-
 -- Next, in `reduceRec`, we try to find the appropriate branch to apply to the arguement.
 -- To do so, we use:
 #check_failure getRecRuleFor
@@ -133,6 +134,8 @@ open Lean Meta
 -- an the argument of majors (up to a number : params+motives+minors)
 -- Finally, we glue back all the remaining args
 
+-- Note : I don't see how projection of structures work in this context ...
+
 
 #check Quot.lift
 #check Quot.ind
@@ -143,7 +146,6 @@ open Lean Meta
 -- The relevant arguments and are extracted, using indices that are given
 -- at the bottom of the implementation. The relevant parts are then glued back
 -- together.
-
 
 
 
@@ -187,8 +189,10 @@ inductive testType (x : Nat) : String → List Nat → Type where
 
 def RecValData : CoreM Unit := do
   let .some (.recInfo i) := (← getEnv).find? `testType.rec | throwError "ahh 1"
-  IO.println s!"Names : {i.all} ; params : {i.numParams} ; indices : {i.numIndices} ; minors : {i.numMinors} ; motives {i.numMotives}"
+  IO.println s!"Names : {i.all} ; params : {i.numParams} ; indices : {i.numIndices} ; minors : {i.numMinors} ; motives {i.numMotives}\n\n"
+  IO.println s!"Rules {(i.rules.map (fun x => (repr x.ctor,  x.rhs)))}"
   -- to study → rules
+
 
 #eval RecValData
 
@@ -206,6 +210,24 @@ def fib : Nat → Nat
 #check fib.match_1
 #print Nat.brecOn
 
+
+-- # Structures
+
+structure moreTest where
+  a : Nat
+  b : String
+
+set_option pp.all true in
+#print moreTest.a
+
+
+def StructData : CoreM Unit := do
+  let .some (.defnInfo i) := (← getEnv).find? `moreTest.a | throwError "ahh 1"
+  IO.println s!"{repr i.value}"
+
+#eval StructData
+
+#check moreTest.rec
 
 -- # To study
 

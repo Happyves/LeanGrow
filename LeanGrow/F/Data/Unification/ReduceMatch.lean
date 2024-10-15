@@ -21,6 +21,7 @@ def CExpr.ReduceMatchAssign (l r : CExpr) : Option (List (Nat × NodeExpr)) :=
 - reducing Exprs, both for caching thms and on query, should handle many annoying cases ...
 
 - reductions may apply after rw's for example in `(h₁ : x = y z) (h₂ : y = (fun t => w t))`
+  even worse for iota, where recursor may be a partial application before being rewritten...
 
 - maybe add all versions (with more or less reductions) to the CExprTrie, with the same index ?
 
@@ -38,7 +39,7 @@ Add stuff to CExpr
 
 - **zeta** constructor shoould be like beta
 
-- **nabla** should be wraped around constants (technically als lambdas ?!?) that have a function type. When matching at nabla constructor, inspect if other is nabla expanded ?
+- **nabla** should be wraped around constants (technically also lambdas ?!?) that have a function type. When matching at nabla constructor, inspect if other is nabla expanded ?
 
 - **delta** ; to avoid requiring a getEnv Monad, make a cache with constants ; distinguish axioms, constructors, recursors, and delta-expandable constants ; When matching, replace constant by valueat try to match with it ; note te value should already be in a CExpr format with all other reduction constructors
 

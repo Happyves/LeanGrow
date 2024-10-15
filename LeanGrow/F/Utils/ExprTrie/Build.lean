@@ -331,6 +331,7 @@ partial def CExprTrie.find_candidates? [BEq α] (T : CExprTrie α) (ce : CExpr) 
             match links? with
             | .some (lf,la) => go done ((f, lf) :: (a, la) :: more)
             | _ => []
+-- **TODO** replace here and everywhere by `go (match links? with | .some _ => done | []) (match links? with | .some (lf,la) => ((f, lf) :: (a, la) :: more) | []) ` so as to make it tail recursive
         | .lam _ f a _ =>
             let lb := CExprTrie.getAtLink T link
             let links? := CExprTrie.Branch_getLamLinks? lb
@@ -607,4 +608,4 @@ def CExprTrie.unify_reconstruct [BEq α] [Repr α] (r : α → α → Prop) [Dec
     candidates.foldl (fun out (node_idx, assign_data) => go node_idx out assign_data) []
 
 
-#eval CExprTrie.unify_reconstruct (· ≤ ·) (CExprTrie.unify_candidates (CExprTrie.ofList (· ≤ ·) test_list) (· ≤ ·) (.app (.lnode 0 (.ofBvar 42) .none) (.lnode 1 (.ofBvar 42) .none)))
+-- #eval CExprTrie.unify_reconstruct (· ≤ ·) (CExprTrie.unify_candidates (CExprTrie.ofList (· ≤ ·) test_list) (· ≤ ·) (.app (.lnode 0 (.ofBvar 42) .none) (.lnode 1 (.ofBvar 42) .none)))
