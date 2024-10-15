@@ -152,4 +152,15 @@ the same goal as the original, where we fill the `ltxSols` list with the solutio
 and all those that it generates via propagation.
 We then create new subgoals (and add them to the `subgoals` entry of the new thm-appli),
 which correspond to those generated from propagation.
+
+
+**Actually**
+Since a subgoal can have lnodes in its type that refer to previous subgoals,
+we should think of the backstep as applying to *multiple* different goals. (or not, read ahead)
+For example, we could have a first appli of le_trans yielding goals Nat,
+1 ≤ .lnode 1 0 and .lnode 1 0 ≤ 4.  We then apply a second le_trans to the second
+subgoal, so as to get new goals Nat, 1 ≤ .lnode 1 1 and .lnode 1 1 ≤ .lnode 1 0.
+If we have `p : 2 ≤ 3` in the context, and we unify it with .lnode 1 1 ≤ .lnode 1 0, then we should
+produce a backstep that has the following data : it solves the initial goal,
+produces new subgoals 1 ≤ 2 and 3 ≤ 4, and assigns solutions 2 3 and p.
 -/
