@@ -1,6 +1,7 @@
 
 
 import Lean
+import Mathlib
 
 open Lean Elab Term Meta SynthInstance
 
@@ -111,7 +112,26 @@ def test_myInstance : CoreM Unit := do
 
 def testinQuery : CoreM Unit := do
   let env ← getEnv
-  let isit? := Lean.Meta.isGlobalInstance env `myInstance
+  let isit? := Lean.Meta.isGlobalInstance env `instAddNat --`myInstance
   IO.println isit?
 
 #eval testinQuery
+
+#synth Add Nat
+
+#check instAddNat
+
+#check AddCommMonoid
+
+#check Nat.instAddCommMonoid
+-- ↑ infer_instance
+
+--#print Nat.instAddCommMonoid
+-- one of the two, probably ↓, causes overflow, as it tries to synthesise a nonexistent instance ?
+--#check inferInstance
+
+set_option pp.all true in
+#reduce Nat.instAddCommMonoid
+
+
+#check AddLeftCancelSemigroup.toAddSemigroup
