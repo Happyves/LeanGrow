@@ -28,6 +28,7 @@ inductive RExpr where
 | lit : Literal → RExpr
 | proj : Name → Nat → RExpr → RExpr
 | struc : List RExpr → RExpr -- for constants of a structure type ?!? projections as list
+-- OptParam and OutParam ... are gonna be painful
 | failed : RExpr
 | hole : RExpr
 | beta : Name → RExpr → RExpr → BinderInfo → RExpr → RExpr -- probably best to keep a local context at unification to see which bvars to replace by what
@@ -39,7 +40,10 @@ inductive RExpr where
 | rw : Nat → RExpr
 -- ↑ should only be introduced at search-time, and links to the id of the rw-class
 | proof : RExpr → RExpr
--- ↑ by proof irrelevance, we only have to chek that the propositions unify, to get that the types are equal ... to study
+-- ↑ by proof irrelevance, we only have to chek that the propositions unify, to get that the types are equal ...
+-- as seems to be noted in `isDefEqEtaStruct`, proof irrelevance can cause less eager unification
+-- (if the proofs are the same up to mvars, this would have been the chance to assigne mvars ???)
+
 --deriving Inhabited, BEq, Repr
 
 #check ConstantInfo

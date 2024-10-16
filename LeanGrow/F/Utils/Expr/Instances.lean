@@ -70,3 +70,48 @@ open SynthInstance
 #check getGlobalInstancesIndex
 -- where retireval is done with
 #check DiscrTree.getUnify
+
+
+
+#check Lean.Declaration
+
+
+instance myInstance : Inhabited Nat where
+  default := 42
+
+#check myInstance
+
+
+
+def test_myInstance : CoreM Unit := do
+  let .some (info) := (← getEnv).find? `myInstance | throwError "ahh 1"
+  let todo :=
+    match info with
+    | .axiomInfo _ => "axiom"
+    | .defnInfo _ => "definition"
+    | .thmInfo _ => "thm"
+    | _ => "other"
+  IO.println todo
+
+
+#eval test_myInstance
+
+
+#check DefinitionVal
+-- no instances here...
+
+#check Elab.Command.elabDeclaration
+
+
+#check Frontend.processCommand
+
+#check Environment
+
+#check Lean.Meta.isGlobalInstance
+
+def testinQuery : CoreM Unit := do
+  let env ← getEnv
+  let isit? := Lean.Meta.isGlobalInstance env `myInstance
+  IO.println isit?
+
+#eval testinQuery
