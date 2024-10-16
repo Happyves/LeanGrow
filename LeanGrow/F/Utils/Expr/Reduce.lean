@@ -148,6 +148,12 @@ open Lean Meta
 -- together.
 
 
+/-
+Note:
+The fact we don't δ reduce has consequences, for example in `Lean.Meta.isDefEqProjDelta` at `Lean > Meta > ExprDefEq`.
+-/
+
+#exit
 
 -- # Levels
 
@@ -235,6 +241,18 @@ def StructData : CoreM Unit := do
 
 #check Expr.toCtorIfLit
 -- very important ! otherwise, `.lit 2` whouldn't work with `Nat.rec`
+
+
+-- # Are def with prop types thms
+
+def mydefthm (n m : Nat) : n = m := sorry
+
+def test_mydefthm : CoreM Unit := do
+  let .some (.thmInfo _) := (← getEnv).find? `moreTest.a | throwError "ahh 1"
+-- It is defined as def despite having prop as type
+-- #eval test_mydefthm
+
+
 
 
 

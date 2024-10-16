@@ -17,8 +17,10 @@ inductive RExpr where
 -- ↑ may be smart to do in preprocess, so that we don't have to check if inductive type when seeking to apply induction
 | quo : Name → List Level → RExpr
 | deltaDef : Name → List Level → RExpr
+-- ↑ ↓ for delta refer to `Lean.ReducibilityHints` and `Lean.Meta.isDefEqDeltaStep` in `Lean > Meta > ExprDefEq`
 | deltaFun : Name → List Level → RExpr -- for function definitions, so as to be used for nable (makes the nabla constructor useless)
-| deltaThm : Name → List Level → RExpr
+-- We should also keep a context where lnodes & gnodes that are funcitons are collected, so that we try nabla in these cases too
+| deltaThm : Name → List Level → RExpr -- Lean stores defs with Prop types as defs → when making RExpr, check if type is Prop !!
 | app : RExpr → RExpr → RExpr
 | lam : Name → RExpr → RExpr → BinderInfo → RExpr -- make sure nabla applies here too.. or not, as it also creates betas... possible loop ?
 | forallE : Name → RExpr → RExpr → BinderInfo → RExpr
@@ -36,6 +38,8 @@ inductive RExpr where
 -- unification, without leading to a term size explosion, as may happen in β or ζ
 | rw : Nat → RExpr
 -- ↑ should only be introduced at search-time, and links to the id of the rw-class
+| proof : RExpr → RExpr
+-- ↑ by proof irrelevance, we only have to chek that the propositions unify, to get that the types are equal ... to study
 --deriving Inhabited, BEq, Repr
 
 #check ConstantInfo
