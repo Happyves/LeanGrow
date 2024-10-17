@@ -92,14 +92,14 @@ partial def full_matcher_smoothF (thm_data : Array EmbedData) (thm_order : Array
             | n :: l =>
               let nd := thm_data.get! n
               match nd with
-              | .inst _ _ =>
+              | .inst _ _ _ =>
                     let L := embed_next_smooth ltx_cexpr_idx embedSofar n nd
                     match L with
                     | [] => main (⟨embedSofar, (n :: instances), l, assignedFrontier⟩ :: more) done
                             -- if we fail to embed an instance, we proceed
                     | _ =>  let add := L.map (fun (embed, front) => ⟨embed, instances, l, front.mergeSort (· ≤ ·)⟩)
                             main (add ++ more) done
-              | .nonInst _ _ =>
+              | .nonInst _ _ _ =>
                     let L := embed_next_smooth ltx_cexpr_idx embedSofar n nd
                     let add := L.map (fun (embed, front) => ⟨embed, instances, l, front.mergeSort (· ≤ ·)⟩ )
                     main (add ++ more) done
@@ -141,14 +141,14 @@ partial def partial_matcher_smoothF (thm_data : Array EmbedData) (thm_order : Ar
             | n :: l =>
               let nd := thm_data.get! n
               match nd with
-              | .inst _ _ =>
+              | .inst _ _ _ =>
                     let L := embed_next_smooth ltx_cexpr_idx embedSofar n nd
                     match L with
                     | [] => main (⟨embedSofar, (n :: instances), unembedable, l, assignedFrontier⟩ :: more) .none done
                             -- if we fail to embed an instance, we proceed
                     | _ =>  let add := L.map (fun (embed, front) => ⟨embed, instances, unembedable, l, front.mergeSort (· ≤ ·)⟩)
                             main (add ++ more) (.some (n, add.length, ⟨embedSofar, instances, unembedable, l, []⟩)) done
-              | .nonInst _ _ =>
+              | .nonInst _ _ _ =>
                     let L := embed_next_smooth ltx_cexpr_idx embedSofar n nd
                     match L with
                     | [] => main (⟨embedSofar, instances, (n :: unembedable), l, assignedFrontier⟩ :: more) .none done

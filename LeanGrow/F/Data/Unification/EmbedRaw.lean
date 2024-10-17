@@ -95,13 +95,13 @@ partial def full_matcher_raw (thm_data : Array EmbedData) (thm_order : Array Nat
         | n :: l =>
           let nd := thm_data.get! n
           match nd with
-          | .inst _ _ =>
+          | .inst _ _ _ =>
                 let L := embed_next_raw ltx embedSofar n nd
                 match L with
                 | [] => lTrace TraceFlags.zero & s!"Empty frontier. Tried emebedding {repr n}\nFailed to embed instance. Take note of it and proceed.\n\n" & main embedSofar (n :: instances) l assignedFrontier
                         -- if we fail to embed an intance, we proceed
                 | _ => lTrace TraceFlags.zero & s!"Empty frontier. Tried emebedding {repr n}\nSuccess!! Proceed on each possibility\n\n" &(L.map (fun (embed, front) => main embed instances l front)).join
-          | .nonInst _ _ =>
+          | .nonInst _ _ _ =>
                 let L := embed_next_raw ltx embedSofar n nd
                 lTrace TraceFlags.zero & s!"Empty frontier. Tried to emebedding {repr n}" & (L.map (fun (embed, front) => main embed instances l front)).join
     | n :: l =>
@@ -133,14 +133,14 @@ partial def full_matcher_rawF (thm_data : Array EmbedData) (thm_order : Array Na
             | n :: l =>
               let nd := thm_data.get! n
               match nd with
-              | .inst _ _ =>
+              | .inst _ _ _ =>
                     let L := embed_next_raw ltx embedSofar n nd
                     match L with
                     | [] => main (⟨embedSofar, (n :: instances), l, assignedFrontier⟩ :: more) done
                             -- if we fail to embed an instance, we proceed
                     | _ =>  let add := L.map (fun (embed, front) => ⟨embed, instances, l, front.mergeSort (· ≤ ·)⟩)
                             main (add ++ more) done
-              | .nonInst _ _ =>
+              | .nonInst _ _ _ =>
                     let L := embed_next_raw ltx embedSofar n nd
                     let add := L.map (fun (embed, front) => ⟨embed, instances, l, front.mergeSort (· ≤ ·)⟩ )
                     main (add ++ more) done
@@ -181,14 +181,14 @@ partial def partial_matcher_rawF (thm_data : Array EmbedData) (thm_order : Array
             | n :: l =>
               let nd := thm_data.get! n
               match nd with
-              | .inst _ _ =>
+              | .inst _ _ _ =>
                     let L := embed_next_raw ltx embedSofar n nd
                     match L with
                     | [] => main (⟨embedSofar, (n :: instances), unembedable, l, assignedFrontier⟩ :: more) .none done
                             -- if we fail to embed an instance, we proceed
                     | _ =>  let add := L.map (fun (embed, front) => ⟨embed, instances, unembedable, l, front.mergeSort (· ≤ ·)⟩)
                             main (add ++ more) (.some (n, add.length, ⟨embedSofar, instances, unembedable, l, []⟩)) done
-              | .nonInst _ _ =>
+              | .nonInst _ _ _ =>
                     let L := embed_next_raw ltx embedSofar n nd
                     match L with
                     | [] => main (⟨embedSofar, instances, (n :: unembedable), l, assignedFrontier⟩ :: more) .none done
