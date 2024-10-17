@@ -135,3 +135,13 @@ set_option pp.all true in
 
 
 #check AddLeftCancelSemigroup.toAddSemigroup
+
+def testinIfToInEnv : CoreM Unit := do
+  let env ← getEnv
+  let .some i := env.constants.find? `AddLeftCancelSemigroup.toAddSemigroup | throwError "ahh 1"
+  match i with
+  | .defnInfo _ => IO.println "def"
+  | _ => IO.println "other"
+
+#eval testinIfToInEnv
+-- interesting... I don't think recusors are stored in env, but projections of instances are

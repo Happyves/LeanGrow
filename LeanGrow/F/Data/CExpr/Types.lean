@@ -22,7 +22,6 @@ inductive CExpr where
 | lit : Literal → CExpr
 | proj : Name → Nat → CExpr → CExpr
 | failed : CExpr
-| hole : CExpr
 deriving Inhabited, BEq, Repr
 
 
