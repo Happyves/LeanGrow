@@ -6,21 +6,49 @@ open Lean
 
 #check 1
 
+instance : BEq InductiveVal where
+  beq := fun a b =>
+    a.toConstantVal == b.toConstantVal &&
+    a.numParams == b.numParams &&
+    a.numIndices == b.numIndices &&
+    a.all == b.all &&
+    a.ctors == b.ctors &&
+    a.isRec == b.isRec &&
+    a.isNested == b.isNested &&
+    a.isUnsafe == b.isUnsafe &&
+    a.isReflexive == b.isReflexive
+
+
+instance : BEq QuotKind where
+  beq := fun a b =>
+    match a, b with
+    | .type, .type => true
+    | .ctor, .ctor => true
+    | .lift, .lift => true
+    | .ind, .ind => true
+    | _, _ => false
+
+instance : BEq QuotVal where
+  beq := fun a b =>
+    a.toConstantVal == b.toConstantVal &&
+    a.kind == b.kind
+
+
+
 inductive RExpr where
 | lnode : Nat → Option Nat → RExpr
 | gnode : Nat → RExpr
 | bvar : Nat → RExpr
 | sort : Level → RExpr
 | axm : Name → List Level → RExpr
-| ctor : Name → List Level → RExpr -- to change, likely
-| indt : Name → List Level → RExpr
+| ctor : ConstructorVal → List Level → RExpr
+| indt : InductiveVal → List Level → RExpr
 -- ↑ may be smart to do in preprocess, so that we don't have to check if inductive type when seeking to apply induction
-| quo : Name → List Level → RExpr
+| quo : QuotVal → List Level → RExpr
 | deltaDef : Name → List Level → RExpr
 -- ↑ ↓ for delta refer to `Lean.ReducibilityHints` and `Lean.Meta.isDefEqDeltaStep` in `Lean > Meta > ExprDefEq`
 | deltaFun : Name → List Level → RExpr -- for function definitions, so as to be used for nable (makes the nabla constructor useless)
 -- We should also keep a context where lnodes & gnodes that are funcitons are collected, so that we try nabla in these cases too
-| deltaThm : Name → List Level → RExpr -- Lean stores defs with Prop types as defs → when making RExpr, check if type is Prop !!
 | app : RExpr → RExpr → RExpr
 | lam : Name → RExpr → RExpr → BinderInfo → RExpr -- make sure nabla applies here too.. or not, as it also creates betas... possible loop ?
 | forallE : Name → RExpr → RExpr → BinderInfo → RExpr
@@ -39,11 +67,26 @@ inductive RExpr where
 -- unification, without leading to a term size explosion, as may happen in β or ζ
 | rw : Nat → RExpr
 -- ↑ should only be introduced at search-time, and links to the id of the rw-class
-| proof : RExpr → RExpr
+| proof : RExpr → RExpr → RExpr
 -- ↑ by proof irrelevance, we only have to chek that the propositions unify, to get that the types are equal ...
 -- as seems to be noted in `isDefEqEtaStruct`, proof irrelevance can cause less eager unification
 -- (if the proofs are the same up to mvars, this would have been the chance to assigne mvars ???)
-
---deriving Inhabited, BEq, Repr
+deriving Inhabited, BEq--, Repr
 
 #check ConstantInfo
+
+
+inductive NodeExpr where
+| ofLNode (i : Nat) (tag : Option Nat)
+| ofGNode (i : Nat)
+| ofRExpr (c : RExpr)
+deriving Inhabited, BEq
+
+
+/-
+**Notes**
+
+- for deltaDef and deltaFun, we should, at cache build time, get rid of abbreviations by checking that
+  the constant doesn't unfld to a constant (else, keep unfolding until this is false, and use that as val)
+
+-/

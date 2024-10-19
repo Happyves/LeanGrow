@@ -140,11 +140,56 @@ private def largest_match (of within : CExpr) : FindOccsState :=
     | _, .lnode _ _ _ => .neq
     | .gnode l _, .gnode L _ => if l == L then .eq else .neq
     | _, .gnode _ _ => .neq
+    | ce, .app f' a' =>
+          let rf := go (.appl :: sofar) ce f'
+          let ra := go (.appr :: sofar) ce a'
+          match rf , ra with
+          | .eq, .eq => .jump ((f', .appl :: sofar) :: (a', .appr :: sofar) :: [])
+          | .eq, .jump l => .jump ((f', .appl :: sofar) :: l)
+          | .jump L, .eq => .jump ((a', .appr :: sofar) :: L)
+          | .jump L, .jump l => .jump (L ++ l)
+          | _ , .jump l => .jump l
+          | .jump l, _ => .jump l
+          | _, .eq => .jump [(a', .appr :: sofar)]
+          | .eq, _ => .jump [(f', .appl :: sofar)]
+          | _, _ => .jump []
+    | ce, .lam _ f' a' _ =>
+          let rf := go (.lamt :: sofar) ce f'
+          let ra := go (.lamb :: sofar) ce a'
+          match rf , ra with
+          | .eq, .eq => .jump ((f', .lamt :: sofar) :: (a', .lamb :: sofar) :: [])
+          | .eq, .jump l => .jump ((f', .lamt :: sofar) :: l)
+          | .jump L, .eq => .jump ((a', .lamb :: sofar) :: L)
+          | .jump L, .jump l => .jump (L ++ l)
+          | _ , .jump l => .jump l
+          | .jump l, _ => .jump l
+          | _, .eq => .jump [(a', .lamb :: sofar)]
+          | .eq, _ => .jump [(f', .lamt :: sofar)]
+          | _, _ => .jump []
+    | ce, .forallE _ f' a' _ =>
+          let rf := go (.allt :: sofar) ce f'
+          let ra := go (.allb :: sofar) ce a'
+          match rf , ra with
+          | .eq, .eq => .jump ((f', .allt :: sofar) :: (a', .allb :: sofar) :: [])
+          | .eq, .jump l => .jump ((f', .allt :: sofar) :: l)
+          | .jump L, .eq => .jump ((a', .allb :: sofar) :: L)
+          | .jump L, .jump l => .jump (L ++ l)
+          | _ , .jump l => .jump l
+          | .jump l, _ => .jump l
+          | _, .eq => .jump [(a', .lamb :: sofar)]
+          | .eq, _ => .jump [(f', .allb :: sofar)]
+          | _, _ => .jump []
+    -- todo let and proj ; but largest_match is useless since flawed
     | _, r => .jump [(r, sofar)]
   go [] of within
 
 
-  -- sorry
+/-
+flaw:
+within →  b a a a
+of → b a a
+will jump to b and miss the inner occurence
+-/
 
 
 

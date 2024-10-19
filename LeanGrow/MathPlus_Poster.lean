@@ -5,17 +5,15 @@ open BigOperators
 
 
 
-example (n : ℕ) : Even (∑ n in ((Finset.range n).filter Even), n) :=
+example (n : ℕ) : Even (∑ m in ((Finset.range n).filter Even), m) :=
   by
   induction' n with n ih
-  · -- ⊢ Even (∑ n ∈ Finset.filter Even (Finset.range 0), n)
-    rw [Finset.range_zero]
-    -- ⊢ Even (∑ n ∈ Finset.filter Even ∅, n)
-    rw [Finset.filter_empty]
-    -- Even (∑ n ∈ ∅, n)
-    rw [Finset.sum_empty]
-    -- ⊢ Even 0
-    decide
+  rw [Finset.range_zero]
+  rw [Finset.filter_empty]
+  -- Even (∑ n ∈ ∅, n)
+  rw [Finset.sum_empty]
+  -- ⊢ Even 0
+  decide
   · /-
     n : ℕ
     ih : Even (∑ n ∈ Finset.filter Even (Finset.range n), n)
