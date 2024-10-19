@@ -159,57 +159,92 @@ produces new subgoals 1 ≤ 2 and 3 ≤ 4, and assigns solutions 2 3 and p.
 -/
 
 
--- def integrate_solve_outcome
---   (goalIdCounter solveStepIdCounter : Nat)
---   (sol_ltx_id : Nat) (sol_type : CExpr) (goal_data : GoalData)
---   (unif_outcome : List (Nat × (Nat × Nat))) -- from CExpr.MatchAssignSolutions
---   (goal_dict : List (Nat × GoalData))
---   (backStep_dict : List (Nat × BackStepData))
---   (solveStep_dict : List (Nat × SolveStepData))
+
+def List.eraseF (p : α → Bool) : List α → List α
+| [] => []
+| x :: l => if p x then l else x :: (List.eraseF p l)
 
 
 
-
-def propagate_solve_in_thm
-  (thm_data : Array EmbedData) (tag : Nat)
+def propagate_solve_assign_step
+  (tag lidx gidx: Nat)
   (ltx : List (Array CExpr)) (ltx_handler : Nat → (Nat × Nat))
-  (assign : List (Nat × Nat)) -- (lnode idx, gnode idx) ; should be derived from solve-unification ; lnodes should have tag corresponding to thm_data
-  : List (Nat × Nat) × List (Nat × CExpr) × List (Nat × Nat × Nat) :=
-  -- fst : (lnode idx, gnode idx) pairs that correspond to assignements, after propagation
-  -- snd : (lnode idx, new_goal_type) new goals after propagation
-  -- third : (gnode idx, tag, lnode idx) to be added for futher propagation outside of the thm
-  let rec propa (lidx gidx : Nat) (sofar_inner : Array (Option Nat)) (sofar_outer : List (Nat × Nat × Nat)) : Option ((Array (Option Nat)) × List (Nat × Nat × Nat)) :=
-    let (p,i) := ltx_handler gidx
-    let gt := (ltx.get! p).get! i
-    let lt := thm_data.get! lidx
-    let uni := CExpr.MatchAssignSolutions gt lt.cexpr
-    match uni with
-    | .none => .none
-    | .some L =>
-          L.foldl
-            (fun inter (gi,t,li) =>
-                match inter with
-                | .none => .none
-                | .some (A, l) =>
-                      if t == tag
-                      then
-                        let nA := Array.assignOrFail li gi A
-                        match nA with
-                        | .none => .none
-                        | .some (NA) => .some (NA,l)
-                      else .some (A, (gi,t,li) :: l)
-            )
-            (.some (sofar_inner, sofar_outer))
-  let propagated := assign.foldl
-    (fun V (lidx, gidx) =>
-      match V with
-      | .some (si, so) => propa lidx gidx si so
-      | .none => .none
-      )
-    (Option.some (Array.mkArray thm_data.size (.none : Option Nat),[]))
+  (backStep_dict : List (Nat × BackStepData))
+  (sofar : List (Nat × Array (Option SolNodeExpr)))
+  : Option (List (Nat × Array (Option SolNodeExpr)) × List (Nat × Nat × SolNodeExpr)) :=
+    match sofar.find? (fun x => x.1 == tag) with
+    | .none =>
+        let (gp,gi) := ltx_handler gidx
+        let gt := (ltx.get! gp).get! gi
+        match backStep_dict.find? (fun x => x.1 == tag) with
+        | .none => .none
+        | .some (_, backData) =>
+            match backData.instantAssigns.find? (fun x => x.1 == lidx) with
+            | .some (_, lt) => if gt == lt then .some (sofar, []) else .none
+            | .none =>
+                  let uni := CExpr.MatchAssignSolutions gt (backData.assembly_embed.get! lidx).cexpr
+                  match uni with
+                  | .none => .none
+                  | .some res =>
+                        let Anew := Array.mkArray backData.assembly_embed.size (.none)
+                        let A := Anew.set! lidx (.some (.ofGNode gidx))
+                        .some ((tag, A) :: sofar, res)
+    | .some (_, embSofar) =>
+        match embSofar.get! lidx with
+        | .some j => if j == (.ofGNode gidx) then .some (sofar,[]) else .none
+        | .none =>
+            let (gp,gi) := ltx_handler gidx
+            let gt := (ltx.get! gp).get! gi
+            match backStep_dict.find? (fun x => x.1 == tag) with
+            | .none => .none
+            | .some (_, backData) =>
+                match backData.instantAssigns.find? (fun x => x.1 == lidx) with
+                | .some (_, lt) => if gt == lt then .some (sofar, []) else .none
+                | .none =>
+                      let uni := CExpr.MatchAssignSolutions gt (backData.assembly_embed.get! lidx).cexpr
+                      match uni with
+                      | .none => .none
+                      | .some res =>
+                            let interim := sofar.eraseF (fun x => x.1 == tag)
+                            .some ((tag, embSofar.set! lidx (.some (.ofGNode gidx))) :: interim, res)
 
 
--- def propagate_solve
---   (unif_outcome : List (Nat × (Nat × Nat))) -- from CExpr.MatchAssignSolutions
---   (backsteps : List (Nat × BackStepData)) :
---   List (Nat × (Nat × Nat)) ×
+partial def propagate_solve_assign
+  (tag lidx gidx : Nat)
+  (ltx : List (Array CExpr)) (ltx_handler : Nat → (Nat × Nat))
+  (backStep_dict : List (Nat × BackStepData)) :
+  Option (List (Nat × Array (Option SolNodeExpr))) :=
+    let rec go (sofar : List (Nat × Array (Option SolNodeExpr)))  : List (Nat × Nat × SolNodeExpr) → Option (List (Nat × Array (Option SolNodeExpr)))
+      | [] => .some sofar
+      | (t,l,pg) :: todo =>
+          match pg with
+          | .ofCExpr ce =>
+              match sofar.find? (fun x => x.1 == tag) with
+              | .none =>
+                  match backStep_dict.find? (fun x => x.1 == tag) with
+                  | .none => .none
+                  | .some (_, backData) =>
+                        let Anew := Array.mkArray backData.assembly_embed.size (.none)
+                        let A := Anew.set! lidx (.some (.ofCExpr ce))
+                        .some ((tag, A) :: sofar)
+              | .some (_, embSofar) =>
+                  match embSofar.get! lidx with
+                  | .some j => if j == (.ofCExpr ce) then .some (sofar) else .none
+                  | .none =>
+                      let interim := sofar.eraseF (fun x => x.1 == tag)
+                      .some ((tag, embSofar.set! lidx (.some (.ofCExpr ce))) :: interim)
+          | .ofGNode g =>
+              match propagate_solve_assign_step t l g ltx ltx_handler backStep_dict sofar with
+              | .none => .none
+              | .some (next,toPropa) =>
+                    let nextPropa := toPropa ++ todo
+                    go next nextPropa
+    go [] [(tag, lidx, (.ofGNode gidx))]
+
+
+/-
+TODO next: same idea as `propagate_lnode` to get new subgoals,
+but note that this should also be over all of the `List (Nat × Array (Option SolNodeExpr))`
+in parallel, since assigned lnodes with one tag may also be among the unsolved goals
+of other taged thm-applis.
+-/
