@@ -1,7 +1,7 @@
 
 
 import LeanGrow.F.Data.Unification.UnifyForBack
-import LeanGrow.F.Search.BackwardData.Types
+import LeanGrow.F.Search.BackwardData.tTypes
 import LeanGrow.F.Utils.Array
 import Mathlib.Data.List.Sort
 
@@ -100,11 +100,10 @@ def integrate_backward_outcome (goalIdCounter backStepIdCounter : Nat)
           (⟨c, backStepIdCounter, n, ce, compute_subgoal_deps ce⟩ :: L,c+1)
       )
       ([], goalIdCounter)
-  (⟨backStepIdCounter, `dummy, thm_data, 42, assigned, gd.1⟩,gd)
+  (⟨backStepIdCounter, [(backStepIdCounter,`dummy, thm_data)], [42], (assigned.map (fun x => (backStepIdCounter,x))), gd.1⟩,gd)
   -- replace dummy and 42 by thm name or other assembly data and tageted goal repsctively
 
 
-#check 1
 
 
 /-
@@ -180,14 +179,18 @@ def propagate_solve_assign_step
         match backStep_dict.find? (fun x => x.1 == tag) with
         | .none => .none
         | .some (_, backData) =>
-            match backData.instantAssigns.find? (fun x => x.1 == lidx) with
-            | .some (_, lt) => if gt == lt then .some (sofar, []) else .none
+            match backData.instantAssigns.find? (fun x => x.1 == tag && x.2.1 == lidx) with
+            | .some (_, _,lt) => if gt == lt then .some (sofar, []) else .none
             | .none =>
-                  let uni := CExpr.MatchAssignSolutions gt (backData.assembly_embed.get! lidx).cexpr
+                  let lt : CExpr × Nat :=
+                    match backData.assembly.find? (fun x => x.1 == tag) with
+                    | .none => (.failed, 0)
+                    | .some (_,_,emD) => ((emD.get! lidx).cexpr, emD.size)
+                  let uni := CExpr.MatchAssignSolutions gt lt.1
                   match uni with
                   | .none => .none
                   | .some res =>
-                        let Anew := Array.mkArray backData.assembly_embed.size (.none)
+                        let Anew := Array.mkArray lt.2 (.none)
                         let A := Anew.set! lidx (.some (.ofGNode gidx))
                         .some ((tag, A) :: sofar, res)
     | .some (_, embSofar) =>
@@ -199,15 +202,21 @@ def propagate_solve_assign_step
             match backStep_dict.find? (fun x => x.1 == tag) with
             | .none => .none
             | .some (_, backData) =>
-                match backData.instantAssigns.find? (fun x => x.1 == lidx) with
-                | .some (_, lt) => if gt == lt then .some (sofar, []) else .none
+                match backData.instantAssigns.find? (fun x => x.1 == tag && x.2.1 == lidx) with
+                | .some (_, _, lt) => if gt == lt then .some (sofar, []) else .none
                 | .none =>
-                      let uni := CExpr.MatchAssignSolutions gt (backData.assembly_embed.get! lidx).cexpr
+                      let lt : CExpr  :=
+                        match backData.assembly.find? (fun x => x.1 == tag) with
+                        | .none => (.failed)
+                        | .some (_,_,emD) => ((emD.get! lidx).cexpr)
+                      let uni := CExpr.MatchAssignSolutions gt lt
                       match uni with
                       | .none => .none
                       | .some res =>
                             let interim := sofar.eraseF (fun x => x.1 == tag)
                             .some ((tag, embSofar.set! lidx (.some (.ofGNode gidx))) :: interim, res)
+
+
 
 
 partial def propagate_solve_assign
@@ -225,9 +234,12 @@ partial def propagate_solve_assign
                   match backStep_dict.find? (fun x => x.1 == tag) with
                   | .none => .none
                   | .some (_, backData) =>
-                        let Anew := Array.mkArray backData.assembly_embed.size (.none)
-                        let A := Anew.set! lidx (.some (.ofCExpr ce))
-                        .some ((tag, A) :: sofar)
+                        match backData.assembly.find? (fun x => x.1 == tag) with
+                        | .none => .none
+                        | .some (_,_,emD) =>
+                              let Anew := Array.mkArray emD.size (.none)
+                              let A := Anew.set! lidx (.some (.ofCExpr ce))
+                              .some ((tag, A) :: sofar)
               | .some (_, embSofar) =>
                   match embSofar.get! lidx with
                   | .some j => if j == (.ofCExpr ce) then .some (sofar) else .none
@@ -243,6 +255,7 @@ partial def propagate_solve_assign
     go [] [(tag, lidx, (.ofGNode gidx))]
 
 
+
 /-
 TODO next: same idea as `propagate_lnode` to get new subgoals,
 but note that this should also be over all of the `List (Nat × Array (Option SolNodeExpr))`
@@ -256,7 +269,6 @@ were backsteps implying them. We could then propagate this to the new subgoals, 
 the thm application remains valid after substituing lnodes with gnodes or constant expressions
 -/
 
-#check List.mergeSort
 
 partial def propagate_solve_newgoals
   (backSolveId : Nat) (goalIdCounter : Nat)
@@ -298,3 +310,18 @@ partial def propagate_solve_newgoals
         let (ng,nc) := process_2 count tag A ctx
         process_3 nc (ng ++ cache) ((tag, A) :: ctx) rest
   process_3 goalIdCounter [] [] oa
+
+
+#check List.mergeSort
+
+def integrate_solve_outcome (goalIdCounter backStepIdCounter : Nat)
+  (tag lidx gidx : Nat) -- ie. we're solving subgoal corresponding to lnode lidx of thm-appli tag with gnode gidx
+  (ltx : List (Array CExpr)) (ltx_handler : Nat → (Nat × Nat))
+  (backStep_dict : List (Nat × BackStepData)) :
+  Option (BackStepData × List GoalData × Nat) :=
+  let propa? := propagate_solve_assign tag lidx gidx ltx ltx_handler backStep_dict
+  match propa? with
+  | .none => .none
+  | .some L =>
+        let (newGoals,newGoalCounter) := propagate_solve_newgoals backStepIdCounter goalIdCounter L backStep_dict
+        let main : BackStepData := ⟨backStepIdCounter,⟩

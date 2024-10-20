@@ -27,6 +27,5 @@ structure BackStepData where
   assembly_name : Lean.Name
   assembly_embed : Array EmbedData
   targetId : Nat -- the id of the goal solved by applying this thm
-  instantAssigns : List (Nat × CExpr)
-  subgoals : List Nat -- or List (Nat × CExpr) ? or NodeExpr instean of CExpr, probably ?
-  -- also ↑ should have goal ids as well as their position as hyps in the thm application !!
+  instantAssigns : List (Nat × CExpr) -- position in thm, assignements
+  subgoals : List GoalData
