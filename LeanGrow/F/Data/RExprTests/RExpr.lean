@@ -55,12 +55,11 @@ inductive RExpr where
 | letE : Name → RExpr → RExpr → RExpr → Bool → RExpr -- should be treated as ζ node and act like beta ↓
 | lit : Literal → RExpr
 | proj : Name → Nat → RExpr → RExpr
-| struc : List RExpr → RExpr -- for constants of a structure type ?!? projections as list
+| struc : Name → List RExpr → RExpr -- for constants of a structure type ?!? projections as list
+-- to be determined according to `Lean.isStructureLike`
 -- OptParam and OutParam ... are gonna be painful
 | failed : RExpr
-| hole : RExpr
-| beta : Name → RExpr → RExpr → BinderInfo → RExpr → RExpr -- probably best to keep a local context at unification to see which bvars to replace by what
-| nabla : RExpr → RExpr --should be wraped around constants (technically also lambdas ?!?) that have a function type
+--| beta : Name → RExpr → RExpr → BinderInfo → RExpr → RExpr -- probably best to keep a local context at unification to see which bvars to replace by what
 | pRec : RecursorVal → RExpr
 --| iota : RecursorVal → (motive : RExpr) → (branches : List RExpr) → (arg : RExpr) →  RExpr
 -- ↑ It might actually be best to systematically reduce ι, as this requires less comparisons durring
@@ -88,5 +87,9 @@ deriving Inhabited, BEq
 
 - for deltaDef and deltaFun, we should, at cache build time, get rid of abbreviations by checking that
   the constant doesn't unfld to a constant (else, keep unfolding until this is false, and use that as val)
+
+- We should eta expand all structures before caching. This needs to be done in every expression.
+  For example in `.lam _ T B _`, if `T` is a structure, we should replace, in `B`, all occurences
+  of `.bvar x` with `T.mk (.proj T 0 (.bvar x)) (.proj T 1 (.bvar x)) ...`.
 
 -/

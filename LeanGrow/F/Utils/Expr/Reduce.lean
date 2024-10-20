@@ -153,7 +153,7 @@ Note:
 The fact we don't δ reduce has consequences, for example in `Lean.Meta.isDefEqProjDelta` at `Lean > Meta > ExprDefEq`.
 -/
 
-#exit
+
 
 -- # Levels
 
@@ -235,12 +235,6 @@ def StructData : CoreM Unit := do
 
 #check moreTest.rec
 
--- # To study
-
-#check Core.instantiateValueLevelParams
-
-#check Expr.toCtorIfLit
--- very important ! otherwise, `.lit 2` whouldn't work with `Nat.rec`
 
 
 -- # Are def with prop types thms
@@ -253,56 +247,51 @@ def test_mydefthm : CoreM Unit := do
 -- #eval test_mydefthm
 
 
+-- # Prop irrelevance in kernel
 
+theorem p1 (n m : Nat) (h₁ : n = m) (h₂ : n = 42) : m = 42 := by
+  rw [← h₁] ; exact h₂
 
+theorem p2 (n m : Nat) (h₁ : n = m) (h₂ : n = 42) : m = 42 := by
+  rw [eq_comm] ; rw [h₁] at h₂ ; exact h₂.symm
 
-#exit
+#print p1
+#print p2
 
--- We have reduction in the form of
-#check reduce
--- which seems to be iteration of `whnf` (from extern (kernel?)) on the term
--- and then on its arguments
-
--- There is a different implementation of weak head normal form.
-#check whnfImp
--- It first tries to replace free ad meta variables from contexts in
-#check whnfEasyCases
--- It also stores reduction results in a cache for future uses
-#check_failure cache -- privtae
--- The main function for reduction is
-#check whnfCore
-
--- ζ-reduction is handled via
-#check Expr.instantiate1
--- β-reduction is handled via
-#check Expr.betaRev
--- `match` expressions seem to be handled via
-#check reduceMatcher?
--- ι-reduction is handled via
-#check_failure reduceRec -- private
-#check_failure reduceQuotRec -- private
--- And its performed in `whnfCore` if were're dealing with an application who's head is a
-#check RecursorVal
-#check QuotVal
-
-/- We can see what is happening in `reduceRec`. The major index corresponds to the actal object we run recursion on.
-We first reduce it with the C++ kernels whnf, then we use the follwoing to see which rule applies-/
-#check_failure getRecRuleFor --private
-/- which simply sooks at the application head of the argument, and tries to match it to a constructor, for which
-it then returns the rules. Then, we flue the rest of the relevant arguments back with many `mkAppRange`-/
-
-
-#print Nat.add
-
-elab "test_4" : command => do
-  let .defnInfo v := (← getEnv).constants.find! `Option.map | throwError "ahh 1" -- `Nat.add
-  let r ← Elab.Command.liftTermElabM (@Lean.Meta.reduce v.value false true false)
-  let s := (repr r)
-  logInfo s
-
--- set_option pp.all true in
--- set_option pp.instances false in
-test_4
+theorem p3 : p1 = p2 := rfl
 
 set_option pp.all true in
-#print Option.map
+#print p3
+
+def fp (_ : ∀ (n m : Nat), n = m → n = 42 → m = 42) : Nat := 37
+
+#check fp
+
+example : fp p1 = fp p2 := rfl
+
+theorem p1' : 1 < 3 := by
+  apply Nat.lt_of_succ_lt_succ
+  decide
+
+theorem p2' : 1 < 3 := by
+  rw [Nat.lt_succ]
+  decide
+
+#print p1'
+#print p2'
+
+theorem p3' : [1,2,3].get ⟨1, p1'⟩ = [1,2,3].get ⟨1, p2'⟩ := rfl
+
+set_option pp.all true in
+#print p3'
+
+
+theorem p4 (h : [1,2,3].get ⟨1, p1'⟩ = 42) : [1,2,3].get ⟨1, p2'⟩ = 42 := by
+  exact h
+
+
+#print p4
+
+-- # testing nabla
+
+example : (fun n : Nat => n+2) = (fun x => (fun n : Nat => n+2) x) := rfl
