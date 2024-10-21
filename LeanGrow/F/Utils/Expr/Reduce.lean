@@ -240,7 +240,7 @@ def myAdd (n : Nat) : Nat → Nat
 #print myAdd
 
 
-#exit
+
 
 
 
@@ -336,3 +336,7 @@ def test_p5 : CoreM Unit := do
   IO.println s!"{repr i.type}"
 
 #eval test_p5
+
+
+#check getUnfoldEqnFor?
+#check funext

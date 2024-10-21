@@ -274,7 +274,7 @@ partial def propagate_solve_newgoals
   (backSolveId : Nat) (goalIdCounter : Nat)
   (assignments : List (Nat × Array (Option SolNodeExpr)))
   (backStep_dict : List (Nat × BackStepData)) :
-  List (GoalData) × Nat :=
+  List (GoalData) × List (Nat × Nat × CExpr) × Nat :=
   let oa := List.mergeSort (fun x y => x.1 ≤ y.1) assignments
   -- make use of the fact that backsteps can only inherit lnodes from previous backsteps, with smaller Id
   let rec process_1 (ctx : List (Nat × Array (Option SolNodeExpr))) : CExpr → CExpr
@@ -292,27 +292,56 @@ partial def propagate_solve_newgoals
     | .letE n f a z i => .letE n (process_1 ctx f) (process_1 ctx a) (process_1 ctx z) i
     | .proj n i a => .proj n i (process_1 ctx a)
     | ce => ce
-  let rec process_2 (goalIdCounter : Nat) (tag : Nat) (A : Array (Option SolNodeExpr)) (ctx : List (Nat × Array (Option SolNodeExpr))) : List (GoalData) × Nat :=
+  let rec process_2 (goalIdCounter : Nat) (tag : Nat) (A : Array (Option SolNodeExpr)) (ctx : List (Nat × Array (Option SolNodeExpr))) : List (GoalData) × List (Nat × Nat × CExpr) × Nat :=
     match backStep_dict.find? (fun x => x.1 == tag) with
-    | .none => ([], goalIdCounter)
+    | .none => ([], [], goalIdCounter)
     | .some (_, data) =>
           let tofix := data.subgoals
           tofix.foldl
-            (fun (L,k) ⟨_,_,posi,typ,_⟩ =>
-              let nt := process_1 ((tag, A) :: ctx) typ
-              let ndep := compute_subgoal_deps nt
-              (⟨k,backSolveId,posi,nt,ndep⟩ :: L, k+1)
+            (fun (GL,AL,k) ⟨_,_,posi,typ,_⟩ =>
+              match A.get! posi with
+              | .some res =>
+                  let eres : CExpr :=
+                    match res with
+                    | (.ofGNode j) => .gnode j (.ofBvar 42)
+                    | (.ofCExpr nce) => nce
+                  (GL, (tag, posi, eres) :: AL, k+1)
+              | .none =>
+                  let nt := process_1 ((tag, A) :: ctx) typ
+                  let ndep := compute_subgoal_deps nt
+                  (⟨k,backSolveId,posi,nt,ndep⟩ :: GL, AL, k+1)
+                  -- in particular, goals in which types aren't updated (because thay have no assign lnodes)
+                  -- will be duplicated, but with a different backstepId !
               )
-            ([], goalIdCounter)
-  let rec process_3 (count : Nat) (cache : List (GoalData)) (ctx : List (Nat × Array (Option SolNodeExpr))) : List (Nat × Array (Option SolNodeExpr)) → List (GoalData) × Nat
-    | [] => (cache, count)
+            ([], [], goalIdCounter)
+  let rec process_3 (count : Nat) (cacheG : List (GoalData)) (cacheA : List (Nat × Nat × CExpr)) (ctx : List (Nat × Array (Option SolNodeExpr))) : List (Nat × Array (Option SolNodeExpr)) → List (GoalData) × List (Nat × Nat × CExpr) × Nat
+    | [] => (cacheG, cacheA, count)
     | (tag, A) :: rest =>
-        let (ng,nc) := process_2 count tag A ctx
-        process_3 nc (ng ++ cache) ((tag, A) :: ctx) rest
-  process_3 goalIdCounter [] [] oa
+        let (ng,na,nc) := process_2 count tag A ctx
+        process_3 nc (ng ++ cacheG) (na ++ cacheA) ((tag, A) :: ctx) rest
+  process_3 goalIdCounter [] [] [] oa
+
+
 
 
 #check List.mergeSort
+
+private def build_assembly_and_targets
+  (assignments : List (Nat × Array (Option SolNodeExpr)))
+  (backStep_dict : List (Nat × BackStepData)) :
+  Option ((List (Nat × Lean.Name × Array EmbedData) × (List Nat))) :=
+  assignments.foldl
+    (fun sofar (tag, _) =>
+      match sofar with
+      | .none => .none
+      | .some (asm, tgs) =>
+            match backStep_dict.find? (fun x => x.1 == tag) with
+            | .none => .none
+            | .some (_, data) => .some (data.assembly ++ asm, data.targetIds ++ tgs) -- can there be duplictes ?!?
+      )
+    (.some ([], []))
+
+
 
 def integrate_solve_outcome (goalIdCounter backStepIdCounter : Nat)
   (tag lidx gidx : Nat) -- ie. we're solving subgoal corresponding to lnode lidx of thm-appli tag with gnode gidx
@@ -323,5 +352,9 @@ def integrate_solve_outcome (goalIdCounter backStepIdCounter : Nat)
   match propa? with
   | .none => .none
   | .some L =>
-        let (newGoals,newGoalCounter) := propagate_solve_newgoals backStepIdCounter goalIdCounter L backStep_dict
-        let main : BackStepData := ⟨backStepIdCounter,⟩
+        match build_assembly_and_targets L backStep_dict with
+        | .none => .none
+        | .some (asm, tgs) =>
+          let (newGoals, newAssignments, newGoalCounter) := propagate_solve_newgoals backStepIdCounter goalIdCounter L backStep_dict
+          let main : BackStepData := ⟨backStepIdCounter,asm,tgs,newAssignments,newGoals⟩
+          .some (main, newGoals, newGoalCounter)
