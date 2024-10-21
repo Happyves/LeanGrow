@@ -52,7 +52,6 @@ inductive RExpr where
 | app : RExpr → RExpr → RExpr
 | lam : Name → RExpr → RExpr → BinderInfo → RExpr -- make sure nabla applies here too.. or not, as it also creates betas... possible loop ?
 | forallE : Name → RExpr → RExpr → BinderInfo → RExpr
-| letE : Name → RExpr → RExpr → RExpr → Bool → RExpr -- should be treated as ζ node and act like beta ↓
 | lit : Literal → RExpr
 | proj : Name → Nat → RExpr → RExpr
 | struc : Name → List RExpr → RExpr -- for constants of a structure type ?!? projections as list

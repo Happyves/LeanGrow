@@ -215,6 +215,33 @@ def fib : Nat → Nat
 
 #check fib.match_1
 #print Nat.brecOn
+#print Nat.below
+
+
+def test_m_1 : CoreM Unit := do
+  let .some (.defnInfo i) := (← getEnv).find? `fib | throwError "ahh 1"
+  IO.println s!"{repr i.value}"
+
+#eval test_m_1
+
+
+def test_m_2 : MetaM Unit := do
+  let .some (.defnInfo i) := (← getEnv).find? `fib | throwError "ahh 1"
+  IO.println s!"{(← reduce i.value)}"
+
+#eval test_m_2
+
+
+def myAdd (n : Nat) : Nat → Nat
+| 0 => n
+| m+1 => Nat.succ (myAdd n m)
+
+#print myAdd.match_1
+#print myAdd
+
+
+#exit
+
 
 
 -- # Structures
@@ -295,3 +322,17 @@ theorem p4 (h : [1,2,3].get ⟨1, p1'⟩ = 42) : [1,2,3].get ⟨1, p2'⟩ = 42 :
 -- # testing nabla
 
 example : (fun n : Nat => n+2) = (fun x => (fun n : Nat => n+2) x) := rfl
+
+
+-- # checking if lets in thm types
+
+theorem p5 (n : Nat) (h : let x := 42 ; n = x) : let res := True ; res := sorry
+
+#print p5
+
+
+def test_p5 : CoreM Unit := do
+  let .some (.thmInfo i) := (← getEnv).find? `p5 | throwError "ahh 1"
+  IO.println s!"{repr i.type}"
+
+#eval test_p5
