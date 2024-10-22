@@ -100,7 +100,7 @@ def integrate_backward_outcome (goalIdCounter backStepIdCounter : Nat)
           (⟨c, backStepIdCounter, n, ce, compute_subgoal_deps ce⟩ :: L,c+1)
       )
       ([], goalIdCounter)
-  (⟨backStepIdCounter, [(backStepIdCounter,`dummy, thm_data)], [42], (assigned.map (fun x => (backStepIdCounter,x))), gd.1⟩,gd)
+  (⟨backStepIdCounter, .none, [(backStepIdCounter,`dummy, thm_data)], [42], (assigned.map (fun x => (backStepIdCounter,x))), gd.1⟩,gd)
   -- replace dummy and 42 by thm name or other assembly data and tageted goal repsctively
 
 
@@ -220,7 +220,7 @@ def propagate_solve_assign_step
 
 
 partial def propagate_solve_assign
-  (tag lidx gidx : Nat)
+  (init : List (ℕ × ℕ × SolNodeExpr))
   (ltx : List (Array CExpr)) (ltx_handler : Nat → (Nat × Nat))
   (backStep_dict : List (Nat × BackStepData)) :
   Option (List (Nat × Array (Option SolNodeExpr))) := -- tag, assignments in form of array where idx is lnode idx and enty is assignement
@@ -229,30 +229,30 @@ partial def propagate_solve_assign
       | (t,l,pg) :: todo =>
           match pg with
           | .ofCExpr ce =>
-              match sofar.find? (fun x => x.1 == tag) with
+              match sofar.find? (fun x => x.1 == t) with
               | .none =>
-                  match backStep_dict.find? (fun x => x.1 == tag) with
+                  match backStep_dict.find? (fun x => x.1 == t) with
                   | .none => .none
                   | .some (_, backData) =>
-                        match backData.assembly.find? (fun x => x.1 == tag) with
+                        match backData.assembly.find? (fun x => x.1 == t) with
                         | .none => .none
                         | .some (_,_,emD) =>
                               let Anew := Array.mkArray emD.size (.none)
-                              let A := Anew.set! lidx (.some (.ofCExpr ce))
-                              .some ((tag, A) :: sofar)
+                              let A := Anew.set! l (.some (.ofCExpr ce))
+                              .some ((t, A) :: sofar)
               | .some (_, embSofar) =>
-                  match embSofar.get! lidx with
+                  match embSofar.get! l with
                   | .some j => if j == (.ofCExpr ce) then .some (sofar) else .none
                   | .none =>
-                      let interim := sofar.eraseF (fun x => x.1 == tag)
-                      .some ((tag, embSofar.set! lidx (.some (.ofCExpr ce))) :: interim)
+                      let interim := sofar.eraseF (fun x => x.1 == t)
+                      .some ((t, embSofar.set! l (.some (.ofCExpr ce))) :: interim)
           | .ofGNode g =>
               match propagate_solve_assign_step t l g ltx ltx_handler backStep_dict sofar with
               | .none => .none
               | .some (next,toPropa) =>
                     let nextPropa := toPropa ++ todo
                     go next nextPropa
-    go [] [(tag, lidx, (.ofGNode gidx))]
+    go [] init
 
 
 
@@ -344,17 +344,33 @@ private def build_assembly_and_targets
 
 
 def integrate_solve_outcome (goalIdCounter backStepIdCounter : Nat)
-  (tag lidx gidx : Nat) -- ie. we're solving subgoal corresponding to lnode lidx of thm-appli tag with gnode gidx
+  (goalId gidx : Nat)
   (ltx : List (Array CExpr)) (ltx_handler : Nat → (Nat × Nat))
-  (backStep_dict : List (Nat × BackStepData)) :
+  (backStep_dict : List (Nat × BackStepData)) (goal_dict : List (Nat × GoalData)) :
   Option (BackStepData × List GoalData × Nat) :=
-  let propa? := propagate_solve_assign tag lidx gidx ltx ltx_handler backStep_dict
-  match propa? with
+  let (p,i) := ltx_handler gidx
+  let gt := (ltx.get! p).get! i
+  match goal_dict.find? (fun x => x.1 == goalId) with
   | .none => .none
-  | .some L =>
-        match build_assembly_and_targets L backStep_dict with
-        | .none => .none
-        | .some (asm, tgs) =>
-          let (newGoals, newAssignments, newGoalCounter) := propagate_solve_newgoals backStepIdCounter goalIdCounter L backStep_dict
-          let main : BackStepData := ⟨backStepIdCounter,asm,tgs,newAssignments,newGoals⟩
-          .some (main, newGoals, newGoalCounter)
+  | .some (_, gdata) =>
+      match CExpr.MatchAssignSolutions gt gdata.type with
+      | .none => .none
+      | .some emb =>
+          let propa? := propagate_solve_assign emb ltx ltx_handler backStep_dict
+          match propa? with
+          | .none => .none
+          | .some L =>
+                if L.isEmpty
+                then
+                  let main : BackStepData := ⟨backStepIdCounter, .some gidx,[],[goalId],[],[]⟩
+                  .some (main, [], goalIdCounter+1)
+                else
+                  match build_assembly_and_targets L backStep_dict with
+                  | .none => .none
+                  | .some (asm, tgs) =>
+                      let (newGoals, newAssignments, newGoalCounter) := propagate_solve_newgoals backStepIdCounter goalIdCounter L backStep_dict
+                      let main : BackStepData :=
+                        match newGoals with
+                        | [] => ⟨backStepIdCounter, .some gidx, asm, tgs, newAssignments, []⟩
+                        | _ => ⟨backStepIdCounter, .none, asm, goalId :: tgs, newAssignments, newGoals⟩
+                      .some (main, newGoals, newGoalCounter)

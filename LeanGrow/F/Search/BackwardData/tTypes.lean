@@ -13,6 +13,7 @@ structure GoalData where
 
 structure BackStepData where
   backStepId : Nat
+  exactAsm : Option Nat
   assembly : List (Nat × Lean.Name × Array EmbedData)
   targetIds : List Nat
   instantAssigns : List (Nat × Nat × CExpr) -- tag, position in thm, assignements
