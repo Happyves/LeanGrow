@@ -338,5 +338,78 @@ def test_p5 : CoreM Unit := do
 #eval test_p5
 
 
+-- # testing unfold declarations
+
 #check getUnfoldEqnFor?
 #check funext
+#check getEqnsFor?
+
+
+def test_6 : MetaM Unit := do
+  let res ← getUnfoldEqnFor? `fib
+  IO.println s!"{repr res}"
+
+#eval test_6
+
+def test_7 : MetaM Unit := do
+  let res ← getEqnsFor? `fib
+  IO.println s!"{repr res}"
+
+#eval test_7
+
+#check fib.eq_def
+
+#check fib.eq_1
+#check fib.eq_2
+#check fib.eq_3
+
+def test_8 : MetaM Unit := do
+  let .some (.thmInfo i) := (← getEnv).find? `fib.eq_1 | throwError "ahh 1"
+  IO.println s!"{repr i.type}\n\n\n{repr i.value}"
+
+#eval test_8
+
+#check Nat.add.eq_1
+#check Nat.add.eq_2
+
+
+def mutlimatch : Nat → Nat → Nat
+| 0, 0 => 0
+| _+1, 0 => 0
+| 0, n+1 => n
+| n+1, m+1 => n+m
+
+#check mutlimatch.eq_1
+#check_failure mutlimatch.eq_2
+#check_failure mutlimatch.eq_1.eq_1
+-- this is fixed in newer versions
+
+
+
+-- # More on recursors
+
+def test_9 : MetaM Unit := do
+  let .some (.recInfo i) := (← getEnv).find? `Nat.rec | throwError "ahh 1"
+  IO.println s!"{(i.rules.map (fun x => (x.ctor, x.rhs)))}"
+
+#eval test_9
+
+
+def test_10 : MetaM Unit := do
+  let .some (.recInfo i) := (← getEnv).find? `Nat.rec | throwError "ahh 1"
+  let rule_rhs := (i.rules.get! 1).rhs
+  let test : Expr :=
+    -- rule_rhs (fun _ => Nat) 1 (fun _ sofar => sofar+1)
+    .app (.app (.app rule_rhs (.lam `x (.const `Nat []) (.const `Nat []) .default))
+      (.app (.const `Nat.succ []) (.const `Nat.zero [])))
+        (.lam `n (.const `Nat []) (.lam `sofar (.const `Nat []) (.app (.const `Nat.succ []) (.bvar 0)) .default) .default)
+  IO.println s!"{← reduce test}" -- with `← whnf`, yields 1 for rule 0
+
+
+#eval test_10
+
+
+def testAdd2 (n : Nat) : Nat := @Nat.rec (fun _ => Nat) 2 (fun _ sofar => Nat.succ sofar) n
+
+#check testAdd2.eq_1
+-- no disjunction in newest version either

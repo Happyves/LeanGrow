@@ -59,10 +59,9 @@ inductive RExpr where
 -- OptParam and OutParam ... are gonna be painful
 | failed : RExpr
 --| beta : Name → RExpr → RExpr → BinderInfo → RExpr → RExpr -- probably best to keep a local context at unification to see which bvars to replace by what
-| pRec : RecursorVal → RExpr
---| iota : RecursorVal → (motive : RExpr) → (branches : List RExpr) → (arg : RExpr) →  RExpr
--- ↑ It might actually be best to systematically reduce ι, as this requires less comparisons durring
--- unification, without leading to a term size explosion, as may happen in β or ζ
+| recu : Name → List Level → List RExpr → RExpr
+| mat : Name → List Level → List RExpr → RExpr
+-- we will need an enironment for ↑
 | rw : Nat → RExpr
 -- ↑ should only be introduced at search-time, and links to the id of the rw-class
 | proof : RExpr → RExpr → RExpr
@@ -79,6 +78,24 @@ inductive NodeExpr where
 | ofGNode (i : Nat)
 | ofRExpr (c : RExpr)
 deriving Inhabited, BEq
+
+inductive IotaWrap where
+| ofRec (r : List (((Array RExpr) × RExpr) × RExpr))
+/- ↑ is the equivalent of a list of `RecursorRule`.
+Instead of the ctor name, we hav it in embedable form,
+where the array corresponds to the params and the second
+elem in the pair corresponds to the head.
+The last RExpr is the rhs, which we should replace the `.rec`
+with in case of a match, so that the rediction can then be performed
+with more betas. Indeed, we expect the args to `RExpr.recu` to be the
+motive and the replacement rules
+-/
+| ofMatch (q : List ((Array RExpr) × (List RExpr) × RExpr))
+/- ↑ list of alternatives corresponding to `eq_`, where the first
+element in the triple refers to the types of the lnodes in the arguments
+that are being matched on (secomd in triple) and the righ-hand-side
+(third in triple).
+-/
 
 
 /-
