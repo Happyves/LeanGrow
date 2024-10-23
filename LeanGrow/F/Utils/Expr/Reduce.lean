@@ -326,7 +326,7 @@ example : (fun n : Nat => n+2) = (fun x => (fun n : Nat => n+2) x) := rfl
 
 -- # checking if lets in thm types
 
-theorem p5 (n : Nat) (h : let x := 42 ; n = x) : let res := True ; res := sorry
+theorem p5 (n : Nat) (h : let x := 42 ; (fun _ => n = x) ()) : let res := True ; res := sorry
 
 #print p5
 
@@ -336,6 +336,7 @@ def test_p5 : CoreM Unit := do
   IO.println s!"{repr i.type}"
 
 #eval test_p5
+
 
 
 -- # testing unfold declarations

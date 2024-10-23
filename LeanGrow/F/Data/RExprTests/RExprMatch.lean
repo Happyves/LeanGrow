@@ -83,11 +83,6 @@ partial def RExpr.MatchAssignLFF (delta : Name → RExpr) (l r : RExpr) : Option
                               -- As can be seen in `Lean.Meta.isDefEqProofIrrel` if the props unify, the proofs are equal
                               -- and we don't have to track this so as to mention prop irrel thms when reconstructing
                               | .none => .none
-                  -- regular
-                  | ((.app f a, lctx), .app f' a', ctx) => go true Aout (((f, lctx),f', ctx) :: ((a, lctx),a', ctx) :: L)
-                  | ((.lam _ t b _, lctx), .lam _ t' b' _, ctx) => go true Aout (((t, lctx),t', ctx) :: ((b, lctx),b', ctx) :: L)
-                  | ((.forallE _ t b _, lctx), .forallE _ t' b' _, ctx) => go true Aout (((t, lctx),t', ctx) :: ((b, lctx),b', ctx) :: L)
-                  | ((.proj t i b, lctx), .proj t' i' b', ctx) => go ((t == t') && (i == i')) Aout (((b, lctx), b', ctx) :: L)
                   -- projection reduction
                   | ((.proj n i (.struc n' f), lctx), more, ctx) => go (n == n') Aout (((f.get! i, lctx), more, ctx) :: L)
                   | (more, .proj n i (.struc n' f), ctx) => go (n == n') Aout ((more, f.get! i, ctx) :: L)
@@ -96,6 +91,10 @@ partial def RExpr.MatchAssignLFF (delta : Name → RExpr) (l r : RExpr) : Option
                   -- beta
                   | ((.app (.lam _ _ B _) (A), lctx), (more, rctx)) => go true Aout (((B, A :: lctx), (more, rctx)) :: L)
                   | ((more, lctx), (.app (.lam _ _ B _) (A), rctx)) => go true Aout (((more, lctx), (B, A :: rctx)) :: L)
+                  -- zeta
+                  | ((.letE _ _ v b _, lctx), (more, rctx)) => go true Aout (((b, v :: lctx), (more, rctx)) :: L)
+                  | ((more, lctx), (.letE _ _ v b _, rctx)) => go true Aout (((more, lctx), (b, v :: rctx)) :: L)
+                  -- beta-zeta
                   | ((.bvar i, lctx), (t, rctx)) =>
                         match List.get?_tail i lctx with
                         | .some (b,c) => go true Aout (((b,c),(t,rctx)) :: L)
@@ -104,6 +103,14 @@ partial def RExpr.MatchAssignLFF (delta : Name → RExpr) (l r : RExpr) : Option
                         match List.get?_tail i rctx with
                         | .some (b,c) => go true Aout (((t,lctx), (b,c)) :: L)
                         | _ => .none
+                  -- todo
+
+                  -- regular (should be last else β undetected)
+                  | ((.app f a, lctx), .app f' a', ctx) => go true Aout (((f, lctx),f', ctx) :: ((a, lctx),a', ctx) :: L)
+                  | ((.lam _ t b _, lctx), .lam _ t' b' _, ctx) => go true Aout (((t, lctx),t', ctx) :: ((b, lctx),b', ctx) :: L)
+                  | ((.forallE _ t b _, lctx), .forallE _ t' b' _, ctx) => go true Aout (((t, lctx),t', ctx) :: ((b, lctx),b', ctx) :: L)
+                  | ((.proj t i b, lctx), .proj t' i' b', ctx) => go ((t == t') && (i == i')) Aout (((b, lctx), b', ctx) :: L)
+
                   -- no match
                   | (_ , _) => .none
       else .none
@@ -120,6 +127,7 @@ partial def RExpr.MatchAssignLFF (delta : Name → RExpr) (l r : RExpr) : Option
   The reason is that we don't have fvars, and we don't want any. ζ would have to
   be handled like δ, with extra pain... Plus, let doesn't appear that often
   in practice and the terms it substitutes aren't that big.
+  *Actually*, ζ fits right into the β framework
 
 - eta expand all structures
 

@@ -41,10 +41,10 @@ inductive RExpr where
 | bvar : Nat → RExpr
 | sort : Level → RExpr
 | axm : Name → List Level → RExpr
-| ctor : ConstructorVal → List Level → RExpr
-| indt : InductiveVal → List Level → RExpr
+| ctor : Name → ConstructorVal → List Level → RExpr
+| indt : Name → InductiveVal → List Level → RExpr
 -- ↑ may be smart to do in preprocess, so that we don't have to check if inductive type when seeking to apply induction
-| quo : QuotVal → List Level → RExpr
+| quo : Name → QuotVal → List Level → RExpr
 | deltaDef : Name → List Level → RExpr
 -- ↑ ↓ for delta refer to `Lean.ReducibilityHints` and `Lean.Meta.isDefEqDeltaStep` in `Lean > Meta > ExprDefEq`
 | deltaFun : Name → List Level → RExpr -- for function definitions, so as to be used for nable (makes the nabla constructor useless)
@@ -52,12 +52,13 @@ inductive RExpr where
 | app : RExpr → RExpr → RExpr
 | lam : Name → RExpr → RExpr → BinderInfo → RExpr -- make sure nabla applies here too.. or not, as it also creates betas... possible loop ?
 | forallE : Name → RExpr → RExpr → BinderInfo → RExpr
+| letE : Name → RExpr → RExpr → RExpr → Bool → RExpr
 | lit : Literal → RExpr
 | proj : Name → Nat → RExpr → RExpr
-| struc : Name → List RExpr → RExpr -- for constants of a structure type ?!? projections as list
+| struc : Name → List Level → List RExpr → List RExpr → RExpr -- for constants of a structure type ?!? projections as list
 -- to be determined according to `Lean.isStructureLike`
 -- OptParam and OutParam ... are gonna be painful
-| failed : RExpr
+| failed : String → RExpr
 --| beta : Name → RExpr → RExpr → BinderInfo → RExpr → RExpr -- probably best to keep a local context at unification to see which bvars to replace by what
 | recu : Name → List Level → List RExpr → RExpr
 | mat : Name → List Level → List RExpr → RExpr
@@ -73,7 +74,7 @@ deriving Inhabited, BEq--, Repr
 #check ConstantInfo
 
 
-inductive NodeExpr where
+inductive NodeRExpr where
 | ofLNode (i : Nat) (tag : Option Nat)
 | ofGNode (i : Nat)
 | ofRExpr (c : RExpr)
