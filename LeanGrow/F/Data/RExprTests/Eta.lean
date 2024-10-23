@@ -26,6 +26,7 @@ def RExpr.isStructureNaive (env : Environment) (re : RExpr) : Option StrucData :
   let (h, as) := RExpr.getApp re
   match h with
   | .indt strucName ({ isRec := false, ctors := [ctorName], .. }) lvls =>
+    -- not proposition valued ones, following `Lean.Meta.toCtorWhenStructure` in Lean > Meta > WHNF
         match env.find? ctorName with
         | .some (.ctorInfo I) =>
               let nf := I.numParams

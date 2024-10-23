@@ -10,5 +10,11 @@ def RExpr.getApp (ce : RExpr): RExpr × List RExpr :=
     | h => (h, args.reverse)
   go [] ce
 
+def pRExpr.getApp (ce : pRExpr): pRExpr × List pRExpr :=
+  let rec go (args : List pRExpr) : pRExpr → pRExpr × List pRExpr
+    | .app h a => go (a :: args) h
+    | h => (h, args.reverse)
+  go [] ce
+
 -- def RExpr.mkApp (n : Name) (lvl : List Level) (args : List RExpr) : RExpr :=
 --   sorry

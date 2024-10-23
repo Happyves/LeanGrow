@@ -110,3 +110,41 @@ that are being matched on (secomd in triple) and the righ-hand-side
   of `.bvar x` with `T.mk (.proj T 0 (.bvar x)) (.proj T 1 (.bvar x)) ...`.
 
 -/
+
+
+inductive pRExpr where
+| lnode : Nat → Option Nat → pRExpr
+| gnode : Nat → pRExpr
+| bvar : Nat → pRExpr
+| sort : Level → pRExpr
+| axm : Name → List Level → pRExpr
+| ctor : Name → ConstructorVal → List Level → pRExpr
+| indt : Name → InductiveVal → List Level → pRExpr
+| pindt : Name → InductiveVal → List Level → pRExpr
+-- ↑ for inductive predicates ; need distinguishing as they don't get eta expanded
+| quo : Name → QuotVal → List Level → pRExpr
+| deltaDef : Name → List Level → pRExpr
+-- ↑ ↓ for delta refer to `Lean.ReducibilityHints` and `Lean.Meta.isDefEqDeltaStep` in `Lean > Meta > ExprDefEq`
+| deltaFun : Name → List Level → pRExpr -- for function definitions, so as to be used for nable (makes the nabla constructor useless)
+-- We should also keep a context where lnodes & gnodes that are funcitons are collected, so that we try nabla in these cases too
+| app : pRExpr → pRExpr → pRExpr
+| lam : Name → pRExpr → pRExpr → BinderInfo → pRExpr -- make sure nabla applies here too.. or not, as it also creates betas... possible loop ?
+| forallE : Name → pRExpr → pRExpr → BinderInfo → pRExpr
+| letE : Name → pRExpr → pRExpr → pRExpr → Bool → pRExpr
+| lit : Literal → pRExpr
+| proj : Name → Nat → pRExpr → pRExpr
+| struc : Name → List Level → List pRExpr → List pRExpr → pRExpr -- for constants of a structure type ?!? projections as list
+-- to be determined according to `Lean.isStructureLike`
+-- OptParam and OutParam ... are gonna be painful
+| failed : String → pRExpr
+--| beta : Name → pRExpr → pRExpr → BinderInfo → pRExpr → pRExpr -- probably best to keep a local context at unification to see which bvars to replace by what
+| recu : Name → List Level → List pRExpr → pRExpr
+| mat : Name → List Level → List pRExpr → pRExpr
+-- we will need an enironment for ↑
+| rw : Nat → pRExpr
+-- ↑ should only be introduced at search-time, and links to the id of the rw-class
+| proof : pRExpr → pRExpr → pRExpr
+-- ↑ by proof irrelevance, we only have to chek that the propositions unify, to get that the types are equal ...
+-- as seems to be noted in `isDefEqEtaStruct`, proof irrelevance can cause less eager unification
+-- (if the proofs are the same up to mvars, this would have been the chance to assigne mvars ???)
+deriving Inhabited, BEq--, Repr
