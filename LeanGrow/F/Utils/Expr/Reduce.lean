@@ -13,7 +13,7 @@ open Lean Meta
 -- for lets, apps, constants and projections, it applies another function,
 -- which corresponds to the next pieces of code of `whnfCore`
 -- Bizarely, in this precise code that follows, constants are left untouched.
--- Lets n the other hand, are reduced (provided the config says so) to
+-- Lets on the other hand, are reduced (provided the config says so) to
 #check Expr.instantiate1
 
 -- Finally, in the case of apps, the interesting things happen

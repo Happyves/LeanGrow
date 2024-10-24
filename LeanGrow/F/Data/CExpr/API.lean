@@ -294,3 +294,11 @@ partial def CExpr.getGNodesMaxIdxF (E : CExpr) : Option Nat :=
       match (go [E]) with
       | [M] => .some M
       | _ => .none
+
+
+
+def CExpr.getApp (on : CExpr) : CExpr × List (CExpr) :=
+      let rec go (as : List CExpr) : CExpr → CExpr × List (CExpr)
+            | .app l r => go (r :: as) l
+            | h => (h, as)
+      go [] on

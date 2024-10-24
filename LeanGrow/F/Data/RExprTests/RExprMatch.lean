@@ -105,6 +105,8 @@ partial def RExpr.MatchAssignLFF (delta : Name → RExpr) (l r : RExpr) : Option
                         | _ => .none
                   -- todo
 
+                  --iota for struct: .proj .struct should be handled by List.get!
+
                   -- regular (should be last else β undetected)
                   | ((.app f a, lctx), .app f' a', ctx) => go true Aout (((f, lctx),f', ctx) :: ((a, lctx),a', ctx) :: L)
                   | ((.lam _ t b _, lctx), .lam _ t' b' _, ctx) => go true Aout (((t, lctx),t', ctx) :: ((b, lctx),b', ctx) :: L)

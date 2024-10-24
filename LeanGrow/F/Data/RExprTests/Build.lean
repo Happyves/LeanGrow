@@ -1,7 +1,14 @@
 
-import LeanGrow.F.Data.RExprTests.RExpr
-import LeanGrow.F.Data.CExpr.Types
-import Lean.Structure
+import LeanGrow.F.Data.RExprTests.Eta
+
+
+#check 1
+
+/-
+TODO
+- build struc, recu, mat from applications
+- determin prop-typed terms, and wrap them in .proof
+-/
 
 
 
