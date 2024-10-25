@@ -54,3 +54,13 @@ def CExpr.letFunAppArgs? (e : CExpr) : Option (List CExpr × Lean.Name × CExpr 
     | _ => .none
   else
     .none
+
+
+def CExpr.beta (h : CExpr) : List CExpr → CExpr
+      | [] => h
+      | a :: as =>
+            match h with
+            | .lam _ _ b _ =>
+                  let go := CExpr.instanciate a b
+                  CExpr.beta go as
+            | _ => CExpr.mkApp h (a :: as)
