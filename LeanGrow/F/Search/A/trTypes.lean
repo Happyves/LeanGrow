@@ -8,8 +8,8 @@ inductive BackTree where
 | fail
 | ofAssign (value : CExpr)
 | ofGoal (id : Nat) (type : CExpr)
-| ofBack (id : Nat) (thm : Lean.Name) (dirs : Array (List Nat)) (args : Array BackTree)
-deriving Inhabited, BEq, Repr
+| ofBack (id : Nat) (thm : Lean.Name) (bdirs : Array (List Nat)) (gdirs : Array (List Nat)) (args : Array BackTree)
+deriving Inhabited, BEq, Repr         -- RBNode might be better for dirs entries ? or ordered lists so that we can quit search faster ?
 
 structure BackState where
   id_gen_back : Nat

@@ -1,5 +1,6 @@
 
 import LeanGrow.F.Search.A.trTypes
+import LeanGrow.F.Data.Unification.UnifyForBack
 
 
 open Lean
@@ -46,10 +47,59 @@ partial def BackTree.modifyAtGoalId (id : Nat) (mod : BackTree → BackTree) : B
   | .fail => .fail
   | .ofAssign ce => .ofAssign ce
   | .ofGoal j t => if j == id then mod (.ofGoal j t) else .ofGoal j t
-  | .ofBack i n dirs ts =>
-      match dirs.findIdx? (fun l => l.contains id) with
-      | .none => .ofBack i n dirs ts
-      | .some j => .ofBack i n dirs (ts.set! j (BackTree.modifyAtGoalId id mod (ts.get! j)))
+  | .ofBack i n bdirs gdirs ts =>
+      match gdirs.findIdx? (fun l => l.contains id) with
+      | .none => .ofBack i n bdirs gdirs ts
+      | .some j => .ofBack i n bdirs gdirs (ts.set! j (BackTree.modifyAtGoalId id mod (ts.get! j)))
+
+partial def BackTree.modifyAtBackId (id : Nat) (mod : BackTree → BackTree) : BackTree → BackTree
+  | .fail => .fail
+  | .ofAssign ce => .ofAssign ce
+  | .ofGoal j t => .ofGoal j t
+  | .ofBack i n bdirs gdirs ts =>
+        if i == id
+        then
+          mod (.ofBack i n bdirs gdirs ts)
+        else
+          match bdirs.findIdx? (fun l => l.contains id) with
+          | .none => .ofBack i n bdirs gdirs ts
+          | .some j => .ofBack i n bdirs gdirs (ts.set! j (BackTree.modifyAtBackId id mod (ts.get! j)))
+
+
+partial def BackTree.modifyAtBackId? (id : Nat) (mod : BackTree → Option BackTree) : BackTree → Option BackTree
+  | .fail => .some (.fail)
+  | .ofAssign ce => .some (.ofAssign ce)
+  | .ofGoal j t => .some (.ofGoal j t)
+  | .ofBack i n bdirs gdirs ts =>
+        if i == id
+        then
+          mod (.ofBack i n bdirs gdirs ts)
+        else
+          match bdirs.findIdx? (fun l => l.contains id) with
+          | .none => .some (.ofBack i n bdirs gdirs ts)
+          | .some j =>
+              match (BackTree.modifyAtBackId? id mod (ts.get! j)) with
+              | .none => .none
+              | .some fix => .some (.ofBack i n bdirs gdirs (ts.set! j fix))
+
+
+partial def BackTree.modifyAtBackId_wRetrieve (default : α) (id : Nat)
+  (mod : BackTree → Option (BackTree × α) ) : BackTree → Option (BackTree × α)
+  | .fail => .some (.fail, default)
+  | .ofAssign ce => .some (.ofAssign ce, default)
+  | .ofGoal j t => .some (.ofGoal j t, default)
+  | .ofBack i n bdirs gdirs ts =>
+        if i == id
+        then
+          mod (.ofBack i n bdirs gdirs ts)
+        else
+          match bdirs.findIdx? (fun l => l.contains id) with
+          | .none => .some (.ofBack i n bdirs gdirs ts, default)
+          | .some j =>
+              match (BackTree.modifyAtBackId_wRetrieve default id mod (ts.get! j)) with
+              | .none => .none
+              | .some fix => .some (.ofBack i n bdirs gdirs (ts.set! j fix.1), fix.2)
+
 
 
 def List.replaceByListAt (toAdd : List α) : List α → Nat → List α
@@ -63,14 +113,24 @@ def List.replaceByListWhen (toAdd : List α) (p : α → Bool) : List α → Lis
 
 
 
-partial def BackTree.modifyAtGoalId_wUpdates (id : Nat) (rep : List Nat) (mod : BackTree → BackTree) : BackTree → BackTree
+partial def BackTree.modifyAtGoalId_wUpdates (id : Nat) (rep : List Nat) (newBid : Nat) (mod : BackTree → BackTree) : BackTree → BackTree
   | .fail => .fail
   | .ofAssign ce => .ofAssign ce
   | .ofGoal j t => if j == id then mod (.ofGoal j t) else .ofGoal j t
-  | .ofBack i n dirs ts =>
-      match dirs.findIdx? (fun l => l.contains id) with
-      | .none => .ofBack i n dirs ts
-      | .some j => .ofBack i n (dirs.set! j (List.replaceByListWhen rep (fun x => x == id) (dirs.get! j))) (ts.set! j (BackTree.modifyAtGoalId id mod (ts.get! j)))
+  | .ofBack i n bdirs gdirs ts =>
+      match gdirs.findIdx? (fun l => l.contains id) with
+      | .none => .ofBack i n bdirs gdirs ts
+      | .some j => .ofBack i n (bdirs.set! j (newBid :: (bdirs.get! j))) (gdirs.set! j (List.replaceByListWhen rep (fun x => x == id) (gdirs.get! j))) (ts.set! j (BackTree.modifyAtGoalId id mod (ts.get! j)))
+
+
+partial def BackTree.modifyAtBackId_wUpdates (id : Nat) (rep : List Nat) (mod : BackTree → BackTree) : BackTree → BackTree
+  | .fail => .fail
+  | .ofAssign ce => .ofAssign ce
+  | .ofGoal j t => .ofGoal j t
+  | .ofBack i n bdirs gdirs ts =>
+      match bdirs.findIdx? (fun l => l.contains id) with
+      | .none => .ofBack i n bdirs gdirs ts
+      | .some j => .ofBack i n (bdirs.set! j (List.replaceByListWhen rep (fun x => x == id) (bdirs.get! j))) gdirs (ts.set! j (BackTree.modifyAtGoalId id mod (ts.get! j)))
 
 
 
@@ -98,15 +158,92 @@ def integrate_backstep
       (fun A (pos, gId, type) => A.set! pos (.ofGoal gId type))
       new_leaves_2
     let new_branches : BackTree → BackTree := fun _ =>
-      .ofBack id_gen_back thm_name dirs_new new_leaves_3
-    let finalT := BackTree.modifyAtGoalId_wUpdates target_goal_id new_dirs new_branches backTree
+      .ofBack id_gen_back thm_name (Array.mkArray thm_data_size []) dirs_new new_leaves_3
+    let finalT := BackTree.modifyAtGoalId_wUpdates target_goal_id new_dirs id_gen_back new_branches backTree
     ⟨common.map Prod.snd, finalT⟩
 
+
+
+
+def List.eraseF (p : α → Bool) : List α → List α
+| [] => []
+| x :: l => if p x then l else x :: (List.eraseF p l)
+
+
+structure PropUniState where
+  tree : BackTree
+  todo : List (Nat × Nat × SolNodeExpr)
+  updated : List (Nat × Nat)
+
+
+def propagate_uni_assign_step
+  (tag idx : Nat) (guni : SolNodeExpr)
+  (ltx : List (Array CExpr)) (ltx_handler : Nat → (Nat × Nat))
+  (sofar : PropUniState)
+  : Option PropUniState :=
+  let mod : BackTree → Option (BackTree × List (Nat × Nat × SolNodeExpr))
+    | .ofBack _ n bdirs gdirs args =>
+          match args.get! idx with
+          | .ofAssign ce =>
+                match ce, guni with
+                | .gnode j _, .ofGNode J => if j == J then .some (.ofBack tag n bdirs gdirs args, []) else .none
+                | _, .ofCExpr cst =>
+                      if ce == cst -- we could unify, but we might get .lnode _ _ = .lnode _ _ which we can't handle ? or can we ?
+                      -- ↑ may actually become a problem once we unify under reductions, as == will also have be up to reductions
+                      then
+                        .some (.ofBack tag n bdirs gdirs args, [])
+                      else
+                        .none
+                | _, _ => .none
+          | .ofGoal _ type =>
+                match guni with
+                | .ofGNode gidx =>
+                    let (gp,gi) := ltx_handler gidx
+                    let gt := (ltx.get! gp).get! gi
+                    match CExpr.MatchAssignSolutions gt type with
+                    | .none => .none
+                    | .some res => .some (.ofAssign (.gnode gidx (.ofBvar 42)), res)
+                | .ofCExpr ce =>
+                    -- no checks
+                    .some (.ofAssign ce, [])
+          | _ => .none
+    | _ => .none
+  let S? := BackTree.modifyAtBackId_wRetrieve [] tag mod sofar.tree
+  match S? with
+  | .some (T,next) => .some ⟨T, next ++ sofar.todo, (tag, idx) :: sofar.updated⟩
+  | _ => .none
+
+
+partial def propagate_uni_assign
+  (ltx : List (Array CExpr)) (ltx_handler : Nat → (Nat × Nat))
+  (init_uni : List (Nat × Nat × SolNodeExpr))
+  (init_tree : BackTree) :
+  Option (BackTree × List (Nat × Nat)) :=
+    let rec go (on : PropUniState) : Option PropUniState :=
+      match on.todo with
+      | [] => .some on
+      | (tag,idx,guni) :: more =>
+          let step? := propagate_uni_assign_step tag idx guni ltx ltx_handler ⟨on.tree, more, on.updated⟩
+          match step? with
+          | .none => .none
+          | .some step => go step
+    let res := go ⟨init_tree, init_uni, []⟩
+    match res with
+    | .none => .none
+    | .some s => .some (s.tree, s.updated)
+
+
 /-
-Next up, unification step:
-- change goal-leaf into assign-leaf
-- do so for all propagated assignements
-- replace goals
+Next up:
+- replace SolNodeExpr with CExpr!
+- in ↑, let `updated` also contain the update-value
+- add dependecy data to .ofAssign and .ofGoal
+- walk down backtree, and at each backstep, look at
+  bdirs ; continiue with call, but with only those
+  from `updated` who's tag coicides with the bdirs
+  (the lnodes in the types or asisgns in a subtree
+  can only be tagged with backstep ids of its ancestors,
+  so we only have to consider those)
 
 
 -/

@@ -26,7 +26,8 @@ def CExpr.reduceMatcher? (env : Environment) (e : CExpr) : CExpr_ReduceMatcherRe
               .partialApp
             else
               match env.find? n with
-              |
+              | .some cstInfo =>
 
+              | _ => .notMatcher
       | _ => .notMatcher
   | _ => .notMatcher

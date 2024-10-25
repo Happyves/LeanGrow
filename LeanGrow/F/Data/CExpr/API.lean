@@ -311,6 +311,8 @@ def CExpr.mkApp (h : CExpr) (args : List CExpr) : CExpr :=
       go h args
 
 
+#exit
+
 def replaceNoCache (f? : CExpr → Option CExpr) (e : CExpr) : CExpr :=
   match f? e with
   | some eNew => eNew
