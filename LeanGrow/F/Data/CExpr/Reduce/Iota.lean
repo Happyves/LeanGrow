@@ -8,8 +8,8 @@ open Lean Meta
 
 
 inductive CExpr_ReduceMatcherResult where
-  | reduced (val : Expr)
-  | stuck   (val : Expr)
+  | reduced (val : CExpr)
+  | stuck   (val : CExpr)
   | notMatcher
   | partialApp
 

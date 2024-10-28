@@ -1,7 +1,7 @@
 
 import LeanGrow.F.Search.A.trTypes
 import LeanGrow.F.Data.Unification.UnifyForBack
-
+import LeanGrow.F.Utils.Array
 
 open Lean
 
@@ -172,78 +172,163 @@ def List.eraseF (p : α → Bool) : List α → List α
 
 structure PropUniState where
   tree : BackTree
-  todo : List (Nat × Nat × SolNodeExpr)
-  updated : List (Nat × Nat)
+  todo : List (Nat × Nat × CExpr)
+  updated : List (Nat × Nat × CExpr)
+  solvedGoals : List Nat
 
 
 def propagate_uni_assign_step
-  (tag idx : Nat) (guni : SolNodeExpr)
+  (tag idx : Nat) (guni : CExpr)
   (ltx : List (Array CExpr)) (ltx_handler : Nat → (Nat × Nat))
   (sofar : PropUniState)
   : Option PropUniState :=
-  let mod : BackTree → Option (BackTree × List (Nat × Nat × SolNodeExpr))
+  let mod : BackTree → Option (BackTree × List (Nat × Nat × CExpr) × List Nat)
     | .ofBack _ n bdirs gdirs args =>
           match args.get! idx with
           | .ofAssign ce =>
-                match ce, guni with
-                | .gnode j _, .ofGNode J => if j == J then .some (.ofBack tag n bdirs gdirs args, []) else .none
-                | _, .ofCExpr cst =>
-                      if ce == cst -- we could unify, but we might get .lnode _ _ = .lnode _ _ which we can't handle ? or can we ?
-                      -- ↑ may actually become a problem once we unify under reductions, as == will also have be up to reductions
-                      then
-                        .some (.ofBack tag n bdirs gdirs args, [])
-                      else
-                        .none
-                | _, _ => .none
-          | .ofGoal _ type =>
+                if ce == guni -- we could unify, but we might get .lnode _ _ = .lnode _ _ which we can't handle ? or can we ?
+                -- ↑ may actually become a problem once we unify under reductions, as == will also have be up to reductions
+                then
+                  .some (.ofBack tag n bdirs gdirs args, [], [])
+                else
+                  .none
+          | .ofGoal gid type =>
                 match guni with
-                | .ofGNode gidx =>
+                | .gnode gidx o =>
                     let (gp,gi) := ltx_handler gidx
                     let gt := (ltx.get! gp).get! gi
-                    match CExpr.MatchAssignSolutions gt type with
+                    match CExpr.MatchAssignSolutions' gt type with
                     | .none => .none
-                    | .some res => .some (.ofAssign (.gnode gidx (.ofBvar 42)), res)
-                | .ofCExpr ce =>
+                    | .some res => .some (.ofAssign (.gnode gidx o), res, gid :: sofar.solvedGoals)
+                | _ =>
                     -- no checks
-                    .some (.ofAssign ce, [])
+                    .some (.ofAssign guni, [], gid :: sofar.solvedGoals)
           | _ => .none
     | _ => .none
-  let S? := BackTree.modifyAtBackId_wRetrieve [] tag mod sofar.tree
+  let S? := BackTree.modifyAtBackId_wRetrieve ([],[]) tag mod sofar.tree
   match S? with
-  | .some (T,next) => .some ⟨T, next ++ sofar.todo, (tag, idx) :: sofar.updated⟩
+  | .some (T,next) => .some ⟨T, next.1 ++ sofar.todo, (tag, idx, guni) :: sofar.updated, next.2⟩
   | _ => .none
+
 
 
 partial def propagate_uni_assign
   (ltx : List (Array CExpr)) (ltx_handler : Nat → (Nat × Nat))
-  (init_uni : List (Nat × Nat × SolNodeExpr))
+  (init_uni : List (Nat × Nat × CExpr))
   (init_tree : BackTree) :
-  Option (BackTree × List (Nat × Nat)) :=
+  Option (BackTree × List (Nat × Nat × CExpr) × List Nat) :=
     let rec go (on : PropUniState) : Option PropUniState :=
       match on.todo with
       | [] => .some on
       | (tag,idx,guni) :: more =>
-          let step? := propagate_uni_assign_step tag idx guni ltx ltx_handler ⟨on.tree, more, on.updated⟩
+          let step? := propagate_uni_assign_step tag idx guni ltx ltx_handler ⟨on.tree, more, on.updated, on.solvedGoals⟩
           match step? with
           | .none => .none
           | .some step => go step
-    let res := go ⟨init_tree, init_uni, []⟩
+    let res := go ⟨init_tree, init_uni, [], []⟩
     match res with
     | .none => .none
-    | .some s => .some (s.tree, s.updated)
+    | .some s => .some (s.tree, s.updated, s.solvedGoals)
 
 
-/-
-Next up:
-- replace SolNodeExpr with CExpr!
-- in ↑, let `updated` also contain the update-value
-- add dependecy data to .ofAssign and .ofGoal
-- walk down backtree, and at each backstep, look at
-  bdirs ; continiue with call, but with only those
-  from `updated` who's tag coicides with the bdirs
-  (the lnodes in the types or asisgns in a subtree
-  can only be tagged with backstep ids of its ancestors,
-  so we only have to consider those)
 
 
--/
+
+
+def customSplit (toPropa : List (Nat × Nat × CExpr)) (bdirs : Array (List Nat)) : Array (List (Nat × Nat × CExpr)) :=
+  let tofill := Array.mkArray bdirs.size []
+  let rec entry (i : Nat) (dirs : List Nat) (sofar : Array (List (Nat × Nat × CExpr))) (todo : List (Nat × Nat × CExpr)) : List (Nat × Nat × CExpr) → Array (List (Nat × Nat × CExpr)) × List (Nat × Nat × CExpr)
+    | [] => (sofar, todo)
+    | (t,p,v) :: more =>
+        if dirs.contains t
+        then entry i dirs (sofar.modify i (fun L => (t,p,v) :: L)) todo more
+        else entry i dirs sofar ((t,p,v) :: todo) more
+  let rec go (sofar : Array (List (Nat × Nat × CExpr))) (todo : List (Nat × Nat × CExpr)) : Nat → Array (List (Nat × Nat × CExpr))
+    | 0 => (entry 0 (bdirs.get! 0) sofar [] todo).1
+    | n+1 =>
+        let (next, nextTD) := entry n (bdirs.get! n) sofar [] todo
+        go next nextTD n
+  go tofill toPropa tofill.size
+
+
+def customSplit' (toPropa : List (Nat)) (gdirs : Array (List Nat)) : Array (List (Nat)) :=
+  let tofill := Array.mkArray gdirs.size []
+  let rec entry (i : Nat) (dirs : List Nat) (sofar : Array (List (Nat))) (todo : List (Nat)) : List (Nat) → Array (List (Nat)) × List (Nat)
+    | [] => (sofar, todo)
+    | N :: more =>
+        if dirs.contains N
+        then entry i dirs (sofar.modify i (fun L => N :: L)) todo more
+        else entry i dirs sofar (N :: todo) more
+  let rec go (sofar : Array (List (Nat))) (todo : List (Nat)) : Nat → Array (List (Nat))
+    | 0 => (entry 0 (gdirs.get! 0) sofar [] todo).1
+    | n+1 =>
+        let (next, nextTD) := entry n (gdirs.get! n) sofar [] todo
+        go next nextTD n
+  go tofill toPropa tofill.size
+
+
+partial def derefrenceAssignedGoals (assigned : List Nat)  : BackTree → BackTree
+  | .ofBack id n bdirs gdirs args =>
+      let sp := customSplit' assigned gdirs
+      let update : Array BackTree := (args.foldl
+        (fun (A,I) T =>
+          let newT := derefrenceAssignedGoals (sp.get! I) T
+          (A.set! I newT, I+1)
+          )
+        (Array.mkArray args.size .fail, 0)).1
+      .ofBack id n bdirs (gdirs.mapF (fun L => L.filter (fun x => !(assigned.contains x)))) update
+  | t => t
+
+
+
+def List.splitMore (p : α → Bool) : List (α × β) → (List (α × β) × List (α × β))
+  | [] => ([], [])
+  | (a,b) :: more =>
+      let (y,n) := List.splitMore p more
+      if p a
+      then ((a,b) :: y, n)
+      else (y, (a,b) :: n)
+
+-- make efficient
+def porpagate_at_cexpr (ancestors : List (Nat × Nat × CExpr)) : CExpr → CExpr
+  | .lnode pos _ (.some t) =>
+        match ancestors.find? (fun x => x.1 == t && x.2.1 == pos) with
+        | .none => .failed
+        | .some (_,_,val) => val
+  | .app l r => .app (porpagate_at_cexpr ancestors l) (porpagate_at_cexpr ancestors r)
+  | .lam n l r i => .lam n (porpagate_at_cexpr ancestors l) (porpagate_at_cexpr ancestors r) i
+  | .forallE n l r i => .forallE n (porpagate_at_cexpr ancestors l) (porpagate_at_cexpr ancestors r) i
+  | .letE n l r z i => .letE n (porpagate_at_cexpr ancestors l) (porpagate_at_cexpr ancestors r) (porpagate_at_cexpr ancestors z) i
+  | .proj n i e => .proj n i (porpagate_at_cexpr ancestors e)
+  | ce => ce
+
+
+partial def propagate_uni_assign_toGoalsAssigns
+  (updated : List (Nat × Nat × CExpr)) (init_tree : BackTree) : BackTree :=
+  let rec go (ancestors : List (Nat × Nat × CExpr)) (splitable : List (Nat × Nat × CExpr)) : BackTree → BackTree
+    | .fail => .fail
+    | .ofBack id n bdirs gdirs args =>
+          let (here, next) := List.splitMore (fun x => x == id) splitable
+          let sp := customSplit next bdirs
+          let new_ancestors := here ++ ancestors
+          let update : Array BackTree := (args.foldl
+            (fun (A,I) T =>
+              let newT := go new_ancestors (sp.get! I) T
+              (A.set! I newT, I+1)
+              )
+            (Array.mkArray args.size BackTree.fail, 0)).1
+          .ofBack id n bdirs gdirs update
+    | .ofGoal id ce => .ofGoal id (porpagate_at_cexpr (splitable ++ ancestors) ce)
+    | .ofAssign ce => .ofAssign (porpagate_at_cexpr (splitable ++ ancestors) ce)
+  go [] updated init_tree
+
+
+def integrate_uni?
+  (ltx : List (Array CExpr)) (ltx_handler : Nat → (Nat × Nat))
+  (init_uni : List (Nat × Nat × CExpr))
+  (init_tree : BackTree) : Option BackTree :=
+    match propagate_uni_assign ltx ltx_handler init_uni init_tree with
+    | .some (TA,A,G) =>
+        let TD := derefrenceAssignedGoals G TA
+        propagate_uni_assign_toGoalsAssigns A TD
+    | .none => .none

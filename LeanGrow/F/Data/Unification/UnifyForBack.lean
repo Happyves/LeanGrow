@@ -51,3 +51,28 @@ partial def CExpr.MatchAssignSolutions (s g : CExpr) : Option (List (Nat × Nat 
                   | (_ , _) => .none -- in particular, we don't expect to see `.lnode j _ .none`, since goal CExpr get their lnodes tagged
       else .none
       go true (.some []) [(s,g)]
+
+
+partial def CExpr.MatchAssignSolutions' (s g : CExpr) : Option (List (Nat × Nat × CExpr)) :=
+      let rec go (go? : Bool) (Aout : Option (List (Nat × Nat × CExpr))) (todo : List (CExpr × CExpr)) : Option (List (Nat × Nat × CExpr)) :=
+      if go?
+      then
+            match todo with
+            | [] => Aout
+            | nx :: L =>
+                  match nx with
+                  | (.gnode i o, .lnode j _ (.some t)) => let Aup := List.assignOrFail' Aout t j (.gnode i o) ; go true Aup L
+                  | (e, .lnode j _ (.some t)) => let Aup := List.assignOrFail' Aout t j (e) ; go true Aup L
+                  | (.gnode i _, .gnode j _) => go (i == j) Aout L
+                  | (.bvar i , .bvar j) => go (i == j) Aout L
+                  | (.sort _, .sort _) => go true Aout L
+                  | (.const n _, .const n' _) =>  go (n == n')  Aout L
+                  | (.app f a, .app f' a') => go true Aout ((f,f') :: (a,a') :: L)
+                  | (.lam _ t b _, .lam _ t' b' _) => go true Aout ((t,t') :: (b,b') :: L)
+                  | (.forallE _ t b _, .forallE _ t' b' _) => go true Aout ((t,t') :: (b,b') :: L)
+                  | (.letE _ t v b _, .letE _ t' v' b' _) => go true Aout ((t,t') :: (v,v') :: (b,b') :: L)
+                  | (.lit l, .lit l') => go (l == l') Aout L
+                  | (.proj t i b, .proj t' i' b') => go ((t == t') && (i == i')) Aout ((b, b') :: L)
+                  | (_ , _) => .none -- in particular, we don't expect to see `.lnode j _ .none`, since goal CExpr get their lnodes tagged
+      else .none
+      go true (.some []) [(s,g)]
