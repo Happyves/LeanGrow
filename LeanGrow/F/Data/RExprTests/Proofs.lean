@@ -27,3 +27,59 @@ To check if a term is a proof, without using inferType, we could:
 - for lnodes and gnodes, we'll need a context...
 
 -/
+
+#check Meta.inferType
+
+#check ReaderT.run (pure () : MetaM Unit) {}
+#check Meta.Context
+#reduce ReaderT.run (pure () : MetaM Unit) {}
+
+/-- Assumes reduced input -/
+def Expr.naiveIsPropHeaded (e : Expr) : Bool :=
+  let rec go (bvarIsProp : List Bool) : Expr → Bool
+    | .bvar i =>
+            match bvarIsProp.get? i with
+            | .some b => b
+            | _ => false
+    | .sort u => u == .zero
+    | .app f _ => go bvarIsProp f
+    | .forallE _ t b _ =>
+            let is? := go bvarIsProp t
+            go (is? :: bvarIsProp) b
+    | .letE _ t _ b _ =>
+            let is? := go bvarIsProp t
+            go (is? :: bvarIsProp) b
+    | .mdata _ e => go bvarIsProp e
+    | _ => false
+  go [] e
+
+
+
+def RExpr.naiveIsPropHeaded (env : Environment) (re : RExpr) (LNodeIsProp : List (Option Nat × Nat))
+  (GNodeIsProp : List (Nat)) : Bool :=
+    let rec go (bvarIsProp : List Bool) : RExpr → Bool
+      | .lnode idx t =>
+            match LNodeIsProp.find? (fun x => x.1 == t && x.2 == idx) with
+            | .some _ => true
+            | _ => false
+      | .gnode idx => GNodeIsProp.contains idx
+      | .bvar i =>
+            match bvarIsProp.get? i with
+            | .some b => b
+            | _ => false
+      | .forallE _ t b _ =>
+            let is? := go bvarIsProp t
+            go (is? :: bvarIsProp) b
+      | .letE _ t _ b _ =>
+            let is? := go bvarIsProp t
+            go (is? :: bvarIsProp) b
+      | .app f _ => go bvarIsProp f
+      | .sort u => u == .zero
+      | .axm n _ =>
+            match env.find? n with
+            | .none => false
+            | .some v =>  Expr.naiveIsPropHeaded v.type
+
+
+
+    sorry

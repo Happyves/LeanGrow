@@ -311,34 +311,34 @@ def CExpr.mkApp (h : CExpr) (args : List CExpr) : CExpr :=
       go h args
 
 
-#exit
 
-def replaceNoCache (f? : CExpr → Option CExpr) (e : CExpr) : CExpr :=
+
+def CExpr.replaceNoCache (f? : CExpr → Option CExpr) (e : CExpr) : CExpr :=
   match f? e with
   | some eNew => eNew
   | none      => match e with
-    | .forallE _ d b _ => let d := replaceNoCache f? d; let b := replaceNoCache f? b; e.updateForallE! d b
-    | .lam _ d b _     => let d := replaceNoCache f? d; let b := replaceNoCache f? b; e.updateLambdaE! d b
-    | .letE _ t v b _  => let t := replaceNoCache f? t; let v := replaceNoCache f? v; let b := replaceNoCache f? b; e.updateLet! t v b
-    | .app f a         => let f := replaceNoCache f? f; let a := replaceNoCache f? a; e.updateApp! f a
-    | .proj _ _ b      => let b := replaceNoCache f? b; e.updateProj! b
+    | .forallE n d b i => let d := replaceNoCache f? d; let b := replaceNoCache f? b; .forallE n d b i
+    | .lam n d b i     => let d := replaceNoCache f? d; let b := replaceNoCache f? b; .lam n d b i
+    | .letE n t v b i  => let t := replaceNoCache f? t; let v := replaceNoCache f? v; let b := replaceNoCache f? b; .letE n t v b i
+    | .app f a         => let f := replaceNoCache f? f; let a := replaceNoCache f? a; .app f a
+    | .proj n i b      => let b := replaceNoCache f? b; .proj n i b
     | e                => e
 
 
 def CExpr.instantiateLevelParamsCore (s : Name → Option Level) (e : CExpr) : CExpr :=
-  e.replace replaceFn
+  e.replaceNoCache replaceFn
 where
   replaceFn (e : CExpr) : Option CExpr :=
-    if !e.hasLevelParam then e else match e with
-    | const _ us => e.updateConst! (us.map fun u => u.substParams s)
-    | sort u => e.updateSort! (u.substParams s)
-    | _ => none
+    match e with
+    | .const n us => .some (.const n (us.map fun u => u.substParams s))
+    | sort u => .some (.sort (u.substParams s))
+    | _ => .none
 
 private def getParamSubst : List Name → List Level → Name → Option Level
   | p::ps, u::us, p' => if p == p' then some u else getParamSubst ps us p'
   | _,     _,     _  => none
 
 
-def instantiateLevelParams (e : Expr) (paramNames : List Name) (lvls : List Level) : Expr :=
+def CExpr.instantiateLevelParams (e : CExpr) (paramNames : List Name) (lvls : List Level) : CExpr :=
   if paramNames.isEmpty || lvls.isEmpty then e else
-    instantiateLevelParamsCore (getParamSubst paramNames lvls) e
+    CExpr.instantiateLevelParamsCore (getParamSubst paramNames lvls) e

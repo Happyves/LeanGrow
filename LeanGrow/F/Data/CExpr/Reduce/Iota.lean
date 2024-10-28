@@ -27,7 +27,12 @@ def CExpr.reduceMatcher? (env : Environment) (e : CExpr) : CExpr_ReduceMatcherRe
             else
               match env.find? n with
               | .some cstInfo =>
-
+                    let f :=
               | _ => .notMatcher
       | _ => .notMatcher
   | _ => .notMatcher
+
+
+#print Nat.add.eq_1
+
+#check (1+1)
