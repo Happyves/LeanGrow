@@ -310,6 +310,12 @@ def CExpr.mkApp (h : CExpr) (args : List CExpr) : CExpr :=
             | a :: as => go (.app sofar a) as
       go h args
 
+def CExpr.mkAppA (h : CExpr) (args : Array CExpr) : CExpr :=
+      let rec go (sofar : CExpr) : Nat → CExpr
+            | 0 => (.app sofar (args.get! (args.size - 1)))
+            | n+1 => go (.app sofar (args.get! (args.size - 1 - n))) n
+      go h args.size
+
 
 
 
@@ -342,3 +348,17 @@ private def getParamSubst : List Name → List Level → Name → Option Level
 def CExpr.instantiateLevelParams (e : CExpr) (paramNames : List Name) (lvls : List Level) : CExpr :=
   if paramNames.isEmpty || lvls.isEmpty then e else
     CExpr.instantiateLevelParamsCore (getParamSubst paramNames lvls) e
+
+
+/-
+**About levels**:
+It seems that the typical use case of ↑ is when `e` is the value of a `.const`,
+`paramNames` is the info contained in the `ConstantInfo` and `lvls` originates
+from the `.const` constructor.
+This is realy a glorified way of replacing parameters with concrete level values,
+at all constants and sorts within the value expression.
+Note that according to `getParamSubst` the way we do the substitution is that we look
+up the index of the parameter in the list, and replace it by the level at same index
+in the list of levels.
+
+-/

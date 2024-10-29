@@ -75,9 +75,18 @@ instance : Inhabited (CTrie α) where
   default := empty
 
 
+private def CTrie.upsert_help (cs : Array ByteArray) (i : Nat) (s : ByteArray) : Option (Nat × Nat) :=
+  let rec go : Nat → Option (Nat × Nat)
+    | 0 => .none
+    | n+1 =>
+        let j := ByteArray.getLongestMatch_wOffset i s (cs.get! n)
+        if j == 0 then go n else .some (n,j)
+  go cs.size
 
-partial def upsert (t : CTrie α) (s : ByteArray) (f : Option α → α) : Trie α :=
-  let go (i : Nat) : CTrie α → CTrie α
+
+
+partial def CTrie.upsert (t : CTrie α) (s : ByteArray) (f : Option α → α) : CTrie α :=
+  let rec go (i : Nat) : CTrie α → CTrie α
     | .leaf v =>
           if i < s.size
           then
@@ -88,22 +97,43 @@ partial def upsert (t : CTrie α) (s : ByteArray) (f : Option α → α) : Trie 
           if i < s.size
           then
             let j := ByteArray.getLongestMatch_wOffset i s c
-            let nc := c.drop j
-            let add := s.drop (i+j)
-            let join := c.take j
-            .node1 .none join (.node .none #[nc,add] #[.node1 v nc t, .node1 .none add (.leaf (f .none))])
+            if j == c.size
+            then
+              .node1 v c (go (i+j) t)
+            else
+              let nc := c.drop j
+              let add := s.drop (i+j)
+              let join := c.take j
+              .node1 .none join (.node .none #[nc,add] #[.node1 v nc t, .node1 .none add (.leaf (f .none))])
           else
             .node1 (f v) c t
     | .node v cs ts =>
           if i < s.size
           then
-            sorry
-            -- Todo: for each branch, look for longest match.
-            -- If non-zero, modify at that branch as in `.node1` and stop.
-            -- if zero everwhere, append to `.node`
+            match CTrie.upsert_help cs i s with
+            | .none =>
+                .node v (cs.push (s.drop i)) (ts.push (.leaf (f .none)))
+            | .some (idx,len) =>
+                if len == (cs.get! idx).size
+                then
+                  .node v cs (ts.modify idx ((go (i+len))))
+                else
+                  let nc := (cs.get! idx).drop len
+                  let add := s.drop (i+len)
+                  let join := (cs.get! idx).take len
+                  .node v ((cs.modify idx (fun _ => join))) (ts.modify idx (fun t => .node .none #[nc,add] #[.node1 v nc t, .node1 .none add (.leaf (f .none))]))
           else
             .node (f v) cs ts
   go 0 t
 
 
 #check String.toUTF8
+#check Trie.upsert
+#check Array.push
+
+
+partial def CTrie.insert (t : CTrie α) (s : String) (val : α) : CTrie α :=
+  CTrie.upsert t (s.toUTF8) (fun _ => val)
+
+
+-- todo : test ; make sorted version

@@ -163,11 +163,19 @@ def integrate_backstep
     ⟨common.map Prod.snd, finalT⟩
 
 
-
-
 def List.eraseF (p : α → Bool) : List α → List α
 | [] => []
 | x :: l => if p x then l else x :: (List.eraseF p l)
+
+
+def integrate_backstep_main
+  (thm_name : Name) (thm_data_size : Nat) (target_goal_id : Nat)
+  (assigned newgoals : List (Nat × CExpr))
+  (state : BackState) : BackState :=
+  let ⟨G,T⟩ := integrate_backstep thm_name thm_data_size target_goal_id assigned newgoals state.id_gen_back state.id_gen_goal state.bt
+  let nG := G ++ (List.eraseF (fun x => x.1 == target_goal_id) state.active_goals)
+  ⟨state.id_gen_back + 1, state.id_gen_goal + G.length, nG,T⟩
+
 
 
 structure PropUniState where
@@ -326,9 +334,17 @@ partial def propagate_uni_assign_toGoalsAssigns
 def integrate_uni?
   (ltx : List (Array CExpr)) (ltx_handler : Nat → (Nat × Nat))
   (init_uni : List (Nat × Nat × CExpr))
-  (init_tree : BackTree) : Option BackTree :=
+  (init_tree : BackTree) : Option (BackTree × List Nat) :=
     match propagate_uni_assign ltx ltx_handler init_uni init_tree with
     | .some (TA,A,G) =>
         let TD := derefrenceAssignedGoals G TA
-        propagate_uni_assign_toGoalsAssigns A TD
+        -- don't know if doing this always is a waste of time
+        -- only becomes necessary if theres a lot of solved goals ?
+        let TF := propagate_uni_assign_toGoalsAssigns A TD
+        (TF, G)
     | .none => .none
+
+
+def integrate_uni_full
+  (now : BackState) (newTree : BackTree) (solved : List Nat) : BackState :=
+  {now with active_goals := now.active_goals.filter (fun x => !(solved.contains x.1)), bt := newTree}

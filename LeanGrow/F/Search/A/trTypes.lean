@@ -19,7 +19,14 @@ structure BackState where
 deriving Inhabited, BEq, Repr
 
 
+inductive StepType where
+| init
+| ofBack (targetId : Nat) (thm_name : Lean.Name)
+| ofUni (targetId : Nat) (gnodeId : Nat)
+deriving Inhabited, BEq, Repr
+
+
 inductive BackStateTree where
-| leaf (id : Nat) (s : BackState)
-| node (id : Nat) (s : BackState) (dirs : List (List Nat)) (chi : List BackStateTree)
+| leaf (id : Nat) (kind : StepType) (s : BackState)
+| node (id : Nat) (kind : StepType) (s : BackState) (dirs : List (List Nat)) (chi : List BackStateTree)
 deriving Inhabited, BEq, Repr
