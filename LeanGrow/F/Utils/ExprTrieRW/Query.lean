@@ -80,12 +80,20 @@ def updateTodos (on : CExpr) (dirs : List rwDirs) (cache : List (Nat × CExpr ×
         | .ofRW id ind => updateTodos on dirs ((id, on, ind, dirs) :: cache) xs
         | _ => updateTodos on dirs cache xs
 
+def List.listConsIfNonempty (app : List α) (to : List (List α)) : List (List α) :=
+    match app with
+    | [] => to
+    | _ => app :: to
 
 
-partial def CExprTrie.find_candidates? [BEq α] (T : CExprTrie α) (ce : CExpr) (r : α → α → Prop) [DecidableRel r] : List (List α) × List (Nat × CExpr × List α × List rwDirs) :=
+
+
+partial def CExprTrie.find_candidates? [BEq α] [Repr α] (T : CExprTrie α) (ce : CExpr) (r : α → α → Prop) [DecidableRel r] : List (List α) × List (Nat × CExpr × List α × List rwDirs) :=
+  with_lTrace [TraceFlags.zero] in
   let rec go (done : List (List α)) (todos : List (Nat × CExpr × List α × List rwDirs)) : List (CExpr × Nat × List rwDirs) → List (List α) × List (Nat × CExpr × List α × List rwDirs)
     | [] => (done, todos)
     | (nx, link, dirs) :: more =>
+        lTrace TraceFlags.zero & s!"Call\n{repr done}\n{repr todos}\n{repr ((nx, link, dirs) :: more)}\n\n" &
         match nx with
         | .failed => ([], [])
         | .app f a =>
@@ -134,37 +142,37 @@ partial def CExprTrie.find_candidates? [BEq α] (T : CExprTrie α) (ce : CExpr) 
             let rws := updateTodos (.lit l) dirs [] lb
             let rws_ind := rws.map (fun x => x.2.2.1)
             let nlb := CExprTrie.getIndices_Lit l lb
-            go (nlb :: (rws_ind ++ done)) (rws ++ todos) more
+            go (List.listConsIfNonempty nlb (rws_ind ++ done)) (rws ++ todos) more
         | .lnode l o t =>
             let lb := CExprTrie.getAtLink T link
             let rws := updateTodos (.lnode l o t) dirs [] lb
             let rws_ind := rws.map (fun x => x.2.2.1)
             let nlb := CExprTrie.getIndices_lNode l t lb
-            go (nlb :: (rws_ind ++ done)) (rws ++ todos) more
+            go (List.listConsIfNonempty nlb (rws_ind ++ done)) (rws ++ todos) more
         | .gnode l o =>
             let lb := CExprTrie.getAtLink T link
             let rws := updateTodos (.gnode l o) dirs [] lb
             let rws_ind := rws.map (fun x => x.2.2.1)
             let nlb := CExprTrie.getIndices_gNode l lb
-            go (nlb :: (rws_ind ++ done)) (rws ++ todos) more
+            go (List.listConsIfNonempty nlb (rws_ind ++ done)) (rws ++ todos) more
         | .bvar l =>
             let lb := CExprTrie.getAtLink T link
             let rws := updateTodos (.bvar l) dirs [] lb
             let rws_ind := rws.map (fun x => x.2.2.1)
             let nlb := CExprTrie.getIndices_Bvar l lb
-            go (nlb :: (rws_ind ++ done)) (rws ++ todos) more
+            go (List.listConsIfNonempty nlb (rws_ind ++ done)) (rws ++ todos) more
         | .sort l =>
             let lb := CExprTrie.getAtLink T link
             let rws := updateTodos (.sort l) dirs [] lb
             let rws_ind := rws.map (fun x => x.2.2.1)
             let nlb := CExprTrie.getIndices_Sort l lb
-            go (nlb :: (rws_ind ++ done)) (rws ++ todos) more
+            go (List.listConsIfNonempty nlb (rws_ind ++ done)) (rws ++ todos) more
         | .const l m =>
             let lb := CExprTrie.getAtLink T link
             let rws := updateTodos (.const l m) dirs [] lb
             let rws_ind := rws.map (fun x => x.2.2.1)
             let nlb := CExprTrie.getIndices_Const l lb
-            go (nlb :: (rws_ind ++ done)) (rws ++ todos) more
+            go (List.listConsIfNonempty nlb (rws_ind ++ done)) (rws ++ todos) more
   go [] [] [(ce,0,[])]
 
 
@@ -172,16 +180,19 @@ partial def CExprTrie.find_candidates? [BEq α] (T : CExprTrie α) (ce : CExpr) 
 -- #eval CExprTrie.find_candidates? (CExprTrie.ofList (· ≤ ·) test_list) (.app (.app (.const `a []) (.const `e [])) (.const `c [])) (· ≤ ·)
 
 
-def CExprTrie.find_step [BEq α] (T : CExprTrie α) (ce : CExpr) (r : α → α → Prop) [DecidableRel r] : List α × List (Nat × CExpr × List α × List rwDirs) :=
+def CExprTrie.find_step [BEq α] [Repr α] (T : CExprTrie α) (ce : CExpr) (r : α → α → Prop) [DecidableRel r] : List α × List (Nat × CExpr × List α × List rwDirs) :=
+  with_lTrace [TraceFlags.zero] in
   let (cand_safe, cand_rw) := CExprTrie.find_candidates? T ce r
   let prune :=
     match (cand_safe) with
     | [] => []
     | h :: t => t.foldl (fun x y => List.orderedIntersect r x y ) h
+  lTrace TraceFlags.zero & s!"Find out: {repr cand_safe} {repr cand_rw}\n{repr prune}\n\n" &
   (prune, (cand_rw.map (fun (n,e,ind, dir) => (n,e, List.orderedIntersect r prune ind, dir) )).filter (fun x => !x.2.2.1.isEmpty))
 
 
 -- #eval CExprTrie.find? (CExprTrie.ofList (· ≤ ·) test_list) (.app (.app (.const `a []) (.const `e [])) (.const `c [])) (· ≤ ·)
+
 
 
 #check Eq.rec
@@ -210,11 +221,55 @@ inductive RWblueprint (α : Type _) where
 deriving Inhabited, BEq, Repr
 
 
-def CExprTrie.find [BEq α] (r : α → α → Prop) [DecidableRel r] (ce : CExpr) (Top : CExprTrie α) (RW_classes : List (Nat × CExprTrie α)) : Option (RWblueprint α) :=
+def List.recuceOptions? : List (Option α) → Option (List α)
+    | [] => .some []
+    | .none :: _ => .none
+    | .some v :: more =>
+        match List.recuceOptions? more with
+        | .none => .none
+        | .some l => .some (v :: l)
+
+
+
+partial def CExprTrie.find [BEq α] [Repr α] (r : α → α → Prop) [DecidableRel r] (ce : CExpr) (Top : CExprTrie α) (RW_classes : List (Nat × CExprTrie α)) : Option (RWblueprint α) :=
+    with_lTrace [TraceFlags.zero] in
+    let rec main (ce : CExpr) (classId : Nat) (indi : List α) : Option (RWblueprint α) :=
+        lTrace TraceFlags.zero & s!"MAIN {classId} {repr indi}\n{repr ce}\n\n" &
+        match RW_classes.find? (fun x => x.1 == classId) with
+        | .none => .none
+        | .some (_, Tr) =>
+            let (f, rw) := CExprTrie.find_step Tr ce r
+            match f with
+            | [] => .none
+            | _ =>
+                match rw with
+                | [] => .some (.exactMatch (.some classId) f) -- no rewrites encountered in tree
+                | _ =>
+                    let next? := List.recuceOptions? (rw.map (fun x => main x.2.1 x.1 x.2.2.1))
+                    match next? with
+                    | .none => .none
+                    | .some next => .some (.node (.some classId) indi (rw.map (fun x => (x.1,x.2.2.1,x.2.2.2))) next)
     let (first, fst_rws) := CExprTrie.find_step Top ce r
+    lTrace TraceFlags.zero & s!"Init {repr first} {repr fst_rws}\n\n" &
     match first with
     | [] => .none
     | _ =>
         match fst_rws with
-        | [] => .some (.exactMatch .none [])
+        | [] => .some (.exactMatch .none []) -- no rewrites encountered in top tree
         | _ =>
+            let next? := List.recuceOptions? (fst_rws.map (fun x => main x.2.1 x.1 x.2.2.1))
+            match next? with
+            | .none => .none
+            | .some next => .some (.node .none first (fst_rws.map (fun x => (x.1,x.2.2.1,x.2.2.2))) next)
+
+
+def rw_list : List (Nat × CExpr) :=
+  [(1, (.app (.const `a []) (.const `b []))),
+   (2, (.const `z []))
+  ]
+
+def tree_w_rw := CExprTrie.addRW (CExprTrie.ofList (· ≤ ·) test_list) 1 [1,4] 37 (· ≤ ·)
+
+-- #eval tree_w_rw
+
+#eval CExprTrie.find (· ≤ ·) (.app (.const `z []) (.const `c [])) tree_w_rw [(37, CExprTrie.ofList (· ≤ ·) rw_list)]

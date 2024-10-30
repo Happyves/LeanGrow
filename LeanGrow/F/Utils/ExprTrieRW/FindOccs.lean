@@ -56,37 +56,37 @@ partial def CExprTrie.find_occurences_candidates [BEq α] (T : CExprTrie α) (ce
             let rws := updateTodos (.lit l) dirs [] lb
             let rws_ind := rws.map (fun x => x.2.2.1)
             let nlb := CExprTrie.getIndices_Lit l lb
-            go (nlb :: (rws_ind ++ done)) (rws ++ todos) more
+            go (List.listConsIfNonempty nlb (rws_ind ++ done)) (rws ++ todos) more
         | .lnode l o t =>
             let lb := CExprTrie.getAtLink T link
             let rws := updateTodos (.lnode l o t) dirs [] lb
             let rws_ind := rws.map (fun x => x.2.2.1)
             let nlb := CExprTrie.getIndices_lNode l t lb
-            go (nlb :: (rws_ind ++ done)) (rws ++ todos) more
+            go (List.listConsIfNonempty nlb (rws_ind ++ done)) (rws ++ todos) more
         | .gnode l o =>
             let lb := CExprTrie.getAtLink T link
             let rws := updateTodos (.gnode l o) dirs [] lb
             let rws_ind := rws.map (fun x => x.2.2.1)
             let nlb := CExprTrie.getIndices_gNode l lb
-            go (nlb :: (rws_ind ++ done)) (rws ++ todos) more
+            go (List.listConsIfNonempty nlb (rws_ind ++ done)) (rws ++ todos) more
         | .bvar l =>
             let lb := CExprTrie.getAtLink T link
             let rws := updateTodos (.bvar l) dirs [] lb
             let rws_ind := rws.map (fun x => x.2.2.1)
             let nlb := CExprTrie.getIndices_Bvar l lb
-            go (nlb :: (rws_ind ++ done)) (rws ++ todos) more
+            go (List.listConsIfNonempty nlb (rws_ind ++ done)) (rws ++ todos) more
         | .sort l =>
             let lb := CExprTrie.getAtLink T link
             let rws := updateTodos (.sort l) dirs [] lb
             let rws_ind := rws.map (fun x => x.2.2.1)
             let nlb := CExprTrie.getIndices_Sort l lb
-            go (nlb :: (rws_ind ++ done)) (rws ++ todos) more
+            go (List.listConsIfNonempty nlb (rws_ind ++ done)) (rws ++ todos) more
         | .const l m =>
             let lb := CExprTrie.getAtLink T link
             let rws := updateTodos (.const l m) dirs [] lb
             let rws_ind := rws.map (fun x => x.2.2.1)
             let nlb := CExprTrie.getIndices_Const l lb
-            go (nlb :: (rws_ind ++ done)) (rws ++ todos) more
+            go (List.listConsIfNonempty nlb (rws_ind ++ done)) (rws ++ todos) more
   go [] [] [(ce,start,[])]
 
 

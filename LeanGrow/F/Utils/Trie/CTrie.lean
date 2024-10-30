@@ -104,7 +104,7 @@ partial def CTrie.upsert (t : CTrie α) (s : ByteArray) (f : Option α → α) :
               let nc := c.drop j
               let add := s.drop (i+j)
               let join := c.take j
-              .node1 .none join (.node .none #[nc,add] #[.node1 v nc t, .node1 .none add (.leaf (f .none))])
+              .node1 v join (.node .none #[nc,add] #[t,(.leaf (f .none))])
           else
             .node1 (f v) c t
     | .node v cs ts =>
@@ -121,7 +121,7 @@ partial def CTrie.upsert (t : CTrie α) (s : ByteArray) (f : Option α → α) :
                   let nc := (cs.get! idx).drop len
                   let add := s.drop (i+len)
                   let join := (cs.get! idx).take len
-                  .node v ((cs.modify idx (fun _ => join))) (ts.modify idx (fun t => .node .none #[nc,add] #[.node1 v nc t, .node1 .none add (.leaf (f .none))]))
+                  .node v ((cs.modify idx (fun _ => join))) (ts.modify idx (fun t => .node .none #[nc,add] #[t,(.leaf (f .none))]))
           else
             .node (f v) cs ts
   go 0 t
@@ -137,3 +137,43 @@ partial def CTrie.insert (t : CTrie α) (s : String) (val : α) : CTrie α :=
 
 
 -- todo : test ; make sorted version
+
+
+def CTrie.ofList : List (String × α) → CTrie α
+  | [] => CTrie.empty
+  | (s,v) :: more => CTrie.insert (CTrie.ofList more) s v
+
+def test_list : List (String × Nat) := [("ban", 42),("banana", 37),("bandana", 69), ("bahamas", 2)]
+
+-- #eval CTrie.ofList test_list
+
+
+partial def CTrie.find? (t : CTrie α) (s : String) : Option α :=
+  let toB := s.toUTF8
+  let rec go (i : Nat) : CTrie α → Option α
+    | .leaf v => v
+    | .node1 v c t =>
+          if i = toB.size
+          then v
+          else
+            let j := ByteArray.getLongestMatch_wOffset i toB c
+            if j == c.size
+            then go (i+j) t
+            else .none
+    | .node v cs ts =>
+          if i = toB.size
+          then v
+          else
+            match CTrie.upsert_help cs i toB with
+            | .none => .none
+            | .some (idx,len) =>
+                  if len == (cs.get! idx).size
+                  then go (i+len) (ts.get! idx)
+                  else .none
+  go 0 t
+
+#eval CTrie.find? (CTrie.ofList test_list) "bahamas"
+#eval CTrie.find? (CTrie.ofList test_list) "ban"
+#eval CTrie.find? (CTrie.ofList test_list) "banana"
+#eval CTrie.find? (CTrie.ofList test_list) "bandana"
+#eval CTrie.find? (CTrie.ofList test_list) "trains"
