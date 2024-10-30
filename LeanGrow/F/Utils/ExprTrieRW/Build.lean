@@ -247,3 +247,8 @@ def test_list : List (Nat × CExpr) :=
   ]
 
 -- #eval CExprTrie.ofList (· ≤ ·) test_list
+
+
+def CExprTrie.addRW [BEq α] (T : CExprTrie α) (location : Nat) (occIn : List α) (classId : Nat) (r : α → α → Prop) [DecidableRel r] : CExprTrie α :=
+    CExprTrie.modifyAtLink T location (fun br =>  (.ofRW classId occIn):: br)
+-- probably no need to delete initial occurence that the rw class should substitute

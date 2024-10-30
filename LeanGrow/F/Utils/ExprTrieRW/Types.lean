@@ -34,3 +34,9 @@ instance [Inhabited α] : Inhabited (CExprTrie α) where
 
 instance [Repr α] : Repr (CExprTrie α) where
   reprPrec := instReprList.reprPrec
+
+
+
+inductive rwDirs where
+| left | mid | right
+deriving Inhabited, BEq, Repr
