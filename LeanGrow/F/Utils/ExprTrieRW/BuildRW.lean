@@ -111,4 +111,7 @@ In new versions:
 Seems not embeddable in `Option.map (fun x => Nat.succ x) .none` ?
 At least, it seems not possible to find β without deriving a type, somehow...
 
+This is actually already a problem in our embedding algos... Say if we tried to goal-embed the above,
+with f = (fun x => Nat.succ x), then we'd get an .ofCExpr, which wouldn't propagate as we don't know
+its type
 -/
