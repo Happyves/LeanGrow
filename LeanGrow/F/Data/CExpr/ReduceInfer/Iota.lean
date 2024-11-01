@@ -13,6 +13,7 @@ inductive CExpr_ReduceMatcherResult where
   | notMatcher
   | partialApp
 
+#exit
 
 def CExpr.reduceMatcher? (env : Environment) (e : CExpr) : CExpr_ReduceMatcherResult :=
   let (h,args) := CExpr.getApp e

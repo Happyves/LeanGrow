@@ -75,7 +75,7 @@ instance : Inhabited (CTrie α) where
   default := empty
 
 
-private def CTrie.upsert_help (cs : Array ByteArray) (i : Nat) (s : ByteArray) : Option (Nat × Nat) :=
+private def upsert_help (cs : Array ByteArray) (i : Nat) (s : ByteArray) : Option (Nat × Nat) :=
   let rec go : Nat → Option (Nat × Nat)
     | 0 => .none
     | n+1 =>
@@ -85,7 +85,7 @@ private def CTrie.upsert_help (cs : Array ByteArray) (i : Nat) (s : ByteArray) :
 
 
 
-partial def CTrie.upsert (t : CTrie α) (s : ByteArray) (f : Option α → α) : CTrie α :=
+partial def upsert (t : CTrie α) (s : ByteArray) (f : Option α → α) : CTrie α :=
   let rec go (i : Nat) : CTrie α → CTrie α
     | .leaf v =>
           if i < s.size
@@ -132,14 +132,14 @@ partial def CTrie.upsert (t : CTrie α) (s : ByteArray) (f : Option α → α) :
 #check Array.push
 
 
-partial def CTrie.insert (t : CTrie α) (s : String) (val : α) : CTrie α :=
+partial def insert (t : CTrie α) (s : String) (val : α) : CTrie α :=
   CTrie.upsert t (s.toUTF8) (fun _ => val)
 
 
 -- todo : test ; make sorted version
 
 
-def CTrie.ofList : List (String × α) → CTrie α
+def ofList : List (String × α) → CTrie α
   | [] => CTrie.empty
   | (s,v) :: more => CTrie.insert (CTrie.ofList more) s v
 
@@ -148,7 +148,7 @@ def test_list : List (String × Nat) := [("ban", 42),("banana", 37),("bandana", 
 -- #eval CTrie.ofList test_list
 
 
-partial def CTrie.find? (t : CTrie α) (s : String) : Option α :=
+partial def find? (t : CTrie α) (s : String) : Option α :=
   let toB := s.toUTF8
   let rec go (i : Nat) : CTrie α → Option α
     | .leaf v => v
