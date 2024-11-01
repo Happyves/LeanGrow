@@ -4,7 +4,12 @@ import LeanGrow.F.Data.CExpr.API
 #check 1
 
 
-partial def CExpr.instanciate (subs within : CExpr) : CExpr :=
+/-- Doesn't shift bvar indices.
+Should only be used on terms that we don't consider subterms,
+or if we store bvar types in a list what position represents index,
+and we don't delete the head of that list.
+-/
+partial def CExpr.instantiate (subs within : CExpr) : CExpr :=
   let rec go : List (Nat × CExpr) → List CExpr
     | [] => []
     | (d, .lam n t b i) :: more =>
@@ -56,11 +61,51 @@ def CExpr.letFunAppArgs? (e : CExpr) : Option (List CExpr × Lean.Name × CExpr 
     .none
 
 
+/-- Does shift bvar indices.
+Should only be used on terms that we consider subterms.
+-/
+partial def CExpr.instantiateShift (subs within : CExpr) : CExpr :=
+  let rec go : List (Nat × CExpr) → List CExpr
+    | [] => []
+    | (d, .lam n t b i) :: more =>
+          let r := go ((d,t) :: (d+1,b) :: more)
+          let (F,r2) := List.headD_tail r .failed
+          let (A,r3) := List.headD_tail r2 .failed
+          (.lam n F A i) :: r3
+    | (d, .forallE n t b i) :: more =>
+          let r := go ((d,t) :: (d+1,b) :: more)
+          let (F,r2) := List.headD_tail r .failed
+          let (A,r3) := List.headD_tail r2 .failed
+          (.forallE n F A i) :: r3
+    | (d, .letE n t v b i) :: more =>
+          let r := go ((d,t) :: (d,v) :: (d+1,b) :: more)
+          let (F,r2) := List.headD_tail r .failed
+          let (A,r3) := List.headD_tail r2 .failed
+          let (Z,r4) := List.headD_tail r3 .failed
+          (.letE n F A Z i) :: r4
+    | (d, .proj n i e) :: more =>
+          let r := go ((d,e) :: more)
+          let (E,r2) := List.headD_tail r .failed
+          (.proj n i E) :: r2
+    | (d, .app l r) :: more =>
+          let r := go ((d,l) :: (d,r) :: more)
+          let (F,r2) := List.headD_tail r .failed
+          let (A,r3) := List.headD_tail r2 .failed
+          (.app F A) :: r3
+    | (d, .bvar i) :: more =>
+          match compare d i with
+          | .eq => subs :: go more
+          | .lt => (.bvar (i-1)) :: go more
+          | .gt => (.bvar i) :: go more
+    | (_, ce) :: more => ce :: go more
+  List.headD (go [(0,within)]) .failed
+
+
 def CExpr.beta (h : CExpr) : List CExpr → CExpr
       | [] => h
       | a :: as =>
             match h with
             | .lam _ _ b _ =>
-                  let go := CExpr.instanciate a b
+                  let go := CExpr.instantiateShift a b
                   CExpr.beta go as
             | _ => CExpr.mkApp h (a :: as)

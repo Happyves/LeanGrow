@@ -5,8 +5,16 @@ import LeanGrow.F.Data.CExpr.ReduceInfer.Delta
 import LeanGrow.F.Data.CExpr.ReduceInfer.Iota
 import LeanGrow.F.Data.CExpr.ReduceInfer.Magic
 
-#check 1
+open Lean
 
+
+
+
+
+#exit
 
 @[export lean_my_whnf]
-def cexprWhnfImp (ce : CExpr) : CExpr := sorry
+def cexprWhnfImp
+  (gnodeTypes : List (Array CExpr)) (gnodeTypesHandler : Nat → (Nat × Nat))
+  (ltxTypes : List (Array EmbedData)) (current : Option (Array EmbedData))
+  (cstData : CTrie CstInfo) (bvarCtx : List CExpr) (ce : CExpr) : CExpr := sorry

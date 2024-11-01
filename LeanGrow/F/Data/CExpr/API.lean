@@ -362,3 +362,8 @@ up the index of the parameter in the list, and replace it by the level at same i
 in the list of levels.
 
 -/
+
+
+def CExpr.updateFn : CExpr → CExpr → CExpr
+  | .app f a, g => .app (CExpr.updateFn f g) a
+  | _,           g => g
