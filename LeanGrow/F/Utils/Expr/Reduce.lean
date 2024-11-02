@@ -414,3 +414,56 @@ def testAdd2 (n : Nat) : Nat := @Nat.rec (fun _ => Nat) 2 (fun _ sofar => Nat.su
 
 #check testAdd2.eq_1
 -- no disjunction in newest version either
+
+
+
+-- # Better explanation of reduceMatcher
+
+-- we illustrate it on
+#print fib.match_1
+#print fib
+
+def reduceMatcher?
+  {whnfMatcher : Expr → MetaM Expr} -- dummy for exposition
+  (e : Expr) : MetaM ReduceMatcherResult := do
+  let .const declName declLevels := e.getAppFn
+  -- we expect an expression with `fib.match_1` as head
+    | return .notMatcher
+  let some info ← getMatcherInfo? declName
+  -- `info` contains data of the size and position of args
+    | return .notMatcher
+  let args := e.getAppArgs
+  let prefixSz := info.numParams + 1 + info.numDiscrs -- parameters (fib has none), motive, inputs (fib has one Nat as input)
+  if args.size < prefixSz + info.numAlts then
+    return ReduceMatcherResult.partialApp -- case of a partial application
+  let constInfo ← getConstInfo declName
+  let f ← instantiateValueLevelParams constInfo declLevels
+  -- the value of the matcher, with the right levels. Here its:
+  -- `fun motive x h_1 h_2 h_3 ↦ Nat.casesOn x (h_1 ()) fun n ↦ Nat.casesOn n (h_2 ()) fun n ↦ h_3 n`
+  let auxApp := mkAppN f args[0:prefixSz] -- apply params, motive and inputs
+  let auxAppType ← inferType auxApp
+  -- for motive `M` and input `X` for fib, the above will b
+  -- `(Unit → M 0) → (Unit → M 1) → ((n : Nat) → M n.succ.succ) → M X`
+  forallBoundedTelescope auxAppType info.numAlts fun hs _ => do
+    -- create 3 (numAlts) free vars with types `(Unit → M 0)` `(Unit → M 1)` and `((n : Nat) → M n.succ.succ)`
+    let auxApp ← whnfMatcher (mkAppN auxApp hs)
+    -- use them as dummies of the matcher value to reduce it.
+    -- The above would be `Nat.casesOn X (h_1 ()) fun n ↦ Nat.casesOn n (h_2 ()) fun n ↦ h_3 n` this the `h` being the dummies
+    -- If `X` were a concrete value, like `1`, the above would reduce, (calling `whnf` indirectly) to `h_2 ()`
+    let auxAppFn := auxApp.getAppFn
+    -- the then get the dummy that made it past reduction
+    -- In the context of above, it would be `h_2`
+    let mut i := prefixSz
+    for h in hs do -- ←↑↓ is a loop where we go over the remaining args passed to the matcher in the original expression
+      if auxAppFn == h then
+        -- we check if the dummy-from-reduction is that with the loop index
+        let result := mkAppN args[i]! auxApp.getAppArgs
+        -- if so, we consider the corresponding actual argument, and append the argumets that arrose from reduction
+        -- In our example, arguments-from.reduction are `()` ; if `X` had been `n+2`, it would have been `n`
+        let result := mkAppN result args[prefixSz + info.numAlts:args.size]
+        -- don't forget to append the rest of the arguments!
+        return ReduceMatcherResult.reduced result.headBeta
+        -- don't forget to beta. In fib, `h_2` is `fun a x ↦ 1 : Unit → Nat.below 1 → Nat`
+        -- so the beta with arg `()` results in `fun  x ↦ 1 : Nat.below 1 → Nat`
+      i := i + 1
+    return ReduceMatcherResult.stuck auxApp

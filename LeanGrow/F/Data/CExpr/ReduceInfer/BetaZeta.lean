@@ -101,11 +101,15 @@ partial def CExpr.instantiateShift (subs within : CExpr) : CExpr :=
   List.headD (go [(0,within)]) .failed
 
 
-def CExpr.beta (h : CExpr) : List CExpr → CExpr
+def CExpr.beta_help (h : CExpr) : List CExpr → CExpr
       | [] => h
       | a :: as =>
             match h with
             | .lam _ _ b _ =>
                   let go := CExpr.instantiateShift a b
-                  CExpr.beta go as
+                  CExpr.beta_help go as
             | _ => CExpr.mkApp h (a :: as)
+
+def CExpr.beta (e : CExpr) :  CExpr :=
+      let (h, as) := CExpr.getApp e
+      CExpr.beta_help h as
