@@ -20,3 +20,5 @@ structure FixCtx where
 
 @[extern 6 "lean_my_infer_type"] opaque cexprInferType
   (fctx : FixCtx) (bvarCtx : List CExpr) : CExpr → CExpr
+
+@[extern 6 "lean_my_test"] opaque myTestExternExport : Nat

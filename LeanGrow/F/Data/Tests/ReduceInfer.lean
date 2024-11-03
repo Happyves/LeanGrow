@@ -32,3 +32,6 @@ elab "testReduce" t:term : command => do
 
 
 -- testReduce (fun x => x) Nat.zero
+
+--#eval myTestExternExport
+-- seeems to be problem about the extern-export thing

@@ -62,3 +62,6 @@ It's something that is only required for unification, at wich stage
 the solution is to, at a mismatch, prefrom one delta, and then reduce
 again.
 -/
+
+@[export lean_my_test]
+def myTestExternExportImp : Nat := 42
