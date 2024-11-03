@@ -34,29 +34,25 @@ elab "testing" : command => do
 
 
 
-def myForallBoundedTelescope (gnodeTypes : List (Array CExpr)) (gnodeTypesHandler : Nat → (Nat × Nat))
-  (ltxTypes : List (Array EmbedData)) (current : Option (Array EmbedData))
-  (cstData : CTrie CstInfo) (bvarCtx : List CExpr)
+def myForallBoundedTelescope (fctx : FixCtx) (bvarCtx : List CExpr)
   (auxAppType : CExpr) : Nat → CExpr × List CExpr
   | 0 => (auxAppType, bvarCtx)
   | n+1 =>
     match auxAppType with
-    | .forallE _ t b _ => myForallBoundedTelescope gnodeTypes gnodeTypesHandler ltxTypes current cstData (t :: bvarCtx) b n
+    | .forallE _ t b _ => myForallBoundedTelescope fctx (t :: bvarCtx) b n
     | _ =>
-        let tryharder := cexprWhnf gnodeTypes gnodeTypesHandler ltxTypes current cstData bvarCtx auxAppType
+        let tryharder := cexprWhnf fctx bvarCtx auxAppType
         match tryharder with
-        | .forallE _ t b _ => myForallBoundedTelescope gnodeTypes gnodeTypesHandler ltxTypes current cstData (t :: bvarCtx) b n
+        | .forallE _ t b _ => myForallBoundedTelescope fctx (t :: bvarCtx) b n
         | _ => (.failed, []) -- because we don't expect failure ??
 
 
-def CExpr.reduceMatcher? (gnodeTypes : List (Array CExpr)) (gnodeTypesHandler : Nat → (Nat × Nat))
-  (ltxTypes : List (Array EmbedData)) (current : Option (Array EmbedData))
-  (cstData : CTrie CstInfo) (bvarCtx : List CExpr)
+def CExpr.reduceMatcher? (fctx : FixCtx) (bvarCtx : List CExpr)
   (e : CExpr) : CExpr_ReduceMatcherResult :=
   let (h,args) := CExpr.getApp e
   match h with
   | .const n lvl =>
-      match cstData.find? n.toString with
+      match fctx.cstData.find? n.toString with
       | .some (.mat paras _ val info) =>
             let prefixSz := info.numParams + 1 + info.numDiscrs
             if args.length < prefixSz + info.numAlts
@@ -65,9 +61,9 @@ def CExpr.reduceMatcher? (gnodeTypes : List (Array CExpr)) (gnodeTypesHandler : 
             else
               let f := CExpr.instantiateLevelParams val paras lvl
               let auxApp := CExpr.mkApp f (args.take (prefixSz))
-              let auxAppType := cexprInferType gnodeTypes gnodeTypesHandler ltxTypes current cstData bvarCtx auxApp
-              let (_,BV) := myForallBoundedTelescope gnodeTypes gnodeTypesHandler ltxTypes current cstData bvarCtx auxAppType info.numAlts
-              let auxAppNew := cexprWhnf gnodeTypes gnodeTypesHandler ltxTypes current cstData
+              let auxAppType := cexprInferType fctx bvarCtx auxApp
+              let (_,BV) := myForallBoundedTelescope fctx bvarCtx auxAppType info.numAlts
+              let auxAppNew := cexprWhnf fctx
                 BV (CExpr.mkApp auxApp ((List.range info.numAlts).map (CExpr.bvar)).reverse)
               let (H,AS) := CExpr.getApp auxAppNew
               match H with
@@ -99,12 +95,10 @@ def CExpr.mkNullaryCtor (cstData : CTrie CstInfo) (n : Name) (lvl : List Level) 
 #eval Array.shrink #[1,2,3] 1
 
 
-def CExpr.toCtorWhenK (gnodeTypes : List (Array CExpr)) (gnodeTypesHandler : Nat → (Nat × Nat))
-  (ltxTypes : List (Array EmbedData)) (current : Option (Array EmbedData))
-  (cstData : CTrie CstInfo) (bvarCtx : List CExpr)
+def CExpr.toCtorWhenK (fctx : FixCtx) (bvarCtx : List CExpr)
   (recName : Name) (recVal : cRecursorVal) (major : CExpr) : CExpr :=
-  let majorType := cexprWhnf gnodeTypes gnodeTypesHandler ltxTypes current cstData bvarCtx
-    (cexprInferType gnodeTypes gnodeTypesHandler ltxTypes current cstData bvarCtx major)
+  let majorType := cexprWhnf fctx bvarCtx
+    (cexprInferType fctx bvarCtx major)
   let (H, AS) := CExpr.getApp majorType
   match H with
   | .const n lvl =>
@@ -112,7 +106,7 @@ def CExpr.toCtorWhenK (gnodeTypes : List (Array CExpr)) (gnodeTypesHandler : Nat
       then
         major
       else
-        match CExpr.mkNullaryCtor cstData n lvl AS recVal.numParams with
+        match CExpr.mkNullaryCtor fctx.cstData n lvl AS recVal.numParams with
         | .none => major
         | .some newCtorApp => newCtorApp
   | _ => major
@@ -143,11 +137,9 @@ def toCtorWhenStructure_help (strucName : Name) (nfields : Nat) (major : CExpr) 
 
 
 
-def CExpr.toCtorWhenStructure (gnodeTypes : List (Array CExpr)) (gnodeTypesHandler : Nat → (Nat × Nat))
-  (ltxTypes : List (Array EmbedData)) (current : Option (Array EmbedData))
-  (cstData : CTrie CstInfo) (bvarCtx : List CExpr)
+def CExpr.toCtorWhenStructure (fctx : FixCtx) (bvarCtx : List CExpr)
   (strucName : Name) (major : CExpr) : CExpr :=
-  match cstData.find? strucName.toString with
+  match (fctx : FixCtx).cstData.find? strucName.toString with
   | .some (.struc _ _ ctN ctV) =>
       match (major.getApp).1 with
       | .const N _ =>
@@ -155,9 +147,9 @@ def CExpr.toCtorWhenStructure (gnodeTypes : List (Array CExpr)) (gnodeTypesHandl
           then
             major
           else
-            let majorType := cexprInferType gnodeTypes gnodeTypesHandler ltxTypes current cstData bvarCtx major
-            let majorTypeType := cexprWhnf gnodeTypes gnodeTypesHandler ltxTypes current cstData bvarCtx
-              (cexprInferType gnodeTypes gnodeTypesHandler ltxTypes current cstData bvarCtx majorType)
+            let majorType := cexprInferType fctx bvarCtx major
+            let majorTypeType := cexprWhnf fctx bvarCtx
+              (cexprInferType fctx bvarCtx majorType)
             if majorTypeType == .sort .zero
             then
               major
@@ -182,17 +174,15 @@ def getRecRuleFor (recVal : cRecursorVal) : CExpr → Option cRecursorRule
   | .const fn _ => recVal.rules.find? fun r => r.ctor == fn
   | _           => none
 
-def CExpr.reduceRec  (gnodeTypes : List (Array CExpr)) (gnodeTypesHandler : Nat → (Nat × Nat))
-  (ltxTypes : List (Array EmbedData)) (current : Option (Array EmbedData))
-  (cstData : CTrie CstInfo) (bvarCtx : List CExpr)
+def CExpr.reduceRec (fctx : FixCtx) (bvarCtx : List CExpr)
   (recName : Name) (recLvlParams : List Name) (recVal : cRecursorVal) (recLvls : List Level) (recArgs : List CExpr) (on : CExpr) : CExpr :=
   let majorIdx := recVal.getMajorIdx
   if H : majorIdx < recArgs.length
   then
-    let major := cexprWhnf gnodeTypes gnodeTypesHandler ltxTypes current cstData bvarCtx (recArgs.get ⟨majorIdx, H⟩)
-    let eta_1 := if recVal.k then (CExpr.toCtorWhenK gnodeTypes gnodeTypesHandler ltxTypes current cstData bvarCtx recName recVal major) else major
+    let major := cexprWhnf fctx bvarCtx (recArgs.get ⟨majorIdx, H⟩)
+    let eta_1 := if recVal.k then (CExpr.toCtorWhenK fctx bvarCtx recName recVal major) else major
     let eta_2 := eta_1.toCtorIfLit
-    let eta_3 := CExpr.toCtorWhenStructure gnodeTypes gnodeTypesHandler ltxTypes current cstData bvarCtx
+    let eta_3 := CExpr.toCtorWhenStructure fctx bvarCtx
       recName.getPrefix eta_2
     let (h,as) := eta_3.getApp
     match getRecRuleFor recVal h with
@@ -202,7 +192,8 @@ def CExpr.reduceRec  (gnodeTypes : List (Array CExpr)) (gnodeTypesHandler : Nat 
         let rhs_2 := CExpr.mkApp rhs_1 (recArgs.take (recVal.numParams+recVal.numMotives+recVal.numMinors))
         let nparams := as.length - rule.nfields
         let rhs_3 := CExpr.mkApp rhs_2 (as.drop nparams)
-        CExpr.mkApp rhs_3 (recArgs.drop (majorIdx + 1))
+        cexprWhnf fctx bvarCtx (CExpr.mkApp rhs_3 (recArgs.drop (majorIdx + 1)))
+        -- not in `reduceRec`, but is success in `whnfCore`
   else
     on
 
@@ -212,22 +203,21 @@ def CExpr.reduceRec  (gnodeTypes : List (Array CExpr)) (gnodeTypesHandler : Nat 
 #check 1
 
 
-def CExpr.reduceQuotRec  (gnodeTypes : List (Array CExpr)) (gnodeTypesHandler : Nat → (Nat × Nat))
-  (ltxTypes : List (Array EmbedData)) (current : Option (Array EmbedData))
-  (cstData : CTrie CstInfo) (bvarCtx : List CExpr)
+def CExpr.reduceQuotRec (fctx : FixCtx) (bvarCtx : List CExpr)
   (recVal : QuotVal) (recArgs : List CExpr) (on : CExpr) : CExpr :=
     let process (majorPos argPos : Nat) (on' : CExpr): CExpr :=
       if H : majorPos < recArgs.length
       then
-        let major := cexprWhnf gnodeTypes gnodeTypesHandler ltxTypes current cstData bvarCtx (recArgs.get ⟨majorPos, H⟩)
+        let major := cexprWhnf fctx bvarCtx (recArgs.get ⟨majorPos, H⟩)
         match major with
         | .app (.app (.app (.const majorFn _) _) _) majorArg =>
-            match cstData.find? majorFn.toString with
+            match fctx.cstData.find? majorFn.toString with
             | .some (.quot _ _ ⟨_,.ctor⟩) =>
                   let f := recArgs.get! argPos
                   let r := CExpr.app f majorArg
                   let recArity := majorPos + 1
-                  CExpr.mkApp r (recArgs.drop recArity)
+                  cexprWhnf fctx bvarCtx (CExpr.mkApp r (recArgs.drop recArity))
+                  -- not in `reduceQuotRec`, but is success in `whnfCore`
             | _ => on'
         | _ => on'
       else
