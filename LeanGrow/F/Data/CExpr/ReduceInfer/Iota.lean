@@ -102,13 +102,13 @@ def CExpr.mkNullaryCtor (cstData : CTrie CstInfo) (n : Name) (lvl : List Level) 
 def CExpr.toCtorWhenK (gnodeTypes : List (Array CExpr)) (gnodeTypesHandler : Nat → (Nat × Nat))
   (ltxTypes : List (Array EmbedData)) (current : Option (Array EmbedData))
   (cstData : CTrie CstInfo) (bvarCtx : List CExpr)
-  (recVal : RecursorVal) (major : CExpr) : CExpr :=
+  (recName : Name) (recVal : cRecursorVal) (major : CExpr) : CExpr :=
   let majorType := cexprWhnf gnodeTypes gnodeTypesHandler ltxTypes current cstData bvarCtx
     (cexprInferType gnodeTypes gnodeTypesHandler ltxTypes current cstData bvarCtx major)
   let (H, AS) := CExpr.getApp majorType
   match H with
   | .const n lvl =>
-      if !(n == recVal.getInduct)
+      if !(n == recName.getPrefix)
       then
         major
       else
@@ -174,62 +174,85 @@ def CExpr.toCtorWhenStructure (gnodeTypes : List (Array CExpr)) (gnodeTypesHandl
   | _ => major
 
 
+def cRecursorVal.getMajorIdx (v : cRecursorVal) : Nat :=
+  v.numParams + v.numMotives + v.numMinors + v.numIndices
 
 
-/-
-
-private def reduceRec (recVal : RecursorVal) (recLvls : List Level) (recArgs : Array Expr) (failK : Unit → MetaM α) (successK : Expr → MetaM α) : MetaM α :=
-  let majorIdx := recVal.getMajorIdx
-  if h : majorIdx < recArgs.size then do
-    let major := recArgs.get ⟨majorIdx, h⟩
-    let mut major ← if isWFRec recVal.name && (← getTransparency) == .default then
-      -- If recursor is `Acc.rec` or `WellFounded.rec` and transparency is default,
-      -- then we bump transparency to .all to make sure we can unfold defs defined by WellFounded recursion.
-      -- We use this trick because we abstract nested proofs occurring in definitions.
-      -- Alternative design: do not abstract nested proofs used to justify well-founded recursion.
-      withTransparency .all <| whnf major
-    else
-      whnf major
-    if recVal.k then
-      major ← toCtorWhenK recVal major
-    major := major.toCtorIfLit
-    major ← cleanupNatOffsetMajor major
-    major ← toCtorWhenStructure recVal.getInduct major
-    match getRecRuleFor recVal major with
-    | some rule =>
-      let majorArgs := major.getAppArgs
-      if recLvls.length != recVal.levelParams.length then
-        failK ()
-      else
-        let rhs := rule.rhs.instantiateLevelParams recVal.levelParams recLvls
-        -- Apply parameters, motives and minor premises from recursor application.
-        let rhs := mkAppRange rhs 0 (recVal.numParams+recVal.numMotives+recVal.numMinors) recArgs
-        /- The number of parameters in the constructor is not necessarily
-           equal to the number of parameters in the recursor when we have
-           nested inductive types. -/
-        let nparams := majorArgs.size - rule.nfields
-        let rhs := mkAppRange rhs nparams majorArgs.size majorArgs
-        let rhs := mkAppRange rhs (majorIdx + 1) recArgs.size recArgs
-        successK rhs
-    | none => failK ()
-  else
-    failK ()
--/
-
-
+def getRecRuleFor (recVal : cRecursorVal) : CExpr → Option cRecursorRule
+  | .const fn _ => recVal.rules.find? fun r => r.ctor == fn
+  | _           => none
 
 def CExpr.reduceRec  (gnodeTypes : List (Array CExpr)) (gnodeTypesHandler : Nat → (Nat × Nat))
   (ltxTypes : List (Array EmbedData)) (current : Option (Array EmbedData))
   (cstData : CTrie CstInfo) (bvarCtx : List CExpr)
-  (recVal : RecursorVal) (recLvls : List Level) (recArgs : List Expr) (on : CExpr) : CExpr :=
+  (recName : Name) (recLvlParams : List Name) (recVal : cRecursorVal) (recLvls : List Level) (recArgs : List CExpr) (on : CExpr) : CExpr :=
   let majorIdx := recVal.getMajorIdx
-  if h : majorIdx < recArgs.length
+  if H : majorIdx < recArgs.length
   then
-    let major := cexprWhnf gnodeTypes gnodeTypesHandler ltxTypes current cstData bvarCtx (recArgs.get ⟨majorIdx, h⟩)
-    let eta_1 := if recVal.k then (CExpr.toCtorWhenK gnodeTypes gnodeTypesHandler ltxTypes current cstData bvarCtx recVal major) else major
+    let major := cexprWhnf gnodeTypes gnodeTypesHandler ltxTypes current cstData bvarCtx (recArgs.get ⟨majorIdx, H⟩)
+    let eta_1 := if recVal.k then (CExpr.toCtorWhenK gnodeTypes gnodeTypesHandler ltxTypes current cstData bvarCtx recName recVal major) else major
     let eta_2 := eta_1.toCtorIfLit
     let eta_3 := CExpr.toCtorWhenStructure gnodeTypes gnodeTypesHandler ltxTypes current cstData bvarCtx
-      recVal.getInduct eta_2
-    sorry
+      recName.getPrefix eta_2
+    let (h,as) := eta_3.getApp
+    match getRecRuleFor recVal h with
+    | .none => on
+    | .some rule =>
+        let rhs_1 := rule.rhs.instantiateLevelParams recLvlParams recLvls
+        let rhs_2 := CExpr.mkApp rhs_1 (recArgs.take (recVal.numParams+recVal.numMotives+recVal.numMinors))
+        let nparams := as.length - rule.nfields
+        let rhs_3 := CExpr.mkApp rhs_2 (as.drop nparams)
+        CExpr.mkApp rhs_3 (recArgs.drop (majorIdx + 1))
+  else
+    on
 
-#check getRecRuleFor
+
+
+
+#check 1
+
+
+def CExpr.reduceQuotRec  (gnodeTypes : List (Array CExpr)) (gnodeTypesHandler : Nat → (Nat × Nat))
+  (ltxTypes : List (Array EmbedData)) (current : Option (Array EmbedData))
+  (cstData : CTrie CstInfo) (bvarCtx : List CExpr)
+  (recVal : QuotVal) (recArgs : List CExpr) (on : CExpr) : CExpr :=
+    let process (majorPos argPos : Nat) (on' : CExpr): CExpr :=
+      if H : majorPos < recArgs.length
+      then
+        let major := cexprWhnf gnodeTypes gnodeTypesHandler ltxTypes current cstData bvarCtx (recArgs.get ⟨majorPos, H⟩)
+        match major with
+        | .app (.app (.app (.const majorFn _) _) _) majorArg =>
+            match cstData.find? majorFn.toString with
+            | .some (.quot _ _ ⟨_,.ctor⟩) =>
+                  let f := recArgs.get! argPos
+                  let r := CExpr.app f majorArg
+                  let recArity := majorPos + 1
+                  CExpr.mkApp r (recArgs.drop recArity)
+            | _ => on'
+        | _ => on'
+      else
+        on'
+    match recVal.kind with
+    | QuotKind.lift => process 5 3 on
+    | QuotKind.ind  => process 4 3 on
+    | _             => on
+
+#print Eq.ndrec
+
+
+def CExpr.projectCore? (cstData : CTrie CstInfo) (e : CExpr) (i : Nat) : Option CExpr :=
+  let e := e.toCtorIfLit
+  let (h,as) := e.getApp
+  match h with
+  | .const n _ =>
+      match cstData.find? n.toString with
+      | .some (.ctor _ _ val) =>
+          let numArgs := as.length
+          let idx := val.numParams + i
+          if idx < numArgs
+          then
+            .some (as.get! idx)
+          else
+            .none
+      | _ => .none
+  | _ => .none

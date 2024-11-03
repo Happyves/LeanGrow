@@ -39,12 +39,66 @@ instance : Repr ConstructorVal where
     "{" ++ s!"induct := {repr b}, cidx := {repr c}, numParams := {repr d}, numFields := {repr e}, isUnsafe := {repr f}" ++ "}"
 
 
+#check RecursorVal
+
+structure cRecursorRule where
+  ctor : Name
+  nfields : Nat
+  rhs : CExpr
+deriving Inhabited, BEq, Repr
+
+structure cRecursorVal where
+  all : List Name
+  numParams : Nat
+  numIndices : Nat
+  numMotives : Nat
+  numMinors : Nat
+  rules : List cRecursorRule
+  k : Bool
+  isUnsafe : Bool
+deriving Inhabited, BEq
+
+instance : Repr cRecursorVal where
+  reprPrec := fun ⟨a,b,c,d,e,f,g,h⟩ _ =>
+    "{" ++ s!"all := {a}, numParams := {repr b}, numIndices := {repr c}, numMotives := {repr d}, numMinors := {repr e}, rules := {repr f}, k := {repr g}, isUnsafe := {repr h}" ++ "}"
+
+
+instance : BEq QuotKind where
+  beq := fun a b =>
+    match a, b with
+    | .type, .type => true
+    | .ctor, .ctor => true
+    | .lift, .lift => true
+    | .ind, .ind => true
+    | _, _ => false
+
+
+instance : Repr QuotKind where
+  reprPrec := fun b _ =>
+    match  b with
+    | .type => "type"
+    | .ctor => "ctor"
+    | .lift => "lift"
+    | .ind => "ind"
+
+instance : BEq QuotVal where
+  beq := fun ⟨a,b⟩ ⟨A,B⟩ => (a == A) && (b == B)
+
+instance : Repr QuotVal where
+  reprPrec := fun ⟨_,b⟩ _ => repr b
+
+
+
+
 inductive CstInfo where
 | wVal (levelParams : List Lean.Name) (type : CExpr) (val : CExpr)
 | noVal (levelParams : List Lean.Name) (type : CExpr)
 | struc (levelParams : List Lean.Name) (type : CExpr) (ctorName : Lean.Name) (ctorVal : ConstructorVal)
 | mat (levelParams : List Lean.Name) (type : CExpr) (val : CExpr) (info : MatcherInfo)
 | indu (levelParams : List Lean.Name) (type : CExpr) (info : InductiveVal)
+| recu (levelParams : List Lean.Name) (type : CExpr) (info : cRecursorVal)
+| quot (levelParams : List Lean.Name) (type : CExpr) (info : QuotVal)
+| ctor (levelParams : List Lean.Name) (type : CExpr) (info : ConstructorVal)
 deriving Inhabited, BEq, Repr
 
 def CstInfo.type : CstInfo → CExpr
@@ -53,6 +107,10 @@ def CstInfo.type : CstInfo → CExpr
   | .struc _ t _ _=> t
   | .mat _ t _ _ => t
   | .indu _ t _ => t
+  | .recu _ t _ => t
+  | .quot _ t _ => t
+  | .ctor _ t _ => t
+
 
 def CstInfo.levelParams : CstInfo → List Lean.Name
   | .wVal t _ _ => t
@@ -60,6 +118,9 @@ def CstInfo.levelParams : CstInfo → List Lean.Name
   | .struc t _ _ _ => t
   | .mat t _ _ _ => t
   | .indu t _ _ => t
+  | .recu t _ _ => t
+  | .quot t _ _ => t
+  | .ctor t _ _ => t
 
 
 /-
