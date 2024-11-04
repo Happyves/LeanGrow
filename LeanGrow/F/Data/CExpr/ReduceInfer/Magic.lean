@@ -14,11 +14,11 @@ structure FixCtx where
   deriving Inhabited
 
 
-@[extern 6 "lean_my_whnf"] opaque cexprWhnf
+@[extern "lean_my_whnf"] opaque cexprWhnf
   (fctx : FixCtx) (bvarCtx : List CExpr) : CExpr → CExpr
 
 
-@[extern 6 "lean_my_infer_type"] opaque cexprInferType
+@[extern "lean_my_infer_type"] opaque cexprInferType
   (fctx : FixCtx) (bvarCtx : List CExpr) : CExpr → CExpr
 
-@[extern 6 "lean_my_test"] opaque myTestExternExport : Nat
+@[extern "lean_my_test"] opaque myTestExternExport : Nat → Nat

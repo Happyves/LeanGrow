@@ -8,8 +8,13 @@ package "LeanGrow" where
   ]
   -- add any additional package configuration options here
 
-require "leanprover-community" / "mathlib"
+require mathlib from git
+  "https://github.com/leanprover-community/mathlib4.git" @ "v4.10.0-rc1"
 
 @[default_target]
 lean_lib «LeanGrow» where
   -- add any library configuration options here
+
+-- @[default_target]
+-- lean_exe LeanGrow where
+--   root := `LeanGrow
