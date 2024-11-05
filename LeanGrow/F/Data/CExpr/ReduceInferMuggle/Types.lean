@@ -15,8 +15,10 @@ structure FixCtx where
   deriving Inhabited
 
 inductive FlowType where
-| failed
 | Whnf_1
+| Whnf_2
+| Whnf_3
+| Whnf_4
 | InferType_1
 | cInferAppType_1
 | cInferAppType_2
@@ -44,8 +46,13 @@ inductive FlowType where
 | toCtorWhenK_2
 | toCtorWhenStructure_1
 | toCtorWhenStructure_2
-| toCtorWhenStructure_3
-| toCtorWhenStructure_4
+| reduceRec_1
+| reduceRec_2
+| reduceRec_3
+| reduceRec_4
+| reduceQuotRec_1
+| reduceQuotRec_2
+| reduceQuotRec_3
 deriving Inhabited, BEq, Repr
 
 

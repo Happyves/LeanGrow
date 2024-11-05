@@ -85,26 +85,6 @@ def CExpr.mkNullaryCtor (cstData : CTrie CstInfo) (n : Name) (lvl : List Level) 
 
 
 
-/-
-
-def CExpr.toCtorWhenK (fctx : FixCtx) (bvarCtx : List CExpr)
-  (recName : Name) (recVal : cRecursorVal) (major : CExpr) : CExpr :=
-  let majorType := cexprWhnf fctx bvarCtx
-    (cexprInferType fctx bvarCtx major)
-  let (H, AS) := CExpr.getApp majorType
-  match H with
-  | .const n lvl =>
-      if !(n == recName.getPrefix)
-      then
-        major
-      else
-        match CExpr.mkNullaryCtor fctx.cstData n lvl AS recVal.numParams with
-        | .none => major
-        | .some newCtorApp => newCtorApp
-  | _ => major
-
--/
-
 def toCtorWhenK_1 : FlowState → FlowState
   | ⟨(.toCtorWhenK_1, bvarCtx) :: mI, (.ofName recName) :: (.ofcRecursorVal recVal) ::(.ofCExpr major) ::  mA⟩ =>
       ⟨(.InferType_1, bvarCtx) :: (.Whnf_1, bvarCtx) :: (.toCtorWhenK_2, bvarCtx) :: mI, (.ofCExpr major) :: (.ofName recName) :: (.ofcRecursorVal recVal) ::(.ofCExpr major) ::  mA⟩
@@ -185,46 +165,80 @@ def getRecRuleFor (recVal : cRecursorVal) : CExpr → Option cRecursorRule
   | .const fn _ => recVal.rules.find? fun r => r.ctor == fn
   | _           => none
 
-/-
-
-def CExpr.reduceRec (fctx : FixCtx) (bvarCtx : List CExpr)
-  (recName : Name) (recLvlParams : List Name) (recVal : cRecursorVal) (recLvls : List Level) (recArgs : List CExpr) (on : CExpr) : CExpr :=
-  let majorIdx := recVal.getMajorIdx
-  if H : majorIdx < recArgs.length
-  then
-    let major := cexprWhnf fctx bvarCtx (recArgs.get ⟨majorIdx, H⟩)
-    let eta_1 := if recVal.k then (CExpr.toCtorWhenK fctx bvarCtx recName recVal major) else major
-    let eta_2 := eta_1.toCtorIfLit
-    let eta_3 := CExpr.toCtorWhenStructure fctx bvarCtx
-      recName.getPrefix eta_2
-    let (h,as) := eta_3.getApp
-    match getRecRuleFor recVal h with
-    | .none => on
-    | .some rule =>
-        let rhs_1 := rule.rhs.instantiateLevelParams recLvlParams recLvls
-        let rhs_2 := CExpr.mkApp rhs_1 (recArgs.take (recVal.numParams+recVal.numMotives+recVal.numMinors))
-        let nparams := as.length - rule.nfields
-        let rhs_3 := CExpr.mkApp rhs_2 (as.drop nparams)
-        cexprWhnf fctx bvarCtx (CExpr.mkApp rhs_3 (recArgs.drop (majorIdx + 1)))
-        -- not in `reduceRec`, but is success in `whnfCore`
-  else
-    on
-
--/
 
 
-
-#exit
-
-
-
-
-def CExpr.reduceQuotRec (fctx : FixCtx) (bvarCtx : List CExpr)
-  (recVal : QuotVal) (recArgs : List CExpr) (on : CExpr) : CExpr :=
-    let process (majorPos argPos : Nat) (on' : CExpr): CExpr :=
-      if H : majorPos < recArgs.length
+def reduceRec_1 : FlowState → FlowState
+  | ⟨(.reduceRec_1, bvarCtx) :: mI, (.ofName recName) :: (.ofListName recLvlParams) :: (.ofcRecursorVal recVal) :: (.ofListLevel recLvls) :: (.ofList recArgs) :: (.ofCExpr on)  :: mA⟩ =>
+      let majorIdx := recVal.getMajorIdx
+      if H : majorIdx < recArgs.length
       then
-        let major := cexprWhnf fctx bvarCtx (recArgs.get ⟨majorPos, H⟩)
+        let major := (recArgs.get ⟨majorIdx, H⟩)
+        ⟨(.Whnf_1, bvarCtx) :: (.reduceRec_2, bvarCtx) :: mI, (.ofCExpr major) :: (.ofName recName) :: (.ofListName recLvlParams) :: (.ofcRecursorVal recVal) :: (.ofListLevel recLvls) :: (.ofList recArgs) :: (.ofCExpr on)  :: mA⟩
+      else
+        ⟨mI, (.ofCExpr on)  :: mA⟩
+  | _  => FailedState
+
+
+def reduceRec_2 : FlowState → FlowState
+  | ⟨(.reduceRec_2, bvarCtx) :: mI, (.ofCExpr major) :: (.ofName recName) :: (.ofListName recLvlParams) :: (.ofcRecursorVal recVal) :: (.ofListLevel recLvls) :: (.ofList recArgs) :: (.ofCExpr on)  :: mA⟩ =>
+      if recVal.k
+      then
+        ⟨(.toCtorWhenK_1, bvarCtx) :: (.reduceRec_3, bvarCtx) :: mI, (.ofName recName) :: (.ofcRecursorVal recVal) :: (.ofCExpr major) :: (.ofName recName) :: (.ofListName recLvlParams) :: (.ofcRecursorVal recVal) :: (.ofListLevel recLvls) :: (.ofList recArgs) :: (.ofCExpr on)  :: mA⟩
+      else
+        ⟨(.reduceRec_3, bvarCtx) :: mI, (.ofCExpr major) :: (.ofName recName) :: (.ofListName recLvlParams) :: (.ofcRecursorVal recVal) :: (.ofListLevel recLvls) :: (.ofList recArgs) :: (.ofCExpr on)  :: mA⟩
+  | _  => FailedState
+
+
+
+def reduceRec_3 : FlowState → FlowState
+  | ⟨(.reduceRec_3, bvarCtx) :: mI, (.ofCExpr eta_1) :: (.ofName recName) :: (.ofListName recLvlParams) :: (.ofcRecursorVal recVal) :: (.ofListLevel recLvls) :: (.ofList recArgs) :: (.ofCExpr on)  :: mA⟩ =>
+      let eta_2 := eta_1.toCtorIfLit
+      ⟨(.toCtorWhenStructure_1, bvarCtx) :: (.reduceRec_4, bvarCtx) :: mI, (.ofName recName.getPrefix) :: (.ofCExpr eta_2) :: (.ofName recName) :: (.ofListName recLvlParams) :: (.ofcRecursorVal recVal) :: (.ofListLevel recLvls) :: (.ofList recArgs) :: (.ofCExpr on)  :: mA⟩
+  | _  => FailedState
+
+
+def reduceRec_4 : FlowState → FlowState
+  | ⟨(.reduceRec_4, bvarCtx) :: mI, (.ofCExpr eta_3) :: (.ofName _) :: (.ofListName recLvlParams) :: (.ofcRecursorVal recVal) :: (.ofListLevel recLvls) :: (.ofList recArgs) :: (.ofCExpr on)  :: mA⟩ =>
+      let (h,as) := eta_3.getApp
+      match getRecRuleFor recVal h with
+      | .none => ⟨mI, (.ofCExpr on)  :: mA⟩
+      | .some rule =>
+          let majorIdx := recVal.getMajorIdx
+          let rhs_1 := rule.rhs.instantiateLevelParams recLvlParams recLvls
+          let rhs_2 := CExpr.mkApp rhs_1 (recArgs.take (recVal.numParams+recVal.numMotives+recVal.numMinors))
+          let nparams := as.length - rule.nfields
+          let rhs_3 := CExpr.mkApp rhs_2 (as.drop nparams)
+          let res := (CExpr.mkApp rhs_3 (recArgs.drop (majorIdx + 1)))
+          ⟨(.Whnf_1, bvarCtx) :: mI, (.ofCExpr res)  :: mA⟩
+  | _  => FailedState
+
+
+
+def reduceQuotRec_1 : FlowState → FlowState
+  | ⟨(.reduceQuotRec_1, bvarCtx) :: mI, (.ofQuotVal recVal) :: (.ofList recArgs) :: (.ofCExpr on)  :: mA⟩ =>
+        match recVal.kind with
+        | QuotKind.lift =>
+            ⟨(.reduceQuotRec_2, bvarCtx) :: mI, (.ofNat 5) :: (.ofNat 3) :: (.ofCExpr on) :: (.ofQuotVal recVal) :: (.ofList recArgs) :: (.ofCExpr on) :: mA⟩
+        | QuotKind.ind  =>
+            ⟨(.reduceQuotRec_2, bvarCtx) :: mI, (.ofNat 4) :: (.ofNat 3) :: (.ofCExpr on) :: (.ofQuotVal recVal) :: (.ofList recArgs) :: (.ofCExpr on) :: mA⟩
+        | _             =>
+            ⟨mI, (.ofCExpr on)  :: mA⟩
+  | _  => FailedState
+
+
+def reduceQuotRec_2 : FlowState → FlowState
+  | ⟨(.reduceQuotRec_2, bvarCtx) :: mI, (.ofNat majorPos) :: (.ofNat argPos) :: (.ofCExpr on') :: (.ofQuotVal recVal) :: (.ofList recArgs) :: (.ofCExpr on)  :: mA⟩ =>
+        if H : majorPos < recArgs.length
+        then
+          let major := (recArgs.get ⟨majorPos, H⟩)
+          ⟨(.Whnf_1, bvarCtx) :: (.reduceQuotRec_3, bvarCtx) :: mI, (.ofCExpr major) :: (.ofNat majorPos) :: (.ofNat argPos) :: (.ofCExpr on') :: (.ofQuotVal recVal) :: (.ofList recArgs) :: (.ofCExpr on)  :: mA⟩
+        else
+          ⟨mI, (.ofCExpr on')  :: mA⟩
+  | _  => FailedState
+
+
+def reduceQuotRec_3 (fctx : FixCtx) : FlowState → FlowState
+  | ⟨(.reduceQuotRec_3, bvarCtx) :: mI, (.ofCExpr major) :: (.ofNat majorPos) :: (.ofNat argPos) :: (.ofCExpr on') :: (.ofQuotVal _) :: (.ofList recArgs) :: (.ofCExpr _)  :: mA⟩ =>
         match major with
         | .app (.app (.app (.const majorFn _) _) _) majorArg =>
             match fctx.cstData.find? majorFn.toString with
@@ -232,18 +246,12 @@ def CExpr.reduceQuotRec (fctx : FixCtx) (bvarCtx : List CExpr)
                   let f := recArgs.get! argPos
                   let r := CExpr.app f majorArg
                   let recArity := majorPos + 1
-                  cexprWhnf fctx bvarCtx (CExpr.mkApp r (recArgs.drop recArity))
-                  -- not in `reduceQuotRec`, but is success in `whnfCore`
-            | _ => on'
-        | _ => on'
-      else
-        on'
-    match recVal.kind with
-    | QuotKind.lift => process 5 3 on
-    | QuotKind.ind  => process 4 3 on
-    | _             => on
+                  let res := (CExpr.mkApp r (recArgs.drop recArity))
+                  ⟨mI, (.ofCExpr res)  :: mA⟩
+            | _ => ⟨mI, (.ofCExpr on')  :: mA⟩
+        | _ => ⟨(.Whnf_1, bvarCtx) :: mI, (.ofCExpr on')  :: mA⟩
+  | _  => FailedState
 
-#print Eq.ndrec
 
 
 def CExpr.projectCore? (cstData : CTrie CstInfo) (e : CExpr) (i : Nat) : Option CExpr :=
