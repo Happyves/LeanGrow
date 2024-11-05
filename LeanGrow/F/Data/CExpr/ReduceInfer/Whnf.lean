@@ -27,7 +27,7 @@ partial def myWhnfCore
         | _ =>
             let (f,as) := ce.getApp
             let f' := myWhnfCore fctx bvarCtx f
-            let ce2 := f'.beta_help as
+            let ce2 := myWhnfCore fctx bvarCtx (f'.beta_help as)
             match (ce2.reduceMatcher? fctx bvarCtx) with
             | .reduced eNew => myWhnfCore fctx bvarCtx eNew
             | .partialApp   => ce2

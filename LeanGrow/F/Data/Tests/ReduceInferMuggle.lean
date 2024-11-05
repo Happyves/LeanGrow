@@ -31,6 +31,18 @@ elab "testReduce" t:term : command => do
 
 
 testReduce (fun x => x) Nat.zero
+testReduce (fun x => x) ((fun x => x) Nat.zero)
+testReduce (fun x => (fun y => y) x) Nat.zero
+
+elab "testReduceRef" t:term : command => do
+  let exp ← Command.liftTermElabM (elabTermAndSynthesize t .none)
+  let red ← Command.liftTermElabM (Meta.whnf exp)
+  IO.println s!"{repr red}"
+
+testReduceRef (fun x => x) ((fun x => x) Nat.zero)
+testReduceRef (fun x => (fun y => y) x) Nat.zero
+
+
 
 elab "testInfer" t:term : command => do
   let exp ← Command.liftTermElabM (elabTermAndSynthesize t .none)
@@ -39,4 +51,4 @@ elab "testInfer" t:term : command => do
   IO.println s!"{repr red}"
 
 testInfer (fun x => x) Nat.zero
-testInfer Nat.succ
+testInfer Nat.succ Nat.zero

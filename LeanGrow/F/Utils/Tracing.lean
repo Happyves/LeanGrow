@@ -1,9 +1,9 @@
 
 inductive TraceFlags where
-| zero | one | two | three | four | five | six | seven | eight | nine
+| zero | one | two | three | four | five | six | seven | eight | nine | ten | eleven | twelve | thirteen
 deriving BEq, Inhabited, Repr
 
-def TraceFlags.all : List TraceFlags := [.zero, .one, .two, .three, .four, .five, .six, .seven, .eight, .nine]
+def TraceFlags.all : List TraceFlags := [.zero, .one, .two, .three, .four, .five, .six, .seven, .eight, .nine, .ten, .eleven, .twelve, .thirteen]
 
 def TraceFlags.off : List TraceFlags := []
 

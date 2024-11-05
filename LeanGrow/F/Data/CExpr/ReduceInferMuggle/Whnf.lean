@@ -43,12 +43,17 @@ def Whnf_2 (fctx : FixCtx) : FlowState → FlowState
 def Whnf_3 : FlowState → FlowState
   | ⟨(.Whnf_3, bvarCtx) :: mI, (.ofCExpr f') :: (.ofList as) :: mA⟩ =>
         let ce2 := f'.beta_help as
-        ⟨(.reduceMatcher?_1, bvarCtx) :: (.Whnf_4, bvarCtx) :: mI, (.ofCExpr ce2) :: (.ofCExpr ce2) :: mA⟩
+        ⟨(.Whnf_1, bvarCtx) :: (.Whnf_4, bvarCtx) :: mI, (.ofCExpr ce2) :: mA⟩
   | _  => FailedState
 
 
-def Whnf_4 (fctx : FixCtx) : FlowState → FlowState
-  | ⟨(.Whnf_4, bvarCtx) :: mI, (.ofReduceMatcherResult info) :: (.ofCExpr ce2) :: mA⟩ =>
+def Whnf_4 : FlowState → FlowState
+  | ⟨(.Whnf_4, bvarCtx) :: mI, (.ofCExpr ce2) :: mA⟩ =>
+        ⟨(.reduceMatcher?_1, bvarCtx) :: (.Whnf_5, bvarCtx) :: mI, (.ofCExpr ce2) :: (.ofCExpr ce2) :: mA⟩
+  | _  => FailedState
+
+def Whnf_5 (fctx : FixCtx) : FlowState → FlowState
+  | ⟨(.Whnf_5, bvarCtx) :: mI, (.ofReduceMatcherResult info) :: (.ofCExpr ce2) :: mA⟩ =>
         match info with
         | .reduced eNew => ⟨(.Whnf_1, bvarCtx) :: mI, (.ofCExpr eNew) :: mA⟩
         | .partialApp   => ⟨mI, (.ofCExpr ce2) :: mA⟩

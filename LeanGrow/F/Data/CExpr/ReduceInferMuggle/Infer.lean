@@ -16,7 +16,7 @@ def cInferConstType (cstData : CTrie CstInfo) (c : Name) (us : List Level) : CEx
 
 def cInferAppType_1 : FlowState → FlowState
   | ⟨(.cInferAppType_1, bvCtx) :: mI, (.ofCExpr f) :: (.ofList args) :: mA⟩ =>
-      ⟨(.Whnf_1, bvCtx) :: (.cInferAppType_2, bvCtx) :: mI, (.ofCExpr f) :: (.ofList args) :: mA⟩
+      ⟨(.InferType_1, bvCtx) :: (.cInferAppType_2, bvCtx) :: mI, (.ofCExpr f) :: (.ofList args) :: mA⟩
   | _ => FailedState
 
 def cInferAppType_2 : FlowState → FlowState

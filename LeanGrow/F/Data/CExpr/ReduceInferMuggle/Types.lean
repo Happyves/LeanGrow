@@ -19,6 +19,7 @@ inductive FlowType where
 | Whnf_2
 | Whnf_3
 | Whnf_4
+| Whnf_5
 | InferType_1
 | cInferAppType_1
 | cInferAppType_2
