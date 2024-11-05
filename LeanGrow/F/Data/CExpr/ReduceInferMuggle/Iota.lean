@@ -1,88 +1,79 @@
 
 import LeanGrow.F.Data.CExpr.API
-import LeanGrow.F.Data.CExpr.ReduceInfer.Magic
-import LeanGrow.F.Data.CExpr.ReduceInfer.BetaZeta
+import LeanGrow.F.Data.CExpr.ReduceInferMuggle.Types
+import LeanGrow.F.Data.CExpr.ReduceInferMuggle.BetaZeta
 import Lean
 
 open Lean Meta
 
-#check getMatcherInfoCore?
+
+def myForallBoundedTelescope_1 : FlowState → FlowState
+  | ⟨(.myForallBoundedTelescope_1, bvarCtx) :: mI, (.ofCExpr auxAppType) :: (.ofNat iter) :: mA⟩ =>
+      match iter with
+      | 0 => ⟨mI, (.ofList bvarCtx) :: mA⟩ -- differs from original in that we only return the list
+      | n+1 =>
+          match auxAppType with
+          | .forallE _ t b _ =>
+              ⟨(.myForallBoundedTelescope_1, t :: bvarCtx) :: mI, (.ofCExpr b) :: (.ofNat n) :: mA⟩
+          | _ =>
+              ⟨(.Whnf_1, bvarCtx) :: (.myForallBoundedTelescope_2, bvarCtx) :: mI, (.ofCExpr auxAppType) :: (.ofNat n) :: mA⟩
+  | _  => FailedState
 
 
-inductive CExpr_ReduceMatcherResult where
-  | reduced (val : CExpr)
-  | stuck   (val : CExpr)
-  | notMatcher
-  | partialApp
-
-def fib : Nat → Nat
-  | 0 => 0
-  | 1 => 1
-  | n+2 => (fib (n+1)) + (fib n)
-
-#print fib.match_1
-
-elab "testing" : command => do
-  let env ← getEnv
-  let ext := Lean.Meta.Match.Extension.extension.getState env
-  let f1 := env.find? `fib.match_1
-  let f2 := ext.map.find? `fib.match_1
-  IO.println s!"{f1.isSome} and {repr f2}"
-
--- testing
+def myForallBoundedTelescope_2 : FlowState → FlowState
+  | ⟨(.myForallBoundedTelescope_2, bvarCtx) :: mI, (.ofCExpr auxAppType) :: (.ofNat iter) :: mA⟩ =>
+        match auxAppType with
+        | .forallE _ t b _ =>
+            ⟨(.myForallBoundedTelescope_1, t :: bvarCtx) :: mI, (.ofCExpr b) :: (.ofNat iter) :: mA⟩
+        | _ => FailedState
+  | _  => FailedState
 
 
 
-
-def myForallBoundedTelescope (fctx : FixCtx) (bvarCtx : List CExpr)
-  (auxAppType : CExpr) : Nat → CExpr × List CExpr
-  | 0 => (auxAppType, bvarCtx)
-  | n+1 =>
-    match auxAppType with
-    | .forallE _ t b _ => myForallBoundedTelescope fctx (t :: bvarCtx) b n
-    | _ =>
-        let tryharder := cexprWhnf fctx bvarCtx auxAppType
-        match tryharder with
-        | .forallE _ t b _ => myForallBoundedTelescope fctx (t :: bvarCtx) b n
-        | _ => (.failed, []) -- because we don't expect failure ??
-
-
-def CExpr.reduceMatcher? (fctx : FixCtx) (bvarCtx : List CExpr)
-  (e : CExpr) : CExpr_ReduceMatcherResult :=
-  let (h,args) := CExpr.getApp e
-  match h with
-  | .const n lvl =>
-      match fctx.cstData.find? n.toString with
-      | .some (.mat paras _ val info) =>
-            let prefixSz := info.numParams + 1 + info.numDiscrs
-            if args.length < prefixSz + info.numAlts
-            then
-              .partialApp
-            else
-              let f := CExpr.instantiateLevelParams val paras lvl
-              let auxApp := CExpr.mkApp f (args.take (prefixSz))
-              let auxAppType := cexprInferType fctx bvarCtx auxApp
-              let (_,BV) := myForallBoundedTelescope fctx bvarCtx auxAppType info.numAlts
-              let auxAppNew := cexprWhnf fctx
-                BV (CExpr.mkApp auxApp ((List.range info.numAlts).map (CExpr.bvar)).reverse)
-              let (H,AS) := CExpr.getApp auxAppNew
-              match H with
-              | .bvar I =>
-                  let result := CExpr.mkApp (args.get! (prefixSz + (info.numAlts - 1 - I))) AS
-                  let result' := CExpr.mkApp result (args.drop (prefixSz + info.numAlts))
-                  .reduced (CExpr.beta result')
-              | _ => .stuck auxApp
-      | _ => .notMatcher
-  | _ => .notMatcher
+def reduceMatcher?_1 (fctx : FixCtx) : FlowState → FlowState
+  | ⟨(.reduceMatcher?_1, bvarCtx) :: mI, (.ofCExpr e) ::  mA⟩ =>
+        let (h,args) := CExpr.getApp e
+        match h with
+        | .const n lvl =>
+            match fctx.cstData.find? n.toString with
+            | .some (.mat paras _ val info) =>
+                  let prefixSz := info.numParams + 1 + info.numDiscrs
+                  if args.length < prefixSz + info.numAlts
+                  then
+                    ⟨mI, (.ofReduceMatcherResult .partialApp) :: mA⟩
+                  else
+                    let f := CExpr.instantiateLevelParams val paras lvl
+                    let auxApp := CExpr.mkApp f (args.take (prefixSz))
+                    ⟨(.InferType_1, bvarCtx) :: (.reduceMatcher?_2, bvarCtx) :: mI, (.ofCExpr auxApp) :: (.ofCExpr auxApp) :: (.ofList args) :: (.ofMatcherInfo info) :: (.ofNat prefixSz) :: mA⟩
+            | _ => ⟨mI, (.ofReduceMatcherResult .notMatcher) :: mA⟩
+        | _ => ⟨mI, (.ofReduceMatcherResult .notMatcher) :: mA⟩
+  | _  => FailedState
 
 
-#print Nat.add.eq_1
+def reduceMatcher?_2 : FlowState → FlowState
+  | ⟨(.reduceMatcher?_2, bvarCtx) :: mI, (.ofCExpr auxAppType) :: (.ofCExpr auxApp) :: (.ofList args) :: (.ofMatcherInfo info) :: (.ofNat prefixSz) :: mA⟩ =>
+      ⟨(.myForallBoundedTelescope_1, bvarCtx) :: (.reduceMatcher?_3, bvarCtx) :: mI, (.ofCExpr auxAppType) :: (.ofNat info.numAlts) :: (.ofCExpr auxApp) :: (.ofList args) :: (.ofMatcherInfo info) :: (.ofNat prefixSz) :: mA⟩
+  | _  => FailedState
 
-#check (1+1)
 
-#check Subarray
+def reduceMatcher?_3 : FlowState → FlowState
+  | ⟨(.reduceMatcher?_3, bvarCtx) :: mI, (.ofList BV) :: (.ofCExpr auxApp) :: (.ofList args) :: (.ofMatcherInfo info) :: (.ofNat prefixSz) :: mA⟩ =>
+      let interim := (CExpr.mkApp auxApp ((List.range info.numAlts).map (CExpr.bvar)).reverse)
+      ⟨(.reduceMatcher?_4, BV) ::(.reduceMatcher?_4, bvarCtx) :: mI, (.ofCExpr interim) :: (.ofCExpr auxApp) :: (.ofList args) :: (.ofMatcherInfo info) :: (.ofNat prefixSz) :: mA⟩
+  | _  => FailedState
 
-#check RecursorVal.k -- good docs
+
+def reduceMatcher?_4 : FlowState → FlowState
+  | ⟨(.reduceMatcher?_4, _) :: mI, (.ofCExpr auxAppNew) :: (.ofCExpr auxApp) :: (.ofList args) :: (.ofMatcherInfo info) :: (.ofNat prefixSz) :: mA⟩ =>
+      let (H,AS) := CExpr.getApp auxAppNew
+      match H with
+      | .bvar I =>
+          let result := CExpr.mkApp (args.get! (prefixSz + (info.numAlts - 1 - I))) AS
+          let result' := CExpr.mkApp result (args.drop (prefixSz + info.numAlts))
+          ⟨mI, (.ofReduceMatcherResult (.reduced (CExpr.beta result'))) :: mA⟩
+      | _ =>
+        ⟨mI, (.ofReduceMatcherResult (.stuck auxApp)) :: mA⟩
+  | _  => FailedState
 
 
 def CExpr.mkNullaryCtor (cstData : CTrie CstInfo) (n : Name) (lvl : List Level) (as : List CExpr) (nparams : Nat) : Option CExpr :=
@@ -92,8 +83,9 @@ def CExpr.mkNullaryCtor (cstData : CTrie CstInfo) (n : Name) (lvl : List Level) 
       .some (CExpr.mkApp (.const ct lvl) (as.take nparams))
   | _ => .none
 
-#eval Array.shrink #[1,2,3] 1
 
+
+/-
 
 def CExpr.toCtorWhenK (fctx : FixCtx) (bvarCtx : List CExpr)
   (recName : Name) (recVal : cRecursorVal) (major : CExpr) : CExpr :=
@@ -111,6 +103,29 @@ def CExpr.toCtorWhenK (fctx : FixCtx) (bvarCtx : List CExpr)
         | .some newCtorApp => newCtorApp
   | _ => major
 
+-/
+
+def toCtorWhenK_1 : FlowState → FlowState
+  | ⟨(.toCtorWhenK_1, bvarCtx) :: mI, (.ofName recName) :: (.ofcRecursorVal recVal) ::(.ofCExpr major) ::  mA⟩ =>
+      ⟨(.InferType_1, bvarCtx) :: (.Whnf_1, bvarCtx) :: (.toCtorWhenK_2, bvarCtx) :: mI, (.ofCExpr major) :: (.ofName recName) :: (.ofcRecursorVal recVal) ::(.ofCExpr major) ::  mA⟩
+  | _  => FailedState
+
+
+def toCtorWhenK_2 (fctx : FixCtx) : FlowState → FlowState
+  | ⟨(.toCtorWhenK_2, _) :: mI, (.ofCExpr majorType) :: (.ofName recName) :: (.ofcRecursorVal recVal) ::(.ofCExpr major) ::  mA⟩ =>
+        let (H, AS) := CExpr.getApp majorType
+        match H with
+        | .const n lvl =>
+            if !(n == recName.getPrefix)
+            then
+              ⟨mI, (.ofCExpr major) :: mA⟩
+            else
+              match CExpr.mkNullaryCtor fctx.cstData n lvl AS recVal.numParams with
+              | .none => ⟨mI, (.ofCExpr major) :: mA⟩
+              | .some newCtorApp => ⟨mI, (.ofCExpr newCtorApp) :: mA⟩
+        | _ => ⟨mI, (.ofCExpr major) :: mA⟩
+  | _  => FailedState
+
 
 
 def CExpr.toCtorIfLit : CExpr → CExpr
@@ -123,47 +138,43 @@ def CExpr.toCtorIfLit : CExpr → CExpr
   | e => e
 
 
-/-
-structure test where
-  a : Nat
-  b : Int
-
-#reduce test.a --fun self ↦ self.1
--/
-
 def toCtorWhenStructure_help (strucName : Name) (nfields : Nat) (major : CExpr) (sofar : CExpr) : Nat → CExpr
   | 0 => .app sofar (.proj strucName (nfields - 1) major)
   | n+1 => toCtorWhenStructure_help strucName nfields major (.app sofar (.proj strucName (nfields - 1 - n) major) ) n
 
 
+def toCtorWhenStructure_1 (fctx : FixCtx) : FlowState → FlowState
+  | ⟨(.toCtorWhenStructure_1, bvarCtx) :: mI, (.ofName strucName) :: (.ofCExpr major) ::  mA⟩ =>
+        match fctx.cstData.find? strucName.toString with
+        | .some (.struc _ _ ctN ctV) =>
+            match (major.getApp).1 with
+            | .const N _ =>
+                if !(N == ctN)
+                then
+                  ⟨mI, (.ofCExpr major) :: mA⟩
+                else
+                  ⟨(.InferType_1, bvarCtx) :: (.InferType_1, bvarCtx) :: (.Whnf_1, bvarCtx) ::(.toCtorWhenStructure_2, bvarCtx) :: mI, (.ofCExpr major) :: (.ofName ctN) :: (.ofConstructorVal ctV) :: (.ofName strucName) :: (.ofCExpr major) :: mA⟩
+            | _ => ⟨mI, (.ofCExpr major) :: mA⟩
+        | _ => ⟨mI, (.ofCExpr major) :: mA⟩
+  | _  => FailedState
 
-def CExpr.toCtorWhenStructure (fctx : FixCtx) (bvarCtx : List CExpr)
-  (strucName : Name) (major : CExpr) : CExpr :=
-  match (fctx : FixCtx).cstData.find? strucName.toString with
-  | .some (.struc _ _ ctN ctV) =>
-      match (major.getApp).1 with
-      | .const N _ =>
-          if !(N == ctN)
-          then
-            major
-          else
-            let majorType := cexprInferType fctx bvarCtx major
-            let majorTypeType := cexprWhnf fctx bvarCtx
-              (cexprInferType fctx bvarCtx majorType)
-            if majorTypeType == .sort .zero
-            then
-              major
-            else
-              let (h,as) := major.getApp
-              match h with
-              | .const _ lvl =>
-                  let params := as.take ctV.numParams
-                  let wp := CExpr.mkApp (.const ctN lvl) params
-                  toCtorWhenStructure_help strucName ctV.numFields major wp ctV.numFields
-              | _ => major
 
-      | _ => major
-  | _ => major
+def toCtorWhenStructure_2 : FlowState → FlowState
+  | ⟨(.toCtorWhenStructure_2, _) :: mI, (.ofCExpr majorTypeType) :: (.ofName ctN) :: (.ofConstructorVal ctV) :: (.ofName strucName) :: (.ofCExpr major) :: mA⟩ =>
+      if majorTypeType == .sort .zero
+      then
+        ⟨mI, (.ofCExpr major) :: mA⟩
+      else
+        let (h,as) := major.getApp
+        match h with
+        | .const _ lvl =>
+            let params := as.take ctV.numParams
+            let wp := CExpr.mkApp (.const ctN lvl) params
+            let res := toCtorWhenStructure_help strucName ctV.numFields major wp ctV.numFields
+            ⟨mI, (.ofCExpr res) :: mA⟩
+        | _ => ⟨mI, (.ofCExpr major) :: mA⟩
+  | _  => FailedState
+
 
 
 def cRecursorVal.getMajorIdx (v : cRecursorVal) : Nat :=
@@ -173,6 +184,8 @@ def cRecursorVal.getMajorIdx (v : cRecursorVal) : Nat :=
 def getRecRuleFor (recVal : cRecursorVal) : CExpr → Option cRecursorRule
   | .const fn _ => recVal.rules.find? fun r => r.ctor == fn
   | _           => none
+
+/-
 
 def CExpr.reduceRec (fctx : FixCtx) (bvarCtx : List CExpr)
   (recName : Name) (recLvlParams : List Name) (recVal : cRecursorVal) (recLvls : List Level) (recArgs : List CExpr) (on : CExpr) : CExpr :=
@@ -197,10 +210,13 @@ def CExpr.reduceRec (fctx : FixCtx) (bvarCtx : List CExpr)
   else
     on
 
+-/
 
 
 
-#check 1
+#exit
+
+
 
 
 def CExpr.reduceQuotRec (fctx : FixCtx) (bvarCtx : List CExpr)

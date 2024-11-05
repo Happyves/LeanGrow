@@ -106,67 +106,103 @@ def cInferLambdaType_2 : FlowState → FlowState
   | _  => FailedState
 
 
-
-#exit
-
-def getLevel (fctx : FixCtx) (bvarCtx : List CExpr)
-  (type : CExpr) : Level :=
-  let typeType :=
-    cexprWhnf fctx bvarCtx
-      (cexprInferType fctx bvarCtx type)
-  match typeType with
-  | .sort lvl => lvl
-  | _ => .mvar ⟨`failed⟩
-
-def cInferForallType (fctx : FixCtx) (bvarCtx : List CExpr)
-  (e : CExpr) : CExpr :=
-  let rec go (prepend : List CExpr) (sofar : List Level) : CExpr → List Level
-    | .forallE _ t b _ => go (t :: prepend) ((getLevel fctx prepend t) :: sofar) b
-    | e => (getLevel fctx prepend e) :: sofar
-  match (go bvarCtx [] e) with
-  | [] => .failed
-  | ini :: Ls =>
-      let compL := Ls.foldl (fun s l => mkLevelIMax' l s) ini
-      .sort compL.normalize
+def getLevel_1 : FlowState → FlowState
+  | ⟨(.getLevel_1, bvarCtx) :: mI, (.ofCExpr type) :: mA⟩ =>
+      ⟨(.InferType_1, bvarCtx) :: (.Whnf_1, bvarCtx) :: (.getLevel_2, bvarCtx) :: mI, (.ofCExpr type) ::(.ofCExpr type) :: mA⟩
+  | _  => FailedState
 
 
-#eval Array.push #[1,2] 3
--- since arrays push to the back, and `inferForallType` uses `foldrM`, we should be in the right order ...
+def getLevel_2 : FlowState → FlowState
+  | ⟨(.getLevel_2, _) :: mI, (.ofCExpr typeType) :: mA⟩ =>
+      match typeType with
+      | .sort lvl => ⟨mI, (.ofLevel lvl) :: mA⟩
+      | _ => FailedState
+  | _  => FailedState
+
+
+
+
+def cInferForallType_1 : FlowState → FlowState
+  | ⟨(.cInferForallType_1, bvarCtx) :: mI, (.ofCExpr e) :: mA⟩ =>
+      ⟨(.cInferForallType_2, bvarCtx) :: mI, (.ofCExpr e) :: (.ofListLevel []) :: mA⟩
+  | _  => FailedState
+
+
+def cInferForallType_2 : FlowState → FlowState
+  | ⟨(.cInferForallType_2, bvarCtx) :: mI, (.ofCExpr e) :: (.ofListLevel ll) :: mA⟩ =>
+      match e with
+      | .forallE _ t b _ =>
+          ⟨(.getLevel_1, bvarCtx) :: (.cInferForallType_3, bvarCtx) :: (.cInferForallType_2, t :: bvarCtx) :: mI, (.ofCExpr t) :: (.ofCExpr b) :: (.ofListLevel ll) :: mA⟩
+      | e =>
+          ⟨(.getLevel_1, bvarCtx) :: (.cInferForallType_4, bvarCtx) :: (.cInferForallType_5, bvarCtx) :: mI, (.ofCExpr e) :: (.ofListLevel ll) :: mA⟩
+  | _  => FailedState
+
+
+def cInferForallType_3 : FlowState → FlowState
+  | ⟨(.cInferForallType_3, _) :: mI, (.ofLevel l) :: (.ofCExpr b) :: (.ofListLevel ll) :: mA⟩ =>
+      ⟨ mI, (.ofLevel l) :: (.ofCExpr b) :: (.ofListLevel (l :: ll)) :: mA⟩
+  | _  => FailedState
+
+
+def cInferForallType_4 : FlowState → FlowState
+  | ⟨(.cInferForallType_4, _) :: mI, (.ofLevel l) :: (.ofListLevel ll) :: mA⟩ =>
+      ⟨ mI, (.ofLevel l) :: (.ofListLevel (l :: ll)) :: mA⟩
+  | _  => FailedState
+
+
+def cInferForallType_5 : FlowState → FlowState
+  | ⟨(.cInferForallType_5, _) :: mI, (.ofListLevel ll) :: mA⟩ =>
+      match ll with
+      | [] => FailedState
+      | ini :: Ls =>
+          let compL := Ls.foldl (fun s l => mkLevelIMax' l s) ini
+          let l := .sort compL.normalize
+          ⟨mI, (.ofCExpr l) :: mA⟩
+  | _  => FailedState
+
 
 def Literal.ctype : Literal → CExpr
   | .natVal _ => .const `Nat []
   | .strVal _ => .const `String []
 
--- note : when adding environements for constantInfo and lnode and gnode types,
--- we should also change the types in LeanGrow.F.Data.CExpr.ReduceInfer.Magic
-@[export lean_my_infer_type]
-def cexprInferTypeImp
-  (fctx : FixCtx) (bvarCtx : List CExpr)
-  (e : CExpr) : CExpr :=
-  match e with
-  | .const c us    => cInferConstType fctx.cstData c us
-  | .proj n i s    => cInferProjType fctx bvarCtx n i s
-  | .app ..      => let (h,as) := CExpr.getApp e ; cInferAppType fctx bvarCtx h as
-  | .bvar bidx     =>
-        match bvarCtx.get? bidx with
-        | .some T => T
-        | _ => .failed
-  | .lit v         => Literal.ctype v
-  | .sort lvl      => .sort (mkLevelSucc lvl)
-  | .forallE ..    => cInferForallType fctx bvarCtx e
-  | .lam ..        => cInferLambdaType fctx bvarCtx e
-  | .letE ..       => cInferLambdaType fctx bvarCtx e
-  | .gnode gidx _ =>
-        let (p,i) := fctx.gnodeTypesHandler gidx
-        (fctx.gnodeTypes.get! p).get! i
-  | .lnode pos _ tag =>
-        match tag with
-        | .none =>
-            match fctx.current with
-            | .none => .failed
-            | .some thmdata => (thmdata.get! pos).cexpr
-        | .some backId =>
-            match fctx.ltxTypes.find? (fun x => x.1 == backId) with
-            | .none => .failed
-            | .some (_,thmdata) => (thmdata.get! pos).cexpr
-  | .failed => .failed
+
+def InferType_1 (fctx : FixCtx) : FlowState → FlowState
+  | ⟨(.InferType_1, bvarCtx) :: mI, (.ofCExpr e) :: mA⟩ =>
+      match e with
+      | .const c us    =>
+          let res := cInferConstType fctx.cstData c us
+          ⟨mI, (.ofCExpr res) :: mA⟩
+      | .proj n i s    =>
+          ⟨(.cInferProjType_1, bvarCtx) :: mI, (.ofName n) :: (.ofNat i) :: (.ofCExpr s) :: mA⟩
+      | .app ..      =>
+          let (f,args) := CExpr.getApp e
+          ⟨(.cInferAppType_1, bvarCtx) :: mI, (.ofCExpr f) :: (.ofList args) :: mA⟩
+      | .bvar bidx     =>
+          match bvarCtx.get? bidx with
+          | .some T => ⟨mI, (.ofCExpr T) :: mA⟩
+          | _ => FailedState
+      | .lit v         => ⟨mI, (.ofCExpr (Literal.ctype v)) :: mA⟩
+      | .sort lvl      => ⟨mI, (.ofCExpr (.sort (mkLevelSucc lvl))) :: mA⟩
+      | .forallE ..    => ⟨(.cInferForallType_1, bvarCtx) :: mI, (.ofCExpr e) :: mA⟩
+      | .lam ..        => ⟨(.cInferLambdaType_1, bvarCtx) :: mI, (.ofCExpr e) :: mA⟩
+      | .letE ..       => ⟨(.cInferLambdaType_1, bvarCtx) :: mI, (.ofCExpr e) :: mA⟩
+      | .gnode gidx _ =>
+            let (p,i) := fctx.gnodeTypesHandler gidx
+            let T := (fctx.gnodeTypes.get! p).get! i
+            ⟨mI, (.ofCExpr T) :: mA⟩
+      | .lnode pos _ tag =>
+            match tag with
+            | .none =>
+                match fctx.current with
+                | .none => FailedState
+                | .some thmdata =>
+                    let T := (thmdata.get! pos).cexpr
+                    ⟨mI, (.ofCExpr T) :: mA⟩
+            | .some backId =>
+                match fctx.ltxTypes.find? (fun x => x.1 == backId) with
+                | .none => FailedState
+                | .some (_,thmdata) =>
+                    let T := (thmdata.get! pos).cexpr
+                    ⟨mI, (.ofCExpr T) :: mA⟩
+      | .failed => FailedState
+  | _  => FailedState

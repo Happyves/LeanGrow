@@ -3,7 +3,7 @@ import LeanGrow.F.Data.CExpr.Types
 import LeanGrow.F.Utils.Trie.CTrie
 import LeanGrow.F.Data.CExpr.ReduceInferMuggle.ConstInfo
 
-open Lean
+open Lean Meta Match
 
 
 structure FixCtx where
@@ -27,6 +27,33 @@ inductive FlowType where
 | cInferProjType_4
 | cInferLambdaType_1
 | cInferLambdaType_2
+| getLevel_1
+| getLevel_2
+| cInferForallType_1
+| cInferForallType_2
+| cInferForallType_3
+| cInferForallType_4
+| cInferForallType_5
+| myForallBoundedTelescope_1
+| myForallBoundedTelescope_2
+| reduceMatcher?_1
+| reduceMatcher?_2
+| reduceMatcher?_3
+| reduceMatcher?_4
+| toCtorWhenK_1
+| toCtorWhenK_2
+| toCtorWhenStructure_1
+| toCtorWhenStructure_2
+| toCtorWhenStructure_3
+| toCtorWhenStructure_4
+deriving Inhabited, BEq, Repr
+
+
+inductive ReduceMatcherResult where
+  | reduced (val : CExpr)
+  | stuck   (val : CExpr)
+  | notMatcher
+  | partialApp
 deriving Inhabited, BEq, Repr
 
 
@@ -34,8 +61,17 @@ inductive ArgType where
 | ofCExpr (_ : CExpr)
 | ofList (_ : List CExpr)
 | ofName (_ : Name)
+| ofListName (_ : List Name)
 | ofNat (_ : Nat)
 | ofBinInfo (_ : BinderInfo)
+| ofLevel (_ : Level)
+| ofListLevel (_ : List Level)
+| ofReduceMatcherResult (_ : ReduceMatcherResult)
+| ofConstructorVal (_ : ConstructorVal)
+| ofMatcherInfo (_ : MatcherInfo)
+| ofInductiveVal (_ : InductiveVal)
+| ofcRecursorVal (_ : cRecursorVal)
+| ofQuotVal (_ : QuotVal)
 deriving Inhabited, BEq, Repr
 
 
