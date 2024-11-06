@@ -14,7 +14,7 @@ def match_helper (l r : Option (List (Nat × NodeExpr))) : Option (List (Nat × 
 
 
 
-def Array.assignOrFail [BEq α] (A? : Option (Array (Option α))) (i : Nat) (val : α) : Option (Array (Option α)) :=
+def Array.assignOrFail' [BEq α] (A? : Option (Array (Option α))) (i : Nat) (val : α) : Option (Array (Option α)) :=
       match A? with
       | .some A =>
             match A.get! i with
@@ -33,9 +33,9 @@ partial def CExpr.MatchAssignAF (l r : CExpr) : Option (Array (Option NodeExpr))
             | [] => .some Aout
             | nx :: L =>
                   match nx with
-                  | (.lnode i _ .none , .lnode j _ t) => Array.assignOrFail (go L) i (.ofLNode j t)
-                  | (.lnode i _ .none , .gnode j _) => Array.assignOrFail (go L) i (.ofGNode j)
-                  | (.lnode i _ .none , e) => Array.assignOrFail (go L) i (.ofCExpr e)
+                  | (.lnode i _ .none , .lnode j _ t) => Array.assignOrFail' (go L) i (.ofLNode j t)
+                  | (.lnode i _ .none , .gnode j _) => Array.assignOrFail' (go L) i (.ofGNode j)
+                  | (.lnode i _ .none , e) => Array.assignOrFail' (go L) i (.ofCExpr e)
                   | (.bvar i , .bvar j) =>  if i == j then go L else .none
                   | (.sort _, .sort _) => go L
                   | (.const n _, .const n' _) => if (n == n') then go L else .none
@@ -58,9 +58,9 @@ partial def CExpr.MatchAssignAFF (l r : CExpr) : Option (Array (Option NodeExpr)
             | [] => Aout
             | nx :: L =>
                   match nx with
-                  | (.lnode i _ .none, .lnode j _ t) => let Aup := Array.assignOrFail Aout i (.ofLNode j t) ; go Aup L
-                  | (.lnode i _ .none, .gnode j _) => let Aup := Array.assignOrFail Aout i (.ofGNode j) ; go Aup L
-                  | (.lnode i _ .none, e) => let Aup := Array.assignOrFail Aout i (.ofCExpr e) ; go Aup L
+                  | (.lnode i _ .none, .lnode j _ t) => let Aup := Array.assignOrFail' Aout i (.ofLNode j t) ; go Aup L
+                  | (.lnode i _ .none, .gnode j _) => let Aup := Array.assignOrFail' Aout i (.ofGNode j) ; go Aup L
+                  | (.lnode i _ .none, e) => let Aup := Array.assignOrFail' Aout i (.ofCExpr e) ; go Aup L
                   | (.bvar i , .bvar j) =>  if i == j then go Aout L else .none
                   | (.sort _, .sort _) => go Aout L
                   | (.const n _, .const n' _) => if (n == n') then go Aout L else .none
@@ -109,6 +109,29 @@ partial def CExpr.MatchAssignLFF (l r : CExpr) : Option (List (Nat × NodeExpr))
       else .none
       go true (.some []) [(l,r)]
 
+
+
+partial def CExpr.MatchAssignLFFC (l r : CExpr) : Option (List (Nat × CExpr)) :=
+      let rec go (go? : Bool) (Aout : Option (List (Nat × CExpr))) (todo : List (CExpr × CExpr)) : Option (List (Nat × CExpr)) :=
+      if go?
+      then
+            match todo with
+            | [] => Aout
+            | nx :: L =>
+                  match nx with
+                  | (.lnode i _ .none, e) => let Aup := List.assignOrFail Aout i e ; go true Aup L
+                  | (.bvar i , .bvar j) => go (i == j) Aout L
+                  | (.sort _, .sort _) => go true Aout L
+                  | (.const n _, .const n' _) =>  go (n == n')  Aout L
+                  | (.app f a, .app f' a') => go true Aout ((f,f') :: (a,a') :: L)
+                  | (.lam _ t b _, .lam _ t' b' _) => go true Aout ((t,t') :: (b,b') :: L)
+                  | (.forallE _ t b _, .forallE _ t' b' _) => go true Aout ((t,t') :: (b,b') :: L)
+                  | (.letE _ t v b _, .letE _ t' v' b' _) => go true Aout ((t,t') :: (v,v') :: (b,b') :: L)
+                  | (.lit l, .lit l') => go (l == l') Aout L
+                  | (.proj t i b, .proj t' i' b') => go ((t == t') && (i == i')) Aout ((b, b') :: L)
+                  | (_ , _) => .none
+      else .none
+      go true (.some []) [(l,r)]
 
 
 

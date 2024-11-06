@@ -40,10 +40,11 @@ partial def SinksFirst (raw : List (Nat × CExpr × Bool × List Nat)) : List (N
       go (layer :: cache) next
   (go [] raw).reverse.join
 
+#exit
 
 def DAG_RawToFormat (raw : List (Nat × CExpr × Bool × List Nat)) (l_len : Nat) : (Array Nat) × Array EmbedData :=
   let perm : Array Nat := Array.mkArray l_len 0
-  let data : Array EmbedData := Array.mkArray l_len (.nonInst (.const `dummy []) #[])
+  let data : Array EmbedData := Array.mkArray l_len (.nonInst (.const `dummy []) #[] #[])
   (raw.foldl (fun (i,p,d) (idx, ce, inst?, pars) =>
     let np := p.set! i idx
     let nd := d.set! idx (if inst? then .inst ce pars.toArray else .nonInst ce pars.toArray)

@@ -34,6 +34,10 @@ testReduce (fun x => x) Nat.zero
 testReduce (fun x => x) ((fun x => x) Nat.zero)
 testReduce (fun x => (fun y => y) x) Nat.zero
 
+
+testReduce let a := (fun x => x) ; let b := Nat.zero ; a b
+
+
 elab "testReduceRef" t:term : command => do
   let exp ← Command.liftTermElabM (elabTermAndSynthesize t .none)
   let red ← Command.liftTermElabM (Meta.whnf exp)
