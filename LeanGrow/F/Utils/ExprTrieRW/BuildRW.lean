@@ -1,5 +1,6 @@
 
 import LeanGrow.F.Utils.ExprTrieRW.Query
+import LeanGrow.F.Data.CExpr.ReduceInferMuggle.Control
 
 import Lean
 
@@ -13,35 +14,38 @@ open Lean
 #check Eq.ndrec
 
 
-def CExpr.factor (on : CExpr) (dirs : List rwDirs) (type : CExpr) : CExpr :=
-  let rec go (depth : Nat) : CExpr → List rwDirs → CExpr
+def CExpr.factor (on : CExpr) (dirs : List rwDirs) (type : CExpr) : (CExpr × CExpr) :=
+  let rec go (depth : Nat) : CExpr → List rwDirs → (CExpr × CExpr)
     | .lam n t b i , d :: more =>
           match d with
-          | .left => .lam n (go depth t more) b i
-          | .right => .lam n t (go (depth+1) b more) i
-          | _ => .failed
+          | .left => let (F,R) := (go depth t more) ; (.lam n F b i, R)
+          | .right =>let (F,R) := (go (depth+1) b more) ; (.lam n t F i, R)
+          | _ => (.failed, .failed)
     | .forallE n t b i , d :: more =>
           match d with
-          | .left => .forallE n (go depth t more) b i
-          | .right => .forallE n t (go (depth+1) b more) i
-          | _ => .failed
+          | .left => let (F,R) := (go depth t more) ; (.forallE n F b i, R)
+          | .right => let (F,R) := (go (depth+1) b more) ;  (.forallE n t F i, R)
+          | _ => (.failed, .failed)
     | .letE n t v b i  , d :: more=>
           match d with
-          | .left => .letE n (go depth t more) v b i
-          | .mid => .letE n t (go depth v more) b i
-          | .right => .letE n t v (go (depth+1) b more) i
+          | .left => let (F,R) := (go depth t more); (.letE n F v b i, R)
+          | .mid => let (F,R) := (go depth t more) ; (.letE n t F b i, R)
+          | .right => let (F,R) := (go (depth+1) b more) ; (.letE n t v F i, R)
     | .app l r, d :: more =>
         match d with
-          | .left => .app (go depth l more) r
-          | .right => .app l (go depth r more)
-          | _ => .failed
+          | .left => let (F,R) := (go depth l more) ; (.app F r, R)
+          | .right => let (F,R) := (go depth r more) ;  (.app l F, R)
+          | _ => (.failed, .failed)
     | .proj n i e, d :: more =>
         match d with
-          | .left => .proj n i (go depth e more)
-          | _ => .failed
-    | _, _ :: _  => .failed
-    | _, [] => .bvar depth
-  .lam `LenGrow.EqFacto (type) (go 0 on dirs) .default
+          | .left => let (F,R) := (go depth e more) ; (.proj n i F, R)
+          | _ => (.failed, .failed)
+    | _, _ :: _  => (.failed, .failed)
+    | ce, [] => (.bvar depth, ce)
+  let (F,R) := (go 0 on dirs)
+  (.lam `LeanGrow.EqFacto (type) F .default, R)
+
+
 
 /-
 Alternatively, when we generate the Eq-thms-cache-thing for rewrites, we can take note of the type
@@ -115,3 +119,42 @@ This is actually already a problem in our embedding algos... Say if we tried to 
 with f = (fun x => Nat.succ x), then we'd get an .ofCExpr, which wouldn't propagate as we don't know
 its type
 -/
+
+
+#check Eq.rec
+#check Eq.ndrec
+
+set_option pp.all true in
+#check @Eq.ndrec _ (1+1) (fun x : Nat => x = 2) (rfl : (1+1) = 2) (4-2) (rfl : (1+1) = (4-2))
+
+
+theorem testRW : (1+1 = 2) = (4-2 = 2) := rfl
+
+#print testRW
+-- not prop eq of inhabited, actual reudction must have occured
+
+
+/--
+Wrt Eq.ndrec type:
+on is m ; subs is b ; subsType is α ; init is a ; factor is motive ; rw_thmis h
+-/
+def CExpr.buildRW (fctx : FixCtx) (rw_thm : CExpr) (subs on : CExpr) (dirs : List rwDirs) : CExpr :=
+      let subsType := CExpr.whnf fctx (CExpr.inferType fctx subs)
+      let onType := CExpr.whnf fctx (CExpr.inferType fctx on)
+      -- ↑ is required for β to be reduced in repeated rewriting
+      -- however, it then requires that the `dirs` are wrt. the *reduced* type of on !!!
+      let (factor, init) := CExpr.factor onType dirs subsType
+      let motiveType := CExpr.inferType fctx factor
+      match subsType, motiveType with
+      | .sort u2, .forallE _ _ (.sort u1) _ =>
+            CExpr.mkApp (.const `Eq.ndrec [u1,u2]) [subsType, init, factor, on, subs, rw_thm]
+      | _,_ => .failed
+
+
+def CExpr.buildRWs (fctx : FixCtx) (rw_data : List (CExpr × CExpr × (List rwDirs))) (on : CExpr) : CExpr :=
+      let rec go (on' : CExpr) : List (CExpr × CExpr × (List rwDirs)) → CExpr
+            | (rw_thm, subs, dirs) :: more =>
+                  let step := CExpr.buildRW fctx rw_thm subs on' dirs
+                  go step more
+            | [] => on'
+      go on rw_data

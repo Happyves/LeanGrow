@@ -210,7 +210,7 @@ def CExprTrie.find_step [BEq α] [Repr α] (T : CExprTrie α) (ce : CExpr) (r : 
   so that at rws we get [1] and [], the latter gets deleted as its empty
 
 - the rw indices should also be among the regular ones ; for example, if we have rw classes {x,y} and {z,w} and expression
-  `1 : x+z=42` ; f we didn't add them, the list of non-rw inidces would be empty for a query of `x+z=42`, for example.
+  `1 : x+z=42` ; if we didn't add them, the list of non-rw inidces would be empty for a query of `x+z=42`, for example.
 
 -/
 
