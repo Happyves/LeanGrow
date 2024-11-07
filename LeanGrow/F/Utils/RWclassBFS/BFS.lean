@@ -45,18 +45,21 @@ partial def bfs (source dest : Nat) (g : graph) : List ((Nat × Nat) × Bool) :=
             let toFront := (ns.map (fun x => x.1)).filter (fun n => (List.find? (fun y => y.1 == n) done).isNone)
             find (toDone ++ done) (toFront ++ more)
   let nsIni := graph_neighbours g source
-  let doneIni := nsIni.map (fun (n,d) => (n,source,d))
-  let found := find doneIni (nsIni.map (fun x => x.1))
-  let rec backtrack (sofar : List ((Nat × Nat) × Bool)) (back : Nat) : Bool → List ((Nat × Nat) × Bool)
-    | true => sofar
-    | false =>
-        match found.find? (fun x => x.1 == back) with
-        | .some (_,parent,d) =>
-            let edge := if d then (parent, back) else (back,parent)
-            let next := (edge, d) :: sofar
-            if parent == source then (backtrack next 42 true) else (backtrack next parent false)
-        | _ => [] -- shouldn't happen
-  backtrack [] dest false
+  match nsIni.find? (fun x => x.1 == dest) with
+  | .some (_,d) => if d then [((source, dest), d)] else [((dest, source), d)]
+  | _ =>
+      let doneIni := nsIni.map (fun (n,d) => (n,source,d))
+      let found := find doneIni (nsIni.map (fun x => x.1))
+      let rec backtrack (sofar : List ((Nat × Nat) × Bool)) (back : Nat) : Bool → List ((Nat × Nat) × Bool)
+        | true => sofar
+        | false =>
+            match found.find? (fun x => x.1 == back) with
+            | .some (_,parent,d) =>
+                let edge := if d then (parent, back) else (back, parent)
+                let next := (edge, d) :: sofar
+                if parent == source then (backtrack next 42 true) else (backtrack next parent false)
+            | _ => [] -- shouldn't happen
+      backtrack [] dest false
 
 
 
@@ -77,9 +80,16 @@ four cycle moving lex-up
 -/
 def myG := graph_ofList [(1,2), (2,3), (1,4), (4,3)]
 
+-- #exit
+
+#eval myG
+
 #eval bfs 1 3 myG
 
 #eval bfs 1 4 myG
 
---#eval bfs 3 2 myG
--- overflow :<
+#eval bfs 3 2 myG
+
+#eval bfs 4 1 myG
+
+#eval bfs 4 2 myG
