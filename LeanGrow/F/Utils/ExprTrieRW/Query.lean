@@ -263,6 +263,10 @@ partial def CExprTrie.find [BEq α] [Repr α] (r : α → α → Prop) [Decidabl
             | .some next => .some (.node .none first (fst_rws.map (fun x => (x.1,x.2.2.1,x.2.2.2))) next)
 
 
+-- # Tests
+
+-- **single rw**
+
 def rw_list : List (Nat × CExpr) :=
   [(1, (.app (.const `a []) (.const `b []))),
    (2, (.const `z []))
@@ -270,6 +274,41 @@ def rw_list : List (Nat × CExpr) :=
 
 def tree_w_rw := CExprTrie.addRW (CExprTrie.ofList (· ≤ ·) test_list) 1 [1,4] 37 (· ≤ ·)
 
--- #eval tree_w_rw
+#eval tree_w_rw
 
 #eval CExprTrie.find (· ≤ ·) (.app (.const `z []) (.const `c [])) tree_w_rw [(37, CExprTrie.ofList (· ≤ ·) rw_list)]
+
+
+-- **double rw**
+
+
+def tree_w_rw_2 := CExprTrie.addRW tree_w_rw 2 [4] 42 (· ≤ ·)
+
+def rw_list_2 : List (Nat × CExpr) :=
+  [(1, ((.const `y []))),
+   (2, (.const `d []))
+  ]
+
+#eval CExprTrie.find (· ≤ ·) (.app (.const `z []) (.const `y [])) tree_w_rw_2 [(37, CExprTrie.ofList (· ≤ ·) rw_list), (42, CExprTrie.ofList (· ≤ ·) rw_list_2)]
+
+
+-- **nested rw**
+
+
+def rw_list_3 : List (Nat × CExpr) :=
+  [(1, (.app (.const `a []) (.const `b []))),
+   (2, (.app (.const `x []) (.const `y []))),
+  ]
+
+def rw_list_4 : List (Nat × CExpr) :=
+  [(1, (.const `x [])),
+   (2, (.const `z [])),
+  ]
+
+#eval (CExprTrie.ofList (· ≤ ·) rw_list_3)
+
+def class37 := CExprTrie.addRW (CExprTrie.ofList (· ≤ ·) rw_list_3) 1 [2] 42 (· ≤ ·)
+
+def class42 := (CExprTrie.ofList (· ≤ ·) rw_list_4)
+
+#eval CExprTrie.find (· ≤ ·) (.app (.app (.const `z []) (.const `y [])) (.const `c [])) tree_w_rw [(37, class37), (42, class42)]

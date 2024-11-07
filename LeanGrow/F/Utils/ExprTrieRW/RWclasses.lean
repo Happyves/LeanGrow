@@ -60,3 +60,11 @@ partial def buildEqThm
               -- do this more efficiently ? currently, the term of `a` will be queried again in next iter...
           | _,_,_ => .failed
     mkThm chain
+
+
+structure RWClassData where
+  class_type : CExpr
+  class_type_level : Level
+  class_cexprs : List (Nat × CExpr)
+  base : List ((Nat × Nat) × CExpr)
+  class_graph : BFS.graph
