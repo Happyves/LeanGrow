@@ -18,7 +18,7 @@ inductive CExprTrie.Branch (α : Type _) where
 | ofLit (lit : Literal) (indices : List α)
 | ofProj (name : Name) (idx link_e : Nat)
 | ofFailed
-| ofRW (id : Nat) (indices : List α)
+| ofRW (id : Nat) (entryIndex : Nat) (indices : List α)
 deriving BEq, Inhabited, Repr
 
 

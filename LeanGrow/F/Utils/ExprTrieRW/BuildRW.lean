@@ -187,11 +187,12 @@ partial def CExpr.buildRWofBluePrint
       (fctx : FixCtx)
       (classes : List (Nat × RWClassData))
       (mainData : List (Nat × CExpr))
-      (bp : RWblueprint Nat) : CExpr :=
+      (bp : RWblueprint Nat) (query : CExpr) : CExpr :=
+      -- we expect `query` to be the expression who's query the blueprint was built from.
       let rec go : RWblueprint Nat → CExpr
-            | .exactMatch classId ind =>
-                  match classId with
-                  | .none =>
+            | .exactMatch classId entryId ind =>
+                  match classId, entryId with
+                  | .none, _ =>
                         match ind.head? with
                         | .none => .failed
                         | .some I =>
@@ -202,55 +203,49 @@ partial def CExpr.buildRWofBluePrint
                                     match cet with
                                     | .sort u => CExpr.mkApp (.const `Eq.refl [u]) [cet, ce]
                                     | _ => .failed
-                  | .some cId =>
+                  | .some cId, .some eId =>
                         match classes.find? (fun x => x.1 == cId) with
                         | .none => .failed
                         | .some (_, cData) =>
                               match ind.head? with
                               | .none => .failed
                               | .some I =>
-                                    match cData.class_cexprs.find? (fun x => x.1 == I) with
-                                    | .none => .failed
-                                    | .some (_,ce) =>
-                                          let cet := cData.class_type
-                                          match cet with
-                                          | .sort u => CExpr.mkApp (.const `Eq.refl [u]) [cet, ce]
-                                          | _ => .failed
-            | .node classId ind dirs chi =>
+                                    buildEqThm cData.class_type cData.class_type_level cData.class_cexprs cData.base cData.class_graph eId I
+                                    -- match cData.class_cexprs.find? (fun x => x.1 == I) with
+                                    -- | .none => .failed
+                                    -- | .some (_,ce) =>
+                                    --       let cet := cData.class_type
+                                    --       match cet with
+                                    --       | .sort u =>
+
+                                    --             CExpr.mkApp (.const `Eq.refl [u]) [cet, ce]
+                                    --       | _ => .failed
+                  | _, _ => .failed
+            | .node classId entryId ind dirs chi =>
                   let rwData := dirsToRWinsts classes dirs
                   let thms := chi.map go
                   let joined := List.zip thms rwData
                   match ind.head? with
                   | .none => .failed
                   | .some I =>
-                        match classId with
-                        | .none =>
+                        match classId, entryId with
+                        | .none, _ =>
                               match mainData.find? (fun x => x.1 == I) with
                               | .none => .failed
                               | .some (_,ce) =>
                                     CExpr.buildRWs fctx joined ce
-                        | .some cId =>
+                        | .some cId, .some eId =>
                               match classes.find? (fun x => x.1 == cId) with
                               | .none => .failed
                               | .some (_, cData) =>
-                                    match cData.class_cexprs.find? (fun x => x.1 == I) with
-                                    | .none => .failed
-                                    | .some (_,ce) =>
-                                          CExpr.buildRWs fctx joined ce
+                                    match cData.class_cexprs.find? (fun x => x.1 == I), cData.class_cexprs.find? (fun x => x.1 == eId) with
+                                    | .some (_,ce), .some (_,ceE) =>
+                                          let sofar := CExpr.buildRWs fctx joined ce
+                                          let inClass := buildEqThm cData.class_type cData.class_type_level cData.class_cexprs cData.base cData.class_graph eId I
+                                          CExpr.mkApp (.const `Eq.trans [cData.class_type_level]) [ceE,ce,query,inClass,sofar]
+                                    | _, _ =>  .failed
+
+                        | _, _ => .failed
       go bp
 
-#check Eq.refl
-
-
-/-
-The problem is hat currently, RWblueprint only provides the indices of the expressions
-in the rw class that match the query.
-
-We have to collect the following information.
-When insterting an .ofRW into the CExprTrie, we should point (give the index) to which
-expression of the class was in the pattern. Then in the RWblueprint, we should take not of
-this data.
-Finally, in the above after computing `let thms := chi.map go` we should run an `buildEqThm`
-on each, where the source ... hmmm...
-
--/
+-- TODO: testing and debug
