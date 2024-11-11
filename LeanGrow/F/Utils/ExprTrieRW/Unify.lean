@@ -1,13 +1,32 @@
 
-import LeanGrow.F.Utils.ExprTrie.Query
+import LeanGrow.F.Utils.ExprTrieRW.Query
 
 open Lean
 
 
+/-
 
+Should proceed as in `Query.lean`. The difference will be at untagged lnodes.
+To build a try with RW branches, we should, when encountering an RW branch, build
+the CExprTrie of the class (which may itself contain RW branches).
+There may be exponential growths in the number of terms considered here, but it is a necessity.
+
+We should add a format for construction. This isn't the RWblueprint, as we're not matching the
+untaged lnode to an expression, but a build-blueprint. In the non-rw context, we ended up with
+a list of pair of indices of terms of the trie, together with a list representing the correspondece
+of the pos-index of the lnode and the cexpr we may replace it with in the context of unification.
+Now instead of a cexpr to replace the lnode with, we should have a list of CExpr, together with
+some format on how they were obtained from rewrites. This should also be recorded in the
+embedding data, as we'll need it when assembling the terms (note that we should build only
+in the end, once we know which rewrites were actually needed in the proof)
+-/
+
+#exit
 
 -- TODO : make more efficient
-partial def CExprTrie.buildAtLink [BEq α] [Repr α] (T : CExprTrie α) (link : Nat) (r : α → α → Prop) [DecidableRel r] : List (CExpr × List α) :=
+partial def CExprTrie.buildAtLink [BEq α] [Repr α] (T : CExprTrie α) (link : Nat) (r : α → α → Prop) [DecidableRel r]
+
+  : List (CExpr × List α) :=
   with_lTrace TraceFlags.off in
   let lb := CExprTrie.getAtLink T link
   let rec go : CExprTrie.Branch α → List (CExpr × List α)
@@ -101,7 +120,7 @@ partial def CExprTrie.buildAtLink [BEq α] [Repr α] (T : CExprTrie α) (link : 
           lTrace TraceFlags.zero & s!"Building lit:\n{repr res}\n\n" & res
   (lb.foldl (fun x y => (go y) :: x) []).join
 
-
+#exit
 
 -- #eval CExprTrie.buildAtLink (CExprTrie.ofList (· ≤ ·) test_list) 0 (· ≤ ·)
 

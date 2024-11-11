@@ -8,7 +8,7 @@ import LeanGrow.F.Utils.Tracing
 
 
 
-
+-- BIG TODO : infer types to propagate further
 
 
 def merge_if_compatible (embed : Array (Option NodeExpr)) (assignOutput : List (Nat × NodeExpr)) :

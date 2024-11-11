@@ -181,8 +181,10 @@ def dirsToRWinsts (classes : List (Nat × RWClassData)) (dirs : List (Nat × Lis
             go [] dirs
 
 
-/-- produces a thm .. nope ; but shoud produce a thm `a = b`
-where `a` is in the actual context and `b` is whats assembled from the blueprint-/
+/-- Should produce a thm `a = b`
+where `a` is in the desired pattern and `b` is whats assembled from the blueprint
+from the context, with its rw-classes.
+-/
 partial def CExpr.buildRWofBluePrint
       (fctx : FixCtx)
       (classes : List (Nat × RWClassData))
@@ -249,3 +251,25 @@ partial def CExpr.buildRWofBluePrint
       go bp
 
 -- TODO: testing and debug
+
+#check 1
+
+/-
+State of things:
+
+In the above, `a`, `b` and their equality may appear in different contexts:
+- We could have the goal `a = b`. In that case, we would like to build blueprints
+  for both `a` and `b` from the local context (possibly exact matches) so as
+  to get `a=A` and `b=B` where `A` and `B` are built via rws from local context.
+  We then try to prve `A=B` ?
+
+
+Short term goals:
+Given an RW-thm, find occurences one of the sides in the ltx trie, check
+if RW thm applies by attempting to embed its assumption, add RW node, add
+or modify RW class.
+Make unification up to rewrites: a queried type wih untaged lnodes should
+be found in the form of a RWblueprint, with some format for unification.
+Then, we should try to build the terms...
+
+-/
