@@ -184,6 +184,8 @@ def dirsToRWinsts (classes : List (Nat × RWClassData)) (dirs : List (Nat × Lis
 /-- Should produce a thm `a = b`
 where `a` is in the desired pattern and `b` is whats assembled from the blueprint
 from the context, with its rw-classes.
+
+Conceptual note
 -/
 partial def CExpr.buildRWofBluePrint
       (fctx : FixCtx)
@@ -273,3 +275,73 @@ be found in the form of a RWblueprint, with some format for unification.
 Then, we should try to build the terms...
 
 -/
+
+
+partial def CExpr.buildRWofBluePrint_2
+      (fctx : FixCtx)
+      (classes : List (Nat × RWClassData))
+      (mainData : List (Nat × CExpr))
+      (bp : RWblueprint Nat) : CExpr :=
+      let rec go : RWblueprint Nat → CExpr
+            | .exactMatch classId entryId ind =>
+                  match classId, entryId with
+                  | .none, _ =>
+                        match ind.head? with
+                        | .none => .failed
+                        | .some I =>
+                              match mainData.find? (fun x => x.1 == I) with
+                              | .none => .failed
+                              | .some (_,ce) => ce
+                  | .some cId, .some eId =>
+                        match classes.find? (fun x => x.1 == cId) with
+                        | .none => .failed
+                        | .some (_, cData) =>
+                              match ind.head? with
+                              | .none => .failed
+                              | .some I =>
+                                    let eqC := buildEqThm cData.class_type cData.class_type_level cData.class_cexprs cData.base cData.class_graph eId I
+                                    match cData.class_cexprs.find? (fun x => x.1 == eId), cData.class_cexprs.find? (fun x => x.1 == I) with
+                                    | .some (_,L), .some (_,R) =>
+                                          let motive := CExpr.mkApp (.const `id [cData.class_type_level]) [cData.class_type]
+                                          CExpr.mkApp (.const `Eq.ndrec [cData.class_type_level]) [cData.class_type, L, motive, L, R, eqC]
+                                    | _, _ => .failed
+                  | _, _ => .failed
+            | .node classId entryId ind dirs chi =>
+                  let rwData := dirsToRWinsts classes dirs
+                  let thms := chi.map go
+                  let joined := List.zip thms rwData
+                  match ind.head? with
+                  | .none => .failed
+                  | .some I =>
+                        match classId, entryId with
+                        | .none, _ =>
+                              match mainData.find? (fun x => x.1 == I) with
+                              | .none => .failed
+                              | .some (_,ce) =>
+                                    CExpr.buildRWs fctx joined ce
+                        | .some cId, .some eId =>
+                              match classes.find? (fun x => x.1 == cId) with
+                              | .none => .failed
+                              | .some (_, cData) =>
+                                    match cData.class_cexprs.find? (fun x => x.1 == I), cData.class_cexprs.find? (fun x => x.1 == eId) with
+                                    | .some (_,ce), .some (_,ceE) =>
+                                          let sofar := CExpr.buildRWs fctx joined ce
+                                          let inClass := buildEqThm cData.class_type cData.class_type_level cData.class_cexprs cData.base cData.class_graph eId I
+                                          CExpr.mkApp (.const `Eq.trans [cData.class_type_level]) [ceE,ce,query,inClass,sofar]
+                                    | _, _ =>  .failed
+
+                        | _, _ => .failed
+      go bp
+
+
+#check Eq.ndrec
+
+#check id
+
+example {Even : Nat → Prop} (n m: Nat) (h : Even n) (eq : n = m) : Even m :=
+      @Eq.ndrec _ n _ h m eq
+
+#check @Eq.ndrec Type Nat id (by dsimp ; exact 42) Nat rfl
+#eval @Eq.ndrec Type Nat id (by dsimp ; exact 42) Nat rfl
+
+#check Eq.subst

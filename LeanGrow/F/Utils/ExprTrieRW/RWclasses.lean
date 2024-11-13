@@ -68,3 +68,56 @@ structure RWClassData where
   class_cexprs : List (Nat × CExpr)
   base : List ((Nat × Nat) × CExpr)
   class_graph : BFS.graph
+
+
+#check Nat.add.eq_1
+
+/-
+Conceptualization, cause I'm fucking lost:
+
+- Assume we have ltx `n : Nat ; hn : Even (n+0)`
+
+- We wish to add the rewrite option wrt. thm `Nat.add.eq_1 : ∀ (x : Nat), x.add Nat.zero = x`
+  This should be stored in a format where on of the versions has left-search-pattern `(.lnode 0) + 0`
+
+- We need a method that will unify (.lnode 0) + 0` with a subpattern of the tree
+  corresponding to ltx `n : Nat ; hn : Even (n+0)`
+
+- After unification, there should be propagation, so that we let `.lnode 0` be `n`
+
+- Then, in the cexpr-trie of ltx `n : Nat ; hn : Even (n+0)`, we should add an RW-branch
+  at the location of pattern `n+0`. The rw class should contain terms `n+0` and `n`, and
+  the thm with embedding info to rewrite one into the other.
+
+- Next, assume we want to apply thm `Even n → Even (n+2)` (say with the concrete value of `n`, not an `lnode`)
+
+- When lookig for `Even n` in the cexpr-trie, we should get an rw-blueprint
+
+- From the blueprint, we want to get a term of type `Even n` !
+
+-/
+
+example {Even : Nat → Prop} (n : Nat) (h : Even (n+0)) {thm : Even n → Even (n+2)} : Even (n+2) :=
+  have : Even n := @Eq.ndrec Nat (n+0) Even h n (Nat.add.eq_1 n)
+  thm this
+
+
+/-
+Conceptualization 2, cause I'm fucking lost:
+
+- Assume we have ltx `n : Nat ; hn : Even n`
+
+- We wish to add the rewrite option wrt. thm `Nat.succ_sub_one: ∀ (x : Nat), x.succ - 1 = x`
+  This should be stored in a format where on of the versions has right-search-pattern `(.lnode 0)`
+
+- Unify to get canidates `n` and `hn`, propagate to get rid of `hn` ;
+  Actally, since we look for all subpatterns, the `n` within `hn : Even n` should be found
+
+- Then, in the cexpr-trie of ltx `n : Nat ; hn : Even n`, we should add an RW-branch
+  at the location of pattern `n` (the top). The rw class should contain terms `n` and `n.succ - 1`, and
+  the thm with embedding info to rewrite one into the other. This is useless ?
+  Only the `n` within `hn : Even n` matters here ?
+
+-/
+
+#check Nat.succ_sub_one
