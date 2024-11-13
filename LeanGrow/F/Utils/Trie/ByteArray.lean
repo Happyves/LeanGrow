@@ -78,3 +78,30 @@ partial def ByteArray.lex_compare (A B: ByteArray) : DirOrdering :=
             go (l+1) (r+1)
     | .gt => .gt
   go 0 0
+
+partial def ByteArray.lex_compare_wOffset (off : Nat) (A B: ByteArray) : DirOrdering :=
+  let rec go (l r : Nat) : DirOrdering :=
+    let a := A.get! l
+    let b := B.get! r
+    match Ord.compare a b with
+    | .lt => .lt
+    | .eq =>
+        if (l+1 ≥ A.size)
+        then
+          if (r+1 ≥ B.size)
+          then
+            .eqB
+          else
+            .eqR (r+1)
+        else
+          if (r+1 ≥ B.size)
+          then
+            .eqL (l+1)
+          else
+            go (l+1) (r+1)
+    | .gt => .gt
+  go off 0
+
+
+def ByteArray.insertAt! (as : ByteArray) (i : Nat) (a : UInt8) : ByteArray :=
+  ⟨as.data.insertAt! i a⟩

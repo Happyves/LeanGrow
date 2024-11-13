@@ -1,6 +1,8 @@
 
 import LeanGrow.F.Utils.Trie.ByteArray
 import LeanGrow.F.Utils.Trie.CTrie
+import LeanGrow.F.Utils.Trie.Sorted
+
 
 
 open Lean Data
@@ -33,3 +35,16 @@ def test_list : List (String × Nat) := [("ban", 42),("banana", 37),("bandana", 
 #eval CTrie.find? (CTrie.ofList test_list) "banana"
 #eval CTrie.find? (CTrie.ofList test_list) "bandana"
 #eval CTrie.find? (CTrie.ofList test_list) "trains"
+
+#eval Array.insertAt! #[1,2,3] 1 42
+#eval Array.insertAt! #[1,2,3] 3 42
+#eval Array.insertAt! #[1,2,3] 0 42
+
+#eval CTrie.ofList_sorted test_list
+
+
+#eval CTrie.sorted_find? (CTrie.ofList_sorted test_list) "bahamas"
+#eval CTrie.sorted_find? (CTrie.ofList_sorted test_list) "ban"
+#eval CTrie.sorted_find? (CTrie.ofList_sorted test_list) "banana"
+#eval CTrie.sorted_find? (CTrie.ofList_sorted test_list) "bandana"
+#eval CTrie.sorted_find? (CTrie.ofList_sorted test_list) "trains"
