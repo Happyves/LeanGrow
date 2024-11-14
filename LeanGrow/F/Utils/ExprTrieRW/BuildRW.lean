@@ -277,75 +277,6 @@ Then, we should try to build the terms...
 -/
 
 
-partial def CExpr.buildRWofBluePrint_2
-      (fctx : FixCtx)
-      (classes : List (Nat × RWClassData))
-      (mainData : List (Nat × CExpr)) -- gnode index and its type
-      (bp : RWblueprint Nat) : CExpr :=
-      let rec go : RWblueprint Nat → CExpr
-            | .exactMatch classId entryId ind =>
-                  match classId, entryId with
-                  | .none, _ =>
-                        match ind.head? with
-                        | .none => .failed
-                        | .some I =>
-                              match mainData.find? (fun x => x.1 == I) with
-                              | .none => .failed
-                              | .some _ => .gnode I (.ofBvar 42)
-                                    -- case of the queried expression being in the mainData
-                  | .some cId, .some eId =>
-                        match classes.find? (fun x => x.1 == cId) with
-                        | .none => .failed
-                        | .some (_, cData) =>
-                              match ind.head? with
-                              | .none => .failed
-                              | .some I =>
-                                    let eqC := buildEqThm cData.class_type cData.class_type_level cData.class_cexprs cData.base cData.class_graph eId I
-                                    match cData.class_cexprs.find? (fun x => x.1 == eId), cData.class_cexprs.find? (fun x => x.1 == I) with
-                                    | .some (_,L), .some (_,R) =>
-                                          let motive := CExpr.mkApp (.const `id [cData.class_type_level]) [cData.class_type]
-                                          CExpr.mkApp (.const `Eq.ndrec [cData.class_type_level]) [cData.class_type, L, motive, L, R, eqC]
-                                          /-
-                                          This strange situation can occur if we have equality between types or propositions (say, via propext...)
-                                          A priori, all gnode types are sorts (Nats are of type Sort 1, props of type Sort 0), so the above motive
-                                          is of correct pattern `motive : α → Sort u1`, since its `α → α` and α is a sort.
-                                          -/
-                                    | _, _ => .failed
-                  | _, _ => .failed
-            | .node classId entryId ind dirs chi =>
-                  let rwData := dirsToRWinsts classes dirs
-                  let thms := chi.map go
-                  let joined := List.zip thms rwData
-                  match ind.head? with
-                  | .none => .failed
-                  | .some I =>
-                        match classId, entryId with
-                        | .none, _ =>
-                              match mainData.find? (fun x => x.1 == I) with
-                              | .none => .failed
-                              | .some (_,ce) =>
-                                    CExpr.buildRWs fctx joined ce
-                                    /-
-                                    Case of one or more rewrites within a type of the mainData
-                                    -/
-                        | .some cId, .some eId =>
-                              match classes.find? (fun x => x.1 == cId) with
-                              | .none => .failed
-                              | .some (_, cData) =>
-                                    match cData.class_cexprs.find? (fun x => x.1 == I), cData.class_cexprs.find? (fun x => x.1 == eId) with
-                                    | .some (_,ce), .some (_,ceE) =>
-                                          let sofar := CExpr.buildRWs fctx joined ce
-                                          let inClass := buildEqThm cData.class_type cData.class_type_level cData.class_cexprs cData.base cData.class_graph eId I
-                                          let motive := CExpr.mkApp (.const `id [cData.class_type_level]) [cData.class_type]
-                                          CExpr.mkApp (.const `Eq.trans [cData.class_type_level]) [ceE,ce,query,inClass,sofar]
-                                          CExpr.mkApp (.const `Eq.ndrec [cData.class_type_level]) [cData.class_type, sofar, motive, L, R, eqC]
-                                          -- god I'm cluless
-                                    | _, _ =>  .failed
-
-                        | _, _ => .failed
-      go bp
-
-
 #check Eq.ndrec
 
 #check id
@@ -359,3 +290,86 @@ example {Even : Nat → Prop} (n m: Nat) (h : Even n) (eq : n = m) : Even m :=
 #check Eq.subst
 #check Eq.trans
 #check propext
+
+
+def CExpr.getOfDirs : CExpr → List rwDirs → CExpr
+      | .app l _, .left :: more => l.getOfDirs more
+      | .app _ r, .right :: more => r.getOfDirs more
+      | .lam _ l _ _, .left :: more => l.getOfDirs more
+      | .lam _ _ r _, .right :: more => r.getOfDirs more
+      | .forallE _ l _ _, .left :: more => l.getOfDirs more
+      | .forallE _ _ r _, .right :: more => r.getOfDirs more
+      | .letE _ l _ _ _, .left :: more => l.getOfDirs more
+      | .letE _ _ m _ _, .mid :: more => m.getOfDirs more
+      | .letE _ _ _ r _, .right :: more => r.getOfDirs more
+      | .proj _ _ l, .left :: more => l.getOfDirs more
+      | ce, [] => ce
+      | _,_ => .failed
+
+
+
+partial def CExpr.buildRWofBluePrint_2
+      (fctx : FixCtx)
+      (classes : List (Nat × RWClassData))
+      (mainData : List (Nat × CExpr))
+      (bp : RWblueprint Nat) (query : CExpr) : CExpr :=
+      -- we expect `query` to be the expression who's query the blueprint was built from.
+      let rec go (query_sub : CExpr) : RWblueprint Nat → CExpr
+            | .exactMatch classId entryId ind =>
+                  match classId, entryId with
+                  | .none, _ =>
+                        match ind.head? with
+                        | .none => .failed
+                        | .some I =>
+                              match mainData.find? (fun x => x.1 == I) with
+                              | .none => .failed
+                              | .some (_,ce) =>
+                                    let cet := (ce.inferType fctx).whnf fctx
+                                    match cet with
+                                    | .sort u => CExpr.mkApp (.const `Eq.refl [u]) [cet, ce]
+                                    | _ => .failed
+                  | .some cId, .some eId =>
+                        match classes.find? (fun x => x.1 == cId) with
+                        | .none => .failed
+                        | .some (_, cData) =>
+                              match ind.head? with
+                              | .none => .failed
+                              | .some I =>
+                                    buildEqThm cData.class_type cData.class_type_level cData.class_cexprs cData.base cData.class_graph eId I
+                                    -- match cData.class_cexprs.find? (fun x => x.1 == I) with
+                                    -- | .none => .failed
+                                    -- | .some (_,ce) =>
+                                    --       let cet := cData.class_type
+                                    --       match cet with
+                                    --       | .sort u =>
+
+                                    --             CExpr.mkApp (.const `Eq.refl [u]) [cet, ce]
+                                    --       | _ => .failed
+                  | _, _ => .failed
+            | .node classId entryId ind dirs chi =>
+                  let rwData := dirsToRWinsts classes dirs
+                  let temp := List.zipWith (fun x y => (x.2.2,y) ) dirs chi
+                  let thms := temp.map (fun (d, bp) => go (query_sub.getOfDirs d) bp )
+                  let joined := List.zip thms rwData
+                  match ind.head? with
+                  | .none => .failed
+                  | .some I =>
+                        match classId, entryId with
+                        | .none, _ =>
+                              match mainData.find? (fun x => x.1 == I) with
+                              | .none => .failed
+                              | .some (_,ce) =>
+                                    CExpr.buildRWs fctx joined ce
+                        | .some cId, .some eId =>
+                              match classes.find? (fun x => x.1 == cId) with
+                              | .none => .failed
+                              | .some (_, cData) =>
+                                    match cData.class_cexprs.find? (fun x => x.1 == I), cData.class_cexprs.find? (fun x => x.1 == eId) with
+                                    | .some (_,ce), .some (_,ceE) =>
+                                          let sofar := CExpr.buildRWs fctx joined ce
+                                          let inClass := buildEqThm cData.class_type cData.class_type_level cData.class_cexprs cData.base cData.class_graph eId I
+                                          CExpr.mkApp (.const `Eq.trans [cData.class_type_level]) [ceE,ce,query,inClass,sofar]
+                                    | _, _ =>  .failed
+
+                        | _, _ => .failed
+      go query bp
