@@ -79,7 +79,30 @@ partial def ByteArray.lex_compare (A B: ByteArray) : DirOrdering :=
     | .gt => .gt
   go 0 0
 
-partial def ByteArray.lex_compare_wOffset (off : Nat) (A B: ByteArray) : DirOrdering :=
+partial def ByteArray.lex_compare_wOffset_left (off : Nat) (A B: ByteArray) : DirOrdering :=
+  let rec go (l r : Nat) : DirOrdering :=
+    let a := A.get! l
+    let b := B.get! r
+    match Ord.compare a b with
+    | .lt => .lt
+    | .eq =>
+        if (l+1 ≥ A.size)
+        then
+          if (r+1 ≥ B.size)
+          then
+            .eqB
+          else
+            .eqR (r+1)
+        else
+          if (r+1 ≥ B.size)
+          then
+            .eqL (l+1)
+          else
+            go (l+1) (r+1)
+    | .gt => .gt
+  go off 0
+
+partial def ByteArray.lex_compare_wOffset_right (off : Nat) (A B: ByteArray) : DirOrdering :=
   let rec go (l r : Nat) : DirOrdering :=
     let a := A.get! l
     let b := B.get! r
@@ -105,3 +128,39 @@ partial def ByteArray.lex_compare_wOffset (off : Nat) (A B: ByteArray) : DirOrde
 
 def ByteArray.insertAt! (as : ByteArray) (i : Nat) (a : UInt8) : ByteArray :=
   ⟨as.data.insertAt! i a⟩
+
+
+
+def ByteArray.matchSingle (s : ByteArray) (A : Array ByteArray) : Option Nat :=
+  let rec go : Nat → Option Nat
+    | 0 => .none
+    | n+1 =>
+        let c := A.get! n
+        let com := ByteArray.getLongestMatch s c
+        if com == 0
+        then
+          if c.get! 0 < s.get! 0
+          then .none
+          else go n
+        else
+          .some n
+  go A.size
+
+
+partial def ByteArray.matchMulti (L R : Array ByteArray) : List (Nat × Nat) :=
+  let rec go (l r : Nat) (done :  List (Nat × Nat)) : List (Nat × Nat) :=
+    if (l < L.size) && (r < R.size)
+    then
+      let a := L.get! l
+      let b := R.get! r
+      let com := ByteArray.getLongestMatch a b
+        if com == 0
+        then
+          if a.get! 0 < b.get! 0
+          then go (l+1) r done
+          else go l (r+1) done
+        else
+          go (l+1) (r+1) ((l,r) :: done)
+    else
+      done
+  go 0 0 []

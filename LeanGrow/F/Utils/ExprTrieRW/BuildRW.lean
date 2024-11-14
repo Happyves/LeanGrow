@@ -368,8 +368,33 @@ partial def CExpr.buildRWofBluePrint_2
                                     | .some (_,ce), .some (_,ceE) =>
                                           let sofar := CExpr.buildRWs fctx joined ce
                                           let inClass := buildEqThm cData.class_type cData.class_type_level cData.class_cexprs cData.base cData.class_graph eId I
-                                          CExpr.mkApp (.const `Eq.trans [cData.class_type_level]) [ceE,ce,query,inClass,sofar]
+                                          CExpr.mkApp (.const `Eq.trans [cData.class_type_level]) [ceE,ce,query_sub,inClass,sofar]
                                     | _, _ =>  .failed
 
                         | _, _ => .failed
       go query bp
+
+
+/-
+In the above we seemingly build the blueprint from the bottom up.
+
+It would be intresting to build them from top to down.
+For example, in the nested rw example of the query file, where we have blueprint:
+RWblueprint.node none none [1]
+  [(37, [1], [rwDirs.left])]
+  [RWblueprint.node (some 37) (some 1) [2]
+      [(42, [2], [rwDirs.left])]
+      [RWblueprint.exactMatch (some 42) (some 1) [2]]]
+We would get 1 of the mainData, ie. `(a b) c`.
+Then, we factor it according to `[rwDirs.left]` and use the
+info that that term should be replaced with the term of index 2
+in class 37.
+We would then build the term `(x y) c` using the previous factor as motive,
+and the inner class (37) eaulity theorem as eq-thm from 1 to 2 in `Eq.ndrec`.
+Then with that term, we procced, where we should add `[rwDirs.left]` as a prifix
+to the next rw-dirs.
+So next, `(x y) c` should be factored according to `[rwDirs.left,rwDirs.left]`
+and that term should be replaced by that of index 2 in class 42.
+We would then build the term `(z y) c` using the previous factor as motive,
+and the inner class (42) eaulity theorem as eq-thm from 1 to 2 in `Eq.ndrec`.
+-/

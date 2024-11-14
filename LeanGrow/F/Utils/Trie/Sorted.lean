@@ -111,10 +111,6 @@ partial def sorted_find? (t : CTrie α) (s : String) : Option α :=
 
 
 
-end CTrie
-
-#exit
-
 def match_nontrivial [BEq α] (l r : Option α) : Bool :=
   match l with
   | .none => false
@@ -123,27 +119,64 @@ def match_nontrivial [BEq α] (l r : Option α) : Bool :=
       | .none => false
       | .some vr => vl == vr
 
-partial def CTrie.intersect [BEq α] (l r : CTrie α) : CTrie α :=
-  let rec go (lpre rpre : Option ByteArray) (lo ro : Nat) : CTrie α → CTrie α → CTrie α
-    | .leaf x, .leaf y => if match_nontrivial x y then .leaf y  else .leaf (.none)
-    | .leaf x, .node1 y _ _ => if match_nontrivial x y then .leaf y  else .leaf (.none)
-    | .leaf x, .node y _ _ => if match_nontrivial x y then .leaf y  else .leaf (.none)
-    | .node1 x ax cx, .leaf y => if match_nontrivial x y then .leaf y  else .leaf (.none)
-    | .node1 x ax cx, .node1 y ay cy =>
-        match lpre, rpre with
-        | .none, .none =>
-            match ByteArray.lex_compare ax ay with
-            | .eqB => if match_nontrivial x y then .leaf y  else .leaf (.none)
-            | .eqL off =>
-                if match_nontrivial x y
-                then .node1 y ay (go (.some ax) .none off 0 cx cy)
-                else .node1 .none ay (go (.some ax) .none off 0 cx cy)
-            | .eqR off =>
-                if match_nontrivial x y
-                then .node1 x ax (go .none (.some ay) 0 off cx cy)
-                else .node1 .none ax (go .none (.some ay) 0 off cx cy)
-            | _ => .leaf (.none)
 
+partial def CountCommon [BEq α] (l r : CTrie α) : Nat :=
+  let rec go (l r : CTrie α) : Nat :=
+    match l with
+    | .leaf x =>
+        match r with
+        | .leaf y => if match_nontrivial x y then 1 else 0
+        | .node1 y _ _ => if match_nontrivial x y then 1 else 0
+        | .node y _ _ => if match_nontrivial x y then 1 else 0
     | .node1 x ax cx =>
+        match r with
+        | .leaf y => if match_nontrivial x y then 1 else 0
+        | .node1 y ay cy =>
+            let com := ByteArray.getLongestMatch ax ay
+            if com == ax.size
+            then
+              if ax.size == ay.size
+              then
+                let sofar := go cx cy
+                if match_nontrivial x y then Nat.succ sofar else sofar
+              else
+                let sofar := go cx (.node1 .none (ay.drop com) cy)
+                if match_nontrivial x y then Nat.succ sofar else sofar
+            else
+              if com == ay.size
+              then
+                let sofar := go (.node1 .none (ax.drop com) cx) cy
+                if match_nontrivial x y then Nat.succ sofar else sofar
+              else
+                if match_nontrivial x y then 1 else 0
+        | .node y ay cy =>
+            match ByteArray.matchSingle ax ay with
+            | .none => if match_nontrivial x y then 1 else 0
+            | .some idx =>
+                let ay' := ay.get! idx
+                let cy' := cy.get! idx
+                -- sam as ↑
+                let com := ByteArray.getLongestMatch ax ay'
+                if com == ax.size
+                then
+                  if ax.size == ay'.size
+                  then
+                    let sofar := go cx cy'
+                    if match_nontrivial x y then Nat.succ sofar else sofar
+                  else
+                    let sofar := go cx (.node1 .none (ay'.drop com) cy')
+                    if match_nontrivial x y then Nat.succ sofar else sofar
+                else
+                  if com == ay.size
+                  then
+                    let sofar := go (.node1 .none (ax.drop com) cx) cy'
+                    if match_nontrivial x y then Nat.succ sofar else sofar
+                  else
+                    if match_nontrivial x y then 1 else 0
+    | _ => sorry
+  go l r
 
-  go .none .none 0 0 l r
+
+
+
+end CTrie
