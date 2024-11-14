@@ -280,7 +280,7 @@ Then, we should try to build the terms...
 partial def CExpr.buildRWofBluePrint_2
       (fctx : FixCtx)
       (classes : List (Nat × RWClassData))
-      (mainData : List (Nat × CExpr))
+      (mainData : List (Nat × CExpr)) -- gnode index and its type
       (bp : RWblueprint Nat) : CExpr :=
       let rec go : RWblueprint Nat → CExpr
             | .exactMatch classId entryId ind =>
@@ -291,7 +291,8 @@ partial def CExpr.buildRWofBluePrint_2
                         | .some I =>
                               match mainData.find? (fun x => x.1 == I) with
                               | .none => .failed
-                              | .some (_,ce) => ce
+                              | .some _ => .gnode I (.ofBvar 42)
+                                    -- case of the queried expression being in the mainData
                   | .some cId, .some eId =>
                         match classes.find? (fun x => x.1 == cId) with
                         | .none => .failed
@@ -304,6 +305,11 @@ partial def CExpr.buildRWofBluePrint_2
                                     | .some (_,L), .some (_,R) =>
                                           let motive := CExpr.mkApp (.const `id [cData.class_type_level]) [cData.class_type]
                                           CExpr.mkApp (.const `Eq.ndrec [cData.class_type_level]) [cData.class_type, L, motive, L, R, eqC]
+                                          /-
+                                          This strange situation can occur if we have equality between types or propositions (say, via propext...)
+                                          A priori, all gnode types are sorts (Nats are of type Sort 1, props of type Sort 0), so the above motive
+                                          is of correct pattern `motive : α → Sort u1`, since its `α → α` and α is a sort.
+                                          -/
                                     | _, _ => .failed
                   | _, _ => .failed
             | .node classId entryId ind dirs chi =>
@@ -319,6 +325,9 @@ partial def CExpr.buildRWofBluePrint_2
                               | .none => .failed
                               | .some (_,ce) =>
                                     CExpr.buildRWs fctx joined ce
+                                    /-
+                                    Case of one or more rewrites within a type of the mainData
+                                    -/
                         | .some cId, .some eId =>
                               match classes.find? (fun x => x.1 == cId) with
                               | .none => .failed
@@ -327,7 +336,10 @@ partial def CExpr.buildRWofBluePrint_2
                                     | .some (_,ce), .some (_,ceE) =>
                                           let sofar := CExpr.buildRWs fctx joined ce
                                           let inClass := buildEqThm cData.class_type cData.class_type_level cData.class_cexprs cData.base cData.class_graph eId I
+                                          let motive := CExpr.mkApp (.const `id [cData.class_type_level]) [cData.class_type]
                                           CExpr.mkApp (.const `Eq.trans [cData.class_type_level]) [ceE,ce,query,inClass,sofar]
+                                          CExpr.mkApp (.const `Eq.ndrec [cData.class_type_level]) [cData.class_type, sofar, motive, L, R, eqC]
+                                          -- god I'm cluless
                                     | _, _ =>  .failed
 
                         | _, _ => .failed
@@ -345,3 +357,5 @@ example {Even : Nat → Prop} (n m: Nat) (h : Even n) (eq : n = m) : Even m :=
 #eval @Eq.ndrec Type Nat id (by dsimp ; exact 42) Nat rfl
 
 #check Eq.subst
+#check Eq.trans
+#check propext

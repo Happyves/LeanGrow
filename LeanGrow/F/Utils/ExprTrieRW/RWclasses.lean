@@ -110,13 +110,8 @@ Conceptualization 2, cause I'm fucking lost:
 - We wish to add the rewrite option wrt. thm `Nat.succ_sub_one: ∀ (x : Nat), x.succ - 1 = x`
   This should be stored in a format where on of the versions has right-search-pattern `(.lnode 0)`
 
-- Unify to get canidates `n` and `hn`, propagate to get rid of `hn` ;
-  Actally, since we look for all subpatterns, the `n` within `hn : Even n` should be found
-
-- Then, in the cexpr-trie of ltx `n : Nat ; hn : Even n`, we should add an RW-branch
-  at the location of pattern `n` (the top). The rw class should contain terms `n` and `n.succ - 1`, and
-  the thm with embedding info to rewrite one into the other. This is useless ?
-  Only the `n` within `hn : Even n` matters here ?
+- After unification and propagation, only the `n` in `Even n` is detected. For some reason,
+  I still get confused with he type-term difference and thought `n : Nat` was somehow involved
 
 -/
 
