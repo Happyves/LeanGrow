@@ -120,8 +120,10 @@ def match_nontrivial [BEq α] (l r : Option α) : Bool :=
       | .some vr => vl == vr
 
 
+
+
 partial def CountCommon [BEq α] (l r : CTrie α) : Nat :=
-  let rec go (l r : CTrie α) : Nat :=
+  let rec go (l r : CTrie α) (ol or : Nat) : Nat :=
     match l with
     | .leaf x =>
         match r with
@@ -132,51 +134,94 @@ partial def CountCommon [BEq α] (l r : CTrie α) : Nat :=
         match r with
         | .leaf y => if match_nontrivial x y then 1 else 0
         | .node1 y ay cy =>
-            let com := ByteArray.getLongestMatch ax ay
-            if com == ax.size
-            then
-              if ax.size == ay.size
+              let com := ByteArray.getLongestMatch_wOffsets ax ay ol or
+              if ol + com == ax.size
               then
-                let sofar := go cx cy
-                if match_nontrivial x y then Nat.succ sofar else sofar
-              else
-                let sofar := go cx (.node1 .none (ay.drop com) cy)
-                if match_nontrivial x y then Nat.succ sofar else sofar
-            else
-              if com == ay.size
-              then
-                let sofar := go (.node1 .none (ax.drop com) cx) cy
-                if match_nontrivial x y then Nat.succ sofar else sofar
-              else
-                if match_nontrivial x y then 1 else 0
-        | .node y ay cy =>
-            match ByteArray.matchSingle ax ay with
-            | .none => if match_nontrivial x y then 1 else 0
-            | .some idx =>
-                let ay' := ay.get! idx
-                let cy' := cy.get! idx
-                -- sam as ↑
-                let com := ByteArray.getLongestMatch ax ay'
-                if com == ax.size
+                if ax.size == ay.size
                 then
-                  if ax.size == ay'.size
-                  then
-                    let sofar := go cx cy'
-                    if match_nontrivial x y then Nat.succ sofar else sofar
-                  else
-                    let sofar := go cx (.node1 .none (ay'.drop com) cy')
-                    if match_nontrivial x y then Nat.succ sofar else sofar
+                  let sofar := go cx cy 0 0
+                  if match_nontrivial x y then Nat.succ sofar else sofar
                 else
-                  if com == ay.size
+                  let sofar := go cx r 0 (or + com)
+                  if match_nontrivial x y then Nat.succ sofar else sofar
+              else
+                if or + com == ay.size
+                then
+                  let sofar := go l cy (ol + com) 0
+                  if match_nontrivial x y then Nat.succ sofar else sofar
+                else
+                  if match_nontrivial x y then 1 else 0
+        | .node y ay cy =>
+              match ByteArray.matchSingle_wOffset ax ol ay with
+              | .none => if match_nontrivial x y then 1 else 0
+              | .some idx =>
+                  let ay' := ay.get! idx
+                  let cy' := cy.get! idx
+                  -- sam as ↑
+                  let com := ByteArray.getLongestMatch_wOffsets ax ay' ol 0
+                  if ol + com == ax.size
                   then
-                    let sofar := go (.node1 .none (ax.drop com) cx) cy'
-                    if match_nontrivial x y then Nat.succ sofar else sofar
+                    if ax.size == ay'.size
+                    then
+                      let sofar := go cx cy' 0 0
+                      if match_nontrivial x y then Nat.succ sofar else sofar
+                    else
+                      let sofar := go cx (.node1 .none ay' cy') 0 0
+                      if match_nontrivial x y then Nat.succ sofar else sofar
                   else
-                    if match_nontrivial x y then 1 else 0
-    | _ => sorry
-  go l r
-
-
-
-
-end CTrie
+                    if com == ay.size
+                    then
+                      let sofar := go l cy' (ol+com) 0
+                      if match_nontrivial x y then Nat.succ sofar else sofar
+                    else
+                      if match_nontrivial x y then 1 else 0
+    | .node x ax cx =>
+        match r with
+        | .leaf y => if match_nontrivial x y then 1 else 0
+        | .node1 y ay cy =>
+              match ByteArray.matchSingle_wOffset ay or ax with
+              | .none => if match_nontrivial x y then 1 else 0
+              | .some idx =>
+                  let ax' := ax.get! idx
+                  let cx' := cx.get! idx
+                  -- sam as ↑
+                  let com := ByteArray.getLongestMatch_wOffsets ax' ay 0 or
+                  if com == ax'.size
+                  then
+                    if ax'.size == ay.size
+                    then
+                      let sofar := go cx' r 0 (or+com)
+                      if match_nontrivial x y then Nat.succ sofar else sofar
+                    else
+                      if  match_nontrivial x y then 1 else 0
+                  else
+                    if or + com == ay.size
+                    then
+                      let sofar := go cx' cy 0 0
+                      if match_nontrivial x y then Nat.succ sofar else sofar
+                    else
+                      let sofar := go (.node1 .none ax' cx') cy 0 0
+                      if match_nontrivial x y then Nat.succ sofar else sofar
+        | .node y ay cy =>
+              let hits := ByteArray.matchMulti ax ay
+              let gone := hits.map
+                (fun (ai,bi,com) =>
+                  let A := ax.get! ai
+                  let B := ay.get! bi
+                    if com == A.size
+                    then
+                      if A.size == B.size
+                      then
+                        go (cx.get! ai) (cy.get! bi) 0 0
+                      else
+                        go (cx.get! ai) (.node1 .none B (cy.get! bi)) 0 com
+                    else
+                      if com == B.size
+                      then
+                        go (.node1 .none A (cx.get! ai)) (cy.get! bi) com 0
+                      else
+                        0
+                  )
+                let res := gone.foldl (fun z w => w+z) 0
+                if match_nontrivial x y then Nat.succ res else res
+  go l r 0 0

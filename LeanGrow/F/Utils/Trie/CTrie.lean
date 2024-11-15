@@ -106,3 +106,6 @@ partial def find? (t : CTrie α) (s : String) : Option α :=
                   then go (i+len) (ts.get! idx)
                   else .none
   go 0 t
+
+
+partial def toList (t : CTrie α) : List (String × α) :=

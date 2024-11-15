@@ -25,6 +25,12 @@ partial def ByteArray.getLongestMatch_wOffset (off : Nat) (l r : ByteArray) : Na
     | false => i
   go 0 (if off < l.size && 0 < r.size then l.get! off == r.get! 0 else false)
 
+partial def ByteArray.getLongestMatch_wOffsets (l r : ByteArray)(ol or : Nat) : Nat :=
+  let rec go (i : Nat) : Bool → Nat
+    | true => go (i+1) (if (ol+i+1) < l.size && (or+i+1) < r.size then l.get! (ol+i+1) == r.get! (or+i+1) else false)
+    | false => i
+  go 0 (if ol < l.size && or < r.size then l.get! ol == r.get! or else false)
+
 
 partial def ByteArray.take (A : ByteArray) (n : Nat) : ByteArray :=
   let toFill : Array UInt8 := Array.mkArray n 0
@@ -147,8 +153,23 @@ def ByteArray.matchSingle (s : ByteArray) (A : Array ByteArray) : Option Nat :=
   go A.size
 
 
-partial def ByteArray.matchMulti (L R : Array ByteArray) : List (Nat × Nat) :=
-  let rec go (l r : Nat) (done :  List (Nat × Nat)) : List (Nat × Nat) :=
+def ByteArray.matchSingle_wOffset (s : ByteArray) (off : Nat) (A : Array ByteArray) : Option Nat :=
+  let rec go : Nat → Option Nat
+    | 0 => .none
+    | n+1 =>
+        let c := A.get! n
+        let com := ByteArray.getLongestMatch_wOffsets s c off 0
+        if com == 0
+        then
+          if c.get! 0 < s.get! off
+          then .none
+          else go n
+        else
+          .some n
+  go A.size
+
+partial def ByteArray.matchMulti (L R : Array ByteArray) : List (Nat × Nat × Nat) :=
+  let rec go (l r : Nat) (done :  List (Nat × Nat × Nat)) : List (Nat × Nat × Nat) :=
     if (l < L.size) && (r < R.size)
     then
       let a := L.get! l
@@ -160,7 +181,7 @@ partial def ByteArray.matchMulti (L R : Array ByteArray) : List (Nat × Nat) :=
           then go (l+1) r done
           else go l (r+1) done
         else
-          go (l+1) (r+1) ((l,r) :: done)
+          go (l+1) (r+1) ((l,r, com) :: done)
     else
       done
   go 0 0 []
