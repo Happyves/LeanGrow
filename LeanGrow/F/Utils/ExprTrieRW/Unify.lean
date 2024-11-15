@@ -1,5 +1,6 @@
 
 import LeanGrow.F.Utils.ExprTrieRW.Query
+import LeanGrow.F.Utils.ExprTrieRW.RWclasses
 
 open Lean
 
@@ -21,19 +22,17 @@ embedding data, as we'll need it when assembling the terms (note that we should 
 in the end, once we know which rewrites were actually needed in the proof)
 -/
 
-#exit
 
 -- TODO : make more efficient
 partial def CExprTrie.buildAtLink [BEq α] [Repr α] (T : CExprTrie α) (link : Nat) (r : α → α → Prop) [DecidableRel r]
-
-  : List (CExpr × List α) :=
+  (classes : List (Nat × RWClassData)) : List (CExpr × List α) :=
   with_lTrace TraceFlags.off in
   let lb := CExprTrie.getAtLink T link
   let rec go : CExprTrie.Branch α → List (CExpr × List α)
     | .ofFailed => []
     | .ofApp lf la =>
-          let fs := CExprTrie.buildAtLink T lf r
-          let as := CExprTrie.buildAtLink T la r
+          let fs := CExprTrie.buildAtLink T lf r classes
+          let as := CExprTrie.buildAtLink T la r classes
           let res :=
             (fs.foldl (fun x y =>
               (as.foldl (fun X Y =>
@@ -47,8 +46,8 @@ partial def CExprTrie.buildAtLink [BEq α] [Repr α] (T : CExprTrie α) (link : 
               []).join
           lTrace TraceFlags.zero & s!"Building apps:\n{repr res}\n\n" & res
     | .ofLam n lf la i =>
-          let fs := CExprTrie.buildAtLink T lf r
-          let as := CExprTrie.buildAtLink T la r
+          let fs := CExprTrie.buildAtLink T lf r classes
+          let as := CExprTrie.buildAtLink T la r classes
           let res :=
             (fs.foldl (fun x y =>
               (as.foldl (fun X Y =>
@@ -62,8 +61,8 @@ partial def CExprTrie.buildAtLink [BEq α] [Repr α] (T : CExprTrie α) (link : 
               []).join
           lTrace TraceFlags.zero & s!"Building lams:\n{repr res}\n\n" & res
     | .ofForall n lf la i =>
-          let fs := CExprTrie.buildAtLink T lf r
-          let as := CExprTrie.buildAtLink T la r
+          let fs := CExprTrie.buildAtLink T lf r classes
+          let as := CExprTrie.buildAtLink T la r classes
           let res :=
             (fs.foldl (fun x y =>
               (as.foldl (fun X Y =>
@@ -77,9 +76,9 @@ partial def CExprTrie.buildAtLink [BEq α] [Repr α] (T : CExprTrie α) (link : 
               []).join
             lTrace TraceFlags.zero & s!"Building foalls:\n{repr res}\n\n" & res
     | .ofLet n lf la lz i =>
-          let fs := CExprTrie.buildAtLink T lf r
-          let as := CExprTrie.buildAtLink T la r
-          let zs := CExprTrie.buildAtLink T lz r
+          let fs := CExprTrie.buildAtLink T lf r classes
+          let as := CExprTrie.buildAtLink T la r classes
+          let zs := CExprTrie.buildAtLink T lz r classes
           let res :=
             (fs.foldl (fun x y =>
               (as.foldl (fun X Y =>
@@ -97,7 +96,7 @@ partial def CExprTrie.buildAtLink [BEq α] [Repr α] (T : CExprTrie α) (link : 
               []).join
           lTrace TraceFlags.zero & s!"Building lets:\n{repr res}\n\n" & res
     | .ofProj n i le =>
-          let es := CExprTrie.buildAtLink T le r
+          let es := CExprTrie.buildAtLink T le r classes
           let res := es.map (fun (ce,inter) => (.proj n i ce,inter))
           lTrace TraceFlags.zero & s!"Building proj:\n{repr res}\n\n" & res
     |.ofLit l ind =>
@@ -116,9 +115,19 @@ partial def CExprTrie.buildAtLink [BEq α] [Repr α] (T : CExprTrie α) (link : 
           let res := [(.sort l , ind)]
           lTrace TraceFlags.zero & s!"Building lit:\n{repr res}\n\n" & res
     |.ofConst l ind =>
-          let res := [(.const l [], ind)] -- fix
+          let res := [(.const l [], ind)]
           lTrace TraceFlags.zero & s!"Building lit:\n{repr res}\n\n" & res
+    |.ofRW cI _ ind =>
+          match classes.find? (fun x => x.1 == cI) with
+          | .none => []
+          | .some (_, cData) =>
+              --cData.class_cexprs.map (fun (_,cex) => (cex, ind))
+              -- except that rw classes may contain rw nodes in their trees ...
+              let built := CExprTrie.buildAtLink cData.class_trie 0 (· ≤ ·) classes
+              built.map (fun (cex, _) => (cex, ind))
   (lb.foldl (fun x y => (go y) :: x) []).join
+
+
 
 #exit
 

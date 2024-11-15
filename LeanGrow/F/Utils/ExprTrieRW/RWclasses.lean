@@ -1,6 +1,7 @@
 
 import LeanGrow.F.Data.CExpr.API
 import LeanGrow.F.Utils.RWclassBFS.BFS
+import LeanGrow.F.Utils.ExprTrieRW.Types
 
 #check Eq.trans
 #check Eq.symm
@@ -66,6 +67,7 @@ structure RWClassData where
   class_type : CExpr
   class_type_level : Level
   class_cexprs : List (Nat × CExpr)
+  class_trie : CExprTrie Nat
   base : List ((Nat × Nat) × CExpr)
   class_graph : BFS.graph
 
