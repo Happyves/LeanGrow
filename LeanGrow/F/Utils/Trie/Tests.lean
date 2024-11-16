@@ -42,9 +42,22 @@ def test_list : List (String × Nat) := [("ban", 42),("banana", 37),("bandana", 
 
 #eval CTrie.ofList_sorted test_list
 
+#eval CTrie.toList (CTrie.ofList_sorted test_list)
 
 #eval CTrie.sorted_find? (CTrie.ofList_sorted test_list) "bahamas"
 #eval CTrie.sorted_find? (CTrie.ofList_sorted test_list) "ban"
 #eval CTrie.sorted_find? (CTrie.ofList_sorted test_list) "banana"
 #eval CTrie.sorted_find? (CTrie.ofList_sorted test_list) "bandana"
 #eval CTrie.sorted_find? (CTrie.ofList_sorted test_list) "trains"
+
+def test_list_2 : List (String × Nat) := [("ban", 42),("bad", 37),("bandana", 69), ("bar", 2)]
+
+def test_list_3 : List (String × Nat) := [("ban", 42),("banana", 37),("bandana", 666), ("bahamas", 2)]
+
+
+#eval (CTrie.ofList_sorted test_list_2)
+#eval (CTrie.ofList_sorted test_list)
+
+#eval CTrie.CountCommon (CTrie.ofList_sorted test_list) (CTrie.ofList_sorted test_list_2)
+#eval CTrie.CountCommon (CTrie.ofList_sorted test_list) (CTrie.ofList_sorted test_list_3)
+#eval CTrie.CountCommon (CTrie.ofList_sorted test_list) {}

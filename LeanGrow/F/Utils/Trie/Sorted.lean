@@ -42,12 +42,16 @@ partial def sorted_upsert (t : CTrie α) (s : ByteArray) (f : Option α → α) 
             then
               .node1 v c (go sum t)
             else
-              let nc := c.drop j
-              let add := s.drop sum
-              let join := c.take j
-              if c.get! j < s.get! sum
-              then .node1 v join (.node .none #[nc,add] #[t,(.leaf (f .none))])
-              else .node1 v join (.node .none #[add,nc] #[(.leaf (f .none)),t])
+              if sum == s.size
+              then
+                .node1 v (c.take j) (.node1 (f .none) (c.drop j) t)
+              else
+                let nc := c.drop j
+                let add := s.drop sum
+                let join := c.take j
+                if c.get! j < s.get! sum
+                then .node1 v join (.node .none #[nc,add] #[t,(.leaf (f .none))])
+                else .node1 v join (.node .none #[add,nc] #[(.leaf (f .none)),t])
           else
             .node1 (f v) c t
     | .node v cs ts =>
@@ -61,18 +65,21 @@ partial def sorted_upsert (t : CTrie α) (s : ByteArray) (f : Option α → α) 
                 let sum := (i+len)
                 if len == c.size
                 then
-                  .node v cs (ts.modify idx ((go (i+len))))
+                  .node v cs (ts.modify idx ((go sum)))
                 else
-                  let nc := c.drop len
-                  let add := s.drop sum
-                  let join := c.take len
-                  if c.get! len < s.get! sum
-                  then .node v ((cs.modify idx (fun _ => join))) (ts.modify idx (fun t => .node .none #[nc,add] #[t,(.leaf (f .none))]))
-                  else .node v ((cs.modify idx (fun _ => join))) (ts.modify idx (fun t => .node .none #[add,nc] #[(.leaf (f .none)),t]))
+                  if sum == s.size
+                  then
+                    .node v ((cs.modify idx (fun _ => c.take len))) (ts.modify idx (fun t => .node1 (f .none) (c.drop len) t))
+                  else
+                    let nc := c.drop len
+                    let add := s.drop sum
+                    let join := c.take len
+                    if c.get! len < s.get! sum
+                    then .node v ((cs.modify idx (fun _ => join))) (ts.modify idx (fun t => .node .none #[nc,add] #[t,(.leaf (f .none))]))
+                    else .node v ((cs.modify idx (fun _ => join))) (ts.modify idx (fun t => .node .none #[add,nc] #[(.leaf (f .none)),t]))
           else
             .node (f v) cs ts
   go 0 t
-
 
 
 partial def sorted_insert (t : CTrie α) (s : String) (val : α) : CTrie α :=
@@ -122,7 +129,7 @@ def match_nontrivial [BEq α] (l r : Option α) : Bool :=
 
 
 
-partial def CountCommon [BEq α] (l r : CTrie α) : Nat :=
+partial def CountCommon [BEq α] [Repr α] (l r : CTrie α) : Nat :=
   let rec go (l r : CTrie α) (ol or : Nat) : Nat :=
     match l with
     | .leaf x =>
@@ -190,18 +197,18 @@ partial def CountCommon [BEq α] (l r : CTrie α) : Nat :=
                   then
                     if ax'.size == ay.size
                     then
-                      let sofar := go cx' r 0 (or+com)
-                      if match_nontrivial x y then Nat.succ sofar else sofar
-                    else
-                      if  match_nontrivial x y then 1 else 0
-                  else
-                    if or + com == ay.size
-                    then
                       let sofar := go cx' cy 0 0
                       if match_nontrivial x y then Nat.succ sofar else sofar
                     else
-                      let sofar := go (.node1 .none ax' cx') cy 0 0
+                      let sofar := go cx' r 0 (or + com)
                       if match_nontrivial x y then Nat.succ sofar else sofar
+                  else
+                    if or + com == ay.size
+                    then
+                      let sofar := go (.node1 .none ax' cx') cy com 0
+                      if match_nontrivial x y then Nat.succ sofar else sofar
+                    else
+                      if match_nontrivial x y then 1 else 0
         | .node y ay cy =>
               let hits := ByteArray.matchMulti ax ay
               let gone := hits.map
