@@ -82,3 +82,14 @@ def List.orderedIntersect [BEq α] (r : α → α → Prop) [DecidableRel r] (a 
 def List.findD (p : α → Bool) (default : α) : List α → α
 | [] => default
 | x :: l => if p x then x else l.findD p default
+
+
+-- # union
+
+def List.orderedUnion [BEq α] (r : α → α → Prop) [DecidableRel r] (L : List α) : List α → List α
+  | [] => L
+  | nx :: more => List.orderedUnion r (List.orderedInsertOrLeave r nx L) more
+
+def List.orderedJoin [BEq α] (r : α → α → Prop) [DecidableRel r] (L : List α) : List (List α) → List α
+  | [] => L
+  | nx :: more => List.orderedJoin r (List.orderedUnion r nx L) more

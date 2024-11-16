@@ -25,7 +25,7 @@ in the end, once we know which rewrites were actually needed in the proof)
 
 -- TODO : make more efficient
 partial def CExprTrie.buildAtLink [BEq α] [Repr α] (T : CExprTrie α) (link : Nat) (r : α → α → Prop) [DecidableRel r]
-  (classes : List (Nat × RWClassData)) : List (CExpr × List α) :=
+  (classes : List (Nat × CExprTrie α)) : List (CExpr × List α) :=
   with_lTrace TraceFlags.off in
   let lb := CExprTrie.getAtLink T link
   let rec go : CExprTrie.Branch α → List (CExpr × List α)
@@ -123,118 +123,131 @@ partial def CExprTrie.buildAtLink [BEq α] [Repr α] (T : CExprTrie α) (link : 
           | .some (_, cData) =>
               --cData.class_cexprs.map (fun (_,cex) => (cex, ind))
               -- except that rw classes may contain rw nodes in their trees ...
-              let built := CExprTrie.buildAtLink cData.class_trie 0 (· ≤ ·) classes
+              let built := CExprTrie.buildAtLink cData 0 r classes
               built.map (fun (cex, _) => (cex, ind))
   (lb.foldl (fun x y => (go y) :: x) []).join
 
 
 
-#exit
-
--- #eval CExprTrie.buildAtLink (CExprTrie.ofList (· ≤ ·) test_list) 0 (· ≤ ·)
-
-/-- Assumes `ce` is an expression from a thm, hence has only lnodes-/
-partial def CExprTrie.unify_candidates [BEq α] [Repr α] (T : CExprTrie α) (r : α → α → Prop) [DecidableRel r] (ce : CExpr) : List (Nat × List (CExpr × List α)) :=
-  let rec go (done : List (Nat × List (CExpr × List α))) : List (CExpr × Nat) → List (Nat × List (CExpr × List α))
-    | [] => done
-    | (nx, link) :: more =>
+partial def CExprTrie.unify_candidates? [BEq α] [Repr α] (T : CExprTrie α) (classes : List (Nat × CExprTrie α)) (ce : CExpr) (r : α → α → Prop) [DecidableRel r] : List (List α) × (List (Nat × (List (CExpr × List α)))) × List (Nat × Nat × CExpr × List α × List rwDirs) :=
+  with_lTrace [TraceFlags.zero] in
+  let rec go (done : List (List α)) (uni : List (Nat × (List (CExpr × List α)))) (todos : List (Nat × Nat × CExpr × List α × List rwDirs)) : List (CExpr × Nat × List rwDirs) → List (List α) × (List (Nat × (List (CExpr × List α)))) × List (Nat × Nat × CExpr × List α × List rwDirs)
+    | [] => (done,uni, todos)
+    | (nx, link, dirs) :: more =>
+        lTrace TraceFlags.zero & s!"Call\n{repr done}\n{repr uni}\n{repr todos}\n{repr ((nx, link, dirs) :: more)}\n\n" &
         match nx with
-        | .failed => []
+        | .failed => ([], [], [])
         | .app f a =>
             let lb := CExprTrie.getAtLink T link
+            let rws := updateTodos (.app f a) dirs [] lb
+            let rws_ind := rws.map (fun x => x.2.2.2.1)
             let links? := CExprTrie.Branch_getAppLinks? lb
             match links? with
-            | .some (lf,la) => go done ((f, lf) :: (a, la) :: more)
-            | _ => []
-        | .lam _ f a _ =>
+            | .some (lf,la) => go (rws_ind ++ done) uni (rws ++ todos) ((f, lf, .left :: dirs) :: (a, la, .right :: dirs) :: more)
+            | _ => ([], [], [])
+-- **TODO** replace here and everywhere by `go (match links? with | .some _ => done | []) (match links? with | .some (lf,la) => ((f, lf) :: (a, la) :: more) | []) ` so as to make it tail recursive
+        | .lam n f a i =>
             let lb := CExprTrie.getAtLink T link
+            let rws := updateTodos (.lam n f a i) dirs [] lb
+            let rws_ind := rws.map (fun x => x.2.2.2.1)
             let links? := CExprTrie.Branch_getLamLinks? lb
             match links? with
-            | .some (lf,la) => go done ((f, lf) :: (a, la) :: more)
-            | _ => []
-        | .forallE _ f a _ =>
+            | .some (lf,la) => go (rws_ind ++ done) uni (rws ++ todos) ((f, lf, .left :: dirs) :: (a, la, .right :: dirs) :: more)
+            | _ => ([], [], [])
+        | .forallE n f a i =>
             let lb := CExprTrie.getAtLink T link
+            let rws := updateTodos (.forallE n f a i) dirs [] lb
+            let rws_ind := rws.map (fun x => x.2.2.2.1)
             let links? := CExprTrie.Branch_getForallLinks? lb
             match links? with
-            | .some (lf,la) => go done ((f, lf) :: (a, la) :: more)
-            | _ => []
-        | .letE _ f a z _ =>
+            | .some (lf,la) => go (rws_ind ++ done) uni (rws ++ todos) ((f, lf, .left :: dirs) :: (a, la, .right :: dirs) :: more)
+            | _ => ([], [], [])
+        | .letE n f a z i =>
             let lb := CExprTrie.getAtLink T link
+            let rws := updateTodos (.letE n f a z i) dirs [] lb
+            let rws_ind := rws.map (fun x => x.2.2.2.1)
             let links? := CExprTrie.Branch_getLetLinks? lb
             match links? with
-            | .some (lf,la,lz) => go done ((f, lf) :: (a, la) :: (z, lz) :: more)
-            | _ => []
-        | .proj _ _ e =>
+            | .some (lf,la,lz) => go (rws_ind ++ done) uni (rws ++ todos) ((f, lf, .left :: dirs) :: (a, la, .mid :: dirs) :: (z, lz, .right :: dirs) :: more)
+            | _ => ([], [], [])
+        | .proj n i e =>
             let lb := CExprTrie.getAtLink T link
+            let rws := updateTodos (.proj n i e) dirs [] lb
+            let rws_ind := rws.map (fun x => x.2.2.2.1)
             let links? := CExprTrie.Branch_getProjLinks? lb
             match links? with
-            | .some (le) => go done ((e, le) :: more)
-            | _ => []
+            | .some (le) => go (rws_ind ++ done) uni (rws ++ todos) ((e, le, .left :: dirs) :: more)
+            | _ => ([], [], [])
         | .lit l =>
             let lb := CExprTrie.getAtLink T link
+            let rws := updateTodos (.lit l) dirs [] lb
+            let rws_ind := rws.map (fun x => x.2.2.2.1)
             let nlb := CExprTrie.getIndices_Lit l lb
-            match nlb with
-            | [] => []
-            | _ => go (done) more
-        | .lnode l _ .none => -- tag .none means it does't originate from backward propagation
-            let builds := CExprTrie.buildAtLink T link r
-            go ((l, builds) :: done) more
-        | .lnode l _ t =>
+            go (List.listConsIfNonempty nlb (rws_ind ++ done)) uni (rws ++ todos) more
+        | .lnode l _ .none =>
+            let builds := CExprTrie.buildAtLink T link r classes
+            let index_mistery := List.orderedJoin r [] (builds.map Prod.snd)
+            go (List.listConsIfNonempty index_mistery done) ((l, builds) :: uni) todos more
+        | .lnode l o t =>
             let lb := CExprTrie.getAtLink T link
+            let rws := updateTodos (.lnode l o t) dirs [] lb
+            let rws_ind := rws.map (fun x => x.2.2.2.1)
             let nlb := CExprTrie.getIndices_lNode l t lb
-            match nlb with
-            | [] => []
-            | _ => go (done) more
-        | .gnode l _ =>
+            go (List.listConsIfNonempty nlb (rws_ind ++ done)) uni (rws ++ todos) more
+        | .gnode l o =>
             let lb := CExprTrie.getAtLink T link
+            let rws := updateTodos (.gnode l o) dirs [] lb
+            let rws_ind := rws.map (fun x => x.2.2.2.1)
             let nlb := CExprTrie.getIndices_gNode l lb
-            match nlb with
-            | [] => []
-            | _ => go (done) more
+            go (List.listConsIfNonempty nlb (rws_ind ++ done)) uni (rws ++ todos) more
         | .bvar l =>
             let lb := CExprTrie.getAtLink T link
+            let rws := updateTodos (.bvar l) dirs [] lb
+            let rws_ind := rws.map (fun x => x.2.2.2.1)
             let nlb := CExprTrie.getIndices_Bvar l lb
-            match nlb with
-            | [] => []
-            | _ => go (done) more
+            go (List.listConsIfNonempty nlb (rws_ind ++ done)) uni (rws ++ todos) more
         | .sort l =>
             let lb := CExprTrie.getAtLink T link
+            let rws := updateTodos (.sort l) dirs [] lb
+            let rws_ind := rws.map (fun x => x.2.2.2.1)
             let nlb := CExprTrie.getIndices_Sort l lb
-            match nlb with
-            | [] => []
-            | _ => go (done) more
-        | .const l _ =>
+            go (List.listConsIfNonempty nlb (rws_ind ++ done)) uni (rws ++ todos) more
+        | .const l m =>
             let lb := CExprTrie.getAtLink T link
+            let rws := updateTodos (.const l m) dirs [] lb
+            let rws_ind := rws.map (fun x => x.2.2.2.1)
             let nlb := CExprTrie.getIndices_Const l lb
-            match nlb with
-            | [] => []
-            | _ => go (done) more
-  go [] [(ce,0)]
+            go (List.listConsIfNonempty nlb (rws_ind ++ done)) uni (rws ++ todos) more
+  go [] [] [] [(ce,0,[])]
 
 
 
+def CExprTrie.unify_step [BEq α] [Repr α] (T : CExprTrie α) (classes : List (Nat × CExprTrie α)) (ce : CExpr) (r : α → α → Prop) [DecidableRel r] : List α × (List (Nat × List (CExpr × List α))) ×  List (Nat × Nat × CExpr × List α × List rwDirs) :=
+  let (cand_safe, cand_uni, cand_rw) := CExprTrie.unify_candidates? T classes ce r
+  let prune :=
+    match (cand_safe) with
+    | [] => []
+    | h :: t => t.foldl (fun x y => List.orderedIntersect r x y ) h
+  let new_rw := (cand_rw.map (fun (cn,en,e,ind, dir) => (cn, en ,e, List.orderedIntersect r prune ind, dir) )).filter (fun x => !x.2.2.2.1.isEmpty)
+  let rec handle (done : List (CExpr × List α)): List (CExpr × List α) → List (CExpr × List α)
+    | [] => done
+    | (ce, ind) :: more =>
+        match List.orderedIntersect r prune ind with
+        | [] => handle done more
+        | res => handle ((ce, res) :: done) more
+  let rec handle2 (done : List (Nat × List (CExpr × List α))): List (Nat × List (CExpr × List α)) → List (Nat × List (CExpr × List α))
+    | [] => done
+    | (n, data) :: more =>
+        match handle [] data with
+        | [] => handle2 done more
+        | res => handle2 ((n, res) :: done) more
+  let new_uni := handle2 [] cand_uni
+  (prune, new_uni, new_rw)
 
--- #eval CExprTrie.unify_candidates (CExprTrie.ofList (· ≤ ·) test_list) (· ≤ ·) (.app (.node 0 (.ofBvar 42)) (.node 1 (.ofBvar 42)))
-
--- #eval CExprTrie.uniunify_candidatesfy (CExprTrie.ofList (· ≤ ·) test_list) (· ≤ ·) (.forallE `dummy (.node 0 (.ofBvar 42)) (.node 1 (.ofBvar 42)) .default)
-
--- #eval CExprTrie.unify_candidates (CExprTrie.ofList (· ≤ ·) test_list) (· ≤ ·) (.node 0 (.ofBvar 42))
-
--- #eval CExprTrie.unify_candidates (CExprTrie.ofList (· ≤ ·) test_list) (· ≤ ·) (.const `nope [])
-
-/-
-TODO:
-
-To reconstruct unification candidates, proceed as follows:
-go over list & over indices ; for each, index maintain an apriori embedding (ad new one when new index encountered) ;
-that embedding will store assignements of node indices to CExpre (use arrays ??) ;
-
-In the example of the first eval above, start by building an apriori unification with 4, where 1 would be `d`.
-Then build two apriori unification with 1 and 42, where 1 would be `d`.
-Then modify the a priori embeddings at 1 and 4 where we set 0 to `a b`.
-And so one. If conflicts arise, give up on the embedding at the index entirely ...
-
--/
+inductive uRWblueprint (α : Type _) where
+| exactMatch (classId : Option Nat) (entryId : Option Nat) (indUni : List (α × List (Nat × CExpr)))
+| node (classId : Option Nat) (entryId : Option Nat) (indUni : List (α × List (Nat × CExpr))) (dirs : List (Nat × List α × List rwDirs)) (chi : List (uRWblueprint α))
+deriving Inhabited, BEq, Repr
 
 def CExprTrie.unify_reconstruct [BEq α] [Repr α] (r : α → α → Prop) [DecidableRel r] (candidates : List (Nat × List (CExpr × List α))) : List (α × List (Nat × CExpr)) :=
     let rec go (node_idx : Nat) (sofar : List (α × List (Nat × CExpr))) : List (CExpr × List α) → List (α × List (Nat × CExpr))
@@ -245,4 +258,41 @@ def CExprTrie.unify_reconstruct [BEq α] [Repr α] (r : α → α → Prop) [Dec
     candidates.foldl (fun out (node_idx, assign_data) => go node_idx out assign_data) []
 
 
--- #eval CExprTrie.unify_reconstruct (· ≤ ·) (CExprTrie.unify_candidates (CExprTrie.ofList (· ≤ ·) test_list) (· ≤ ·) (.app (.lnode 0 (.ofBvar 42) .none) (.lnode 1 (.ofBvar 42) .none)))
+partial def CExprTrie.unify (ce : CExpr) (Top : CExprTrie Nat) (RW_classes : List (Nat × CExprTrie Nat)) : Option (uRWblueprint Nat) :=
+    with_lTrace [TraceFlags.zero] in
+    let rec main (ce : CExpr) (classId entryId : Nat): Option (uRWblueprint Nat) :=
+        lTrace TraceFlags.zero & s!"MAIN {classId} \n{repr ce}\n\n" &
+        match RW_classes.find? (fun x => x.1 == classId) with
+        | .none => .none
+        | .some (_, Tr) =>
+            let (f, uni, rw) := CExprTrie.unify_step Tr (RW_classes) ce (· ≤ ·)
+            match f with
+            | [] => .none
+            | _ =>
+                let UNI := CExprTrie.unify_reconstruct (· ≤ ·) uni
+                match rw with
+                | [] => .some (.exactMatch (.some classId) (.some entryId) UNI) -- no rewrites encountered in tree
+                | _ =>
+                    let next? := List.recuceOptions? (rw.map (fun x => main x.2.2.1 x.1 x.2.1))
+                    match next? with
+                    | .none => .none
+                    | .some next => .some (.node (.some classId) (.some entryId) UNI (rw.map (fun x => (x.1,x.2.2.2.1,x.2.2.2.2))) next)
+    let (first, fst_uni, fst_rws) := CExprTrie.unify_step Top RW_classes ce (· ≤ ·)
+    lTrace TraceFlags.zero & s!"Init {repr first} {repr fst_uni} {repr fst_rws}\n\n" &
+    match first with
+    | [] => .none
+    | _ =>
+        let UNI := CExprTrie.unify_reconstruct (· ≤ ·) fst_uni
+        match fst_rws with
+        | [] => .some (.exactMatch .none .none UNI) -- no rewrites encountered in top tree
+        | _ =>
+            let next? := List.recuceOptions? (fst_rws.map (fun x => main x.2.2.1 x.1 x.2.1))
+            match next? with
+            | .none => .none
+            | .some next => .some (.node .none .none UNI (fst_rws.map (fun x => (x.1,x.2.2.2.1,x.2.2.2.2))) next)
+
+#eval CExprTrie.unify (.app (.lnode 0 (.ofBvar 42) .none) (.const `c [])) tree_w_rw [(37, class37), (42, class42)]
+
+-- To fix:
+-- duplicates
+-- BuildTrie should return blueprints !
