@@ -1,6 +1,9 @@
 
 import LeanGrow.F.Utils.ExprTrieRW.Query
 import LeanGrow.F.Utils.ExprTrieRW.RWclasses
+import LeanGrow.F.Utils.ExprTrieRW.DeleteOcc
+
+import Mathlib.Data.List.Basic
 
 open Lean
 
@@ -21,6 +24,9 @@ some format on how they were obtained from rewrites. This should also be recorde
 embedding data, as we'll need it when assembling the terms (note that we should build only
 in the end, once we know which rewrites were actually needed in the proof)
 -/
+
+def List.dedup_beq [BEq α] : List α → List α :=
+  pwFilter (fun a b => !(a == b))
 
 
 -- TODO : make more efficient
@@ -123,11 +129,13 @@ partial def CExprTrie.buildAtLink [BEq α] [Repr α] (T : CExprTrie α) (link : 
           | .some (_, cData) =>
               --cData.class_cexprs.map (fun (_,cex) => (cex, ind))
               -- except that rw classes may contain rw nodes in their trees ...
-              let built := CExprTrie.buildAtLink cData 0 r classes
+              let built := List.dedup_beq (CExprTrie.buildAtLink cData 0 r classes)
+              dbg_trace s!"Build: {repr built}"
               built.map (fun (cex, _) => (cex, ind))
-  (lb.foldl (fun x y => (go y) :: x) []).join
+  List.dedup_beq (lb.foldl (fun x y => (go y) :: x) []).join
+  -- here and above, `List.dedup_beq` is a workaround ; we should delete patterns after insetring the correspodning pointer to the RW class
 
-
+--#exit
 
 partial def CExprTrie.unify_candidates? [BEq α] [Repr α] (T : CExprTrie α) (classes : List (Nat × CExprTrie α)) (ce : CExpr) (r : α → α → Prop) [DecidableRel r] : List (List α) × (List (Nat × (List (CExpr × List α)))) × List (Nat × Nat × CExpr × List α × List rwDirs) :=
   with_lTrace [TraceFlags.zero] in
@@ -245,8 +253,8 @@ def CExprTrie.unify_step [BEq α] [Repr α] (T : CExprTrie α) (classes : List (
   (prune, new_uni, new_rw)
 
 inductive uRWblueprint (α : Type _) where
-| exactMatch (classId : Option Nat) (entryId : Option Nat) (indUni : List (α × List (Nat × CExpr)))
-| node (classId : Option Nat) (entryId : Option Nat) (indUni : List (α × List (Nat × CExpr))) (dirs : List (Nat × List α × List rwDirs)) (chi : List (uRWblueprint α))
+| exactMatch (classId : Option Nat) (entryId : Option Nat) (ind : List α) (indUni : List (α × List (Nat × CExpr)))
+| node (classId : Option Nat) (entryId : Option Nat) (ind : List α) (indUni : List (α × List (Nat × CExpr))) (dirs : List (Nat × List α × List rwDirs)) (chi : List (uRWblueprint α))
 deriving Inhabited, BEq, Repr
 
 def CExprTrie.unify_reconstruct [BEq α] [Repr α] (r : α → α → Prop) [DecidableRel r] (candidates : List (Nat × List (CExpr × List α))) : List (α × List (Nat × CExpr)) :=
@@ -271,12 +279,12 @@ partial def CExprTrie.unify (ce : CExpr) (Top : CExprTrie Nat) (RW_classes : Lis
             | _ =>
                 let UNI := CExprTrie.unify_reconstruct (· ≤ ·) uni
                 match rw with
-                | [] => .some (.exactMatch (.some classId) (.some entryId) UNI) -- no rewrites encountered in tree
+                | [] => .some (.exactMatch (.some classId) (.some entryId) f UNI) -- no rewrites encountered in tree
                 | _ =>
                     let next? := List.recuceOptions? (rw.map (fun x => main x.2.2.1 x.1 x.2.1))
                     match next? with
                     | .none => .none
-                    | .some next => .some (.node (.some classId) (.some entryId) UNI (rw.map (fun x => (x.1,x.2.2.2.1,x.2.2.2.2))) next)
+                    | .some next => .some (.node (.some classId) (.some entryId) f UNI (rw.map (fun x => (x.1,x.2.2.2.1,x.2.2.2.2))) next)
     let (first, fst_uni, fst_rws) := CExprTrie.unify_step Top RW_classes ce (· ≤ ·)
     lTrace TraceFlags.zero & s!"Init {repr first} {repr fst_uni} {repr fst_rws}\n\n" &
     match first with
@@ -284,15 +292,39 @@ partial def CExprTrie.unify (ce : CExpr) (Top : CExprTrie Nat) (RW_classes : Lis
     | _ =>
         let UNI := CExprTrie.unify_reconstruct (· ≤ ·) fst_uni
         match fst_rws with
-        | [] => .some (.exactMatch .none .none UNI) -- no rewrites encountered in top tree
+        | [] => .some (.exactMatch .none .none first UNI) -- no rewrites encountered in top tree
         | _ =>
             let next? := List.recuceOptions? (fst_rws.map (fun x => main x.2.2.1 x.1 x.2.1))
             match next? with
             | .none => .none
-            | .some next => .some (.node .none .none UNI (fst_rws.map (fun x => (x.1,x.2.2.2.1,x.2.2.2.2))) next)
+            | .some next => .some (.node .none .none first UNI (fst_rws.map (fun x => (x.1,x.2.2.2.1,x.2.2.2.2))) next)
+
+--#exit
+
 
 #eval CExprTrie.unify (.app (.lnode 0 (.ofBvar 42) .none) (.const `c [])) tree_w_rw [(37, class37), (42, class42)]
 
 -- To fix:
--- duplicates
+-- duplicates seem to be due to us not erasing the initial occurence of the pattern in
 -- BuildTrie should return blueprints !
+
+#eval CExprTrie.unify (.app (.app (.lnode 0 (.ofBvar 42) .none) (.const `y [])) (.const `c [])) tree_w_rw [(37, class37), (42, class42)]
+
+
+#check List.dedup
+
+#eval (CExprTrie.ofList (· ≤ ·) rw_list_3)
+
+def class37' := (CExprTrie.addRW (CExprTrie.ofList (· ≤ ·) rw_list_3) 1 [2] 42 1 (· ≤ ·)).mitigatedDeleteCExprAtLink (· ≤ ·) ((.const `x [])) 1
+
+#eval class37'
+
+#eval (CExprTrie.ofList (· ≤ ·) test_list)
+
+def tree_w_rw' := (CExprTrie.addRW (CExprTrie.ofList (· ≤ ·) test_list) 1 [1,4] 37 1 (· ≤ ·)).mitigatedDeleteCExprAtLink (· ≤ ·) (.app (.const `a []) (.const `b [])) 1
+
+#eval tree_w_rw'
+
+#eval CExprTrie.unify (.app (.lnode 0 (.ofBvar 42) .none) (.const `c [])) tree_w_rw' [(37, class37), (42, class42)]
+
+#eval CExprTrie.unify (.app (.app (.lnode 0 (.ofBvar 42) .none) (.const `y [])) (.const `c [])) tree_w_rw' [(37, class37), (42, class42)]
