@@ -142,3 +142,14 @@ partial def toList (t : CTrie α) : List (String × α) :=
           | .some v => go ((String.fromUTF8! pre, v) :: done) next
           | .none => go done next
   go [] [(⟨#[]⟩, t)]
+
+
+partial def size (t : CTrie α) : Nat :=
+  let rec go (count : Nat) : List (CTrie α) → Nat
+    | [] => count
+    | nx :: more =>
+        match nx with
+        | .leaf x => match x with | .some _ => go (Nat.succ count) more | .none => go count more
+        | .node1 x _ cx => match x with | .some _ => go (Nat.succ count) (cx :: more) | .none => go count (cx :: more)
+        | .node x _ cx => match x with | .some _ => go (Nat.succ count) (cx.toList ++ more) | .none => go count (cx.toList ++ more)
+  go 0 [t]

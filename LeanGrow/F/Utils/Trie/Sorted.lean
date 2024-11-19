@@ -474,3 +474,110 @@ partial def intersect [BEq α] [Repr α] (l r : CTrie α) : CTrie α :=
 
 #eval [(1,'a'),(2,'b'),(3,'c')].unzip
 #eval [1,2,3].toArray
+
+
+partial def Trie.merge [BEq α] [Inhabited α] (l r : CTrie α) : CTrie α  :=
+  let mini_merge (x y : Option α) : Option α := (match x with | .some X => X | .none => match y with | .some Y => Y | .none => .none)
+  -- so at common entries, the value from l is taken ! Maybe refactor where mini_merge can be any function ?
+  let rec go (l r : CTrie α) (ol or : Nat) : CTrie α :=
+    match l with
+    | .leaf x =>
+        match r with
+        | .leaf y => .leaf (mini_merge x y)
+        | .node1 y ay cy => .node1 (mini_merge x y) ay cy
+        | .node y ay cy => .node (mini_merge x y) ay cy
+    | .node1 x ax cx =>
+        match r with
+        | .leaf y => .node1 (mini_merge x y) ax cx
+        | .node1 y ay cy =>
+              let com := ByteArray.getLongestMatch_wOffsets ax ay ol or
+              if ol + com == ax.size
+              then
+                if ax.size == ay.size
+                then
+                  let sofar := go cx cy 0 0
+                  .node1 (mini_merge x y) ax sofar
+                else
+                  let sofar := go cx r 0 (or + com)
+                  .node1 (mini_merge x y) ax sofar
+              else
+                if or + com == ay.size
+                then
+                  let sofar := go l cy (ol + com) 0
+                  .node1 (mini_merge x y) ay sofar
+                else
+                  let join := (ax.drop ol).take (com)
+                  let ax' := ax.drop (ol + com)
+                  let ay' := ay.drop (or + com)
+                  if ax.get! (ol + com) < ay.get! (or + com)
+                  then
+                    .node1 (mini_merge x y) join (.node .none #[ax',ay'] #[cx,cy])
+                  else
+                    .node1 (mini_merge x y) join (.node .none #[ay',ax'] #[cy,cx])
+        | .node y ay cy =>
+              match ByteArray.matchSingle_wOffset ax ol ay with
+              | .none => .node (mini_merge x y) (ay.insertAt! 0 ax) (cy.insertAt! 0 cx)
+              | .some idx =>
+                  let ay' := ay.get! idx
+                  let cy' := cy.get! idx
+                  let com := ByteArray.getLongestMatch_wOffsets ax ay' ol 0
+                  if ol + com == ax.size
+                  then
+                    if ax.size == ay'.size
+                    then
+                      let sofar := go cx cy' 0 0
+                      .node (mini_merge x y) ay (cy.set! idx sofar)
+                    else
+                      let sofar := go cx (.node1 .none ay' cy') 0 com
+                      .node (mini_merge x y) (ay.set! idx ax) (cy.set! idx sofar)
+                  else
+                    if or + com == ay.size
+                    then
+                      let sofar := go l cy' (ol + com) 0
+                      .node (mini_merge x y) ay (cy.set! idx sofar)
+                    else
+                      let join := (ax.drop ol).take (com)
+                      let ax' := ax.drop (ol + com)
+                      let ay'' := ay'.drop (com)
+                      if ax.get! (ol + com) < ay'.get! (com)
+                      then
+                        .node (mini_merge x y) (ay.set! idx join) (cy.set! idx (.node .none #[ax',ay''] #[cx,cy']))
+                      else
+                        .node (mini_merge x y) (ay.set! idx join) (cy.set! idx (.node .none #[ay'',ax'] #[cy',cx]))
+    | .node x ax cx =>
+        match r with
+        | .leaf y => .node (mini_merge x y) ax cx
+        | .node1 y ay cy =>
+              match ByteArray.matchSingle_wOffset ay or ax with
+              | .none => .node (mini_merge x y) (ax.insertAt! 0 ay) (cx.insertAt! 0 cy)
+              | .some idx =>
+                  let ax' := ax.get! idx
+                  let cx' := cx.get! idx
+                  let com := ByteArray.getLongestMatch_wOffsets ax' ay 0 or
+                  if or + com == ay.size
+                  then
+                    if ax'.size == ay.size
+                    then
+                      let sofar := go cx' cy 0 0
+                      .node (mini_merge x y) ax (cx.set! idx sofar)
+                    else
+
+                  else
+                    if com == ax'.size
+                    then
+                      let sofar := go l cy (ol + com) 0
+                      .node (mini_merge x y) (ax.set! idx ay) (cx.set! idx sofar)
+                    else
+                      let join := (ax.drop ol).take (com)
+                      let ax' := ax.drop (ol + com)
+                      let ay'' := ay'.drop (com)
+                      if ax.get! (ol + com) < ay'.get! (com)
+                      then
+                        .node (mini_merge x y) (ay.set! idx join) (cy.set! idx (.node .none #[ax',ay''] #[cx,cy']))
+                      else
+                        .node (mini_merge x y) (ay.set! idx join) (cy.set! idx (.node .none #[ay'',ax'] #[cy',cx]))
+        | .node y ay cy => sorry
+  go l r 0 0
+
+
+#check Array.insertAt!
