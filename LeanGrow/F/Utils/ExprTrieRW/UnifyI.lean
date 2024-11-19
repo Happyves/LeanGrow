@@ -30,24 +30,13 @@ def List.dedup_beq [BEq α] : List α → List α :=
 
 
 
-inductive rwExpr (α : Sort _) where
-| ofAtom (_ : CExpr)
-| wRW (classId entryId : Nat) (ind : List α) (build : rwExpr α)
-| app (_ : rwExpr α) (_ : rwExpr α)
-| lam (n : Name) (_ : rwExpr α) (_ : rwExpr α) (i : BinderInfo)
-| forallE (n : Name) (_ : rwExpr α) (_ : rwExpr α) (i : BinderInfo)
-| letE (n : Name) (_ : rwExpr α) (_ : rwExpr α) (_ : rwExpr α) (i : Bool)
-| proj (n : Name) (idx : Nat) (_ : rwExpr α)
-deriving Inhabited, Repr, BEq
-
-
 
 -- TODO : make more efficient
 partial def CExprTrie.buildAtLink [BEq α] [Repr α] (T : CExprTrie α) (link : Nat) (r : α → α → Prop) [DecidableRel r]
-  (classes : List (Nat × CExprTrie α)) : List (rwExpr α × List α) :=
+  (classes : List (Nat × CExprTrie α)) : List (CExpr × List α) :=
   with_lTrace TraceFlags.off in
   let lb := CExprTrie.getAtLink T link
-  let rec go : CExprTrie.Branch α → List (rwExpr α × List α)
+  let rec go : CExprTrie.Branch α → List (CExpr × List α)
     | .ofFailed => []
     | .ofApp lf la =>
           let fs := CExprTrie.buildAtLink T lf r classes
@@ -120,24 +109,24 @@ partial def CExprTrie.buildAtLink [BEq α] [Repr α] (T : CExprTrie α) (link : 
           let res := es.map (fun (ce,inter) => (.proj n i ce,inter))
           lTrace TraceFlags.zero & s!"Building proj:\n{repr res}\n\n" & res
     |.ofLit l ind =>
-          let res := [(.ofAtom (.lit l), ind)]
+          let res := [((.lit l), ind)]
           lTrace TraceFlags.zero & s!"Building lit:\n{repr res}\n\n" & res
     |.ofLNode l t ind =>
-          let res := [(.ofAtom (.lnode l (.ofBvar 42) t), ind)] --fix
+          let res := [((.lnode l (.ofBvar 42) t), ind)] --fix
           lTrace TraceFlags.zero & s!"Building lit:\n{repr res}\n\n" & res
     |.ofGNode l ind =>
-          let res := [(.ofAtom (.gnode l (.ofBvar 42)), ind)] --fix
+          let res := [((.gnode l (.ofBvar 42)), ind)] --fix
           lTrace TraceFlags.zero & s!"Building lit:\n{repr res}\n\n" & res
     |.ofBvar l ind =>
-          let res := [(.ofAtom (.bvar l) , ind)]
+          let res := [((.bvar l) , ind)]
           lTrace TraceFlags.zero & s!"Building lit:\n{repr res}\n\n" & res
     |.ofSort l ind =>
-          let res := [(.ofAtom (.sort l) , ind)]
+          let res := [((.sort l) , ind)]
           lTrace TraceFlags.zero & s!"Building lit:\n{repr res}\n\n" & res
     |.ofConst l ind =>
-          let res := [(.ofAtom (.const l []), ind)]
+          let res := [((.const l []), ind)]
           lTrace TraceFlags.zero & s!"Building lit:\n{repr res}\n\n" & res
-    |.ofRW cI eid ind =>
+    |.ofRW cI _ ind =>
           match classes.find? (fun x => x.1 == cI) with
           | .none => []
           | .some (_, cData) =>
@@ -145,15 +134,15 @@ partial def CExprTrie.buildAtLink [BEq α] [Repr α] (T : CExprTrie α) (link : 
               -- except that rw classes may contain rw nodes in their trees ...
               let built := (CExprTrie.buildAtLink cData 0 r classes)
               dbg_trace s!"Build: {repr built}"
-              built.map (fun (cex, ori) => (.wRW cI eid ori cex, ind))
+              built.map (fun (cex, _) => (cex, ind))
   (lb.foldl (fun x y => (go y) :: x) []).join
   -- here and above, `List.dedup_beq` is a workaround ; we should delete patterns after insetring the correspodning pointer to the RW class
 
 --#exit
 
-partial def CExprTrie.unify_candidates? [BEq α] [Repr α] (T : CExprTrie α) (classes : List (Nat × CExprTrie α)) (ce : CExpr) (r : α → α → Prop) [DecidableRel r] : List (List α) × (List (Nat × (List (rwExpr α × List α)))) × List (Nat × Nat × CExpr × List α × List rwDirs) :=
+partial def CExprTrie.unify_candidates? [BEq α] [Repr α] (T : CExprTrie α) (classes : List (Nat × CExprTrie α)) (ce : CExpr) (r : α → α → Prop) [DecidableRel r] : List (List α) × (List (Nat × (List (CExpr × List α)))) × List (Nat × Nat × CExpr × List α × List rwDirs) :=
   with_lTrace TraceFlags.off in
-  let rec go (done : List (List α)) (uni : List (Nat × (List (rwExpr α × List α)))) (todos : List (Nat × Nat × CExpr × List α × List rwDirs)) : List (CExpr × Nat × List rwDirs) → List (List α) × (List (Nat × (List (rwExpr α × List α)))) × List (Nat × Nat × CExpr × List α × List rwDirs)
+  let rec go (done : List (List α)) (uni : List (Nat × (List (CExpr × List α)))) (todos : List (Nat × Nat × CExpr × List α × List rwDirs)) : List (CExpr × Nat × List rwDirs) → List (List α) × (List (Nat × (List (CExpr × List α)))) × List (Nat × Nat × CExpr × List α × List rwDirs)
     | [] => (done,uni, todos)
     | (nx, link, dirs) :: more =>
         lTrace TraceFlags.zero & s!"Call\n{repr done}\n{repr uni}\n{repr todos}\n{repr ((nx, link, dirs) :: more)}\n\n" &
@@ -244,20 +233,20 @@ partial def CExprTrie.unify_candidates? [BEq α] [Repr α] (T : CExprTrie α) (c
 
 
 
-def CExprTrie.unify_step [BEq α] [Repr α] (T : CExprTrie α) (classes : List (Nat × CExprTrie α)) (ce : CExpr) (r : α → α → Prop) [DecidableRel r] : List α × (List (Nat × List (rwExpr α × List α))) ×  List (Nat × Nat × CExpr × List α × List rwDirs) :=
+def CExprTrie.unify_step [BEq α] [Repr α] (T : CExprTrie α) (classes : List (Nat × CExprTrie α)) (ce : CExpr) (r : α → α → Prop) [DecidableRel r] : List α × (List (Nat × List (CExpr × List α))) ×  List (Nat × Nat × CExpr × List α × List rwDirs) :=
   let (cand_safe, cand_uni, cand_rw) := CExprTrie.unify_candidates? T classes ce r
   let prune :=
     match (cand_safe) with
     | [] => []
     | h :: t => t.foldl (fun x y => List.orderedIntersect r x y ) h
   let new_rw := (cand_rw.map (fun (cn,en,e,ind, dir) => (cn, en ,e, List.orderedIntersect r prune ind, dir) )).filter (fun x => !x.2.2.2.1.isEmpty)
-  let rec handle (done : List (rwExpr α × List α)): List (rwExpr α × List α) → List (rwExpr α × List α)
+  let rec handle (done : List (CExpr × List α)): List (CExpr × List α) → List (CExpr × List α)
     | [] => done
     | (ce, ind) :: more =>
         match List.orderedIntersect r prune ind with
         | [] => handle done more
         | res => handle ((ce, res) :: done) more
-  let rec handle2 (done : List (Nat × List (rwExpr α × List α))): List (Nat × List (rwExpr α × List α)) → List (Nat × List (rwExpr α × List α))
+  let rec handle2 (done : List (Nat × List (CExpr × List α))): List (Nat × List (CExpr × List α)) → List (Nat × List (CExpr × List α))
     | [] => done
     | (n, data) :: more =>
         match handle [] data with
@@ -267,12 +256,12 @@ def CExprTrie.unify_step [BEq α] [Repr α] (T : CExprTrie α) (classes : List (
   (prune, new_uni, new_rw)
 
 inductive uRWblueprint (α : Type _) where
-| exactMatch (classId : Option Nat) (entryId : Option Nat) (ind : List α) (indUni : List (α × List (Nat × rwExpr α)))
-| node (classId : Option Nat) (entryId : Option Nat) (ind : List α) (indUni : List (α × List (Nat × rwExpr α))) (dirs : List (Nat × List α × List rwDirs)) (chi : List (uRWblueprint α))
+| exactMatch (classId : Option Nat) (entryId : Option Nat) (ind : List α) (indUni : List (α × List (Nat × CExpr)))
+| node (classId : Option Nat) (entryId : Option Nat) (ind : List α) (indUni : List (α × List (Nat × CExpr))) (dirs : List (Nat × List α × List rwDirs)) (chi : List (uRWblueprint α))
 deriving Inhabited, BEq, Repr
 
-def CExprTrie.unify_reconstruct [BEq α] [Repr α] (r : α → α → Prop) [DecidableRel r] (candidates : List (Nat × List (rwExpr α × List α))) : List (α × List (Nat × rwExpr α)) :=
-    let rec go (node_idx : Nat) (sofar : List (α × List (Nat × rwExpr α))) : List (rwExpr α × List α) → List (α × List (Nat × rwExpr α))
+def CExprTrie.unify_reconstruct [BEq α] [Repr α] (r : α → α → Prop) [DecidableRel r] (candidates : List (Nat × List (CExpr × List α))) : List (α × List (Nat × CExpr)) :=
+    let rec go (node_idx : Nat) (sofar : List (α × List (Nat × CExpr))) : List (CExpr × List α) → List (α × List (Nat × CExpr))
         | [] => sofar
         | (assign, ind) :: rest =>
                 let step := ind.foldl (fun out i => List.findModifyAdd (fun x => x.1 == i) (fun (idx, matchInfo) => (idx, (node_idx,assign) :: matchInfo)) (i, [(node_idx,assign)]) out) sofar
