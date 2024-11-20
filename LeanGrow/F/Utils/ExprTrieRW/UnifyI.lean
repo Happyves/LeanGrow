@@ -334,3 +334,6 @@ def tree_w_rw' := (CExprTrie.addRW (CExprTrie.ofList (· ≤ ·) test_list) 1 [1
 
 
 #eval class42
+
+
+#eval CExprTrie.unify (.app (.app (.lnode 0 (.ofBvar 42) .none) (.const `y [])) (.lnode 1 (.ofBvar 37) .none)) tree_w_rw' [(37, class37'), (42, class42)]
