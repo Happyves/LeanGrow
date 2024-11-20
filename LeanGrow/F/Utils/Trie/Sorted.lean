@@ -476,7 +476,59 @@ partial def intersect [BEq α] [Repr α] (l r : CTrie α) : CTrie α :=
 #eval [1,2,3].toArray
 
 
-partial def Trie.merge [BEq α] [Inhabited α] (l r : CTrie α) : CTrie α  :=
+
+partial def mergeMatchMulti (L R : Array ByteArray) (TL TR : Array (CTrie α)) (post : CTrie α → CTrie α → CTrie α) : (List ByteArray) × (List (CTrie α)) :=
+  let rec go (l r : Nat) (doneB : List ByteArray) (doneT : List (CTrie α)) : (List ByteArray) × (List (CTrie α)) :=
+    if (l < L.size)
+    then
+      if (r < R.size)
+      then
+        let a := L.get! l
+        let b := R.get! r
+        let com := ByteArray.getLongestMatch a b
+          if com == 0
+          then
+            if a.get! 0 < b.get! 0
+            then go (l+1) r (a :: doneB) ((TL.get! l) :: doneT)
+            else go l (r+1) (b :: doneB) ((TR.get! r) :: doneT)
+          else
+            if com == a.size
+            then
+              if com == b.size
+              then
+                go (l+1) (r+1) (a :: doneB) (post (TL.get! l) (TR.get! r) :: doneT)
+              else
+                let b' := b.drop (com)
+                go (l+1) (r+1) (a :: doneB) ((post (TL.get! l) (.node1 .none b' (TR.get! r))) :: doneT)
+            else
+              if com == b.size
+              then
+                let a' := a.drop (com)
+                go (l+1) (r+1) (b :: doneB) ((post (.node1 .none a' (TL.get! l)) (TR.get! r)) :: doneT)
+              else
+                let join := a.take (com)
+                let a' := a.drop (com)
+                let b' := b.drop (com)
+                if a.get! com < b.get! (com)
+                then
+                  go (l+1) (r+1) (join :: doneB) ((.node .none #[a',b'] #[(TL.get! l),(TR.get! r)]) :: doneT)
+                else
+                  go (l+1) (r+1) (join :: doneB) ((.node .none #[b',a'] #[(TR.get! r),(TL.get! l)]) :: doneT)
+      else
+        let a := L.get! l
+        go (l+1) r (a :: doneB) ((TL.get! l) :: doneT)
+    else
+      if (r < R.size)
+      then
+        let b := R.get! r
+        go l (r+1) (b :: doneB) ((TR.get! r) :: doneT)
+      else
+        (doneB, doneT)
+  go 0 0  [] []
+
+
+
+partial def merge [BEq α] [Inhabited α] (l r : CTrie α) : CTrie α  :=
   let mini_merge (x y : Option α) : Option α := (match x with | .some X => X | .none => match y with | .some Y => Y | .none => .none)
   -- so at common entries, the value from l is taken ! Maybe refactor where mini_merge can be any function ?
   let rec go (l r : CTrie α) (ol or : Nat) : CTrie α :=
@@ -498,12 +550,12 @@ partial def Trie.merge [BEq α] [Inhabited α] (l r : CTrie α) : CTrie α  :=
                   let sofar := go cx cy 0 0
                   .node1 (mini_merge x y) ax sofar
                 else
-                  let sofar := go cx r 0 (or + com)
+                  let sofar := go cx (.node1 .none ay cy) 0 (or + com)
                   .node1 (mini_merge x y) ax sofar
               else
                 if or + com == ay.size
                 then
-                  let sofar := go l cy (ol + com) 0
+                  let sofar := go (.node1 .none ax cx) cy (ol + com) 0
                   .node1 (mini_merge x y) ay sofar
                 else
                   let join := (ax.drop ol).take (com)
@@ -515,12 +567,11 @@ partial def Trie.merge [BEq α] [Inhabited α] (l r : CTrie α) : CTrie α  :=
                   else
                     .node1 (mini_merge x y) join (.node .none #[ay',ax'] #[cy,cx])
         | .node y ay cy =>
-              match ByteArray.matchSingle_wOffset ax ol ay with
-              | .none => .node (mini_merge x y) (ay.insertAt! 0 ax) (cy.insertAt! 0 cx)
-              | .some idx =>
+              match ByteArray.matchSingleHits_wOffset ax ol ay with
+              | .ins idx => .node (mini_merge x y) (ay.insertAt! idx ax) (cy.insertAt! idx cx)
+              | .hit idx com =>
                   let ay' := ay.get! idx
                   let cy' := cy.get! idx
-                  let com := ByteArray.getLongestMatch_wOffsets ax ay' ol 0
                   if ol + com == ax.size
                   then
                     if ax.size == ay'.size
@@ -531,7 +582,7 @@ partial def Trie.merge [BEq α] [Inhabited α] (l r : CTrie α) : CTrie α  :=
                       let sofar := go cx (.node1 .none ay' cy') 0 com
                       .node (mini_merge x y) (ay.set! idx ax) (cy.set! idx sofar)
                   else
-                    if or + com == ay.size
+                    if com == ay'.size
                     then
                       let sofar := go l cy' (ol + com) 0
                       .node (mini_merge x y) ay (cy.set! idx sofar)
@@ -548,35 +599,37 @@ partial def Trie.merge [BEq α] [Inhabited α] (l r : CTrie α) : CTrie α  :=
         match r with
         | .leaf y => .node (mini_merge x y) ax cx
         | .node1 y ay cy =>
-              match ByteArray.matchSingle_wOffset ay or ax with
-              | .none => .node (mini_merge x y) (ax.insertAt! 0 ay) (cx.insertAt! 0 cy)
-              | .some idx =>
+              match ByteArray.matchSingleHits_wOffset ay or ax with
+              | .ins idx => .node (mini_merge x y) (ax.insertAt! idx ay) (cx.insertAt! idx cy)
+              | .hit idx com =>
                   let ax' := ax.get! idx
                   let cx' := cx.get! idx
-                  let com := ByteArray.getLongestMatch_wOffsets ax' ay 0 or
                   if or + com == ay.size
                   then
-                    if ax'.size == ay.size
+                    if ay.size == ax'.size
                     then
                       let sofar := go cx' cy 0 0
                       .node (mini_merge x y) ax (cx.set! idx sofar)
                     else
-
+                      let sofar := go (.node1 .none ax' cx') cy com 0
+                      .node (mini_merge x y) (ax.set! idx ay) (cx.set! idx sofar)
                   else
                     if com == ax'.size
                     then
-                      let sofar := go l cy (ol + com) 0
-                      .node (mini_merge x y) (ax.set! idx ay) (cx.set! idx sofar)
+                      let sofar := go cx' r 0 com
+                      .node (mini_merge x y) ax (cx.set! idx sofar)
                     else
-                      let join := (ax.drop ol).take (com)
-                      let ax' := ax.drop (ol + com)
-                      let ay'' := ay'.drop (com)
-                      if ax.get! (ol + com) < ay'.get! (com)
+                      let join := (ay.drop or).take (com)
+                      let ay' := ay.drop (or + com)
+                      let ax'' := ax'.drop (com)
+                      if ax'.get! com < ay.get! (or + com)
                       then
-                        .node (mini_merge x y) (ay.set! idx join) (cy.set! idx (.node .none #[ax',ay''] #[cx,cy']))
+                        .node (mini_merge x y) (ax.set! idx join) (cx.set! idx (.node .none #[ax'',ay'] #[cx',cy]))
                       else
-                        .node (mini_merge x y) (ay.set! idx join) (cy.set! idx (.node .none #[ay'',ax'] #[cy',cx]))
-        | .node y ay cy => sorry
+                        .node (mini_merge x y) (ax.set! idx join) (cx.set! idx (.node .none #[ay',ax''] #[cy,cx']))
+        | .node y ay cy =>
+            let (as, ts) := mergeMatchMulti ax ay cx cy (go · · 0 0)
+            .node (mini_merge x y) (as.reverse.toArray) (ts.reverse.toArray)
   go l r 0 0
 
 
