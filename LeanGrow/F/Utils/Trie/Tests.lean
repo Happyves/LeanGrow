@@ -88,3 +88,19 @@ def test_list_3 : List (String × Nat) := [("ban", 42),("banana", 37),("bandana"
 #eval CTrie.toList (CTrie.merge (CTrie.ofList_sorted test_list) (CTrie.ofList_sorted test_list_2))
 #eval CTrie.toList (CTrie.merge (CTrie.ofList_sorted test_list) (CTrie.ofList_sorted test_list_3))
 #eval CTrie.toList (CTrie.merge (CTrie.ofList_sorted test_list) {})
+
+#eval (CTrie.difference (CTrie.ofList_sorted test_list) (CTrie.ofList_sorted test_list_2))
+#eval (CTrie.difference (CTrie.ofList_sorted test_list) (CTrie.ofList_sorted test_list_3))
+#eval (CTrie.difference (CTrie.ofList_sorted test_list) {})
+
+
+#eval CTrie.toList (CTrie.difference (CTrie.ofList_sorted test_list) (CTrie.ofList_sorted test_list_2))
+#eval CTrie.toList (CTrie.difference (CTrie.ofList_sorted test_list_2) (CTrie.ofList_sorted test_list))
+#eval CTrie.toList (CTrie.difference (CTrie.ofList_sorted test_list) (CTrie.ofList_sorted test_list_3))
+#eval CTrie.toList (CTrie.difference (CTrie.ofList_sorted test_list) {})
+
+#eval CTrie.clean (CTrie.difference (CTrie.ofList_sorted test_list) (CTrie.ofList_sorted test_list_2))
+-- used to have a useless .leaf .none that got cleaned
+#eval CTrie.clean (CTrie.difference (CTrie.ofList_sorted test_list) (CTrie.ofList_sorted test_list_3))
+#eval CTrie.toList (CTrie.clean (CTrie.difference (CTrie.ofList_sorted test_list) (CTrie.ofList_sorted test_list_2)))
+#eval CTrie.toList (CTrie.clean (CTrie.difference (CTrie.ofList_sorted test_list) (CTrie.ofList_sorted test_list_3)))

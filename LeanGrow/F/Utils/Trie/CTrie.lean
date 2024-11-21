@@ -153,3 +153,71 @@ partial def size (t : CTrie α) : Nat :=
         | .node1 x _ cx => match x with | .some _ => go (Nat.succ count) (cx :: more) | .none => go count (cx :: more)
         | .node x _ cx => match x with | .some _ => go (Nat.succ count) (cx.toList ++ more) | .none => go count (cx.toList ++ more)
   go 0 [t]
+
+
+partial def keys (t : CTrie α) : List (String) :=
+  let rec go (done : List (String)) : List (ByteArray × CTrie α) → List (String)
+    | [] => done
+    | (pre, nx) :: more =>
+      match nx with
+      | .leaf x =>
+          match x with
+          | .some _ => go ((String.fromUTF8! pre) :: done) more
+          | .none => go done more
+      | .node1 x ax cx =>
+          let next := (pre ++ ax, cx) :: more
+          match x with
+          | .some _ => go ((String.fromUTF8! pre) :: done) next
+          | .none => go done next
+      | .node x ax cx =>
+          let next := (Array.zip (ax.map (pre ++ ·)) cx).toList ++ more
+          match x with
+          | .some _ => go ((String.fromUTF8! pre) :: done) next
+          | .none => go done next
+  go [] [(⟨#[]⟩, t)]
+
+
+partial def values (t : CTrie α) : List α :=
+  let rec go (done : List α) : List (ByteArray × CTrie α) → List α
+    | [] => done
+    | (pre, nx) :: more =>
+      match nx with
+      | .leaf x =>
+          match x with
+          | .some v => go ((v) :: done) more
+          | .none => go done more
+      | .node1 x ax cx =>
+          let next := (pre ++ ax, cx) :: more
+          match x with
+          | .some v => go ((v) :: done) next
+          | .none => go done next
+      | .node x ax cx =>
+          let next := (Array.zip (ax.map (pre ++ ·)) cx).toList ++ more
+          match x with
+          | .some v => go ((v) :: done) next
+          | .none => go done next
+  go [] [(⟨#[]⟩, t)]
+
+
+partial def clean (t : CTrie α) : CTrie α :=
+  match t with
+  | .leaf x => .leaf x
+  | .node1 x ax cx =>
+      let sofar := cx.clean
+      match sofar with
+      | .leaf .none => .leaf x
+      | _ => .node1 x ax sofar
+  | .node x ax cx =>
+      let sofar := cx.map CTrie.clean
+      let rec clean_inner (bs : List ByteArray) (ts : List (CTrie α)) : Nat → List ByteArray × List (CTrie α)
+        | 0 => (bs,ts)
+        | n+1 =>
+            let X := sofar.get! n
+            match X with
+            | .leaf .none => clean_inner bs ts n
+            | _ => clean_inner ((ax.get! n) :: bs) (X :: ts) n
+      let (nax,ncx) := clean_inner [] [] sofar.size
+      match nax, ncx with
+      | [], _ => .leaf x
+      | [NAX], [NCX] => .node1 x NAX NCX
+      | _, _ => .node x nax.toArray ncx.toArray

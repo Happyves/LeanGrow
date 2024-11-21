@@ -634,3 +634,116 @@ partial def merge [BEq α] [Inhabited α] (l r : CTrie α) : CTrie α  :=
 
 
 #check Array.insertAt!
+
+-- previously "filter"
+partial def difference [BEq α] [Inhabited α] (l r : CTrie α) : CTrie α :=
+  let rec go (l r : CTrie α) (ol or : Nat) : CTrie α :=
+    match l with
+    | .leaf x =>
+        match r with
+        | .leaf y => if match_nontrivial x y then .leaf .none  else .leaf x
+        | .node1 y _ _ => if match_nontrivial x y then .leaf .none  else .leaf x
+        | .node y _ _ => if match_nontrivial x y then .leaf .none  else .leaf x
+    | .node1 x ax cx =>
+        match r with
+        | .leaf y => if match_nontrivial x y then .node1 .none ax cx  else .node1 x ax cx
+        | .node1 y ay cy =>
+              let com := ByteArray.getLongestMatch_wOffsets ax ay ol or
+              if ol + com == ax.size
+              then
+                if ax.size == ay.size
+                then
+                  let sofar := go cx cy 0 0
+                  if match_nontrivial x y then .node1 .none ax sofar else .node1 x ax sofar
+                else
+                  let sofar := go cx (.node1 .none ay cy) 0 (or + com)
+                  if match_nontrivial x y then .node1 .none ax sofar else .node1 x ax sofar
+              else
+                if or + com == ay.size
+                then
+                  let sofar := go (.node1 .none ax cx) cy (ol + com) 0
+                  if match_nontrivial x y then .node1 .none ay sofar else .node1 x ay sofar
+                else
+                  if match_nontrivial x y then .node1 .none ax cx  else .node1 x ax cx
+        | .node y ay cy =>
+              match ByteArray.matchSingle_wOffset ax ol ay with
+              | .none => if match_nontrivial x y then .node1 .none ax cx  else .node1 x ax cx
+              | .some idx =>
+                  let ay' := ay.get! idx
+                  let cy' := cy.get! idx
+                  let com := ByteArray.getLongestMatch_wOffsets ax ay' ol or
+                  if ol + com == ax.size
+                  then
+                    if ax.size == ay'.size
+                    then
+                      let sofar := go cx cy' 0 0
+                      if match_nontrivial x y then .node1 .none ax sofar else .node1 x ax sofar
+                    else
+                      let sofar := go cx (.node1 .none ay' cy') 0 (or + com)
+                      if match_nontrivial x y then .node1 .none ax sofar else .node1 x ax sofar
+                  else
+                    if or + com == ay.size
+                    then
+                      let sofar := go (.node1 .none ax cx) cy' (ol + com) 0
+                      if match_nontrivial x y then .node1 .none ay' sofar else .node1 x ay' sofar
+                    else
+                      if match_nontrivial x y then .node1 .none ax cx  else .node1 x ax cx
+    | .node x ax cx =>
+        match r with
+        | .leaf y => if match_nontrivial x y then .node .none ax cx  else .node x ax cx
+        | .node1 y ay cy =>
+              match ByteArray.matchSingle_wOffset ay or ax with
+              | .none => if match_nontrivial x y then .node .none ax cx  else .node x ax cx
+              | .some idx =>
+                    let ax' := ax.get! idx
+                    let cx' := cx.get! idx
+                    let com := ByteArray.getLongestMatch_wOffsets ax' ay ol or
+                    if ol + com == ax'.size
+                    then
+                      if ax'.size == ay.size
+                      then
+                        let sofar := go cx' cy 0 0
+                        if match_nontrivial x y then .node .none ax (cx.set! idx sofar) else .node x ax (cx.set! idx sofar)
+                      else
+                        let sofar := go cx' (.node1 .none ay cy) 0 (or + com)
+                        if match_nontrivial x y then .node .none ax (cx.set! idx sofar) else .node x ax (cx.set! idx sofar)
+                    else
+                      if or + com == ay.size
+                      then
+                        let sofar := go (.node1 .none ax' cx') cy (ol + com) 0
+                        match sofar with
+                        | .node1 .none _ ncx =>
+                            if match_nontrivial x y then .node .none ax (cx.set! idx ncx) else .node x ax (cx.set! idx ncx)
+                        | _ => .leaf .none  -- failure!
+                      else
+                        if match_nontrivial x y then .node .none ax cx  else .node x ax cx
+        | .node y ay cy =>
+              let hits := (ByteArray.matchMulti ax ay).reverse
+              let gone := hits.map
+                (fun (ai,bi,com) =>
+                  let A := ax.get! ai
+                  let B := ay.get! bi
+                    if com == A.size
+                    then
+                      if A.size == B.size
+                      then
+                        let sofar := go (cx.get! ai) (cy.get! bi) 0 0
+                        (ai,sofar)
+                      else
+                        let sofar := go (cx.get! ai) (.node1 .none B (cy.get! bi)) 0 com
+                        (ai,sofar)
+                    else
+                      if com == B.size
+                      then
+                        let sofar := go (.node1 .none A (cx.get! ai)) (cy.get! bi) (com) 0
+                        match sofar with
+                        | .node1 .none _ ncx => (ai,ncx)
+                        | _ => (ai,.leaf .none)  -- failure!
+                      else
+                        (ai,(cx.get! ai))
+                )
+              let rec update (C : Array (CTrie α)) :  List (Nat × CTrie α) →  Array (CTrie α)
+                | [] => C
+                | (li, new) :: more => update (C.set! li new) more
+              if match_nontrivial x y then .node .none ax (update cx gone)  else .node x ax (update cx gone)
+  go l r 0 0
