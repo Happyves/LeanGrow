@@ -462,3 +462,32 @@ partial def CExpr.buildRWofBluePrint_3
                         let todos := List.zipWith (fun d bp => (d.2.2, bp)) ndirs chi
                         go (.gnode I (.ofBvar 42)) ce Ttype todos
       | _ => .failed
+
+
+/-
+Problems:
+
+1. We should build all possibilities. Currently, we only consider the head of
+indices, but as the example in `UnifyI` with two lnodes shows, we must
+consider all possibilities.
+
+2. Rewrites may occur after rewrites. Example of rws `a = b` `c = fun x => x`,
+ltx `P (c a)` and we query for `P b`. We'd like for an rw-node to be placed at `c a`
+(corresponding to the eq-thm corresponding to β), and this is the job of FindOccs.
+The problem is that with the current defs of rw-classes, the class should contain
+cexprs `c a`, `(fun x => x) a`, `(fun x => x) b`, `c b` and `b` and `a`.
+Phenomenon of exponential growth detected ?
+
+Trippy solution ansatz:
+Instead of rw-classes storing terms that are equal, have it store CExprTries ?
+
+
+
+-/
+
+example (f : α → β) (a : α) : (fun x => f x) a = f a := by exact rfl -- exact? give rfl, so no explicit thm for β
+
+example (a : α) : (fun x => x) a = a := rfl
+-- if we add these in the reduction-via-rewrite paradigm,
+-- we should add both versions, as the first can't handle the
+-- second, since we don't know how to infer `f = id`

@@ -29,3 +29,14 @@ Only then do we build the terms of these types, up to rws, with `find?`
 and `buildRWofBluePrint_3`.
 
 -/
+
+
+def test (_ : (fun _ : Unit => Nat) ()) : 1 = 1 := rfl
+
+#print test
+-- reduced
+
+def test2 (_ : (fun _ : Unit => Nat.add (Nat.zero) Nat.zero = Nat.zero) ()) : 1 = 1 := rfl
+
+#print test2
+-- prtially reduced ?
