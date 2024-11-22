@@ -528,9 +528,8 @@ partial def mergeMatchMulti (L R : Array ByteArray) (TL TR : Array (CTrie α)) (
 
 
 
-partial def merge [BEq α] [Inhabited α] (l r : CTrie α) : CTrie α  :=
-  let mini_merge (x y : Option α) : Option α := (match x with | .some X => X | .none => match y with | .some Y => Y | .none => .none)
-  -- so at common entries, the value from l is taken ! Maybe refactor where mini_merge can be any function ?
+partial def merge_core [BEq α] [Inhabited α] (l r : CTrie α)
+  (mini_merge : Option α → Option α → Option α) : CTrie α  :=
   let rec go (l r : CTrie α) (ol or : Nat) : CTrie α :=
     match l with
     | .leaf x =>
@@ -631,6 +630,26 @@ partial def merge [BEq α] [Inhabited α] (l r : CTrie α) : CTrie α  :=
             let (as, ts) := mergeMatchMulti ax ay cx cy (go · · 0 0)
             .node (mini_merge x y) (as.reverse.toArray) (ts.reverse.toArray)
   go l r 0 0
+
+
+partial def merge [BEq α] [Inhabited α] (l r : CTrie α) : CTrie α :=
+  merge_core l r (fun x y => match x with | .some X => X | .none => match y with | .some Y => Y | .none => .none)
+  -- so at common entries, the value from l is taken ! Maybe refactor where mini_merge can be any function ?
+
+partial def merge_count (l r : CTrie Nat) : CTrie Nat :=
+  merge_core l r (fun x y =>
+    match x, y with
+    | .some X, .some Y  => .some (X+Y)
+    | .none, .some Y  => .some (Y)
+    | .some X, .none  => .some (X)
+    | _,_ => .none
+    )
+
+partial def merge_count_initialise : CTrie α → CTrie Nat
+  | .leaf x => .leaf ((fun _ => 1) <$> x)
+  | .node1 x ax cx => .node1 ((fun _ => 1) <$> x) ax (merge_count_initialise cx)
+  | .node x ax cx => .node ((fun _ => 1) <$> x) ax (cx.map merge_count_initialise)
+
 
 
 #check Array.insertAt!

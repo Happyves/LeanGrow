@@ -104,3 +104,12 @@ def test_list_3 : List (String × Nat) := [("ban", 42),("banana", 37),("bandana"
 #eval CTrie.clean (CTrie.difference (CTrie.ofList_sorted test_list) (CTrie.ofList_sorted test_list_3))
 #eval CTrie.toList (CTrie.clean (CTrie.difference (CTrie.ofList_sorted test_list) (CTrie.ofList_sorted test_list_2)))
 #eval CTrie.toList (CTrie.clean (CTrie.difference (CTrie.ofList_sorted test_list) (CTrie.ofList_sorted test_list_3)))
+
+
+#eval CTrie.enumerate 0 (CTrie.ofList_sorted test_list_2)
+#eval CTrie.enumerate 0 (CTrie.ofList_sorted test_list)
+#eval CTrie.enumerate 0 (CTrie.ofList_sorted test_list_3)
+
+#eval CTrie.toList  (CTrie.merge_count (CTrie.merge_count_initialise (CTrie.ofList_sorted test_list)) (CTrie.merge_count_initialise  (CTrie.ofList_sorted test_list_2)))
+#eval CTrie.toList  (CTrie.merge_count (CTrie.merge_count_initialise (CTrie.ofList_sorted test_list)) (CTrie.merge_count_initialise  (CTrie.ofList_sorted test_list_3)))
+#eval CTrie.toList  (CTrie.merge_count (CTrie.merge_count_initialise (CTrie.ofList_sorted test_list)) {})

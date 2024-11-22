@@ -221,3 +221,33 @@ partial def clean (t : CTrie α) : CTrie α :=
       | [], _ => .leaf x
       | [NAX], [NCX] => .node1 x NAX NCX
       | _, _ => .node x nax.toArray ncx.toArray
+
+
+partial def enumerate (count : Nat) : CTrie α → ((CTrie Nat) × List (Nat × α) × Nat)
+  | .leaf x =>
+      match x with
+      | .some v => (.leaf (.some count), [(count,v)], count + 1)
+      | .none =>  (.leaf .none, [], count)
+  | .node1 x ax cx =>
+      match x with
+      | .some v =>
+          let (nt,nv,nc) := enumerate (count + 1) cx
+          (.node1 (.some count) ax nt, (count,v) :: nv, nc)
+      | _ =>
+          let (nt,nv,nc) := enumerate count cx
+          (.node1 .none ax nt, nv, nc)
+  | .node x ax cx =>
+      let rec inner (A : Array (CTrie Nat)) (cc: Nat) (vals : List (Nat × α)) : Nat → ((Array (CTrie Nat)) × Nat × List (Nat × α))
+        | 0 => (A,cc,vals)
+        | n+1 =>
+            let (nt,nvals,ncc) := enumerate cc (cx.get! n)
+            inner (A.set! n nt) ncc (nvals ++ vals) n
+      match x with
+      | .some v =>
+            let ncx := Array.mkArray cx.size (.leaf .none)
+            let (res,nc,nv) := inner ncx (count+1) [] cx.size
+            (.node (.some count) ax res, (count,v) :: nv,nc)
+      | _ =>
+            let ncx := Array.mkArray cx.size (.leaf .none)
+            let (res,nc,nv) := inner ncx count [] cx.size
+            (.node .none ax res, nv,nc)
