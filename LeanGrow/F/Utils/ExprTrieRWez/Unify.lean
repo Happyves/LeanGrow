@@ -108,22 +108,12 @@ partial def CExprTrie.buildAtLink [BEq α] [Repr α] (T : CExprTrie α) (link : 
 
 def done_prune [BEq α] [Repr α] (r : α → α → Prop) [DecidableRel r]
   (ind : List α) (done : List (Nat × List (CExpr × List α))) : List (Nat × List (CExpr × List α)) :=
-  let rec inter? : List α → List α → Bool
-    | [], _ => false
-    | _, [] => false
-    | ah :: aT , bh :: bT =>
-        if r ah bh
-        then
-          if ah == bh
-          then inter? aT bT
-          else inter? aT (bh :: bT)
-        else inter? (ah :: aT) bT
   let rec process_inner (final : List (CExpr × List α)) : List (CExpr × List α) → List (CExpr × List α)
     | [] => final
     | (n,l) :: more =>
-        if inter? ind l
-        then process_inner ((n,l) :: final) more
-        else process_inner (final) more
+        match List.orderedIntersect r ind l with
+        | [] => process_inner (final) more
+        | I => process_inner ((n,I) :: final) more
   let rec process_outer (final : List (Nat × List (CExpr × List α))) : List (Nat × List (CExpr × List α)) → List (Nat × List (CExpr × List α))
     | [] => final
     | (n,l) :: more =>
@@ -250,7 +240,3 @@ def CExprTrie.unify_reconstruct [BEq α] [Repr α] (r : α → α → Prop) [Dec
 #eval CExprTrie.unify_reconstruct (· ≤ ·) (CExprTrie.unify_candidates (CExprTrie.ofList (· ≤ ·) test_list) (· ≤ ·) 0 (.app (.lnode 0 (.ofBvar 42) .none) (.lnode 1 (.ofBvar 42) .none)))
 #eval CExprTrie.unify_reconstruct (· ≤ ·) (CExprTrie.unify_candidates (CExprTrie.ofList (· ≤ ·) test_list) (· ≤ ·) 0 (.app (.lnode 0 (.ofBvar 42) .none) (.const `d [])))
 #eval (CExprTrie.unify_candidates (CExprTrie.ofList (· ≤ ·) test_list) (· ≤ ·) 0 (.app (.lnode 0 (.ofBvar 42) .none) (.const `d [])))
-
-#check 1
-
--- BIG PROBLEM ...
