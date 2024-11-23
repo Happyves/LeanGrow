@@ -60,15 +60,15 @@ def CExprTrie.getIndices_Sort (l : Level) : List (CExprTrie.Branch α) → List 
     | _ => (CExprTrie.getIndices_Sort l xs)
 
 
-def CExprTrie.getIndices_Const (l : Name) : List (CExprTrie.Branch α) → List α
+def CExprTrie.getIndices_Const (n : Name) (l : List Level) : List (CExprTrie.Branch α) → List α
 | [] => []
 | x :: xs =>
     match x with
-    | .ofConst L ind =>
-        if L == l
+    | .ofConst N L ind =>
+        if L == l && N == n
         then ind
-        else (CExprTrie.getIndices_Const l xs)
-    | _ => (CExprTrie.getIndices_Const l xs)
+        else (CExprTrie.getIndices_Const n l xs)
+    | _ => (CExprTrie.getIndices_Const n l xs)
 
 
 partial def CExprTrie.find_candidates? [BEq α] (T : CExprTrie α) (ce : CExpr) (r : α → α → Prop) [DecidableRel r] : List (List α) :=
@@ -128,9 +128,9 @@ partial def CExprTrie.find_candidates? [BEq α] (T : CExprTrie α) (ce : CExpr) 
             let lb := CExprTrie.getAtLink T link
             let nlb := CExprTrie.getIndices_Sort l lb
             go (nlb :: done) more
-        | .const l _ =>
+        | .const n l =>
             let lb := CExprTrie.getAtLink T link
-            let nlb := CExprTrie.getIndices_Const l lb
+            let nlb := CExprTrie.getIndices_Const n l lb
             go (nlb :: done) more
   go [] [(ce,0)]
 

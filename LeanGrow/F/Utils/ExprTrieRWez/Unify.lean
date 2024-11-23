@@ -6,13 +6,14 @@ open Lean
 
 
 
+
 -- TODO : make more efficient
 partial def CExprTrie.buildAtLink [BEq α] [Repr α] (T : CExprTrie α) (link : Nat) (r : α → α → Prop) [DecidableRel r] : List (CExpr × List α) :=
   with_lTrace TraceFlags.off in
   let lb := CExprTrie.getAtLink T link
   let rec go : CExprTrie.Branch α → List (CExpr × List α)
     | .ofFailed => []
-    | .ofApp lf la =>
+    | .ofApp lf la _ _ _ =>
           let fs := CExprTrie.buildAtLink T lf r
           let as := CExprTrie.buildAtLink T la r
           let res :=
@@ -27,7 +28,7 @@ partial def CExprTrie.buildAtLink [BEq α] [Repr α] (T : CExprTrie α) (link : 
               )
               []).join
           lTrace TraceFlags.zero & s!"Building apps:\n{repr res}\n\n" & res
-    | .ofLam n lf la i =>
+    | .ofLam lf la _ _ _ =>
           let fs := CExprTrie.buildAtLink T lf r
           let as := CExprTrie.buildAtLink T la r
           let res :=
@@ -36,13 +37,15 @@ partial def CExprTrie.buildAtLink [BEq α] [Repr α] (T : CExprTrie α) (link : 
                 let inter := List.orderedIntersect r y.2 Y.2
                 match inter with
                 | [] => X
-                | _ => (.lam n y.1 Y.1 i, inter) :: X
+                | _ => (.lam `dummy y.1 Y.1 .default, inter) :: X
+                  -- wonder whether this can cause problems...
+                  -- We should ignore name and Binderinfo everywhere too
                 )
                 []) :: x
               )
               []).join
           lTrace TraceFlags.zero & s!"Building lams:\n{repr res}\n\n" & res
-    | .ofForall n lf la i =>
+    | .ofForall lf la _ _ _ =>
           let fs := CExprTrie.buildAtLink T lf r
           let as := CExprTrie.buildAtLink T la r
           let res :=
@@ -51,13 +54,13 @@ partial def CExprTrie.buildAtLink [BEq α] [Repr α] (T : CExprTrie α) (link : 
                 let inter := List.orderedIntersect r y.2 Y.2
                 match inter with
                 | [] => X
-                | _ => (.lam n y.1 Y.1 i, inter) :: X
+                | _ => (.forallE `dummy y.1 Y.1 .default, inter) :: X
                 )
                 []) :: x
               )
               []).join
             lTrace TraceFlags.zero & s!"Building foalls:\n{repr res}\n\n" & res
-    | .ofLet n lf la lz i =>
+    | .ofLet lf la lz _ _ _ _ =>
           let fs := CExprTrie.buildAtLink T lf r
           let as := CExprTrie.buildAtLink T la r
           let zs := CExprTrie.buildAtLink T lz r
@@ -69,7 +72,7 @@ partial def CExprTrie.buildAtLink [BEq α] [Repr α] (T : CExprTrie α) (link : 
                   let inter := List.orderedIntersect r Z.2 interim
                   match inter with
                   | [] => z
-                  | _ => (.letE n y.1 Y.1 Z.1 i, inter) :: z
+                  | _ => (.letE `dummy y.1 Y.1 Z.1 true, inter) :: z
                   )
                 []) :: X
                 )
@@ -77,7 +80,7 @@ partial def CExprTrie.buildAtLink [BEq α] [Repr α] (T : CExprTrie α) (link : 
               )
               []).join
           lTrace TraceFlags.zero & s!"Building lets:\n{repr res}\n\n" & res
-    | .ofProj n i le =>
+    | .ofProj n i le _ _ =>
           let es := CExprTrie.buildAtLink T le r
           let res := es.map (fun (ce,inter) => (.proj n i ce,inter))
           lTrace TraceFlags.zero & s!"Building proj:\n{repr res}\n\n" & res
@@ -96,17 +99,44 @@ partial def CExprTrie.buildAtLink [BEq α] [Repr α] (T : CExprTrie α) (link : 
     |.ofSort l ind =>
           let res := [(.sort l , ind)]
           lTrace TraceFlags.zero & s!"Building lit:\n{repr res}\n\n" & res
-    |.ofConst l ind =>
-          let res := [(.const l [], ind)] -- fix
+    |.ofConst n l ind =>
+          let res := [(.const n l, ind)]
           lTrace TraceFlags.zero & s!"Building lit:\n{repr res}\n\n" & res
   (lb.foldl (fun x y => (go y) :: x) []).join
 
 
 
+def done_prune [BEq α] [Repr α] (r : α → α → Prop) [DecidableRel r]
+  (ind : List α) (done : List (Nat × List (CExpr × List α))) : List (Nat × List (CExpr × List α)) :=
+  let rec inter? : List α → List α → Bool
+    | [], _ => false
+    | _, [] => false
+    | ah :: aT , bh :: bT =>
+        if r ah bh
+        then
+          if ah == bh
+          then inter? aT bT
+          else inter? aT (bh :: bT)
+        else inter? (ah :: aT) bT
+  let rec process_inner (final : List (CExpr × List α)) : List (CExpr × List α) → List (CExpr × List α)
+    | [] => final
+    | (n,l) :: more =>
+        if inter? ind l
+        then process_inner ((n,l) :: final) more
+        else process_inner (final) more
+  let rec process_outer (final : List (Nat × List (CExpr × List α))) : List (Nat × List (CExpr × List α)) → List (Nat × List (CExpr × List α))
+    | [] => final
+    | (n,l) :: more =>
+        match process_inner [] l with
+        | [] => process_outer final more
+        | res => process_outer ((n,res) :: final) more
+  process_outer [] done
+
+
 -- #eval CExprTrie.buildAtLink (CExprTrie.ofList (· ≤ ·) test_list) 0 (· ≤ ·)
 
 /-- Assumes `ce` is an expression from a thm, hence has only lnodes-/
-partial def CExprTrie.unify_candidates [BEq α] [Repr α] (T : CExprTrie α) (r : α → α → Prop) [DecidableRel r] (ce : CExpr) : List (Nat × List (CExpr × List α)) :=
+partial def CExprTrie.unify_candidates [BEq α] [Repr α] (T : CExprTrie α) (r : α → α → Prop) [DecidableRel r] (start : Nat) (ce : CExpr) : List (Nat × List (CExpr × List α)) :=
   let rec go (done : List (Nat × List (CExpr × List α))) : List (CExpr × Nat) → List (Nat × List (CExpr × List α))
     | [] => done
     | (nx, link) :: more =>
@@ -147,7 +177,7 @@ partial def CExprTrie.unify_candidates [BEq α] [Repr α] (T : CExprTrie α) (r 
             let nlb := CExprTrie.getIndices_Lit l lb
             match nlb with
             | [] => []
-            | _ => go (done) more
+            | _ => go (done_prune r nlb done) more
         | .lnode l _ .none => -- tag .none means it does't originate from backward propagation
             let builds := CExprTrie.buildAtLink T link r
             go ((l, builds) :: done) more
@@ -156,32 +186,32 @@ partial def CExprTrie.unify_candidates [BEq α] [Repr α] (T : CExprTrie α) (r 
             let nlb := CExprTrie.getIndices_lNode l t lb
             match nlb with
             | [] => []
-            | _ => go (done) more
+            | _ => go (done_prune r nlb done) more
         | .gnode l _ =>
             let lb := CExprTrie.getAtLink T link
             let nlb := CExprTrie.getIndices_gNode l lb
             match nlb with
             | [] => []
-            | _ => go (done) more
+            | _ => go (done_prune r nlb done) more
         | .bvar l =>
             let lb := CExprTrie.getAtLink T link
             let nlb := CExprTrie.getIndices_Bvar l lb
             match nlb with
             | [] => []
-            | _ => go (done) more
+            | _ => go (done_prune r nlb done) more
         | .sort l =>
             let lb := CExprTrie.getAtLink T link
             let nlb := CExprTrie.getIndices_Sort l lb
             match nlb with
             | [] => []
-            | _ => go (done) more
-        | .const l _ =>
+            | _ => go (done_prune r nlb done) more
+        | .const n l =>
             let lb := CExprTrie.getAtLink T link
-            let nlb := CExprTrie.getIndices_Const l lb
+            let nlb := CExprTrie.getIndices_Const n l lb
             match nlb with
             | [] => []
-            | _ => go (done) more
-  go [] [(ce,0)]
+            | _ => go (done_prune r nlb done) more
+  go [] [(ce,start)]
 
 
 
@@ -217,4 +247,10 @@ def CExprTrie.unify_reconstruct [BEq α] [Repr α] (r : α → α → Prop) [Dec
     candidates.foldl (fun out (node_idx, assign_data) => go node_idx out assign_data) []
 
 
--- #eval CExprTrie.unify_reconstruct (· ≤ ·) (CExprTrie.unify_candidates (CExprTrie.ofList (· ≤ ·) test_list) (· ≤ ·) (.app (.lnode 0 (.ofBvar 42) .none) (.lnode 1 (.ofBvar 42) .none)))
+#eval CExprTrie.unify_reconstruct (· ≤ ·) (CExprTrie.unify_candidates (CExprTrie.ofList (· ≤ ·) test_list) (· ≤ ·) 0 (.app (.lnode 0 (.ofBvar 42) .none) (.lnode 1 (.ofBvar 42) .none)))
+#eval CExprTrie.unify_reconstruct (· ≤ ·) (CExprTrie.unify_candidates (CExprTrie.ofList (· ≤ ·) test_list) (· ≤ ·) 0 (.app (.lnode 0 (.ofBvar 42) .none) (.const `d [])))
+#eval (CExprTrie.unify_candidates (CExprTrie.ofList (· ≤ ·) test_list) (· ≤ ·) 0 (.app (.lnode 0 (.ofBvar 42) .none) (.const `d [])))
+
+#check 1
+
+-- BIG PROBLEM ...

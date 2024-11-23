@@ -10,7 +10,7 @@ inductive CExprTrie.Branch (α : Type _) where
 | ofGNode (idx : Nat) (indices : List α)
 | ofBvar (idx : Nat) (indices : List α)
 | ofSort (l : Level) (indices : List α)
-| ofConst (n : Name) (indices : List α) -- (ll : List Level)
+| ofConst (n : Name) (ll : List Level) (indices : List α)
 | ofApp (link_f link_a : Nat) (indDirs : List α) (f_brDirs a_brDirs : List Nat)
 | ofLam (link_t link_b : Nat) (indDirs : List α) (f_brDirs a_brDirs : List Nat)
 | ofForall (link_t link_b : Nat) (indDirs : List α) (f_brDirs a_brDirs : List Nat)

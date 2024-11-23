@@ -51,7 +51,7 @@ partial def CExprTrie.buildAtLink [BEq α] [Repr α] (T : CExprTrie α) (link : 
                 let inter := List.orderedIntersect r y.2 Y.2
                 match inter with
                 | [] => X
-                | _ => (.lam n y.1 Y.1 i, inter) :: X
+                | _ => (.forallE n y.1 Y.1 i, inter) :: X
                 )
                 []) :: x
               )

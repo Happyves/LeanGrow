@@ -1,5 +1,5 @@
 
-import LeanGrow.F.Utils.ExprTrieRWez.Query
+import LeanGrow.F.Utils.ExprTrieRWez.Unify
 
 open Lean
 
@@ -61,9 +61,9 @@ partial def CExprTrie.find_occurences_candidates [BEq α] (T : CExprTrie α) (ce
             let lb := CExprTrie.getAtLink T link
             let nlb := CExprTrie.getIndices_Sort l lb
             go (nlb :: done) more
-        | .const l _ =>
+        | .const n l =>
             let lb := CExprTrie.getAtLink T link
-            let nlb := CExprTrie.getIndices_Const l lb
+            let nlb := CExprTrie.getIndices_Const n l lb
             go (nlb :: done) more
   go [] [(ce,start)]
 
@@ -84,3 +84,20 @@ def CExprTrie.find_occurences [BEq α] (T : CExprTrie α) (ce : CExpr) (r : α �
     go [] (List.reverse T)
 
 #eval CExprTrie.find_occurences (CExprTrie.ofList (· ≤ ·) test_list) (.app (.const `a []) (.const `b [])) (· ≤ ·)
+
+
+def CExprTrie.unify_occurences [BEq α] [Repr α] (T : CExprTrie α) (ce : CExpr) (r : α → α → Prop) [DecidableRel r] : List (Nat × List (α × List (Nat × CExpr))) :=
+    let rec go (done : List (Nat × List (α × List (Nat × CExpr)))) : List (Nat × List (CExprTrie.Branch α)) → List (Nat × List (α × List (Nat × CExpr)))
+        | [] => done
+        | (link, br) :: rest =>
+            let cand_here := CExprTrie.unify_reconstruct r (CExprTrie.unify_candidates ((link, br) :: rest) r link ce)
+            match cand_here with
+            | [] => go done rest
+            | _ => go ((link, cand_here) :: done) rest
+    go [] (List.reverse T)
+
+
+
+#eval CExprTrie.unify_occurences (CExprTrie.ofList (· ≤ ·) test_list) (.app (.const `a []) (.lnode 1 (.ofBvar 42) .none)) (· ≤ ·)
+#eval CExprTrie.unify_occurences (CExprTrie.ofList (· ≤ ·) test_list) (.app (.lnode 0 (.ofBvar 42) .none) (.const `d [])) (· ≤ ·)
+#eval CExprTrie.unify_occurences (CExprTrie.ofList (· ≤ ·) test_list) (.app (.lnode 0 (.ofBvar 42) .none) (.lnode 1 (.ofBvar 42) .none)) (· ≤ ·)

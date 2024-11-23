@@ -187,15 +187,15 @@ def CExprTrie.modifyAsLeaf_Sort [BEq α]  (l : Level) (idx : α) (r : α → α 
         else (.ofSort L ind) :: (CExprTrie.modifyAsLeaf_Sort l idx r xs)
     | _ => x :: (CExprTrie.modifyAsLeaf_Sort l idx r xs)
 
-def CExprTrie.modifyAsLeaf_Const [BEq α] (n : Name) (idx : α) (r : α → α → Prop) [DecidableRel r] : List (CExprTrie.Branch α) → List (CExprTrie.Branch α)
-| [] => [.ofConst n [idx]]
+def CExprTrie.modifyAsLeaf_Const [BEq α] (n : Name) (ll : List Level) (idx : α) (r : α → α → Prop) [DecidableRel r] : List (CExprTrie.Branch α) → List (CExprTrie.Branch α)
+| [] => [.ofConst n ll [idx]]
 | x :: xs =>
     match x with
-    | .ofConst L ind =>
-        if L == n
-        then (.ofConst L (List.orderedInsertOrLeave r idx ind)) :: xs
-        else (.ofConst L ind) :: (CExprTrie.modifyAsLeaf_Const n idx r xs)
-    | _ => x :: (CExprTrie.modifyAsLeaf_Const n idx r xs)
+    | .ofConst L LL ind =>
+        if L == n && LL == ll
+        then (.ofConst L LL (List.orderedInsertOrLeave r idx ind)) :: xs
+        else (.ofConst L LL ind) :: (CExprTrie.modifyAsLeaf_Const n ll idx r xs)
+    | _ => x :: (CExprTrie.modifyAsLeaf_Const n ll idx r xs)
 
 
 
@@ -294,9 +294,9 @@ def CExprTrie.insert [BEq α] (T : CExprTrie α) (idx : α) (ce : CExpr) (r : α
             let lb := CExprTrie.getAtLink T link
             let nlb := CExprTrie.modifyAsLeaf_Sort l idx r lb
             (count, [] , CExprTrie.modifyAtLink T link (fun _ => nlb))
-    | .const l _ =>
+    | .const n l =>
             let lb := CExprTrie.getAtLink T link
-            let nlb := CExprTrie.modifyAsLeaf_Const l idx r lb
+            let nlb := CExprTrie.modifyAsLeaf_Const n l idx r lb
             (count, [] , CExprTrie.modifyAtLink T link (fun _ => nlb))
   (go T idx 0 T.size ce).2.2
 
