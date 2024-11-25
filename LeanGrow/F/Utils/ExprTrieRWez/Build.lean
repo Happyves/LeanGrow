@@ -201,7 +201,7 @@ def CExprTrie.modifyAsLeaf_Const [BEq α] (n : Name) (ll : List Level) (idx : α
 
 
 -- TODO: make more efficient
-def CExprTrie.insert [BEq α] (T : CExprTrie α) (idx : α) (ce : CExpr) (r : α → α → Prop) [DecidableRel r] : CExprTrie α :=
+def CExprTrie.insert_at [BEq α] (T : CExprTrie α) (start : Nat) (idx : α) (ce : CExpr) (r : α → α → Prop) [DecidableRel r] : CExprTrie α :=
   let rec go (T : CExprTrie α ) (idx : α) (link count : Nat) : CExpr → (Nat × List Nat × CExprTrie α)
     | .failed => (count, [], T)
     | .app f a =>
@@ -298,9 +298,10 @@ def CExprTrie.insert [BEq α] (T : CExprTrie α) (idx : α) (ce : CExpr) (r : α
             let lb := CExprTrie.getAtLink T link
             let nlb := CExprTrie.modifyAsLeaf_Const n l idx r lb
             (count, [] , CExprTrie.modifyAtLink T link (fun _ => nlb))
-  (go T idx 0 T.size ce).2.2
+  (go T idx start T.size ce).2.2
 
-
+def CExprTrie.insert [BEq α] (T : CExprTrie α) (idx : α) (ce : CExpr) (r : α → α → Prop) [DecidableRel r] : CExprTrie α :=
+    CExprTrie.insert_at T 0 idx ce r
 
 
 

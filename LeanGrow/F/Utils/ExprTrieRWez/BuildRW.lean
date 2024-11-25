@@ -1,9 +1,11 @@
 
 import LeanGrow.F.Utils.ExprTrieRWez.Unify
-
+import LeanGrow.F.Data.CExpr.API
 
 #check 1
 
+
+open Lean
 
 partial def CExprTrie.buildAtLink_wTrarget [BEq α] [Repr α] (target : α) (T : CExprTrie α) (link : Nat) (r : α → α → Prop) [DecidableRel r] : CExpr :=
   with_lTrace TraceFlags.off in
@@ -111,12 +113,12 @@ def CExprTrie.Branch_findTarget [BEq α] (target : α) (r : α → α → Prop) 
   getem lb
 
 
-partial def CExprTrie.factor [BEq α] (T : CExprTrie α) (tidx : Nat) (cidx : α)
-  (r : α → α → Prop) [DecidableRel r] : CExpr :=
+partial def CExprTrie.factor_with [BEq α] (T : CExprTrie α) (tidx : Nat) (cidx : α)
+  (r : α → α → Prop) [DecidableRel r] (insert : Nat → CExpr) : CExpr :=
     let rec go (depth : Nat) (link : Nat) : CExpr :=
       if link == tidx
       then
-        .bvar depth
+        insert depth
       else
         let lb := CExprTrie.getAtLink T link
         match CExprTrie.Branch_findTarget cidx r lb with
@@ -151,6 +153,15 @@ partial def CExprTrie.factor [BEq α] (T : CExprTrie α) (tidx : Nat) (cidx : α
 
 -- so tree index indices were useless, but α-index directions are usefull
 
+def CExprTrie.factor [BEq α] (T : CExprTrie α) (tidx : Nat) (cidx : α)
+  (r : α → α → Prop) [DecidableRel r] : CExpr :=
+  (CExprTrie.factor_with T tidx cidx r (fun d => .bvar d))
+
+def CExprTrie.buildRWtype [BEq α] (T : CExprTrie α) (tidx : Nat) (cidx : α)
+  (r : α → α → Prop) [DecidableRel r] (replacement : CExpr) : CExpr :=
+  CExprTrie.factor_with T tidx cidx r (fun _ => replacement)
+
+
 
 #eval CExprTrie.factor (CExprTrie.ofList (· ≤ ·) test_list) 4 4 (· ≤ ·)
 #eval CExprTrie.factor (CExprTrie.ofList (· ≤ ·) test_list) 3 4 (· ≤ ·)
@@ -159,3 +170,40 @@ partial def CExprTrie.factor [BEq α] (T : CExprTrie α) (tidx : Nat) (cidx : α
 #eval CExprTrie.factor (CExprTrie.ofList (· ≤ ·) test_list) 0 4 (· ≤ ·)
 
 -- increadibly slow though ...
+
+set_option pp.all true in
+#check Eq.ndrec
+
+/-
+
+As of now, an index should refer to 3 things:
+
+- the term : initially, the index points to the gnode of that index originating from the query;
+  in forward steps, the index will point to a thm application ; in rewrite steps, it will point
+  to the rewrite term. Note that we don't have to build terms until the very end, when a proof
+  was found, so we should do this for better perfromance. We do however have to keep track on how
+  to assemble terms once we're done.
+
+- the type : will be, for thm-applications, the result/head with embedded lnodes replaced by gnodes
+  or constants or expressions with both, and for rewrites simply the expression with the rewritten
+  subexpression (ie. use `CExprTrie.insert_at` in the tree, and build teh expression with `CExprTrie.buildRWtype`,
+  actually, megre these to one function, so as to avoiding traversing twice ??!! ; or don't since we planned
+  on building terms after proof-search was done ?)
+
+- the type's type and universe level : necessary for rewriting ; when adding an index via rewrites,
+  we use those from the original expression, as equality requires them to be the same ; for thm-applicaitons
+  we must make a call to inferType, however.
+
+Also, when we process eq-thms, we should gather the type of the equality ; this can be a constant, or a
+variable (that will become an lnode) ; in the first case, we can also infer its type to get the universe level,
+and in the second the level will be an lnode too, or a constant...
+
+-/
+
+
+partial def CExprTrie.buildRWterm [BEq α] (T : CExprTrie α) (tidx : Nat) (cidx : α) (r : α → α → Prop) [DecidableRel r]
+  (eq_type : CExpr) -- from thm-preprocessed-or-embedding-data
+  (eq_uni top_uni : Level) (init_top init new : CExpr) --refer to, wrt. `Eq.ndrec`, `m` `a` `b` respectively
+  (eq_thm : CExpr) : CExpr :=
+  let motive : CExpr := .lam `dummy eq_type (CExprTrie.factor T tidx cidx r) .default
+  CExpr.mkApp (.const `Eq.ndrec [top_uni,eq_uni]) [eq_type,init,motive,init_top,new,eq_thm]
