@@ -29,7 +29,7 @@ private def upsert_help (cs : Array ByteArray) (i : Nat) (s : ByteArray) : Optio
         if j == 0 then go n else .some (n,j)
   go cs.size
 
-partial def upsert (t : CTrie α) (s : ByteArray) (f : Option α → α) : CTrie α :=
+partial def upsert (t : CTrie α) (s : ByteArray) (f : Option α → Option α) : CTrie α :=
   let rec go (i : Nat) : CTrie α → CTrie α
     | .leaf v =>
           if i < s.size
@@ -86,6 +86,8 @@ partial def upsert (t : CTrie α) (s : ByteArray) (f : Option α → α) : CTrie
 partial def insert (t : CTrie α) (s : String) (val : α) : CTrie α :=
   CTrie.upsert t (s.toUTF8) (fun _ => val)
 
+partial def delete (t : CTrie α) (s : String)  : CTrie α :=
+  CTrie.upsert t (s.toUTF8) (fun _ => .none)
 
 
 def ofList : List (String × α) → CTrie α
