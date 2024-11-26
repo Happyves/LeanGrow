@@ -253,3 +253,34 @@ partial def enumerate (count : Nat) : CTrie α → ((CTrie Nat) × List (Nat × 
             let ncx := Array.mkArray cx.size (.leaf .none)
             let (res,nc,nv) := inner ncx count [] cx.size
             (.node .none ax res, nv,nc)
+
+partial def find_max (T : CTrie Nat) : Option (String × Nat) :=
+  let rec go (sofar : Option (String × Nat)) : List (ByteArray × CTrie Nat) → Option (String × Nat)
+    | [] => sofar
+    | nx :: more =>
+        match nx.2 with
+        | .leaf x =>
+              match x, sofar with
+              | .some v, .some w =>
+                  if v > w.2
+                  then go (.some (String.fromUTF8! nx.1, v)) more
+                  else go sofar more
+              | .some v, .none => go (.some (String.fromUTF8! nx.1, v)) more
+              | _, _ => go sofar more
+        | .node1 x a t =>
+              match x, sofar with
+              | .some v, .some w =>
+                  if v > w.2
+                  then go (.some (String.fromUTF8! nx.1, v)) ((nx.1 ++ a,t) :: more)
+                  else go sofar ((nx.1 ++ a,t) :: more)
+              | .some v, .none => go (.some (String.fromUTF8! nx.1, v)) ((nx.1 ++ a,t) :: more)
+              | _, _ => go sofar ((nx.1 ++ a,t) :: more)
+        | .node x as ts =>
+              match x, sofar with
+              | .some v, .some w =>
+                  if v > w.2
+                  then go (.some (String.fromUTF8! nx.1, v)) ((Array.zip (as.map (nx.1 ++ ·)) ts).toList ++ more)
+                  else go sofar ((Array.zip (as.map (nx.1 ++ ·)) ts).toList ++ more)
+              | .some v, .none => go (.some (String.fromUTF8! nx.1, v)) ((Array.zip (as.map (nx.1 ++ ·)) ts).toList ++ more)
+              | _, _ => go sofar ((Array.zip (as.map (nx.1 ++ ·)) ts).toList ++ more)
+  go .none [(⟨#[]⟩,T)]

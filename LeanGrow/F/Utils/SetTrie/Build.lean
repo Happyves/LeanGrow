@@ -50,6 +50,20 @@ def delete_key_or_leave (k : γ) (delete : β → γ → β) : SetTrie α β →
   | x => x
 
 
-end SetTrie
+partial def split_greedy_exact_hitting_set
+    (empty : γ) (merge : β → γ → γ) (max : γ → Option (δ × Nat))
+    (find : β → δ → Option ι) (delete : β → δ → β) (newkey : δ → β)
+    (c : List (SetTrie α β)) : List (SetTrie α β) :=
+      let apps := SetTrie.find_keys c empty merge
+      match max apps with
+      | .none => c
+      | .some (key, M) =>
+            if M > 1
+            then
+              let (pos, neg) := SetTrie.split_on_split c key find
+              let pos' := pos.map (fun qt => SetTrie.delete_key_or_leave key delete qt)
+              let proceed := SetTrie.split_greedy_exact_hitting_set empty merge max find delete newkey neg
+              (.node (newkey key) pos') :: proceed
+            else c
 
--- continiue at Trie.find_max, in Trie file ; imeplement CExprTrie deletion via rference counting
+end SetTrie
