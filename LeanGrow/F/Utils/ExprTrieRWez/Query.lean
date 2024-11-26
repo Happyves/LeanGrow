@@ -7,7 +7,7 @@ def CExprTrie.getIndices_Lit (l : Literal) : List (CExprTrie.Branch α) → List
 | [] => []
 | x :: xs =>
     match x with
-    | .ofLit L ind =>
+    | .ofLit L ind _ =>
         if L == l
         then ind
         else (CExprTrie.getIndices_Lit l  xs)
@@ -17,7 +17,7 @@ def CExprTrie.getIndices_lNode (l : Nat) (t : Option Nat) : List (CExprTrie.Bran
 | [] => []
 | x :: xs =>
     match x with
-    | .ofLNode L tag ind =>
+    | .ofLNode L tag ind _ =>
         if L == l && t == tag
         then ind
         else (CExprTrie.getIndices_lNode l t xs)
@@ -29,7 +29,7 @@ def CExprTrie.getIndices_gNode (l : Nat) : List (CExprTrie.Branch α) → List �
 | [] => []
 | x :: xs =>
     match x with
-    | .ofGNode L ind =>
+    | .ofGNode L ind _ =>
         if L == l
         then ind
         else (CExprTrie.getIndices_gNode l xs)
@@ -42,7 +42,7 @@ def CExprTrie.getIndices_Bvar (l : Nat) : List (CExprTrie.Branch α) → List α
 | [] => []
 | x :: xs =>
     match x with
-    | .ofBvar L ind =>
+    | .ofBvar L ind _ =>
         if L == l
         then ind
         else (CExprTrie.getIndices_Bvar l xs)
@@ -53,7 +53,7 @@ def CExprTrie.getIndices_Sort (l : Level) : List (CExprTrie.Branch α) → List 
 | [] => []
 | x :: xs =>
     match x with
-    | .ofSort L ind =>
+    | .ofSort L ind _ =>
         if L == l
         then ind
         else (CExprTrie.getIndices_Sort l xs)
@@ -64,7 +64,7 @@ def CExprTrie.getIndices_Const (n : Name) (l : List Level) : List (CExprTrie.Bra
 | [] => []
 | x :: xs =>
     match x with
-    | .ofConst N L ind =>
+    | .ofConst N L ind _ =>
         if L == l && N == n
         then ind
         else (CExprTrie.getIndices_Const n l xs)

@@ -12,7 +12,7 @@ partial def CExprTrie.buildAtLink_wTrarget [BEq α] [Repr α] (target : α) (T :
   let lb := CExprTrie.getAtLink T link
   let rec go : CExprTrie.Branch α → CExpr
     | .ofFailed => .failed
-    | .ofApp lf la ind _ _ =>
+    | .ofApp lf la ind _ _ _ =>
           if List.orderedContains r target ind
           then
             let fs := CExprTrie.buildAtLink_wTrarget target T lf r
@@ -20,7 +20,7 @@ partial def CExprTrie.buildAtLink_wTrarget [BEq α] [Repr α] (target : α) (T :
             .app fs as
           else
             .failed
-    | .ofLam lf la ind _ _ =>
+    | .ofLam lf la ind _ _ _ =>
           if List.orderedContains r target ind
           then
             let fs := CExprTrie.buildAtLink_wTrarget target T lf r
@@ -28,7 +28,7 @@ partial def CExprTrie.buildAtLink_wTrarget [BEq α] [Repr α] (target : α) (T :
             .lam `dummy fs as .default
           else
             .failed
-    | .ofForall lf la ind _ _ =>
+    | .ofForall lf la ind _ _ _ =>
           if List.orderedContains r target ind
           then
             let fs := CExprTrie.buildAtLink_wTrarget target T lf r
@@ -36,7 +36,7 @@ partial def CExprTrie.buildAtLink_wTrarget [BEq α] [Repr α] (target : α) (T :
             .forallE `dummy fs as .default
           else
             .failed
-    | .ofLet lf la lz ind _ _ _ =>
+    | .ofLet lf la lz ind _ _ _ _ =>
           if List.orderedContains r target ind
           then
             let fs := CExprTrie.buildAtLink_wTrarget target T lf r
@@ -45,24 +45,24 @@ partial def CExprTrie.buildAtLink_wTrarget [BEq α] [Repr α] (target : α) (T :
             .letE `dummy fs as zs true
           else
             .failed
-    | .ofProj n i le ind _ =>
+    | .ofProj n i le ind _ _ =>
           if List.orderedContains r target ind
           then
             let es := CExprTrie.buildAtLink_wTrarget target T le r
             .proj n i es
           else
             .failed
-    |.ofLit l ind =>
+    |.ofLit l ind _ =>
           if List.orderedContains r target ind then (.lit l) else .failed
-    |.ofLNode l t ind =>
+    |.ofLNode l t ind _ =>
           if List.orderedContains r target ind then (.lnode l (.ofBvar 42) t) else .failed
-    |.ofGNode l ind =>
+    |.ofGNode l ind _ =>
           if List.orderedContains r target ind then (.gnode l (.ofBvar 42)) else .failed
-    |.ofBvar l ind =>
+    |.ofBvar l ind _ =>
           if List.orderedContains r target ind then (.bvar l) else .failed
-    |.ofSort l ind =>
+    |.ofSort l ind _ =>
           if List.orderedContains r target ind then (.sort l ) else .failed
-    |.ofConst n l ind =>
+    |.ofConst n l ind _ =>
           if List.orderedContains r target ind then (.const n l) else .failed
   ((lb.foldl (fun x y => (go y) :: x) []).filter (fun x => x != .failed)).headD .failed
 
@@ -98,17 +98,17 @@ def CExprTrie.Branch_findTarget [BEq α] (target : α) (r : α → α → Prop) 
     | [] => .ofFailed
     | b :: more =>
         match b with
-        | .ofApp _ _ ind _ _  => if List.orderedContains r target ind then b else getem more
-        | .ofProj _ _ _ ind _ => if List.orderedContains r target ind then b else getem more
-        | .ofLam _ _ ind _ _ => if List.orderedContains r target ind then b else getem more
-        | .ofForall _ _ ind _ _ => if List.orderedContains r target ind then b else getem more
-        | .ofLet _ _ _ ind _ _ _ => if List.orderedContains r target ind then b else getem more
-        | .ofLit _ ind => if List.orderedContains r target ind then b else getem more
-        | .ofLNode _ _ ind => if List.orderedContains r target ind then b else getem more
-        | .ofGNode _ ind => if List.orderedContains r target ind then b else getem more
-        | .ofBvar _ ind => if List.orderedContains r target ind then b else getem more
-        | .ofSort _ ind => if List.orderedContains r target ind then b else getem more
-        | .ofConst _ _ ind => if List.orderedContains r target ind then b else getem more
+        | .ofApp _ _ ind _ _ _ => if List.orderedContains r target ind then b else getem more
+        | .ofProj _ _ _ ind _ _ => if List.orderedContains r target ind then b else getem more
+        | .ofLam _ _ ind _ _ _=> if List.orderedContains r target ind then b else getem more
+        | .ofForall _ _ ind _ _ _ => if List.orderedContains r target ind then b else getem more
+        | .ofLet _ _ _ ind _ _ _ _ => if List.orderedContains r target ind then b else getem more
+        | .ofLit _ ind _ => if List.orderedContains r target ind then b else getem more
+        | .ofLNode _ _ ind _ => if List.orderedContains r target ind then b else getem more
+        | .ofGNode _ ind _ => if List.orderedContains r target ind then b else getem more
+        | .ofBvar _ ind _ => if List.orderedContains r target ind then b else getem more
+        | .ofSort _ ind _ => if List.orderedContains r target ind then b else getem more
+        | .ofConst _ _ ind _ => if List.orderedContains r target ind then b else getem more
         | .ofFailed => getem more
   getem lb
 
@@ -122,32 +122,32 @@ partial def CExprTrie.factor_with [BEq α] (T : CExprTrie α) (tidx : Nat) (cidx
       else
         let lb := CExprTrie.getAtLink T link
         match CExprTrie.Branch_findTarget cidx r lb with
-        | .ofApp  lf la _ _ _  =>
+        | .ofApp  lf la _ _ _ _ =>
             let f := go depth lf
             let a := go depth la
             .app f a
-        | .ofProj n i le _ _ =>
+        | .ofProj n i le _ _ _ =>
             let e := go depth le
             .proj n i e
-        | .ofLam lf la _ _ _ =>
+        | .ofLam lf la _ _ _ _ =>
             let f := go depth lf
             let a := go (depth+1) la
             .lam `dummy f a .default
-        | .ofForall lf la _ _ _ =>
+        | .ofForall lf la _ _ _ _ =>
             let f := go depth lf
             let a := go (depth+1) la
             .forallE `dummy f a .default
-        | .ofLet lf la lz _ _ _ _ =>
+        | .ofLet lf la lz _ _ _ _ _ =>
             let f := go depth lf
             let a := go depth la
             let z := go (depth+1) lz
             .letE `dummy f a z true
-        | .ofLit l _ => .lit l
-        | .ofLNode x y _ => .lnode x (.ofBvar 42) y
-        | .ofGNode x _ => .gnode x (.ofBvar 42)
-        | .ofBvar x _ => .bvar x
-        | .ofSort x _ => .sort x
-        | .ofConst n l _ => .const n l
+        | .ofLit l _ _ => .lit l
+        | .ofLNode x y _ _ => .lnode x (.ofBvar 42) y
+        | .ofGNode x _ _ => .gnode x (.ofBvar 42)
+        | .ofBvar x _ _ => .bvar x
+        | .ofSort x _ _ => .sort x
+        | .ofConst n l _ _ => .const n l
         | .ofFailed => .failed
     go 0 0
 

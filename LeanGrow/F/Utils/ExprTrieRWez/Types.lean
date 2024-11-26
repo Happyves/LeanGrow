@@ -6,17 +6,17 @@ open Lean
 
 
 inductive CExprTrie.Branch (α : Type _) where
-| ofLNode (idx : Nat) (tag : Option Nat) (indices : List α)
-| ofGNode (idx : Nat) (indices : List α)
-| ofBvar (idx : Nat) (indices : List α)
-| ofSort (l : Level) (indices : List α)
-| ofConst (n : Name) (ll : List Level) (indices : List α)
-| ofApp (link_f link_a : Nat) (indDirs : List α) (f_brDirs a_brDirs : List Nat)
-| ofLam (link_t link_b : Nat) (indDirs : List α) (f_brDirs a_brDirs : List Nat)
-| ofForall (link_t link_b : Nat) (indDirs : List α) (f_brDirs a_brDirs : List Nat)
-| ofLet (link_t link_v link_b : Nat) (indDirs : List α) (f_brDirs a_brDirs z_brDirs : List Nat)
-| ofLit (lit : Literal) (indices : List α)
-| ofProj (name : Name) (idx link_e : Nat) (indDirs : List α) (brDirs : List Nat)
+| ofLNode (idx : Nat) (tag : Option Nat) (indices : List α) (ref : Nat)
+| ofGNode (idx : Nat) (indices : List α) (ref : Nat)
+| ofBvar (idx : Nat) (indices : List α) (ref : Nat)
+| ofSort (l : Level) (indices : List α) (ref : Nat)
+| ofConst (n : Name) (ll : List Level) (indices : List α) (ref : Nat)
+| ofApp (link_f link_a : Nat) (indDirs : List α) (f_brDirs a_brDirs : List Nat) (ref : Nat)
+| ofLam (link_t link_b : Nat) (indDirs : List α) (f_brDirs a_brDirs : List Nat) (ref : Nat)
+| ofForall (link_t link_b : Nat) (indDirs : List α) (f_brDirs a_brDirs : List Nat) (ref : Nat)
+| ofLet (link_t link_v link_b : Nat) (indDirs : List α) (f_brDirs a_brDirs z_brDirs : List Nat) (ref : Nat)
+| ofLit (lit : Literal) (indices : List α) (ref : Nat)
+| ofProj (name : Name) (idx link_e : Nat) (indDirs : List α) (brDirs : List Nat) (ref : Nat)
 | ofFailed
 deriving BEq, Inhabited, Repr
 

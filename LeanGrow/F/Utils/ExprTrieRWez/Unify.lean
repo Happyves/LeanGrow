@@ -13,7 +13,7 @@ partial def CExprTrie.buildAtLink [BEq α] [Repr α] (T : CExprTrie α) (link : 
   let lb := CExprTrie.getAtLink T link
   let rec go : CExprTrie.Branch α → List (CExpr × List α)
     | .ofFailed => []
-    | .ofApp lf la _ _ _ =>
+    | .ofApp lf la _ _ _ _ =>
           let fs := CExprTrie.buildAtLink T lf r
           let as := CExprTrie.buildAtLink T la r
           let res :=
@@ -28,7 +28,7 @@ partial def CExprTrie.buildAtLink [BEq α] [Repr α] (T : CExprTrie α) (link : 
               )
               []).join
           lTrace TraceFlags.zero & s!"Building apps:\n{repr res}\n\n" & res
-    | .ofLam lf la _ _ _ =>
+    | .ofLam lf la _ _ _ _ =>
           let fs := CExprTrie.buildAtLink T lf r
           let as := CExprTrie.buildAtLink T la r
           let res :=
@@ -45,7 +45,7 @@ partial def CExprTrie.buildAtLink [BEq α] [Repr α] (T : CExprTrie α) (link : 
               )
               []).join
           lTrace TraceFlags.zero & s!"Building lams:\n{repr res}\n\n" & res
-    | .ofForall lf la _ _ _ =>
+    | .ofForall lf la _ _ _ _ =>
           let fs := CExprTrie.buildAtLink T lf r
           let as := CExprTrie.buildAtLink T la r
           let res :=
@@ -60,7 +60,7 @@ partial def CExprTrie.buildAtLink [BEq α] [Repr α] (T : CExprTrie α) (link : 
               )
               []).join
             lTrace TraceFlags.zero & s!"Building foalls:\n{repr res}\n\n" & res
-    | .ofLet lf la lz _ _ _ _ =>
+    | .ofLet lf la lz _ _ _ _ _ =>
           let fs := CExprTrie.buildAtLink T lf r
           let as := CExprTrie.buildAtLink T la r
           let zs := CExprTrie.buildAtLink T lz r
@@ -80,26 +80,26 @@ partial def CExprTrie.buildAtLink [BEq α] [Repr α] (T : CExprTrie α) (link : 
               )
               []).join
           lTrace TraceFlags.zero & s!"Building lets:\n{repr res}\n\n" & res
-    | .ofProj n i le _ _ =>
+    | .ofProj n i le _ _ _ =>
           let es := CExprTrie.buildAtLink T le r
           let res := es.map (fun (ce,inter) => (.proj n i ce,inter))
           lTrace TraceFlags.zero & s!"Building proj:\n{repr res}\n\n" & res
-    |.ofLit l ind =>
+    |.ofLit l ind _ =>
           let res := [(.lit l, ind)]
           lTrace TraceFlags.zero & s!"Building lit:\n{repr res}\n\n" & res
-    |.ofLNode l t ind =>
+    |.ofLNode l t ind _ =>
           let res := [(.lnode l (.ofBvar 42) t, ind)] --fix
           lTrace TraceFlags.zero & s!"Building lit:\n{repr res}\n\n" & res
-    |.ofGNode l ind =>
+    |.ofGNode l ind _ =>
           let res := [(.gnode l (.ofBvar 42), ind)] --fix
           lTrace TraceFlags.zero & s!"Building lit:\n{repr res}\n\n" & res
-    |.ofBvar l ind =>
+    |.ofBvar l ind _ =>
           let res := [(.bvar l , ind)]
           lTrace TraceFlags.zero & s!"Building lit:\n{repr res}\n\n" & res
-    |.ofSort l ind =>
+    |.ofSort l ind _ =>
           let res := [(.sort l , ind)]
           lTrace TraceFlags.zero & s!"Building lit:\n{repr res}\n\n" & res
-    |.ofConst n l ind =>
+    |.ofConst n l ind _ =>
           let res := [(.const n l, ind)]
           lTrace TraceFlags.zero & s!"Building lit:\n{repr res}\n\n" & res
   (lb.foldl (fun x y => (go y) :: x) []).join

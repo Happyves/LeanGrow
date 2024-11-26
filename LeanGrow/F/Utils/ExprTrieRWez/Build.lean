@@ -41,7 +41,7 @@ def CExprTrie.Branch_getAppLinks? : List (CExprTrie.Branch α) → Option (Nat �
 | [] => .none
 | x :: l =>
     match x with
-    | .ofApp lf la _ _ _ => .some (lf,la)
+    | .ofApp lf la _ _ _ _ => .some (lf,la)
     | _ => CExprTrie.Branch_getAppLinks? l
 
 
@@ -49,21 +49,21 @@ def CExprTrie.Branch_getLamLinks? : List (CExprTrie.Branch α) → Option (Nat �
 | [] => .none
 | x :: l =>
     match x with
-    | .ofLam lf la _ _ _ => .some (lf,la)
+    | .ofLam lf la _ _ _ _ => .some (lf,la)
     | _ => CExprTrie.Branch_getLamLinks? l
 
 def CExprTrie.Branch_getForallLinks? : List (CExprTrie.Branch α) → Option (Nat × Nat)
 | [] => .none
 | x :: l =>
     match x with
-    | .ofForall lf la _ _ _ => .some (lf,la)
+    | .ofForall lf la _ _ _ _ => .some (lf,la)
     | _ => CExprTrie.Branch_getForallLinks? l
 
 def CExprTrie.Branch_getLetLinks? : List (CExprTrie.Branch α) → Option (Nat × Nat × Nat)
 | [] => .none
 | x :: l =>
     match x with
-    | .ofLet lf la lz _ _ _ _=> .some (lf,la,lz)
+    | .ofLet lf la lz _ _ _ _ _=> .some (lf,la,lz)
     | _ => CExprTrie.Branch_getLetLinks? l
 
 
@@ -71,8 +71,9 @@ def CExprTrie.Branch_getProjLinks? : List (CExprTrie.Branch α) → Option (Nat)
 | [] => .none
 | x :: l =>
     match x with
-    | .ofProj _ _ l _ _ => .some l
+    | .ofProj _ _ l _ _ _ => .some l
     | _ => CExprTrie.Branch_getProjLinks? l
+
 
 
 -- These will reverse the branch order, which could be a problem if we impose and order on these CExprTries
@@ -83,7 +84,7 @@ def CExprTrie.BranchUpdateApp [BEq α] (r : α → α → Prop) [DecidableRel r]
     | [] => done
     | x :: l =>
         match x with
-        | .ofApp lf la I fB aB => CExprTrie.BranchUpdateApp r idx fl al ((.ofApp lf la (List.orderedInsertOrLeave r idx I) (fl ++ fB) (al ++ aB)) :: done) l
+        | .ofApp lf la I fB aB ref => CExprTrie.BranchUpdateApp r idx fl al ((.ofApp lf la (List.orderedInsertOrLeave r idx I) (fl ++ fB) (al ++ aB) (Nat.succ ref)) :: done) l
         | _ => CExprTrie.BranchUpdateApp r idx fl al (x :: done) l
 
 def CExprTrie.BranchUpdateLam [BEq α] (r : α → α → Prop) [DecidableRel r]
@@ -93,7 +94,7 @@ def CExprTrie.BranchUpdateLam [BEq α] (r : α → α → Prop) [DecidableRel r]
     | [] => done
     | x :: l =>
         match x with
-        | .ofLam lf la I fB aB => CExprTrie.BranchUpdateLam r idx fl al ((.ofLam lf la (List.orderedInsertOrLeave r idx I) (fl ++ fB) (al ++ aB)) :: done) l
+        | .ofLam lf la I fB aB ref => CExprTrie.BranchUpdateLam r idx fl al ((.ofLam lf la (List.orderedInsertOrLeave r idx I) (fl ++ fB) (al ++ aB) (Nat.succ ref)) :: done) l
         | _ => CExprTrie.BranchUpdateLam r idx fl al (x :: done) l
 
 def CExprTrie.BranchUpdateForall [BEq α] (r : α → α → Prop) [DecidableRel r]
@@ -103,7 +104,7 @@ def CExprTrie.BranchUpdateForall [BEq α] (r : α → α → Prop) [DecidableRel
     | [] => done
     | x :: l =>
         match x with
-        | .ofForall lf la I fB aB => CExprTrie.BranchUpdateForall r idx fl al ((.ofForall lf la (List.orderedInsertOrLeave r idx I) (fl ++ fB) (al ++ aB)) :: done) l
+        | .ofForall lf la I fB aB ref => CExprTrie.BranchUpdateForall r idx fl al ((.ofForall lf la (List.orderedInsertOrLeave r idx I) (fl ++ fB) (al ++ aB) (Nat.succ ref)) :: done) l
         | _ => CExprTrie.BranchUpdateForall r idx fl al (x :: done) l
 
 def CExprTrie.BranchUpdateLet [BEq α] (r : α → α → Prop) [DecidableRel r]
@@ -113,7 +114,7 @@ def CExprTrie.BranchUpdateLet [BEq α] (r : α → α → Prop) [DecidableRel r]
     | [] => done
     | x :: l =>
         match x with
-        | .ofLet lf la lz I fB aB zB => CExprTrie.BranchUpdateLet r idx fl al zl ((.ofLet lf la lz (List.orderedInsertOrLeave r idx I) (fl ++ fB) (al ++ aB) (zl ++ zB)) :: done) l
+        | .ofLet lf la lz I fB aB zB ref => CExprTrie.BranchUpdateLet r idx fl al zl ((.ofLet lf la lz (List.orderedInsertOrLeave r idx I) (fl ++ fB) (al ++ aB) (zl ++ zB) (Nat.succ ref)) :: done) l
         | _ => CExprTrie.BranchUpdateLet r idx fl al zl (x :: done) l
 
 
@@ -125,78 +126,77 @@ def CExprTrie.BranchUpdateProj [BEq α] (r : α → α → Prop) [DecidableRel r
     | [] => done
     | x :: l =>
         match x with
-        | .ofProj n i lf I fB => CExprTrie.BranchUpdateProj r idx fl ((.ofProj n i lf (List.orderedInsertOrLeave r idx I) (fl ++ fB)) :: done) l
+        | .ofProj n i lf I fB ref => CExprTrie.BranchUpdateProj r idx fl ((.ofProj n i lf (List.orderedInsertOrLeave r idx I) (fl ++ fB) (Nat.succ ref)) :: done) l
         | _ => CExprTrie.BranchUpdateProj r idx fl (x :: done) l
 
 
 
 
 def CExprTrie.modifyAsLeaf_Lit [BEq α] (l : Literal) (idx : α) (r : α → α → Prop) [DecidableRel r]  : List (CExprTrie.Branch α) → List (CExprTrie.Branch α)
-| [] => [.ofLit l [idx]]
+| [] => [.ofLit l [idx] 1]
 | x :: xs =>
     match x with
-    | .ofLit L ind =>
+    | .ofLit L ind ref =>
         if L == l
-        then (.ofLit L (List.orderedInsertOrLeave r idx ind)) :: xs
-        else (.ofLit L ind) :: (CExprTrie.modifyAsLeaf_Lit l idx r xs)
+        then (.ofLit L (List.orderedInsertOrLeave r idx ind) (Nat.succ ref)) :: xs
+        else (.ofLit L ind ref) :: (CExprTrie.modifyAsLeaf_Lit l idx r xs)
     | _ => x :: (CExprTrie.modifyAsLeaf_Lit l idx r xs)
 
 
 
 def CExprTrie.modifyAsLeaf_lNode [BEq α]  (l : Nat) (tag : Option Nat) (idx : α) (r : α → α → Prop) [DecidableRel r] : List (CExprTrie.Branch α) → List (CExprTrie.Branch α)
-| [] => [.ofLNode l tag [idx]]
+| [] => [.ofLNode l tag [idx] 1]
 | x :: xs =>
     match x with
-    | .ofLNode L t ind =>
+    | .ofLNode L t ind ref =>
         if L == l && t == tag
-        then (.ofLNode L t (List.orderedInsertOrLeave r idx ind)) :: xs
-        else (.ofLNode L t ind) :: (CExprTrie.modifyAsLeaf_lNode l tag idx r xs)
+        then (.ofLNode L t (List.orderedInsertOrLeave r idx ind) (Nat.succ ref)) :: xs
+        else (.ofLNode L t ind ref) :: (CExprTrie.modifyAsLeaf_lNode l tag idx r xs)
     | _ => x :: (CExprTrie.modifyAsLeaf_lNode l tag idx r xs)
 
 
 def CExprTrie.modifyAsLeaf_gNode [BEq α]  (l : Nat) (idx : α) (r : α → α → Prop) [DecidableRel r] : List (CExprTrie.Branch α) → List (CExprTrie.Branch α)
-| [] => [.ofGNode l [idx]]
+| [] => [.ofGNode l [idx] 1]
 | x :: xs =>
     match x with
-    | .ofGNode L ind =>
+    | .ofGNode L ind ref =>
         if L == l
-        then (.ofGNode L (List.orderedInsertOrLeave r idx ind)) :: xs
-        else (.ofGNode L ind) :: (CExprTrie.modifyAsLeaf_gNode l idx r xs)
+        then (.ofGNode L (List.orderedInsertOrLeave r idx ind) (Nat.succ ref)) :: xs
+        else (.ofGNode L ind ref) :: (CExprTrie.modifyAsLeaf_gNode l idx r xs)
     | _ => x :: (CExprTrie.modifyAsLeaf_gNode l idx r xs)
 
 
 
 
 def CExprTrie.modifyAsLeaf_Bvar [BEq α]  (l : Nat) (idx : α) (r : α → α → Prop) [DecidableRel r] : List (CExprTrie.Branch α) → List (CExprTrie.Branch α)
-| [] => [.ofBvar l [idx]]
+| [] => [.ofBvar l [idx] 1]
 | x :: xs =>
     match x with
-    | .ofBvar L ind =>
+    | .ofBvar L ind ref =>
         if L == l
-        then (.ofBvar L (List.orderedInsertOrLeave r idx ind)) :: xs
-        else (.ofBvar L ind) :: (CExprTrie.modifyAsLeaf_Bvar l idx r xs)
+        then (.ofBvar L (List.orderedInsertOrLeave r idx ind) (Nat.succ ref)) :: xs
+        else (.ofBvar L ind ref) :: (CExprTrie.modifyAsLeaf_Bvar l idx r xs)
     | _ => x :: (CExprTrie.modifyAsLeaf_Bvar l idx r xs)
 
 def CExprTrie.modifyAsLeaf_Sort [BEq α]  (l : Level) (idx : α) (r : α → α → Prop) [DecidableRel r] : List (CExprTrie.Branch α) → List (CExprTrie.Branch α)
-| [] => [.ofSort l [idx]]
+| [] => [.ofSort l [idx] 1]
 | x :: xs =>
     match x with
-    | .ofSort L ind =>
+    | .ofSort L ind ref =>
         if L == l
-        then (.ofSort L (List.orderedInsertOrLeave r idx ind)) :: xs
-        else (.ofSort L ind) :: (CExprTrie.modifyAsLeaf_Sort l idx r xs)
+        then (.ofSort L (List.orderedInsertOrLeave r idx ind) (Nat.succ ref)) :: xs
+        else (.ofSort L ind ref) :: (CExprTrie.modifyAsLeaf_Sort l idx r xs)
     | _ => x :: (CExprTrie.modifyAsLeaf_Sort l idx r xs)
 
 def CExprTrie.modifyAsLeaf_Const [BEq α] (n : Name) (ll : List Level) (idx : α) (r : α → α → Prop) [DecidableRel r] : List (CExprTrie.Branch α) → List (CExprTrie.Branch α)
-| [] => [.ofConst n ll [idx]]
+| [] => [.ofConst n ll [idx] 1]
 | x :: xs =>
     match x with
-    | .ofConst L LL ind =>
+    | .ofConst L LL ind ref =>
         if L == n && LL == ll
-        then (.ofConst L LL (List.orderedInsertOrLeave r idx ind)) :: xs
-        else (.ofConst L LL ind) :: (CExprTrie.modifyAsLeaf_Const n ll idx r xs)
+        then (.ofConst L LL (List.orderedInsertOrLeave r idx ind) (Nat.succ ref)) :: xs
+        else (.ofConst L LL ind ref) :: (CExprTrie.modifyAsLeaf_Const n ll idx r xs)
     | _ => x :: (CExprTrie.modifyAsLeaf_Const n ll idx r xs)
-
 
 
 
@@ -216,7 +216,7 @@ def CExprTrie.insert_at [BEq α] (T : CExprTrie α) (start : Nat) (idx : α) (ce
             | _ =>
                   let (ns1, n1, nT1) := go ((count, []) :: T) idx count (count+2) f
                   let (ns2, n2, nT2) := go (((count+1), []) :: nT1) idx (count+1) ns1 a
-                  let nlb := (.ofApp (count) (count+1) [idx] n1 n2) :: lb
+                  let nlb := (.ofApp (count) (count+1) [idx] n1 n2 1) :: lb
                   (ns2, (count) :: (count+1) :: (n1 ++ n2), CExprTrie.modifyAtLink nT2 link (fun _ => nlb))
     | .lam _ f a _ =>
             let lb := CExprTrie.getAtLink T link
@@ -230,7 +230,7 @@ def CExprTrie.insert_at [BEq α] (T : CExprTrie α) (start : Nat) (idx : α) (ce
             | _ =>
                   let (ns1, n1, nT1) := go ((count, []) :: T) idx count (count+2) f
                   let (ns2, n2, nT2) := go (((count+1), []) :: nT1) idx (count+1) ns1 a
-                  let nlb := (.ofLam (count) (count+1) [idx] n1 n2) :: lb
+                  let nlb := (.ofLam (count) (count+1) [idx] n1 n2 1) :: lb
                   (ns2, (count) :: (count+1) :: (n1 ++ n2), CExprTrie.modifyAtLink nT2 link (fun _ => nlb))
     | .forallE _ f a _ =>
             let lb := CExprTrie.getAtLink T link
@@ -244,7 +244,7 @@ def CExprTrie.insert_at [BEq α] (T : CExprTrie α) (start : Nat) (idx : α) (ce
             | _ =>
                   let (ns1, n1, nT1) := go ((count, []) :: T) idx count (count+2) f
                   let (ns2, n2, nT2) := go (((count+1), []) :: nT1) idx (count+1) ns1 a
-                  let nlb := (.ofForall (count) (count+1) [idx] n1 n2) :: lb
+                  let nlb := (.ofForall (count) (count+1) [idx] n1 n2 1) :: lb
                   (ns2, (count) :: (count+1) :: (n1 ++ n2), CExprTrie.modifyAtLink nT2 link (fun _ => nlb))
     | .letE _ f a z _ =>
             let lb := CExprTrie.getAtLink T link
@@ -260,7 +260,7 @@ def CExprTrie.insert_at [BEq α] (T : CExprTrie α) (start : Nat) (idx : α) (ce
                   let (ns1, n1, nT1) := go ((count, []) :: T) idx count (count+3) f
                   let (ns2, n2, nT2) := go (((count+1), []) :: nT1) idx (count+1) ns1 a
                   let (ns3, n3, nT3) := go (((count+2), []) :: nT2) idx (count+2) ns2 z
-                  let nlb := (.ofLet (count) (count+1) (count+2) [idx] n1 n2 n3) :: lb
+                  let nlb := (.ofLet (count) (count+1) (count+2) [idx] n1 n2 n3 1) :: lb
                   (ns3, (count) :: (count+1) :: (count+2) :: (n1 ++ n2 ++ n3), CExprTrie.modifyAtLink nT3 link (fun _ => nlb))
     | .proj n i e =>
             let lb := CExprTrie.getAtLink T link
@@ -272,7 +272,7 @@ def CExprTrie.insert_at [BEq α] (T : CExprTrie α) (start : Nat) (idx : α) (ce
                   (swf, count :: nf, CExprTrie.modifyAtLink twf link (fun _ => nlb))
             | _ =>
                   let (ns1, n1, nT1) := go ((count, []) :: T) idx count (count+1) e
-                  let nlb := (.ofProj n i (count) [idx] n1) :: lb
+                  let nlb := (.ofProj n i (count) [idx] n1 1) :: lb
                   (ns1, count :: n1, CExprTrie.modifyAtLink nT1 link (fun _ => nlb))
     | .lit l =>
             let lb := CExprTrie.getAtLink T link
