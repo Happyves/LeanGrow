@@ -74,6 +74,12 @@ def CExprTrie.Branch_getProjLinks? : List (CExprTrie.Branch α) → Option (Nat)
     | .ofProj _ _ l _ _ _ => .some l
     | _ => CExprTrie.Branch_getProjLinks? l
 
+/-
+BIG FIX:
+
+In thos below, we can do mayn early returns as branche-types are expected
+be only once inevery branch. Refer to delete, where we implement this.
+-/
 
 
 -- These will reverse the branch order, which could be a problem if we impose and order on these CExprTries
