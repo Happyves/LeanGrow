@@ -99,3 +99,12 @@ def SetTrieC.split_greedy_exact_hitting_set (c : List (SetTrieC α)) : List (Set
       )
     sorry
     (fun key => CExprTrie.ofList (· ≤ ·) [(0,key)]) c
+
+
+-- Actually usefull:
+
+def SetTrieT.make [Inhabited α] (l : List (CTrie Unit)) : SetTrieT α :=
+  SetTrie.make (CTrie.empty : CTrie Nat) (CTrie.empty : CTrie Unit)
+    (fun t sofar => CTrie.merge_count (CTrie.merge_count_initialise t) sofar)
+    sorry
+    CTrie.difference CTrie.find_max CTrie.find? CTrie.delete (fun key => CTrie.ofList [(key,())]) CTrie.merge l

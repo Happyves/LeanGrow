@@ -66,4 +66,77 @@ partial def split_greedy_exact_hitting_set
               (.node (newkey key) pos') :: proceed
             else c
 
+-- For some reason, the following just won't compile and requests inhabitation ...
+-- good thing I don't need it
+-- partial def lift
+--   (emptyC : γ) (emptyO : β) (merge : β → γ → γ) (max : γ → Option (δ × Nat))
+--   (delete : β → δ → β) (insert : β → δ → β)
+--   (c : List (SetTrie α β)) : List (SetTrie α β) × β :=
+--   haveI : Nonempty (β × List (SetTrie α β)) := ⟨(emptyO,[])⟩
+--   --let rec go (c : List (SetTrie α β)) : List (SetTrie α β) × β :=
+--     let apps := SetTrie.find_keys c emptyC merge
+--     match max apps with
+--     | .none => (c,emptyO)
+--     | .some (key, M) =>
+--           if M = c.length
+--           then  let c' := c.map (fun qt => SetTrie.delete_key_or_leave key delete qt)
+--                 let (cf,T) := (lift emptyC emptyO merge max delete insert) c' --go c'
+--                 (cf, insert T key)
+--           else (c, emptyO)
+--   --go c
+
+
+def delete_keyes_or_leave (k : β) (difference : β → β → β) : SetTrie α β → SetTrie α β :=
+  fun t =>  match t with
+            | .node T r => .node ((difference T k)) r
+            | x => x
+
+
+partial def lift
+  (emptyC : γ) (emptyO : β) (merge : β → γ → γ) (max : γ → Option (β × Nat))
+  (difference : β → β → β)
+  (c : List (SetTrie α β)) : β × List (SetTrie α β) :=
+    let apps := SetTrie.find_keys c emptyC merge
+    match max apps with
+    | .none => (emptyO,c)
+    | .some (key, M) =>
+          if M = c.length
+          then  let c' := c.map (fun qt => SetTrie.delete_keyes_or_leave key difference qt)
+                (key,c')
+          else (emptyO,c)
+
+
+def build_main (emptyC : γ) (emptyO : β) (merge : β → γ → γ) (max : γ → Option (β × Nat))
+  (difference : β → β → β) (maxl : γ → Option (δ × Nat))
+  (find : β → δ → Option ι) (delete : β → δ → β) (newkey : δ → β)
+    (c : List (SetTrie α β)) : β × List (SetTrie α β) :=
+      let (lifted_names, listed_children) := SetTrie.lift emptyC emptyO merge max difference c
+      (lifted_names, SetTrie.split_greedy_exact_hitting_set emptyC merge maxl find delete newkey listed_children)
+
+
+
+partial def build [Inhabited α] [BEq β] (emptyC : γ) (emptyO : β) (merge : β → γ → γ) (max : γ → Option (β × Nat))
+  (difference : β → β → β) (maxl : γ → Option (δ × Nat))
+  (find : β → δ → Option ι) (delete : β → δ → β) (newkey : δ → β) (mergeB : β → β → β)
+  : SetTrie α β → SetTrie α β
+    | .root c =>
+          let (l,cn) := SetTrie.build_main emptyC emptyO merge max difference maxl find delete newkey  c
+          if l == emptyO
+          then .root (cn.map (build emptyC emptyO merge max difference maxl find delete newkey mergeB))
+          else .root [.node l (cn.map ((build emptyC emptyO merge max difference maxl find delete newkey mergeB)) )]
+    | .node t c =>
+          let (l,cn) := SetTrie.build_main emptyC emptyO merge max difference maxl find delete newkey c
+          if cn.isEmpty
+          then   .node (mergeB t l) [.leaf default]
+          else   .node (mergeB t l) (cn.map (build emptyC emptyO merge max difference maxl find delete newkey mergeB))
+    | .leaf a =>  .leaf a
+
+
+
+def make [Inhabited α] [BEq β] (emptyC : γ) (emptyO : β) (merge : β → γ → γ) (max : γ → Option (β × Nat))
+  (difference : β → β → β) (maxl : γ → Option (δ × Nat))
+  (find : β → δ → Option ι) (delete : β → δ → β) (newkey : δ → β) (mergeB : β → β → β) (l : List β) : SetTrie α β :=
+    (SetTrie.build emptyC emptyO merge max difference maxl find delete newkey mergeB (SetTrie.init l))
+
+
 end SetTrie

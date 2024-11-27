@@ -766,3 +766,41 @@ partial def difference [BEq α] [Inhabited α] (l r : CTrie α) : CTrie α :=
                 | (li, new) :: more => update (C.set! li new) more
               if match_nontrivial x y then .node .none ax (update cx gone)  else .node x ax (update cx gone)
   go l r 0 0
+
+
+partial def find_maxes (T : CTrie Nat) : Option (CTrie Unit × Nat) :=
+  let rec go (sofar : Option (CTrie Unit × Nat)) : List (ByteArray × CTrie Nat) → Option (CTrie Unit × Nat)
+    | [] => sofar
+    | nx :: more =>
+        match nx.2 with
+        | .leaf x =>
+              match x, sofar with
+              | .some v, .some w =>
+                  match compare v w.2 with
+                  | .gt => go (.some (.node1 .none nx.1 (.leaf (.some ())), v)) more
+                  | .eq => go (.some (CTrie.sorted_upsert w.1 nx.1 (fun _ => ()), v)) more
+                  | .lt => go sofar more
+              | .some v, .none => go (.some (.node1 .none nx.1 (.leaf (.some ())), v)) more
+              | _, _ => go sofar more
+        | .node1 x a t =>
+              match x, sofar with
+              | .some v, .some w =>
+                  match compare v w.2 with
+                  | .gt => go (.some (.node1 .none nx.1 (.leaf (.some ())), v)) ((nx.1 ++ a,t) :: more)
+                  | .eq => go (.some (CTrie.sorted_upsert w.1 nx.1 (fun _ => ()), v)) ((nx.1 ++ a,t) :: more)
+                  | .lt => go sofar ((nx.1 ++ a,t) :: more)
+              | .some v, .none => go (.some (.node1 .none nx.1 (.leaf (.some ())), v)) ((nx.1 ++ a,t) :: more)
+              | _, _ => go sofar ((nx.1 ++ a,t) :: more)
+        | .node x as ts =>
+              match x, sofar with
+              | .some v, .some w =>
+                  match compare v w.2 with
+                  | .gt => go (.some (.node1 .none nx.1 (.leaf (.some ())), v)) ((Array.zip (as.map (nx.1 ++ ·)) ts).toList ++ more)
+                  | .eq => go (.some (CTrie.sorted_upsert w.1 nx.1 (fun _ => ()), v)) ((Array.zip (as.map (nx.1 ++ ·)) ts).toList ++ more)
+                  | .lt => go sofar ((Array.zip (as.map (nx.1 ++ ·)) ts).toList ++ more)
+              | .some v, .none => go (.some (.node1 .none nx.1 (.leaf (.some ())), v)) ((Array.zip (as.map (nx.1 ++ ·)) ts).toList ++ more)
+              | _, _ => go sofar ((Array.zip (as.map (nx.1 ++ ·)) ts).toList ++ more)
+  go .none [(⟨#[]⟩,T)]
+
+
+#reduce compare 1 2

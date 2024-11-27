@@ -205,3 +205,16 @@ def ByteArray.matchSingleHits_wOffset (s : ByteArray) (off : Nat) (A : Array Byt
         else
           .hit n com
   go A.size
+
+
+instance : BEq ByteArray where
+  beq :=
+    let rec help (A B : ByteArray) : Nat → Bool
+      | 0 => true
+      | n+1 => if A.get! n == B.get! n then help A B n else false
+    fun a b =>
+      if a.size == b.size
+      then
+        help a b a.size
+      else
+        false

@@ -6,7 +6,7 @@ inductive CTrie (α : Type) where
   | leaf : Option α → CTrie α
   | node1 : Option α → ByteArray → CTrie α → CTrie α
   | node : Option α → Array ByteArray → Array (CTrie α) → CTrie α
-deriving Repr
+deriving Repr, BEq
 
 
 namespace CTrie
