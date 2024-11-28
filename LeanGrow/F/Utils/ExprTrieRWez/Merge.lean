@@ -13,7 +13,7 @@ from `SetTrie.split_greedy_exact_hitting_set`, for example.
 -/
 
 structure sCExprTrie (α : Type _) where
-  size : Nat
+  size_ind : Nat
   trie : CExprTrie α
 deriving Inhabited, Repr, BEq
 
@@ -170,15 +170,32 @@ def CExprTrie.modifyAsLeaf_ConstM [BEq α] (n : Name) (ll : List Level) (idx : L
         else (.ofConst L LL ind ref) :: (CExprTrie.modifyAsLeaf_ConstM n ll idx Ref r xs)
     | _ => x :: (CExprTrie.modifyAsLeaf_ConstM n ll idx Ref r xs)
 
+def CExprTrie.mapIndices (f : α → α) (done : List (CExprTrie.Branch α)) : List (CExprTrie.Branch α) → List (CExprTrie.Branch α)
+  | [] => done
+  | nx :: more =>
+      match nx with
+      | .ofFailed => CExprTrie.mapIndices f done more
+      | .ofApp a b ind c d e => CExprTrie.mapIndices f (.ofApp a b (ind.map f) c d e :: done) more
+      | .ofLam a b ind c d e => CExprTrie.mapIndices f ((.ofLam a b (ind.map f) c d e) :: done) more
+      | .ofForall a b ind c d e => CExprTrie.mapIndices f ((.ofForall a b (ind.map f) c d e) :: done) more
+      | .ofLet a b c ind d e F g => CExprTrie.mapIndices f ((.ofLet a b c (ind.map f) d e F g) :: done) more
+      | .ofProj a b c ind d e => CExprTrie.mapIndices f ((.ofProj a b c (ind.map f) d e) :: done) more
+      | .ofBvar a ind b => CExprTrie.mapIndices f ((.ofBvar a (ind.map f) b) :: done) more
+      | .ofLNode a b ind c => CExprTrie.mapIndices f ((.ofLNode a b (ind.map f) c ) :: done) more
+      | .ofLit a ind b => CExprTrie.mapIndices f ((.ofLit a (ind.map f) b) :: done) more
+      | .ofGNode a ind b => CExprTrie.mapIndices f ((.ofGNode a (ind.map f) b) :: done) more
+      | .ofConst a b ind c => CExprTrie.mapIndices f ((.ofConst a b (ind.map f) c) :: done) more
+      | .ofSort a ind b => CExprTrie.mapIndices f ((.ofSort a (ind.map f) b) :: done) more
+
 
 
 /--
 Offset warning:
-Assumes input trie to be labeled by an interval of Nats starting at 1.
+Assumes input trie to be labeled (indices) by an interval of Nats starting at 1 !!
 -/
-def sCExprTrie.merge_count  [BEq α] (r : α → α → Prop) [DecidableRel r] (offset : α → Nat → α)
+def sCExprTrie.merge_count  [BEq α] (r : α → α → Prop) [DecidableRel r] (offset : Nat → α → α)
   (T : CExprTrie α) (sT : sCExprTrie α): sCExprTrie α :=
-  let new_off := (CExprTrie.getIndices T).length + sT.size
+  let new_size := (CExprTrie.getIndices T).length + sT.size_ind
 
   let rec inner (new : List (CExprTrie.Branch α)) (sofar : List (CExprTrie.Branch α)) (todos : List (Nat × Nat)) : List (CExprTrie.Branch α) → (List (CExprTrie.Branch α) × List (CExprTrie.Branch α) × List (Nat × Nat))
     | [] => (new,sofar,todos)
@@ -217,12 +234,23 @@ def sCExprTrie.merge_count  [BEq α] (r : α → α → Prop) [DecidableRel r] (
         | .ofConst n l I ref => inner new (CExprTrie.modifyAsLeaf_ConstM n l I ref r sofar) todos more
         | .ofSort i I ref => inner new (CExprTrie.modifyAsLeaf_SortM i I ref r sofar) todos more
 
-  let rec go (sofar : CExprTrie α) : List (Nat × Nat) → CExprTrie α
+  let rec go (sofar : sCExprTrie α) : List (Nat × Nat) → sCExprTrie α
     | [] => sofar
     | (tl, stl) :: more =>
-        let B := CExprTrie.getAtLink T tl
+        let B := CExprTrie.mapIndices (offset sofar.size_ind) [] (CExprTrie.getAtLink T tl)
         let sB := CExprTrie.getAtLink sT.trie stl
         let (new,nsB,todos) := inner [] sB [] B
         sorry
-
   sorry
+
+#check 1
+
+/-
+
+Plan:
+
+Each branch of `new` should be added to `nsB`,and it should incure the following transformation.
+We look up the current trie size, and develop a function that will add the decendents of the branch
+to `sofar`, with links starting at size, for coherence.
+
+-/

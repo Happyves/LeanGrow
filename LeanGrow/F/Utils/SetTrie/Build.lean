@@ -66,25 +66,6 @@ partial def split_greedy_exact_hitting_set
               (.node (newkey key) pos') :: proceed
             else c
 
--- For some reason, the following just won't compile and requests inhabitation ...
--- good thing I don't need it
--- partial def lift
---   (emptyC : γ) (emptyO : β) (merge : β → γ → γ) (max : γ → Option (δ × Nat))
---   (delete : β → δ → β) (insert : β → δ → β)
---   (c : List (SetTrie α β)) : List (SetTrie α β) × β :=
---   haveI : Nonempty (β × List (SetTrie α β)) := ⟨(emptyO,[])⟩
---   --let rec go (c : List (SetTrie α β)) : List (SetTrie α β) × β :=
---     let apps := SetTrie.find_keys c emptyC merge
---     match max apps with
---     | .none => (c,emptyO)
---     | .some (key, M) =>
---           if M = c.length
---           then  let c' := c.map (fun qt => SetTrie.delete_key_or_leave key delete qt)
---                 let (cf,T) := (lift emptyC emptyO merge max delete insert) c' --go c'
---                 (cf, insert T key)
---           else (c, emptyO)
---   --go c
-
 
 def delete_keyes_or_leave (k : β) (difference : β → β → β) : SetTrie α β → SetTrie α β :=
   fun t =>  match t with

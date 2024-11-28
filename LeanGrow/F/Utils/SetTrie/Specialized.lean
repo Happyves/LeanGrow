@@ -106,5 +106,28 @@ def SetTrieC.split_greedy_exact_hitting_set (c : List (SetTrieC α)) : List (Set
 def SetTrieT.make [Inhabited α] (l : List (CTrie Unit)) : SetTrieT α :=
   SetTrie.make (CTrie.empty : CTrie Nat) (CTrie.empty : CTrie Unit)
     (fun t sofar => CTrie.merge_count (CTrie.merge_count_initialise t) sofar)
-    sorry
-    CTrie.difference CTrie.find_max CTrie.find? CTrie.delete (fun key => CTrie.ofList [(key,())]) CTrie.merge l
+    CTrie.find_maxes CTrie.difference CTrie.find_max CTrie.find? CTrie.delete
+    (fun key => CTrie.ofList [(key,())]) CTrie.merge l
+
+
+
+
+private def L_find_maxes (val : Option Nat) (ind : List Nat) : List (Nat × Nat) → Option ((List Nat) × Nat)
+  | [] =>
+      match val with
+      | .none => .none
+      | .some v => .some (ind, v)
+  | (w,i) :: more =>
+      match val with
+      | .none => L_find_maxes (.some w) [i] more
+      | .some v =>
+          match compare v w with
+          | .gt => L_find_maxes val ind more
+          | .eq => L_find_maxes val (i :: ind) more
+          | .lt => L_find_maxes (.some w) [i] more
+
+
+def SetTrieN.make [Inhabited α] (l : List (List Nat)) : SetTrieN α :=
+  SetTrie.make ([] : List (Nat × Nat)) ([] : List Nat) -- ←↓ (occs, id)
+    (fun t sofar => t.foldl (fun x y => x.findModify (fun z => z.2 == y) (fun z => (z.1+1,z.2))) sofar)
+    (L_find_maxes .none [])
