@@ -126,14 +126,17 @@ def CExprTrie.BranchUpdateLet [BEq α] (r : α → α → Prop) [DecidableRel r]
 
 
 def CExprTrie.BranchUpdateProj [BEq α] (r : α → α → Prop) [DecidableRel r]
-    (idx : α) (fl: List Nat)
+    (N : Name) (In : Nat) (idx : α) (fl: List Nat)
     (done : List (CExprTrie.Branch α)):
     List (CExprTrie.Branch α) → List (CExprTrie.Branch α)
     | [] => done
     | x :: l =>
         match x with
-        | .ofProj n i lf I fB ref => CExprTrie.BranchUpdateProj r idx fl ((.ofProj n i lf (List.orderedInsertOrLeave r idx I) (fl ++ fB) (Nat.succ ref)) :: done) l
-        | _ => CExprTrie.BranchUpdateProj r idx fl (x :: done) l
+        | .ofProj n i lf I fB ref =>
+                if n == N && i == In
+                then CExprTrie.BranchUpdateProj r N In idx fl ((.ofProj n i lf (List.orderedInsertOrLeave r idx I) (fl ++ fB) (Nat.succ ref)) :: done) l
+                else CExprTrie.BranchUpdateProj r N In idx fl (x :: done) l
+        | _ => CExprTrie.BranchUpdateProj r N In idx fl (x :: done) l
 
 
 
@@ -274,7 +277,7 @@ def CExprTrie.insert_at [BEq α] (T : CExprTrie α) (start : Nat) (idx : α) (ce
             match links? with
             | .some l =>
                   let (swf,nf,twf) := go T idx l count e
-                  let nlb := CExprTrie.BranchUpdateProj r idx nf [] lb
+                  let nlb := CExprTrie.BranchUpdateProj r n i idx nf [] lb
                   (swf, count :: nf, CExprTrie.modifyAtLink twf link (fun _ => nlb))
             | _ =>
                   let (ns1, n1, nT1) := go ((count, []) :: T) idx count (count+1) e
