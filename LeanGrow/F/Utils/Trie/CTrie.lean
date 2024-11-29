@@ -1,6 +1,6 @@
 
 import LeanGrow.F.Utils.Trie.ByteArray
-
+import LeanGrow.F.Utils.Array
 
 inductive CTrie (α : Type) where
   | leaf : Option α → CTrie α
@@ -284,3 +284,31 @@ partial def find_max (T : CTrie Nat) : Option (String × Nat) :=
               | .some v, .none => go (.some (String.fromUTF8! nx.1, v)) ((Array.zip (as.map (nx.1 ++ ·)) ts).toList ++ more)
               | _, _ => go sofar ((Array.zip (as.map (nx.1 ++ ·)) ts).toList ++ more)
   go .none [(⟨#[]⟩,T)]
+
+
+partial def depth' : CTrie α → Nat
+  | .leaf _ => 0
+  | .node1 _ _ t =>  Nat.succ (depth' t)
+  | .node _ _ ts =>
+      let ds := ts.map depth'
+      Nat.succ (ds.maxI (· > ·))
+
+partial def depth (T : CTrie α) : Nat :=
+  let rec go (candidates : List Nat) (depth : Nat) : List (CTrie α) → Nat
+    | [] => depth
+    | t :: ts =>
+        match t with
+        | .leaf _ =>
+            match candidates with
+            | n :: more => go more (if n > depth then n else depth) ts
+            | _ => 0
+        | .node1 _ _ c =>
+            match candidates with
+            | n :: more => go ((n+1) :: more) depth (c :: ts)
+            | _ => 0
+        | .node _ _ c =>
+            match candidates with
+            | n :: more =>
+                go ((List.replicate c.size (n+1)) ++ more) depth (c.toList ++ ts)
+            | _ => 0
+  go [0] 0 [T]

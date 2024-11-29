@@ -6,25 +6,23 @@ import LeanGrow.F.Utils.SetTrie.Build
 
 namespace SetTrie
 
-/-- to test! -/
+
 partial def depth (T : SetTrie α β) : Nat :=
-  let rec go (candidates depths : List Nat) : List (SetTrie α β) → Nat
-    | [] =>
-        match List.maximum? depths with
-        | .some x => x
-        | _ => 0
+  let rec go (candidates : List Nat) (depth : Nat) : List (SetTrie α β) → Nat
+    | [] => depth
     | t :: ts =>
         match t with
         | .leaf _ =>
             match candidates with
-            | n :: more => go more ((n+1) :: depths) ts
+            | n :: more => go more (if n > depth then n else depth) ts
             | _ => 0
         | .root c | .node _ c =>
             match candidates with
             | n :: more =>
-                go ((List.replicate c.length (n+1)) ++ more) depths (c ++ ts)
+                go ((List.replicate c.length (n+1)) ++ more) depth (c ++ ts)
             | _ => 0
-  go [0] [] [T]
+  go [0] 0 [T]
+
 
 partial def depth' : SetTrie α β →  Nat
   | .root c | .node _ c => match List.maximum? (c.map depth') with | .some x => x+1 | .none => 1

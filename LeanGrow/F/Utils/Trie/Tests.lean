@@ -124,3 +124,11 @@ def test_list_3 : List (String × Nat) := [("ban", 42),("banana", 37),("bandana"
 #eval (CTrie.find_maxes (CTrie.merge_count (CTrie.merge_count_initialise (CTrie.ofList_sorted test_list)) (CTrie.merge_count_initialise  (CTrie.ofList_sorted test_list_2)))).map ((fun (x,y) => (CTrie.toList x, y)))
 #eval (CTrie.find_maxes (CTrie.merge_count (CTrie.merge_count_initialise (CTrie.ofList_sorted test_list)) (CTrie.merge_count_initialise  (CTrie.ofList_sorted test_list_3)))).map ((fun (x,y) => (CTrie.toList x, y)))
 #eval (CTrie.find_maxes (CTrie.merge_count (CTrie.merge_count_initialise (CTrie.ofList_sorted test_list)) {})).map ((fun (x,y) => (CTrie.toList x, y)))
+
+#eval CTrie.depth (CTrie.ofList_sorted test_list_2)
+#eval CTrie.depth (CTrie.ofList_sorted test_list)
+#eval CTrie.depth (CTrie.ofList_sorted test_list_3)
+
+#eval CTrie.depth' (CTrie.ofList_sorted test_list_2)
+#eval CTrie.depth' (CTrie.ofList_sorted test_list)
+#eval CTrie.depth' (CTrie.ofList_sorted test_list_3)

@@ -15,3 +15,14 @@ def Array.assignOrFail [BEq α] (i : Nat) (v : α) (A : Array (Option α)) : Opt
   match A.get! i with
   | .none => .some (A.set! i v)
   | .some w => if v == w then .some A else .none
+
+
+def Array.maxI [Inhabited α] (gt : α → α → Bool) (A : Array α) : α :=
+  let rec go (sofar : α) : Nat → α
+    | 0 => sofar
+    | n+1 =>
+        let a := (A.get! n)
+        if gt a sofar
+        then go a n
+        else go sofar n
+  go default A.size
