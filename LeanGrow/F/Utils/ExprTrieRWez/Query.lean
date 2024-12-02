@@ -102,9 +102,9 @@ partial def CExprTrie.find_candidates? [BEq α] (T : CExprTrie α) (ce : CExpr) 
             match links? with
             | .some (lf,la,lz) => go done ((f, lf) :: (a, la) :: (z, lz) :: more)
             | _ => []
-        | .proj _ _ e =>
+        | .proj n i e =>
             let lb := CExprTrie.getAtLink T link
-            let links? := CExprTrie.Branch_getProjLinks? lb
+            let links? := CExprTrie.Branch_getProjLinks? n i lb
             match links? with
             | .some (le) => go done ((e, le) :: more)
             | _ => []

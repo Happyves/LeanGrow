@@ -156,9 +156,9 @@ partial def CExprTrie.unify_candidates [BEq α] [Repr α] (T : CExprTrie α) (r 
             match links? with
             | .some (lf,la,lz) => go done ((f, lf) :: (a, la) :: (z, lz) :: more)
             | _ => []
-        | .proj _ _ e =>
+        | .proj n i e =>
             let lb := CExprTrie.getAtLink T link
-            let links? := CExprTrie.Branch_getProjLinks? lb
+            let links? := CExprTrie.Branch_getProjLinks? n i lb
             match links? with
             | .some (le) => go done ((e, le) :: more)
             | _ => []
@@ -240,3 +240,14 @@ def CExprTrie.unify_reconstruct [BEq α] [Repr α] (r : α → α → Prop) [Dec
 #eval CExprTrie.unify_reconstruct (· ≤ ·) (CExprTrie.unify_candidates (CExprTrie.ofList (· ≤ ·) test_list) (· ≤ ·) 0 (.app (.lnode 0 (.ofBvar 42) .none) (.lnode 1 (.ofBvar 42) .none)))
 #eval CExprTrie.unify_reconstruct (· ≤ ·) (CExprTrie.unify_candidates (CExprTrie.ofList (· ≤ ·) test_list) (· ≤ ·) 0 (.app (.lnode 0 (.ofBvar 42) .none) (.const `d [])))
 #eval (CExprTrie.unify_candidates (CExprTrie.ofList (· ≤ ·) test_list) (· ≤ ·) 0 (.app (.lnode 0 (.ofBvar 42) .none) (.const `d [])))
+
+
+#check 1
+
+/-
+done_prune isn't enough: we should maintain a list of indices that gets augemented when we
+encounter an atom that matches the query, and according to wish we prune solutions.
+Otherwise, I fear that some solutions won't get pruned, as the atoms appear before/after...
+I don't know, I hve fever.
+
+-/

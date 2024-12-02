@@ -67,12 +67,12 @@ def CExprTrie.Branch_getLetLinks? : List (CExprTrie.Branch α) → Option (Nat �
     | _ => CExprTrie.Branch_getLetLinks? l
 
 
-def CExprTrie.Branch_getProjLinks? : List (CExprTrie.Branch α) → Option (Nat)
+def CExprTrie.Branch_getProjLinks? (n : Name) (i : Nat): List (CExprTrie.Branch α) → Option (Nat)
 | [] => .none
 | x :: l =>
     match x with
-    | .ofProj _ _ l _ _ _ => .some l
-    | _ => CExprTrie.Branch_getProjLinks? l
+    | .ofProj N I li _ _ _ => if N == n && i == I then .some li else CExprTrie.Branch_getProjLinks? n i l
+    | _ => CExprTrie.Branch_getProjLinks? n i l
 
 /-
 BIG FIX:
@@ -273,7 +273,7 @@ def CExprTrie.insert_at [BEq α] (T : CExprTrie α) (start : Nat) (idx : α) (ce
                   (ns3, (count) :: (count+1) :: (count+2) :: (n1 ++ n2 ++ n3), CExprTrie.modifyAtLink nT3 link (fun _ => nlb))
     | .proj n i e =>
             let lb := CExprTrie.getAtLink T link
-            let links? := CExprTrie.Branch_getProjLinks?  lb
+            let links? := CExprTrie.Branch_getProjLinks? n i  lb
             match links? with
             | .some l =>
                   let (swf,nf,twf) := go T idx l count e

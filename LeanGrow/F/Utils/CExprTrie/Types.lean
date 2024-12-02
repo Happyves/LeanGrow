@@ -19,3 +19,8 @@ inductive CExprTrie where
       (projs : List ( List Nat × Name × Nat × CExprTrie))
 | dead
 deriving BEq, Inhabited, Repr
+
+
+inductive oDirs where
+| apf | apa | laf | laa | alf | ala | lef | lea | lez | pro
+deriving BEq, Inhabited, Repr
