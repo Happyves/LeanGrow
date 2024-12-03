@@ -83,7 +83,7 @@ partial def find_occurences (ce : CExpr) (T : CExprTrie) : List (List Nat × Lis
                                 ++ (if lai.isEmpty then [] else [(.laf :: nx.1, laf),(.laa :: nx.1, laa)])
                                 ++ (if ali.isEmpty then [] else [(.alf :: nx.1, alf),(.ala :: nx.1, ala)])
                                 ++ (if lei.isEmpty then [] else [(.lef :: nx.1, lef),(.lea :: nx.1, lea),(.lez :: nx.1, lez)])
-                                ++ projs.map (fun x => (.pro :: nx.1, x.2.2.2))
+                                ++ projs.map (fun x => ((.pro x.2.1 x.2.2.1) :: nx.1, x.2.2.2))
                     go done (todo ++ more)
             | ind => go ((ind, nx.1) :: done) more
     go [] [([],T)]

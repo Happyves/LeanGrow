@@ -22,5 +22,5 @@ deriving BEq, Inhabited, Repr
 
 
 inductive oDirs where
-| apf | apa | laf | laa | alf | ala | lef | lea | lez | pro
+| apf | apa | laf | laa | alf | ala | lef | lea | lez | pro (_ : Name) (_ : Nat)
 deriving BEq, Inhabited, Repr

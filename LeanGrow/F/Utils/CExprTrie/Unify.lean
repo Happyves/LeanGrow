@@ -193,3 +193,34 @@ def unify_reconstruct (candidates : List (Nat × List (CExpr × List Nat))) : Li
                 let step := ind.foldl (fun out i => List.findModifyAdd (fun x => x.1 == i) (fun (idx, matchInfo) => (idx, (node_idx,assign) :: matchInfo)) (i, [(node_idx,assign)]) out) sofar
                 go node_idx step rest
     candidates.foldl (fun out (node_idx, assign_data) => go node_idx out assign_data) []
+
+
+
+partial def unify_occurences (ce : CExpr) (T : CExprTrie) : List ((Nat × List (Nat × CExpr)) × List oDirs) :=
+    let rec go (done : List ((Nat × List (Nat × CExpr)) × List oDirs)) : List (List oDirs × CExprTrie) → List ((Nat × List (Nat × CExpr)) × List oDirs)
+        | [] => done
+        | nx :: more =>
+            let unis := CExprTrie.unify_reconstruct (CExprTrie.unify_candidates nx.2 ce)
+            match unis with
+            | [] =>
+                match nx.2 with
+                | .dead => go done more
+                | .br _ _ _ _ _ _ apf apa api laf laa lai alf ala ali lef lea lez lei projs =>
+                    let todo := (if api.isEmpty then [] else [(.apf :: nx.1, apf),(.apa :: nx.1, apa)])
+                                ++ (if lai.isEmpty then [] else [(.laf :: nx.1, laf),(.laa :: nx.1, laa)])
+                                ++ (if ali.isEmpty then [] else [(.alf :: nx.1, alf),(.ala :: nx.1, ala)])
+                                ++ (if lei.isEmpty then [] else [(.lef :: nx.1, lef),(.lea :: nx.1, lea),(.lez :: nx.1, lez)])
+                                ++ projs.map (fun x => ((.pro x.2.1 x.2.2.1)  :: nx.1, x.2.2.2))
+                    go done (todo ++ more)
+            | ind =>
+                let new := ((ind.map (fun x => (x,nx.1))) ++ done)
+                match nx.2 with
+                | .dead => go new more
+                | .br _ _ _ _ _ _ apf apa api laf laa lai alf ala ali lef lea lez lei projs =>
+                    let todo := (if api.isEmpty then [] else [(.apf :: nx.1, apf),(.apa :: nx.1, apa)])
+                                ++ (if lai.isEmpty then [] else [(.laf :: nx.1, laf),(.laa :: nx.1, laa)])
+                                ++ (if ali.isEmpty then [] else [(.alf :: nx.1, alf),(.ala :: nx.1, ala)])
+                                ++ (if lei.isEmpty then [] else [(.lef :: nx.1, lef),(.lea :: nx.1, lea),(.lez :: nx.1, lez)])
+                                ++ projs.map (fun x => ((.pro x.2.1 x.2.2.1)  :: nx.1, x.2.2.2))
+                    go new (todo ++ more)
+    go [] [([],T)]
