@@ -1,5 +1,5 @@
 
-import LeanGrow.F.Caching.Linking.Types
+import LeanGrow.F.Caching.Linking.CTrie
 
 open Lean
 
