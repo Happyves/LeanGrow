@@ -291,7 +291,7 @@ partial def depth' : CTrie α → Nat
   | .node1 _ _ t =>  Nat.succ (depth' t)
   | .node _ _ ts =>
       let ds := ts.map depth'
-      Nat.succ (ds.maxI (· > ·))
+      Nat.succ (ds.maxI' (· > ·))
 
 partial def depth (T : CTrie α) : Nat :=
   let rec go (candidates : List Nat) (depth : Nat) : List (CTrie α) → Nat
