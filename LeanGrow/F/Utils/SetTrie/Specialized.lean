@@ -1,5 +1,6 @@
 
 import LeanGrow.F.Utils.SetTrie.Build
+import LeanGrow.F.Utils.SetTrie.Query
 import LeanGrow.F.Utils.Trie.Sorted
 import LeanGrow.F.Utils.ExprTrieRWez.Unify
 
@@ -110,7 +111,13 @@ def SetTrieT.make [Inhabited α] (l : List (CTrie Unit)) : SetTrieT α :=
     (fun key => CTrie.ofList [(key,())]) CTrie.merge l
 
 
+def SetTrieT.query (Q : CTrie Unit) (T : SetTrieT α) : List α :=
+  SetTrie.query (fun t Q => CTrie.CountCommon t Q = CTrie.size t) Q T
 
+
+
+#exit
+-- TODO
 
 private def L_find_maxes (val : Option Nat) (ind : List Nat) : List (Nat × Nat) → Option ((List Nat) × Nat)
   | [] =>
@@ -125,6 +132,9 @@ private def L_find_maxes (val : Option Nat) (ind : List Nat) : List (Nat × Nat)
           | .gt => L_find_maxes val ind more
           | .eq => L_find_maxes val (i :: ind) more
           | .lt => L_find_maxes (.some w) [i] more
+
+
+
 
 
 def SetTrieN.make [Inhabited α] (l : List (List Nat)) : SetTrieN α :=

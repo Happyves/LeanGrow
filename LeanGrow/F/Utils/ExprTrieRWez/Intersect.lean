@@ -38,57 +38,57 @@ partial def CExprTrie.intersect (L R : CExprTrie Nat) : List (List Nat × List N
     | [] => (done_ind, done_call)
     | nx :: more =>
         match nx with
-        | .ofApp l r _ _ _ =>
+        | .ofApp l r _ _ _ _ =>
             let links? := CExprTrie.Branch_getAppLinks? br
             match links? with
             | .some (lf,la) => candidates br done_ind ((.two l r lf la) :: done_call) more
             | _ => candidates br done_ind (done_call) more
-        | .ofLam l r _ _ _ =>
+        | .ofLam l r _ _ _ _ =>
             let links? := CExprTrie.Branch_getLamLinks? br
             match links? with
             | .some (lf,la) => candidates br done_ind ((.two l r lf la) :: done_call) more
             | _ => candidates br done_ind (done_call) more
-        | .ofForall l r _ _ _ =>
+        | .ofForall l r _ _ _ _ =>
             let links? := CExprTrie.Branch_getForallLinks? br
             match links? with
             | .some (lf,la) => candidates br done_ind ((.two l r lf la) :: done_call) more
             | _ => candidates br done_ind (done_call) more
-        | .ofLet l r z _ _ _ _ =>
+        | .ofLet l r z _ _ _ _ _ =>
             let links? := CExprTrie.Branch_getLetLinks? br
             match links? with
             | .some (lf,la, lz) => candidates br done_ind ((.three l r z lf la lz) :: done_call) more
             | _ => candidates br done_ind (done_call) more
-        | .ofProj _ _ l _ _ =>
-            let links? := CExprTrie.Branch_getProjLinks? br
+        | .ofProj n i l _ _ _ =>
+            let links? := CExprTrie.Branch_getProjLinks? n i br
             match links? with
             | .some (lf) => candidates br done_ind ((.one l lf) :: done_call) more
             | _ => candidates br done_ind (done_call) more
-        | .ofLit l ind =>
+        | .ofLit l ind _ =>
             let nlb := CExprTrie.getIndices_Lit l br
             match nlb with
             | [] => candidates br done_ind (done_call) more
             | _ => candidates br ((ind, nlb) :: done_ind) (done_call) more
-        | .ofLNode i t ind =>
+        | .ofLNode i t ind _ =>
             let nlb := CExprTrie.getIndices_lNode i t br
             match nlb with
             | [] => candidates br done_ind (done_call) more
             | _ => candidates br ((ind, nlb) :: done_ind) (done_call) more
-        | .ofGNode l ind =>
+        | .ofGNode l ind _ =>
             let nlb := CExprTrie.getIndices_gNode l br
             match nlb with
             | [] => candidates br done_ind (done_call) more
             | _ => candidates br ((ind, nlb) :: done_ind) (done_call) more
-        | .ofBvar l ind =>
+        | .ofBvar l ind _ =>
             let nlb := CExprTrie.getIndices_Bvar l br
             match nlb with
             | [] => candidates br done_ind (done_call) more
             | _ => candidates br ((ind, nlb) :: done_ind) (done_call) more
-        | .ofSort l ind =>
+        | .ofSort l ind _ =>
             let nlb := CExprTrie.getIndices_Sort l br
             match nlb with
             | [] => candidates br done_ind (done_call) more
             | _ => candidates br ((ind, nlb) :: done_ind) (done_call) more
-        | .ofConst n l ind =>
+        | .ofConst n l ind _ =>
             let nlb := CExprTrie.getIndices_Const n l br
             match nlb with
             | [] => candidates br done_ind (done_call) more

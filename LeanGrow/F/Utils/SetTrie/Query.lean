@@ -49,3 +49,21 @@ partial def getVals (T : SetTrie α β) : List α :=
         | .leaf a => go (a :: done) more
         | .root c | .node _ c => go done (c ++ more)
   go [] [T]
+
+
+partial def query' (inter : β → β → Bool) (Q : β) (T : SetTrie α β) : List α :=
+  match T with
+  | .root c => (c.map (query' inter Q)).join
+  | .node t c => if inter t Q then (c.map (query' inter Q)).join else []
+  | .leaf a => [a]
+
+
+partial def query (inter : β → β → Bool) (Q : β) (T : SetTrie α β) : List α :=
+  let rec go (done : List α) : List (SetTrie α β) → List α
+    | [] => done
+    | nx :: more =>
+        match nx with
+        | .root c => go done (c ++ more)
+        | .node t c => if inter t Q then go done (c ++ more) else go done more
+        | .leaf a => go (a :: done) more
+  go [] [T]
