@@ -6,15 +6,59 @@ import LeanGrow.F.Utils.ExprTrieRWez.Unify
 
 #check 1
 
--- with β as a Trie or as a CExprTrie
+
+-- # CTrie
 
 def SetTrieT (α : Type _) := SetTrie α (CTrie Unit)
 
+def SetTrieT.make [Inhabited α] (l : List (CTrie Unit)) : SetTrieT α :=
+  SetTrie.make (CTrie.empty : CTrie Nat) (CTrie.empty : CTrie Unit)
+    (fun t sofar => CTrie.merge_count (CTrie.merge_count_initialise t) sofar)
+    CTrie.find_maxes CTrie.difference CTrie.find_max CTrie.find? CTrie.delete
+    (fun key => CTrie.ofList [(key,())]) CTrie.merge l
+
+def SetTrieT.query (Q : CTrie Unit) (T : SetTrieT α) : List α :=
+  SetTrie.query (fun t Q => CTrie.CountCommon t Q = CTrie.size t) Q T
+
+
+-- # CExprTrie
+
 def SetTrieC (α : Type _) := SetTrie α (CExprTrie Nat)
 
-def SetTrieN (α : Type _) := SetTrie α (List Nat) -- ordered lists for cluster ids
+
+-- # Lists of nats
+
+def SetTrieN (α : Type _) := SetTrie α (List Nat) -- unordered lists for cluster ids
+
+def SetTrieN.make [Inhabited α] (l : List (List Nat)) : SetTrieN α :=
+  let rec find_maxes (empty? : Bool) (done : List Nat) (max : Nat) : List (Nat × Nat) → Option ((List Nat) × Nat)
+    | [] => if empty? then .none else .some (done,max)
+    | nx :: more =>
+        match compare nx.1 max with
+        | .gt => find_maxes false [nx.2] nx.1 more
+        | .eq => find_maxes false (nx.2 :: done) max more
+        | .lt => find_maxes false done max more
+  let rec find_max (empty? : Bool) (done : Nat) (max : Nat) : List (Nat × Nat) → Option (Nat × Nat)
+    | [] => if empty? then .none else .some (done,max)
+    | nx :: more =>
+        match compare nx.1 max with
+        | .gt => find_max false nx.2 nx.1 more
+        | _ => find_max false done max more
+  SetTrie.make ([] : List (Nat × Nat)) ([] : List Nat) -- ←↓ (occs, id)
+    (fun t sofar => t.foldl (fun x y => x.findModifyAdd (fun z => z.2 == y) (fun z => (z.1+1,z.2)) (1,y)) sofar)
+    (find_maxes true [] 0) (fun x y => y.foldl (fun a b => a.erase b) x) (find_max true 0 0)
+    (fun l x => l.find? (fun y => y == x)) List.erase (fun n => [n]) List.append l
 
 
+def SetTrieN.query (Q : List Nat) (T : SetTrieN α) : List α :=
+  let rec contains (t Q : List Nat) : Bool :=
+    match t with
+    | [] => true
+    | nx :: more => if Q.contains nx then contains more Q else false
+  SetTrie.query contains Q T
+
+
+/-
 def SetTrieT.find_keys (c : List (SetTrieT α)) : CTrie Nat :=
   SetTrie.find_keys c CTrie.empty (fun t sofar => CTrie.merge_count (CTrie.merge_count_initialise t) sofar)
 
@@ -100,44 +144,4 @@ def SetTrieC.split_greedy_exact_hitting_set (c : List (SetTrieC α)) : List (Set
       )
     sorry
     (fun key => CExprTrie.ofList (· ≤ ·) [(0,key)]) c
-
-
--- Actually usefull:
-
-def SetTrieT.make [Inhabited α] (l : List (CTrie Unit)) : SetTrieT α :=
-  SetTrie.make (CTrie.empty : CTrie Nat) (CTrie.empty : CTrie Unit)
-    (fun t sofar => CTrie.merge_count (CTrie.merge_count_initialise t) sofar)
-    CTrie.find_maxes CTrie.difference CTrie.find_max CTrie.find? CTrie.delete
-    (fun key => CTrie.ofList [(key,())]) CTrie.merge l
-
-
-def SetTrieT.query (Q : CTrie Unit) (T : SetTrieT α) : List α :=
-  SetTrie.query (fun t Q => CTrie.CountCommon t Q = CTrie.size t) Q T
-
-
-
-#exit
--- TODO
-
-private def L_find_maxes (val : Option Nat) (ind : List Nat) : List (Nat × Nat) → Option ((List Nat) × Nat)
-  | [] =>
-      match val with
-      | .none => .none
-      | .some v => .some (ind, v)
-  | (w,i) :: more =>
-      match val with
-      | .none => L_find_maxes (.some w) [i] more
-      | .some v =>
-          match compare v w with
-          | .gt => L_find_maxes val ind more
-          | .eq => L_find_maxes val (i :: ind) more
-          | .lt => L_find_maxes (.some w) [i] more
-
-
-
-
-
-def SetTrieN.make [Inhabited α] (l : List (List Nat)) : SetTrieN α :=
-  SetTrie.make ([] : List (Nat × Nat)) ([] : List Nat) -- ←↓ (occs, id)
-    (fun t sofar => t.foldl (fun x y => x.findModify (fun z => z.2 == y) (fun z => (z.1+1,z.2))) sofar)
-    (L_find_maxes .none [])
+-/

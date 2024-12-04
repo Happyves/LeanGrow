@@ -29,7 +29,7 @@ partial def applyShift (B : CExprTrie) (shiftIndB : Nat → Nat) : CExprTrie :=
 private def help_merge [BEq α] (A B : List (List Nat × α)) (shiftIndB : Nat → Nat) : List (List Nat × α) :=
   let rec go (done : List (List Nat × α)) : List (List Nat × α) → List (List Nat × α)
     | [] => done
-    | nx :: more => go (done.findModifyAdd (fun x => x.2 == nx.2) (fun x => (x.1 ++ nx.1.map shiftIndB, x.2)) nx) more
+    | nx :: more => go (done.findModifyAdd (fun x => x.2 == nx.2) (fun x => (x.1 ++ nx.1.map shiftIndB, x.2)) (nx.1.map shiftIndB, nx.2)) more
   go A B
 
 
