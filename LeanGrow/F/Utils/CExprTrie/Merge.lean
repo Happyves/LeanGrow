@@ -1,7 +1,10 @@
 
 
-import LeanGrow.F.Utils.CExprTrie.Types
-import LeanGrow.F.Utils.List
+import LeanGrow.F.Utils.CExprTrie.Unify
+import LeanGrow.F.Utils.CExprTrie.Intersect
+import LeanGrow.F.Utils.CExprTrie.Unify
+import LeanGrow.F.Utils.CExprTrie.Build
+
 
 open Lean
 
@@ -60,3 +63,40 @@ partial def merge (A B : CExprTrie) (shiftIndB : Nat → Nat) : CExprTrie :=
         (merge alf alf' shiftIndB) (merge ala ala' shiftIndB) (ali ++ (ali'.map shiftIndB))
         (merge lef lef' shiftIndB) (merge lea lea' shiftIndB) (merge lez lez' shiftIndB) (lei ++ (lei'.map shiftIndB))
         (help_merge_projs projs projs' shiftIndB (merge · · shiftIndB))
+
+
+def findMaxIdx (T : CExprTrie) : Nat :=
+  let rec max (c : Nat) : List Nat → Nat
+    | [] => c
+    | nx :: more => if nx > c then max nx more else max c more
+  let ind := CExprTrie.getIndices T
+  max 0 ind
+
+def merge! (A B : CExprTrie) : CExprTrie :=
+  let off := CExprTrie.findMaxIdx A
+  CExprTrie.merge A B (fun x => x+off)
+
+-- Probably better to specify the whole SetTrie implementation, as ↑ is inefficient
+
+-- name wrt. SetTrie API
+def count (T : CExprTrie) : List (CExpr × Nat) :=
+  let ces := CExprTrie.build T
+  ces.map (fun (x,y) => (x,y.length))
+
+
+def find_maxes (cand : List (CExpr × Nat)) : Option (CExprTrie × Nat) :=
+  let rec go (max : Nat) (idx : Nat) (T : CExprTrie) : List (CExpr × Nat) → Option (CExprTrie × Nat)
+    | [] => .some (T,max)
+    | (ce,occ) :: more =>
+        match compare occ max with
+        | .gt => go occ 2 (CExprTrie.insert ce 1 .dead) more
+        | .eq => go max (idx+1) (CExprTrie.insert ce idx T) more
+        | .lt => go max idx T more
+  go 0 1 .dead cand
+
+
+def find_max (cand : List (CExpr × Nat)) : Option (CExpr × Nat) :=
+  let rec go (good? : Bool) (max : Nat) (ce : CExpr) : List (CExpr × Nat) → Option (CExpr × Nat)
+    | [] => if good? then .some (ce, max) else .none
+    | nx :: more => if nx.2 > max then go true nx.2 nx.1 more else go true max ce more
+  go false 0 .failed cand

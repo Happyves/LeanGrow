@@ -71,3 +71,10 @@ def test_list_3 : List (Nat × CExpr) :=
 
 #eval CExprTrie.contains (CExprTrie.merge (CExprTrie.ofList test_list') (CExprTrie.ofList test_list_2) (fun n => n+4)) (CExprTrie.ofList test_list_3)
 #eval CExprTrie.contains (CExprTrie.ofList test_list') (CExprTrie.ofList test_list_3)
+
+#eval CExprTrie.build (CExprTrie.merge! (CExprTrie.ofList test_list') (CExprTrie.ofList test_list_2))
+#eval CExprTrie.count (CExprTrie.merge! (CExprTrie.ofList test_list') (CExprTrie.ofList test_list_2))
+#eval CExprTrie.find_maxes (CExprTrie.count (CExprTrie.merge! (CExprTrie.ofList test_list') (CExprTrie.ofList test_list_2)))
+
+
+#eval CExprTrie.build (CExprTrie.difference (CExprTrie.ofList test_list') (CExprTrie.ofList test_list_3))

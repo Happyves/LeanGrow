@@ -2,7 +2,10 @@
 import LeanGrow.F.Utils.SetTrie.Build
 import LeanGrow.F.Utils.SetTrie.Query
 import LeanGrow.F.Utils.Trie.Sorted
-import LeanGrow.F.Utils.ExprTrieRWez.Unify
+--import LeanGrow.F.Utils.ExprTrieRWez.Unify
+import LeanGrow.F.Utils.CExprTrie.Merge
+import LeanGrow.F.Utils.CExprTrie.Delete
+
 
 #check 1
 
@@ -23,8 +26,15 @@ def SetTrieT.query (Q : CTrie Unit) (T : SetTrieT α) : List α :=
 
 -- # CExprTrie
 
-def SetTrieC (α : Type _) := SetTrie α (CExprTrie Nat)
+def SetTrieC (α : Type _) := SetTrie α CExprTrie
 
+def SetTrieC.make [Inhabited α] (l : List CExprTrie) : SetTrieC α :=
+  SetTrie.make' CExprTrie.dead CExprTrie.merge! CExprTrie.count CExprTrie.find_maxes
+    CExprTrie.difference CExprTrie.find_max (fun x y =>  match CExprTrie.find? y x with | [] => .none | _ :: _ => .some ())
+    CExprTrie.deleteCExpr (fun ce => CExprTrie.insert ce 1 .dead) l
+
+
+#exit
 
 -- # Lists of nats
 

@@ -102,7 +102,7 @@ set_option linter.unusedTactic false
 
 example (l : List ℕ) (a : ℕ) (h : a ∈ l) : insert a l = l :=
   by
-  --grow
+  grow
   sorry
 
 #check List.insert_pos
