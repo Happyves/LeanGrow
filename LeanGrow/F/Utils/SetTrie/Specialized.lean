@@ -34,7 +34,10 @@ def SetTrieC.make [Inhabited α] (l : List CExprTrie) : SetTrieC α :=
     CExprTrie.deleteCExpr (fun ce => CExprTrie.insert ce 1 .dead) l
 
 
-#exit
+def SetTrieC.query (Q : CExprTrie) (T : SetTrieC α) : List α :=
+  SetTrie.query CExprTrie.contains Q T
+
+
 
 -- # Lists of nats
 
