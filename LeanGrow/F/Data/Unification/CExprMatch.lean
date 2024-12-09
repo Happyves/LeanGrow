@@ -135,7 +135,36 @@ partial def CExpr.MatchAssignLFFC (l r : CExpr) : Option (List (Nat × CExpr)) :
 
 
 
+def List.assignOrFailN [BEq α] (A? : Option (List (Name × α))) (i : Name) (val : α) : Option (List (Name × α)) :=
+      match A? with
+      | .some A =>
+            match A.find? (fun x => (Prod.fst x) == i) with
+            | .some wal => if wal.2 == val then .some A else .none
+            | _ => .some ((i,val) :: A)
+      | _ => .none
+
+def univsUnify (thm query : Level) : Option (List (Name × Level)) :=
+      let rec go (go? : Bool) (Aout : Option (List (Name × Level))) (todo : List (Level × Level)) : Option (List (Name × Level)) :=
+      if go?
+      then
+            match todo with
+            | [] => Aout
+            | nx :: L =>
+                  match nx with
+                  | (.param u, l) => let Aup := List.assignOrFailN Aout u l ; go true Aup L
+                  |
+      else .none
+      go true (.some []) [(thm,query)]
+
+
+
+--def makeUniAssigns (query thm : List Level) := List.zip query thm
+
+
+
 #exit
+-- initial stuff ?
+
 
 partial def EmbedData.MatchAssignLFF (l r : EmbedData) : Option (List (Nat × NodeExpr)) :=
       let rec go (Aout : Option (List (Nat × NodeExpr))) : List (CExpr × CExpr) → Option (List (Nat × NodeExpr))

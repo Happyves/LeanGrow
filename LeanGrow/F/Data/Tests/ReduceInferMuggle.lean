@@ -56,3 +56,6 @@ elab "testInfer" t:term : command => do
 
 testInfer (fun x => x) Nat.zero
 testInfer Nat.succ Nat.zero
+
+
+#check 1
