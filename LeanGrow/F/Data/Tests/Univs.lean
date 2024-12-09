@@ -12,7 +12,7 @@ open Qq
 
 #eval q(@add_comm Rat)
 #eval q(@add_comm (List Type))
-
+#eval q(Rat)
 
 open Lean
 
@@ -25,6 +25,8 @@ def test (n : Name) : CoreM Unit := do
   IO.print s!"{repr data.type}"
 
 #eval test `add_comm
+
+#eval test `Rat
 
 def add_comm_spe := @add_comm ℤ
 

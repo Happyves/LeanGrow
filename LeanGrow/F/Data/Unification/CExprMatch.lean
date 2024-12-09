@@ -1,5 +1,5 @@
 
-import LeanGrow.F.Data.CExpr.API
+import LeanGrow.F.Data.Unification.LevelsUnify
 
 open Lean
 
@@ -135,30 +135,34 @@ partial def CExpr.MatchAssignLFFC (l r : CExpr) : Option (List (Nat × CExpr)) :
 
 
 
-def List.assignOrFailN [BEq α] (A? : Option (List (Name × α))) (i : Name) (val : α) : Option (List (Name × α)) :=
-      match A? with
-      | .some A =>
-            match A.find? (fun x => (Prod.fst x) == i) with
-            | .some wal => if wal.2 == val then .some A else .none
-            | _ => .some ((i,val) :: A)
-      | _ => .none
-
-def univsUnify (thm query : Level) : Option (List (Name × Level)) :=
-      let rec go (go? : Bool) (Aout : Option (List (Name × Level))) (todo : List (Level × Level)) : Option (List (Name × Level)) :=
+partial def CExpr.MatchAssignLFFCU (l r : CExpr) : Option (List (Nat × CExpr) × List (Name × Level)) :=
+      let rec go (go? : Bool) (Aout : Option (List (Nat × CExpr))) (Uout : Option (List (Name × Level))) (todo : List (CExpr × CExpr)) : Option (List (Nat × CExpr) × List (Name × Level)) :=
       if go?
       then
             match todo with
-            | [] => Aout
+            | [] =>
+                  match Aout, Uout with
+                  | .some X, .some Y => .some (X,Y)
+                  | _, _ => .none
             | nx :: L =>
                   match nx with
-                  | (.param u, l) => let Aup := List.assignOrFailN Aout u l ; go true Aup L
-                  |
+                  | (.lnode i _ .none, e) => let Aup := List.assignOrFail Aout i e ; go true Aup Uout L
+                  | (.bvar i , .bvar j) => go (i == j) Aout Uout L
+                  | (.sort a, .sort b) => let us := univsMerge Uout (univsUnify a.normalize b.normalize) ; go us.isSome Aout us L
+                  | (.const n l, .const n' l') =>
+                        if (n == n')
+                        then let us := makeUniAssigns l l' ; go us.isSome Aout us L
+                        else go false Aout .none L
+                  | (.app f a, .app f' a') => go true Aout Uout ((f,f') :: (a,a') :: L)
+                  | (.lam _ t b _, .lam _ t' b' _) => go true Aout Uout ((t,t') :: (b,b') :: L)
+                  | (.forallE _ t b _, .forallE _ t' b' _) => go true Aout Uout ((t,t') :: (b,b') :: L)
+                  | (.letE _ t v b _, .letE _ t' v' b' _) => go true Aout Uout ((t,t') :: (v,v') :: (b,b') :: L)
+                  | (.lit l, .lit l') => go (l == l') Aout Uout L
+                  | (.proj t i b, .proj t' i' b') => go ((t == t') && (i == i')) Aout Uout ((b, b') :: L)
+                  | (_ , _) => .none
       else .none
-      go true (.some []) [(thm,query)]
+      go true (.some []) (.some []) [(l,r)]
 
-
-
---def makeUniAssigns (query thm : List Level) := List.zip query thm
 
 
 
