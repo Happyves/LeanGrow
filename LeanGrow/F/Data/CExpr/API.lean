@@ -189,6 +189,8 @@ def CExpr.getConstNames : CExpr → List Name
 | .sort _ => []
 | _ => []
 
+
+-- todo : add accumulator
 partial def CExpr.getConstNamesF (e : CExpr) : List Name :=
   let rec go : List CExpr → List Name
   | [] => []
@@ -199,7 +201,7 @@ partial def CExpr.getConstNamesF (e : CExpr) : List Name :=
       | .lam _ l r _ => go (l :: r :: L)
       | .forallE _ l r _ => go (l :: r :: L)
       | .letE _ t l r _ => go (t :: l :: r :: L)
-      | .proj n _ e => n :: (go [e])
+      | .proj n _ e => n :: (go [e]) -- should be e :: L
       | _ => []
   go [e]
 

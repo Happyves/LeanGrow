@@ -94,3 +94,6 @@ def testin4 (a b : Nat) (P : Nat → Prop) (Q : Prop) (h : P (a+b)) (H : P (b+a)
   apply add_comm
 
 #eval test' `testin4
+
+
+#check Nat.add.eq_1

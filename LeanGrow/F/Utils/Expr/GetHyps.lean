@@ -12,3 +12,17 @@ def Lean.Expr.getHypsGoal (ty : Expr) : (List (Expr × Bool)) × Expr :=
     | .mdata  _ e => go cache e
     | e => (cache, e)
   go [] ty
+
+structure ParsedEqType where
+  levelP : List Level
+  type : Expr
+  left : Expr
+  right : Expr
+deriving BEq, Inhabited, Repr
+
+#check Eq
+
+def Lean.Expr.ParseEq (e : Expr) : Option ParsedEqType :=
+  match e with
+  | .app (.app (.app (.const `Eq lp) t) l) r => .some ⟨lp,t,l,r⟩
+  | _ => .none
