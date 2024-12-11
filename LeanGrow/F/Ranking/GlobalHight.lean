@@ -23,6 +23,13 @@ def ConstantInfo.isThmOrAx : ConstantInfo → Bool
   | .thmInfo _ | .axiomInfo _ => true
   | _ => false
 
+def ConstantInfo.valueD (defo : Expr) : ConstantInfo → Expr
+  | .defnInfo {value := r, ..} => r
+  | .thmInfo  {value := r, ..} => r
+  | _                         => defo
+
+
+
 
 private partial def step (env : Environment)
   (heights : CTrie Nat) (argNum : List Nat) (hc : List Nat) (stack : List Name) : CTrie Nat :=
@@ -34,7 +41,7 @@ private partial def step (env : Environment)
       | [h] => [(max h H)]
       | h₁ :: h₂ :: more => (max h₂ (max h₁ H)) :: more
     let dec : List Nat → Bool × List Nat
-      | [] => (true,[])
+      | [] => (false,[])
       | c :: more => if c = 0 then (true, more) else (false, (c - 1) :: more)
     let rec split (hs : List Nat) (todos : List Name) : List Name → (List Nat × List Name)
       | [] => (hs,todos)
@@ -59,44 +66,71 @@ private partial def step (env : Environment)
             else
               step env heights nArgNum (updateMax H hc) more
         | .none =>
-            let csts :=  (Expr.getConstNamesF (env.constants.find! nx).value!).dedup.filter (fun x => ConstantInfo.isThmOrAx (env.constants.find! x))
-            let (hs, todos) := split [] [] csts
-            let H? := hs.maximum?
-            match H?, todos with
-            | .some H, _ :: _ => step env heights ((todos.length - 1) :: argNum) (0 :: H :: hc) (todos ++ stack)
-            | .none, _ :: _ => step env heights ((todos.length - 1) :: argNum) (0 :: 0 :: hc) (todos ++ stack)
-            | .some H, [] =>
-                  let (done?,nArgNum) := dec argNum
-                  if done?
-                  then
-                    match more with
-                    | s :: next =>
-                        let nMxs := UpdateMax (H+1) hc
-                        step env ((heights.sorted_insert nx.toString H).sorted_insert s.toString (nMxs.headD 0)) nArgNum nMxs.tail next
-                    | [] => {}
-                  else
-                    step env (heights.sorted_insert nx.toString (H+1)) nArgNum (updateMax (H+1) hc) more
-            | .none, [] => -- axiom
-                  let (done?,nArgNum) := dec argNum
-                  if done?
-                  then
-                    match more with
-                    | s :: next =>
-                        let nMxs := UpdateMax 1 hc
-                        step env ((heights.sorted_insert nx.toString 0).sorted_insert s.toString (nMxs.headD 0)) nArgNum nMxs.tail next
-                    | [] => {}
-                  else
-                    step env (heights.sorted_insert nx.toString 0) nArgNum (updateMax 0 hc) more
+            match (env.constants.find! nx).value? with
+            | .none => -- axiom
+                let (done?,nArgNum) := dec argNum
+                if done?
+                then
+                  match more with
+                  | s :: next =>
+                      let nMxs := UpdateMax 1 hc
+                      step env ((heights.sorted_insert nx.toString 0).sorted_insert s.toString (nMxs.headD 0)) nArgNum nMxs.tail next
+                  | [] => {}
+                else
+                  step env (heights.sorted_insert nx.toString 0) nArgNum (updateMax 0 hc) more
+            | .some V =>
+                  let csts :=  (Expr.getConstNamesF V).dedup.filter (fun x => ConstantInfo.isThmOrAx (env.constants.find! x))
+                  let (hs, todos) := split [] [] csts
+                  let H? := hs.maximum?
+                  match H?, todos with
+                  | .some H, _ :: _ => step env heights ((todos.length - 1) :: argNum) (0 :: H :: hc) (todos ++ stack)
+                  | .none, _ :: _ => step env heights ((todos.length - 1) :: argNum) (0 :: 0 :: hc) (todos ++ stack)
+                  | .some H, [] =>
+                        let (done?,nArgNum) := dec argNum
+                        if done?
+                        then
+                          match more with
+                          | s :: next =>
+                              let nMxs := UpdateMax (H+1) hc
+                              step env ((heights.sorted_insert nx.toString H).sorted_insert s.toString (nMxs.headD 0)) nArgNum nMxs.tail next
+                          | [] => {}
+                        else
+                          step env (heights.sorted_insert nx.toString (H+1)) nArgNum (updateMax (H+1) hc) more
+                  | .none, [] => -- axiom
+                        let (done?,nArgNum) := dec argNum
+                        if done?
+                        then
+                          match more with
+                          | s :: next =>
+                              let nMxs := UpdateMax 1 hc
+                              step env ((heights.sorted_insert nx.toString 0).sorted_insert s.toString (nMxs.headD 0)) nArgNum nMxs.tail next
+                          | [] => {}
+                        else
+                          step env (heights.sorted_insert nx.toString 0) nArgNum (updateMax 0 hc) more
 
 #check List.append_assoc
 
 #check Nat.add_comm
 
-def test : CoreM Unit := do
-  let res := step (← getEnv) {} [] [] [`Nat.mul_le_mul]
+private def test : CoreM Unit := do
+  let res := step (← getEnv) {} [] [] [`List.append_assoc] --[`Nat.mul_le_mul]
   IO.print (CTrie.toList res)
 
-#eval test
+-- #eval test
 
 
--- #print congrArg
+def build_height_weights (env : Environment) (N : Name) : CTrie Nat :=
+  let modules := env.header.moduleNames.map (N.isPrefixOf ·)
+  env.constants.map₁.fold (fun T n info =>
+    if modules[env.const2ModIdx[n].get! (α := Nat)]!
+    then
+      if ConstantInfo.isThmOrAx info
+      then step env T [] [] [n]
+      else T
+    else T
+    ) {}
+
+private def test2 : CoreM Unit := do
+  IO.print (CTrie.toList (build_height_weights (← getEnv) `Mathlib.Data.List))
+
+-- #eval test2
