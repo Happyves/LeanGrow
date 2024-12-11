@@ -17,7 +17,7 @@ def Expr.getConstNames : Expr → List Name
 
 partial def Expr.getConstNamesF (e : Expr) : List Name :=
   let rec go (done : List Name) : List Expr → List Name
-  | [] => []
+  | [] => done
   | x :: L =>
       match x with
       | .const n _ => go (n :: done) L
@@ -27,5 +27,5 @@ partial def Expr.getConstNamesF (e : Expr) : List Name :=
       | .letE _ t l r _ => go done (t :: l :: r :: L)
       | .proj n _ e => go (n :: done) (e :: L)
       | .mdata _ e => go done (e :: L)
-      | _ => []
+      | _ => go done L
   go [] [e]
