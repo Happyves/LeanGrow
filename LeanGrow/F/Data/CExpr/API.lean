@@ -23,7 +23,7 @@ partial def Lean.Expr.toCExprF (E : Expr) : CExpr :=
   let rec go : List Expr → List CExpr
       | [] => []
       | nx :: L =>
-            match nx with
+            match (Expr.consumeTypeAnnotations nx) with
             | .bvar i => .bvar i :: (go L)
             | .fvar _ => .failed :: (go L)
             | .mvar _ => .failed :: (go L)

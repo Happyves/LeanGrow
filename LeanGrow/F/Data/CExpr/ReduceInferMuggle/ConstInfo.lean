@@ -1,6 +1,7 @@
 
-import LeanGrow.F.Data.CExpr.Types
+import LeanGrow.F.Data.CExpr.API
 import Lean.Meta.Match.MatcherInfo
+import Lean.Structure
 
 open Lean Meta Match
 
@@ -47,6 +48,11 @@ structure cRecursorRule where
   rhs : CExpr
 deriving Inhabited, BEq, Repr
 
+def RecursorRule.tocRecursorRule : RecursorRule → cRecursorRule
+| .mk c n rhs => .mk c n rhs.toCExprF
+
+
+
 structure cRecursorVal where
   all : List Name
   numParams : Nat
@@ -57,6 +63,11 @@ structure cRecursorVal where
   k : Bool
   isUnsafe : Bool
 deriving Inhabited, BEq
+
+
+def RecursorVal.tocRecursorVal : RecursorVal → cRecursorVal
+| .mk _ a b c d e R f g => .mk a b c d e (R.map RecursorRule.tocRecursorRule) f g
+
 
 instance : Repr cRecursorVal where
   reprPrec := fun ⟨a,b,c,d,e,f,g,h⟩ _ =>
@@ -123,11 +134,26 @@ def CstInfo.levelParams : CstInfo → List Lean.Name
   | .ctor t _ _ => t
 
 
-/-
-Notes:
 
-- Don't forget to recognize structures when building the Trie (via !isStructureLike ?)
-- also get rid of annotations to account for Expr.consumeTypeAnnotations (in inferProj)
+def isStructureLike! (env : Environment) (constName : Name) : Option (Name × ConstructorVal) :=
+  match env.find? constName with
+  | some (.inductInfo { isRec := false, ctors := [C], numIndices := 0, .. }) =>
+        match env.find? C with
+        | some (.ctorInfo V) => .some (C,V)
+        | _ => .none
+  | _ => .none
 
-
--/
+def ConstantInfo.toCstInfo (env : Environment) (n : Name) (i : ConstantInfo) : CstInfo :=
+  let rec main :  ConstantInfo → CstInfo
+    | .axiomInfo v => .noVal v.levelParams v.type.toCExprF
+    | .defnInfo v | .thmInfo v | .opaqueInfo v => .wVal v.levelParams v.type.toCExprF v.value.toCExprF
+    | .quotInfo v => .quot v.levelParams v.type.toCExprF v
+    | .inductInfo v => .indu v.levelParams v.type.toCExprF v
+    | .ctorInfo v => .ctor v.levelParams v.type.toCExprF v
+    | .recInfo v => .recu v.levelParams v.type.toCExprF (RecursorVal.tocRecursorVal v)
+  match isStructureLike! env n with
+  | .some (c,v) => .struc i.levelParams i.type.toCExprF c v
+  | .none =>
+      match Lean.Meta.getMatcherInfoCore? env n with
+      | .some mi => .mat i.levelParams i.type.toCExprF i.value!.toCExprF mi
+      | .none => main i
