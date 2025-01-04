@@ -1,18 +1,21 @@
 
 import LeanGrow.F.Search.A.trBack
+import LeanGrow.F.Search.A.trSolve
 import LeanGrow.F.Data.Unification.EmbedRawWInferWUnis
 import LeanGrow.F.Data.Unification.EmbedGoalWInferWUnis
-
+import LeanGrow.F.Search.ForwardData.Forward
+import LeanGrow.F.Utils.Paging
 
 #check 1
 
+open Lean
 
 structure miniPermiseDict where
   name : Name
   data : Array EmbedData
   order : Array Nat
   goal : CExpr
-
+deriving Inhabited, Repr, BEq
 
 
 structure SearchState where
@@ -31,6 +34,7 @@ def tryBackOn (fctx : FixCtx) (premises : List miniPermiseDict)
   let rec findBack : List miniPermiseDict → Option (miniPermiseDict × Array (Option CExpr))
     | [] => .none
     | p :: ps =>
+        dbg_trace s!"Back Trying premise {p.name}"
         let res? := match_goal fctx p.data p.data.size p.goal active_goal
         match res? with
         | .some res => .some (p,res)
@@ -38,6 +42,7 @@ def tryBackOn (fctx : FixCtx) (premises : List miniPermiseDict)
   match findBack premises with
   | .none => .none
   | .some (prem,res) =>
+      dbg_trace s!"Back candidate {repr (prem,res)}"
       let (assi,newg) := propagate_lnode_and_tag prem.data state.id_gen_back res
       .some (integrate_backstep_main prem.name prem.data.size active_goal_id assi newg state)
 
@@ -50,12 +55,47 @@ def tryBack (fctx : FixCtx) (premises : List miniPermiseDict) (state : BackState
         | _ => go more
   go state.active_goals
 
-def tryForwWith (fctx : FixCtx) (premises : List miniPermiseDict)
+def tryForWith (fctx : FixCtx) (prem : miniPermiseDict) (state : SearchState) : Option SearchState :=
+  match full_matcher_rawF {fctx with current := .some prem.data} prem.data prem.order state.forw with
+  | [] => .none
+  | opts =>
+      let rez := (opts.map (integrate_forward_raw · prem.goal)).filter (fun x => (state.forw.find? (fun y => y.2 == x)).isNone)
+      let sz := rez.length
+      let add_to_forw := List.zip ((List.range sz).map (· + state.forwID)) rez
+      let newforw := add_to_forw ++ state.forw
+      let newforw2 := add_to_forw.foldl
+        (fun sofar (idx,exp) => PageingSet sofar state.ltx_handler 42 (.failed) idx exp)
+        state.forw2
+      .some {state with forw := newforw, forw2 := newforw2, forwID := state.forwID + sz}
+
+def tryFor (fctx : FixCtx) (prems : List miniPermiseDict) (state : SearchState) : Option SearchState :=
+  let rec go : List miniPermiseDict → Option SearchState
+    | [] => .none
+    | x :: xs =>
+        match tryForWith fctx x state with
+        | .some s => .some s
+        | _ => go xs
+  go prems
 
 
-#exit
+def TryStep (fctx : FixCtx) (prems : List miniPermiseDict) (state : SearchState) : Option SearchState :=
+  dbg_trace s!"trying back"
+  match tryBack fctx prems state.back with
+  | .some newback =>
+      dbg_trace s!"new back {repr newback}\nTry forw"
+      match tryFor fctx prems state with
+      | .some st => .some {st with back := newback}
+      | _ => .some {state with back := newback}
+  | _ =>
+    dbg_trace s!"No back, try forw"
+    match tryFor fctx prems state with
+      | .some st => .some st
+      | _ => .none
 
-def search_step (fctx : FixCtx) (premises : List miniPermiseDict) (st : SearchState) : SearchState :=
+
+
+
+partial def search_step (fctx : FixCtx) (premises : List miniPermiseDict) (st : SearchState) : Option SearchState :=
 
   let rec uni_ltx_activeGoals  (s g : List (Nat × CExpr)) : Option (List (Nat × Nat × CExpr)) :=
     -- try to find one unification of ltx result and an active goal
@@ -63,15 +103,30 @@ def search_step (fctx : FixCtx) (premises : List miniPermiseDict) (st : SearchSt
     | x :: xs, y :: _ =>
         match (CExpr.MatchAssignSolutions' x.2 y.2) with
         | .some (res,_) => .some res
-        | .none => .none
+        | .none => uni_ltx_activeGoals xs g
     | [], _ :: ys => uni_ltx_activeGoals st.forw ys
     | _,_ => .none
 
   match uni_ltx_activeGoals st.forw st.back.active_goals with
   | .some uni_res =>
+      dbg_trace s!"foudn uni {repr uni_res}"
       match integrate_uni? st.forw2 st.ltx_handler uni_res st.back.bt with
       | .some (nbt, slved) =>
          let nb := integrate_uni_full st.back nbt slved
-         {st with back := nb}
-      | _ => sorry
-  | _ => sorry
+         .some {st with back := nb}
+      | _ =>
+        dbg_trace "unification didn't propagate, proceeding"
+        TryStep fctx  premises st
+  | _ =>
+    dbg_trace "no unification of goals and ltx, proceeding"
+    TryStep fctx  premises st
+
+
+partial def search (fuel : Nat ) (fctx : FixCtx) (premises : List miniPermiseDict) (st : SearchState) : Option SearchState :=
+  dbg_trace s!"fuel {fuel}"
+  if fuel == 0 || st.back.active_goals.isEmpty
+  then .some st
+  else
+    match search_step fctx premises st with
+    | .some more => search (fuel - 1) fctx premises more
+    | _ => .none

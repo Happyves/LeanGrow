@@ -12,7 +12,15 @@ open Lean Elab Meta Command Tactic
 
 
 def init_FixCtx (env : Environment) (init_gnodeTypes : Array CExpr) : FixCtx :=
-  let T := env.constants.fold (fun sofar name info => sofar.insert name.toString (ConstantInfo.toCstInfo env name info)) CTrie.empty
+  --let T := env.constants.fold (fun sofar name info => sofar.insert name.toString (ConstantInfo.toCstInfo env name info)) CTrie.empty
+  let modules := env.header.moduleNames
+  let T := env.constants.map₁.fold
+    (fun sofar name info =>
+      if (Name.isPrefixOf `Init modules[env.const2ModIdx[name].get! (α := Nat)]!) || (Name.isPrefixOf `LeanGrow.F.Prototypes.MarkOne.TestTypes modules[env.const2ModIdx[name].get! (α := Nat)]!)
+      then sofar.insert name.toString (ConstantInfo.toCstInfo env name info)
+      else sofar
+      )
+    CTrie.empty
   let handler := fun n : Nat => (n / init_gnodeTypes.size, n % init_gnodeTypes.size)
   ⟨[init_gnodeTypes], handler, [], .none, T⟩
 
@@ -46,18 +54,39 @@ def Names_to_thmData (env : Environment) (L : List Name) : List miniPermiseDict 
   (L.map (Name_to_thmData env)).reduceOption
 
 
-#exit
 
-def LCtx_to_locPermises (ctx : LocalContext) : :=
-  let cctx := ctx.decls.toList.tail
-  let mkHyps (cctx : List (Option LocalDecl)) : List Expr :=
-    cctx.reduceOption.map LocalDecl.type
+def LCtx_to_ltx_and_goal (ctx : LocalContext) : List (Nat × CExpr) × CExpr :=
+  let cctx := ctx.decls.toList.head! -- should be thm type
+  match cctx with
+  | .none => ([], .failed)
+  | .some self =>
+      let (hs,g) := self.type.getHypsGoal
+      let (Hs,G) := ThmType_ToDAG hs hs.length g
+      (Hs.map (fun (a,b,_) => (a,b)), G.1)
 
-#exit
 
-elab "grow" "with" "[" prem:ident,* "]" : tactic => do
+
+--#exit
+
+elab "grow" : tactic => do
   let ref ← getRef
-  let env ← getEnv
-  let pre_premi := prem.getElems.map TSyntax.getId
+  let dEnv ← simpleImportModules #[`LeanGrow.F.Prototypes.MarkOne.TestTypes]
   Elab.Tactic.withMainContext do
-    let ltx ←  getLCtx
+    let Ltx ←  getLCtx
+
+    let (ltx, goal) := LCtx_to_ltx_and_goal Ltx
+    let forw2 := ltx.foldl
+        (fun sofar (idx,exp) => PageingSet sofar (fun x => (x / 42, x % 42)) 42 (.failed) idx exp)
+        []
+    let fctx := init_FixCtx dEnv (ltx.map Prod.snd).toArray
+    --
+    let premises :=( Names_to_thmData dEnv [`myAdd_zero, `Eq.trans])--.reverse
+    let st : SearchState := ⟨⟨0,0,[(0,goal)], .ofGoal 0 goal ⟩, ltx, forw2, (fun x => (x / 42, x % 42)), ltx.length⟩
+    --logInfoAt ref s!"{repr premises}"
+    let res := search 10 fctx  premises st
+    match res with
+    | .none => logInfoAt ref "nope"
+    | .some res! => logInfoAt ref s!"Recovered : {repr res!.back.bt}"
+
+
+#check Eq.trans

@@ -49,7 +49,7 @@ structure cRecursorRule where
 deriving Inhabited, BEq, Repr
 
 def RecursorRule.tocRecursorRule : RecursorRule → cRecursorRule
-| .mk c n rhs => .mk c n rhs.toCExprF
+| .mk c n rhs => .mk c n rhs.toCExpr
 
 
 
@@ -145,15 +145,17 @@ def isStructureLike! (env : Environment) (constName : Name) : Option (Name × Co
 
 def ConstantInfo.toCstInfo (env : Environment) (n : Name) (i : ConstantInfo) : CstInfo :=
   let rec main :  ConstantInfo → CstInfo
-    | .axiomInfo v => .noVal v.levelParams v.type.toCExprF
-    | .defnInfo v | .thmInfo v | .opaqueInfo v => .wVal v.levelParams v.type.toCExprF v.value.toCExprF
-    | .quotInfo v => .quot v.levelParams v.type.toCExprF v
-    | .inductInfo v => .indu v.levelParams v.type.toCExprF v
-    | .ctorInfo v => .ctor v.levelParams v.type.toCExprF v
-    | .recInfo v => .recu v.levelParams v.type.toCExprF (RecursorVal.tocRecursorVal v)
+    | .axiomInfo v => .noVal v.levelParams v.type.toCExpr
+    | .defnInfo v | .thmInfo v | .opaqueInfo v => .wVal v.levelParams v.type.toCExpr v.value.toCExpr
+    | .quotInfo v => .quot v.levelParams v.type.toCExpr v
+    | .inductInfo v => .indu v.levelParams v.type.toCExpr v
+    | .ctorInfo v => .ctor v.levelParams v.type.toCExpr v
+    | .recInfo v => .recu v.levelParams v.type.toCExpr (RecursorVal.tocRecursorVal v)
   match isStructureLike! env n with
-  | .some (c,v) => .struc i.levelParams i.type.toCExprF c v
+  | .some (c,v) => .struc i.levelParams i.type.toCExpr c v
   | .none =>
       match Lean.Meta.getMatcherInfoCore? env n with
-      | .some mi => .mat i.levelParams i.type.toCExprF i.value!.toCExprF mi
+      | .some mi => .mat i.levelParams i.type.toCExpr i.value!.toCExpr mi
       | .none => main i
+
+-- didn't use toCExprF cause it causeed overflow ... :((((
