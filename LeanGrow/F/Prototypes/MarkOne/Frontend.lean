@@ -5,6 +5,7 @@ import LeanGrow.F.Utils.Expr.GetHyps
 import LeanGrow.F.Data.BuildDAG.ofTypeExpr
 import LeanGrow.F.Data.BuildDAG.SinksFirst
 import LeanGrow.F.Data.Unification.EmbedRawWInferWUnis
+import LeanGrow.F.Prototypes.MarkOne.Search
 
 open Lean Elab Meta Command Tactic
 
@@ -21,11 +22,6 @@ def simpleImportModules (imp : Array Name) : IO Environment :=
 
 
 
-structure miniPermiseDict where
-  name : Name
-  data : Array EmbedData
-  order : Array Nat
-  goal : CExpr
 
 def Name_to_thmData (env : Environment) (n : Name) : Option miniPermiseDict :=
   let rec mkEmbD : List (ℕ × CExpr × Bool × List ℕ) → (Array EmbedData × Array Nat)
@@ -45,6 +41,10 @@ def Name_to_thmData (env : Environment) (n : Name) : Option miniPermiseDict :=
       let HS := SinksFirst Hs
       let (embD, orda) := mkEmbD HS
       .some ⟨n,embD,orda,G.1⟩
+
+def Names_to_thmData (env : Environment) (L : List Name) : List miniPermiseDict :=
+  (L.map (Name_to_thmData env)).reduceOption
+
 
 #exit
 

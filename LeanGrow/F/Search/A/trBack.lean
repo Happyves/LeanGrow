@@ -1,6 +1,6 @@
 
 import LeanGrow.F.Search.A.trTypes
-import LeanGrow.F.Data.Unification.UnifyForBack
+import LeanGrow.F.Data.Unification.UnifyForBackWUnis
 import LeanGrow.F.Utils.Array
 
 open Lean
@@ -18,12 +18,12 @@ Example of le_trans aplication : a and c get assigned, and we should propagate
 this to the types of the hypotheses a ≤ b and b ≤ c
 -/
 def propagate_lnode_and_tag (thm_data : Array EmbedData) (backwardId : Nat)
-  (matchData : Array (Option NodeExpr)) : List (Nat × CExpr) × List (Nat × CExpr) :=
+  (matchData : Array (Option CExpr)) : List (Nat × CExpr) × List (Nat × CExpr) :=
   let (assigned, toFix) : List (Nat × CExpr) × List (Nat × CExpr) :=
     (matchData.foldl
     (fun (i,a,f) as? =>
         match as? with
-        | .some ne => (i+1, (i, NodeExpr.toCExpr ne) :: a, f)
+        | .some ne => (i+1, (i, ne) :: a, f)
             -- may produce large terms when lnode was matched to a big expression
         | _ => (i+1, a, (i, (thm_data.get! i).cexpr) :: f)
     )
@@ -207,7 +207,8 @@ def propagate_uni_assign_step
                     let gt := (ltx.get! gp).get! gi
                     match CExpr.MatchAssignSolutions' gt type with
                     | .none => .none
-                    | .some res => .some (.ofAssign (.gnode gidx o), res, gid :: sofar.solvedGoals)
+                    | .some res => .some (.ofAssign (.gnode gidx o), res.1, gid :: sofar.solvedGoals)
+                      -- fix ↑ from passing from Data.Unification.UnifyForBack to Data.Unification.UnifyForBackWUnis
                 | _ =>
                     -- no checks
                     .some (.ofAssign guni, [], gid :: sofar.solvedGoals)

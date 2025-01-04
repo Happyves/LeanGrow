@@ -3,7 +3,7 @@ import LeanGrow.F.Data.Unification.LevelsUnify
 open Lean
 
 
-def List.assignOrFail [BEq α] (A? : Option (List (Nat × α))) (i : Nat) (val : α) : Option (List (Nat × α)) :=
+def List.assignOrFailLOCALuni [BEq α] (A? : Option (List (Nat × α))) (i : Nat) (val : α) : Option (List (Nat × α)) :=
       match A? with
       | .some A =>
             match A.find? (fun x => (Prod.fst x) == i) with
@@ -18,7 +18,7 @@ inductive SolNodeExpr where
 deriving Inhabited, BEq, Repr
 
 
-def List.assignOrFail' [BEq α] (A? : Option (List (Nat × Nat × α))) (i j : Nat) (val : α) : Option (List (Nat × Nat × α)) :=
+def List.assignOrFailLOCALuni' [BEq α] (A? : Option (List (Nat × Nat × α))) (i j : Nat) (val : α) : Option (List (Nat × Nat × α)) :=
       match A? with
       | .some A =>
             match A.find? (fun x => x.1 == i && x.2.1 == j) with
@@ -40,8 +40,8 @@ partial def CExpr.MatchAssignSolutions (s g : CExpr) : Option (List (Nat × Nat 
                   | _, _ => .none
             | nx :: L =>
                   match nx with
-                  | (.gnode i _, .lnode j _ (.some t)) => let Aup := List.assignOrFail' Aout t j (.ofGNode i) ; go true Aup Uout L
-                  | (e, .lnode j _ (.some t)) => let Aup := List.assignOrFail' Aout t j (.ofCExpr e) ; go true Aup Uout L
+                  | (.gnode i _, .lnode j _ (.some t)) => let Aup := List.assignOrFailLOCALuni' Aout t j (.ofGNode i) ; go true Aup Uout L
+                  | (e, .lnode j _ (.some t)) => let Aup := List.assignOrFailLOCALuni' Aout t j (.ofCExpr e) ; go true Aup Uout L
                   | (.gnode i _, .gnode j _) => go (i == j) Aout Uout L
                   | (.bvar i , .bvar j) => go (i == j) Aout Uout L
                   | (.sort a, .sort b) => let us := univsMerge Uout (univsUnify a.normalize b.normalize) ; go us.isSome Aout us L
@@ -74,8 +74,8 @@ partial def CExpr.MatchAssignSolutions' (s g : CExpr) : Option (List (Nat × Nat
                   | _, _ => .none
             | nx :: L =>
                   match nx with
-                  | (.gnode i o, .lnode j _ (.some t)) => let Aup := List.assignOrFail' Aout t j (.gnode i o) ; go true Aup Uout L
-                  | (e, .lnode j _ (.some t)) => let Aup := List.assignOrFail' Aout t j (e) ; go true Aup Uout L
+                  | (.gnode i o, .lnode j _ (.some t)) => let Aup := List.assignOrFailLOCALuni' Aout t j (.gnode i o) ; go true Aup Uout L
+                  | (e, .lnode j _ (.some t)) => let Aup := List.assignOrFailLOCALuni' Aout t j (e) ; go true Aup Uout L
                   | (.gnode i _, .gnode j _) => go (i == j) Aout Uout L
                   | (.bvar i , .bvar j) => go (i == j) Aout Uout L
                   | (.sort a, .sort b) => let us := univsMerge Uout (univsUnify a.normalize b.normalize) ; go us.isSome Aout us L

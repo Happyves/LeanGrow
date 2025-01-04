@@ -12,7 +12,7 @@ import LeanGrow.F.Data.CExpr.ReduceInferMuggle.Control
 
 
 
-def merge_if_compatible (embed : Array (Option CExpr)) (assignOutput : List (Nat × CExpr)) :
+def merge_if_compatibleG (embed : Array (Option CExpr)) (assignOutput : List (Nat × CExpr)) :
   Option (Array (Option CExpr) × List Nat) :=
   let rec go (embed : Array (Option CExpr)) (toPropagate : List Nat) : List (Nat × CExpr) → Option (Array (Option CExpr) × List Nat)
     | [] => .some (embed, toPropagate)
@@ -23,7 +23,7 @@ def merge_if_compatible (embed : Array (Option CExpr)) (assignOutput : List (Nat
         | .some i => if i == l then go embed toPropagate rest else .none
   with_lTrace [TraceFlags.zero] in
   let res := go embed [] assignOutput
-  lTrace TraceFlags.zero & s!"Running merge_if_compatible.\nOn embed:{repr embed}\nOn assignOuput:{repr assignOutput}\nReturn:{repr res}\n\n" & res
+  lTrace TraceFlags.zero & s!"Running merge_if_compatibleG.\nOn embed:{repr embed}\nOn assignOuput:{repr assignOutput}\nReturn:{repr res}\n\n" & res
 
 open Lean
 
@@ -38,12 +38,12 @@ def propagate_goal (fctx : FixCtx)
         match CExpr.MatchAssignLFFCU todo_thm_type cet with
         | .none => .none
         | .some (l,u) =>
-              let exp := merge_if_compatible embedSofar l
+              let exp := merge_if_compatibleG embedSofar l
               let us := univsMerge (.some paramsSofar) (.some u)
               match exp, us with
               | .some exp', .some us' => .some (exp',us')
               | _, _ => .none
-  with_lTrace [TraceFlags.zero] in
+  with_lTrace TraceFlags.off in
   lTrace TraceFlags.zero & s!"Ran embed_next_raw.\nOn embed:{repr embedSofar}\nOn todo id {todo_idx} with cexpr {repr todo_thm_type}\nReturn:{repr res}\n\n" & res
 
 
@@ -58,7 +58,7 @@ partial def match_goal (fctx : FixCtx)
             match propagate_goal fctx embed paramsSofar n nd.cexpr with
             | .none => .none
             | .some ((emb, toFront), us) => gop emb us (toFront ++ l)
-    with_lTrace [TraceFlags.zero] in
+    with_lTrace TraceFlags.off in
     match CExpr.MatchAssignLFFCU thm_goal real_goal with -- real_goal is a cexpr wrt. ltx
     | .none => .none
     | .some (l, u) =>
