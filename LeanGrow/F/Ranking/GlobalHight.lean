@@ -211,3 +211,47 @@ private def test_s1 : CoreM Unit := do
   IO.print (CTrie.toList res)
 
 -- #eval test_s1
+
+/-
+Idea : for constants from a modult with prefix "Mathlib.Tactic", unfold them (i.e. replace by value)
+
+-/
+
+
+private partial def step3 (env : Environment) (heights : CTrie Nat) (n : Name) : CTrie Nat :=
+  let modules := env.header.moduleNames --.map (N.isPrefixOf ·)
+  let rec delta_tactics (good : List Name) : List Name → List Name
+    | [] => good
+    | x :: xs =>
+        if Name.isPrefixOf `Mathlib.Tactic modules[env.const2ModIdx[x].get! (α := Nat)]!
+        then
+          let V := (env.constants.find! x).value! -- tactics add no axioms ?
+          delta_tactics good (((Expr.getConstNamesF V).dedup.filter (fun y => ConstantInfo.isThmOrAx (env.constants.find! y))) ++ xs)
+        else
+          delta_tactics (x :: good) xs
+  let rec go (heights : CTrie Nat) (stack : List Nat) : List Instr → CTrie Nat
+    | .comp n :: more => --dbg_trace s!"comp {n} ; stack {stack}"
+          match heights.sorted_find? n.toString with
+          | .some H => go heights (H :: stack) more
+          | .none =>
+              match (env.constants.find! n).value? with
+              | .none => go (heights.sorted_insert n.toString 0) (0 :: stack) more
+              | .some V =>
+                  let csts := delta_tactics [] ((Expr.getConstNamesF V).dedup.filter (fun x => ConstantInfo.isThmOrAx (env.constants.find! x)))
+                  match csts with
+                  | [] => go (heights.sorted_insert n.toString 0) (0 :: stack) more
+                  | _ => go heights stack ((csts.map Instr.comp) ++ ( Instr.store n csts.length :: more))
+    | .store n as :: more => --dbg_trace s!"store {n} {as} ; stack {stack}"
+        match (stack.take as).maximum? with
+        | .none => {} -- shouldn't
+        | .some H => go (heights.sorted_insert n.toString (H+1)) ((H+1) :: (stack.drop as)) more
+    | [] => heights
+  go heights [] [.comp n]
+
+
+private def test_s2 : CoreM Unit := do
+  let res := step3 (← getEnv) {} `List.get_reverse
+  IO.print (CTrie.toList res)
+
+-- #eval test_s2
+-- no more Omega :)
