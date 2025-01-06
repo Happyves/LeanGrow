@@ -67,3 +67,52 @@ partial def query (inter : β → β → Bool) (Q : β) (T : SetTrie α β) : Li
         | .node t c => if inter t Q then go done (c ++ more) else go done more
         | .leaf a => go (a :: done) more
   go [] [T]
+
+/-- Ignores entries with key of number (not actual key size ; example Trie size) ≤ then depth-/
+partial def queryWC (inter : β → β → Bool) (Q : β) (depth : Nat) (T : SetTrie α β) : List α :=
+  let rec go (done : List α) : List (Nat × SetTrie α β) → List α
+    | [] => done
+    | (nxd,nx) :: more =>
+        match nx with
+        | .root c => go done ((c.map (fun x => (1,x))) ++ more)
+        | .node t c => if inter t Q then go done ((c.map (fun x => (nxd.succ,x))) ++ more) else go done more
+        | .leaf a => if nxd > depth then go (a :: done) more else go done more
+  go [] [(0,T)]
+
+partial def queryDeepest [Inhabited α] (inter : β → β → Bool) (Q : β) (T : SetTrie α β) : α :=
+  let rec go (depth : Nat) (done : α) : List (Nat × SetTrie α β) → α
+    | [] => done
+    | (nxd,nx) :: more =>
+        match nx with
+        | .root c => go 0 done ((c.map (fun x => (1,x))) ++ more)
+        | .node t c => if inter t Q then go depth done ((c.map (fun x => (nxd.succ,x))) ++ more) else go depth done more
+        | .leaf a => if nxd > depth then go nxd a more else go depth done more
+  go 0 default [(0,T)]
+
+partial def queryDeepests [Inhabited α] (inter : β → β → Bool) (Q : β) (T : SetTrie α β) : List α :=
+  let rec go (depth : Nat) (done : List α) : List (Nat × SetTrie α β) → List α
+    | [] => done
+    | (nxd,nx) :: more =>
+        match nx with
+        | .root c => go 0 done ((c.map (fun x => (1,x))) ++ more)
+        | .node t c => if inter t Q then go depth done ((c.map (fun x => (nxd.succ,x))) ++ more) else go depth done more
+        | .leaf a =>
+            match compare nxd depth with
+            | .gt => go nxd [a] more
+            | .eq => go depth (a :: done) more
+            | _ => go depth done more
+  go 0 default [(0,T)]
+
+partial def queryHeaviests [Inhabited α] (inter : β → β → Bool) (weight : β → Nat) (Q : β) (T : SetTrie α β) : List α :=
+  let rec go (depth : Nat) (done : List α) : List (Nat × SetTrie α β) → List α
+    | [] => done
+    | (nxd,nx) :: more =>
+        match nx with
+        | .root c => go 0 done ((c.map (fun x => (0,x))) ++ more)
+        | .node t c => if inter t Q then go depth done ((c.map (fun x => (nxd + weight t,x))) ++ more) else go depth done more
+        | .leaf a =>
+            match compare nxd depth with
+            | .gt => go nxd [a] more
+            | .eq => go depth (a :: done) more
+            | _ => go depth done more
+  go 0 default [(0,T)]

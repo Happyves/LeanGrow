@@ -23,6 +23,12 @@ def SetTrieT.make [Inhabited α] (l : List (CTrie Unit)) : SetTrieT α :=
 def SetTrieT.query (Q : CTrie Unit) (T : SetTrieT α) : List α :=
   SetTrie.query (fun t Q => CTrie.CountCommon t Q = CTrie.size t) Q T
 
+def SetTrieT.queryDeepests [Inhabited α] (Q : CTrie Unit) (T : SetTrieT α) : List α :=
+  SetTrie.queryDeepests (fun t Q => CTrie.CountCommon t Q = CTrie.size t) Q T
+
+def SetTrieT.queryHeaviests [Inhabited α] (Q : CTrie Unit) (T : SetTrieT α) : List α :=
+  SetTrie.queryHeaviests (fun t Q => CTrie.CountCommon t Q = CTrie.size t) CTrie.size Q T
+
 
 -- # CExprTrie
 
@@ -37,7 +43,16 @@ def SetTrieC.make [Inhabited α] (l : List CExprTrie) : SetTrieC α :=
 def SetTrieC.query (Q : CExprTrie) (T : SetTrieC α) : List α :=
   SetTrie.query CExprTrie.contains Q T
 
+def SetTrieC.queryDeepests [Inhabited α] (Q : CExprTrie) (T : SetTrieC α) : List α :=
+  SetTrie.queryDeepests CExprTrie.contains Q T
 
+def SetTrieC.queryHeaviests [Inhabited α] (Q : CExprTrie) (T : SetTrieC α) : List α :=
+  SetTrie.queryHeaviests CExprTrie.contains CExprTrie.sizeSafe Q T
+  -- inverstigate if CExprTrie preserve the fact that indices should be interval
+  -- starting at 1 or 0, so that we may use CExprTrie.sizeCanon here
+
+instance (α : Type _) : Inhabited (SetTrieC α) where
+  default := (default : SetTrie α CExprTrie)
 
 -- # Lists of nats
 

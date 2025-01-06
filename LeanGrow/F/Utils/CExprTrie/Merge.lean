@@ -100,3 +100,16 @@ def find_max (cand : List (CExpr × Nat)) : Option (CExpr × Nat) :=
     | [] => if good? then .some (ce, max) else .none
     | nx :: more => if nx.2 > max then go true nx.2 nx.1 more else go true max ce more
   go false 0 .failed cand
+
+/-- Assumes indices from interval from 1 to N, so that N is the size-/
+def sizeCanon (T : CExprTrie) : Nat := T.findMaxIdx
+
+def sizeSafe (T : CExprTrie) : Nat :=
+  let ind := CExprTrie.getIndices T
+  let rec count (c : Nat) (seen : List Nat) : List Nat → Nat
+    | [] => c
+    | x :: xs =>
+        if seen.orderedContains (· ≤ ·) x
+        then count c seen xs
+        else count (c+1) (seen.orderedInsertOrLeave (· ≤ ·) x) xs
+  count 0 [] ind
