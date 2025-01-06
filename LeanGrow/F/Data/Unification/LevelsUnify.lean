@@ -14,7 +14,7 @@ def List.assignOrFailN [BEq α] (A? : Option (List (Name × α))) (i : Name) (va
 
 #check Level.normalize
 -- again, unification isn't up to reductions here
-partial def univsUnify (thm query : Level) : Option (List (Name × Level)) :=
+partial def univsUnify (query thm : Level) : Option (List (Name × Level)) :=
       let rec go (go? : Bool) (Aout : Option (List (Name × Level))) (todo : List (Level × Level)) : Option (List (Name × Level)) :=
             if go?
             then

@@ -216,7 +216,8 @@ def propagate_uni_assign_step
     | _ => .none
   let S? := BackTree.modifyAtBackId_wRetrieve ([],[]) tag mod sofar.tree
   match S? with
-  | .some (T,next) => .some ⟨T, next.1 ++ sofar.todo, (tag, idx, guni) :: sofar.updated, next.2⟩
+  | .some (T,next) => .some ⟨T, next.1 ++ sofar.todo, (tag, idx, guni) :: sofar.updated,
+        next.2 ++ sofar.solvedGoals⟩ -- ???
   | _ => .none
 
 

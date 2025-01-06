@@ -148,10 +148,10 @@ partial def CExpr.MatchAssignLFFCU (l r : CExpr) : Option (List (Nat Ã— CExpr) Ã
                   match nx with
                   | (.lnode i _ .none, e) => let Aup := List.assignOrFail Aout i e ; go true Aup Uout L
                   | (.bvar i , .bvar j) => go (i == j) Aout Uout L
-                  | (.sort a, .sort b) => let us := univsMerge Uout (univsUnify a.normalize b.normalize) ; go us.isSome Aout us L
+                  | (.sort a, .sort b) => let us := univsMerge Uout (univsUnify b.normalize a.normalize) ; go us.isSome Aout us L
                   | (.const n l, .const n' l') =>
-                        if (n == n')
-                        then let us := makeUniAssigns l l' ; go us.isSome Aout us L
+                        if (n == n') -- big confusion with CExpr.MatchAssignSolutions' in UnifyForBackWUnis, as thm and query order changed, as ecidence in the use in match_goal
+                        then let us := makeUniAssigns l' l ; go us.isSome Aout us L
                         else go false Aout .none L
                   | (.app f a, .app f' a') => go true Aout Uout ((f,f') :: (a,a') :: L)
                   | (.lam _ t b _, .lam _ t' b' _) => go true Aout Uout ((t,t') :: (b,b') :: L)

@@ -112,6 +112,9 @@ partial def search_step (premises : List miniPermiseDict) (st : SearchState) : O
     | _,_ => .none
 
   match uni_ltx_activeGoals st.forw st.back.active_goals.reverse with
+    -- .reverse is here to make test look good ; in practice we need to find a much more durrable
+    -- solution here : we unify b after an application of Eq.trans with something from the context,
+    -- when in fact we want the h from context to unify, settling b ...
   | .some uni_res =>
       dbg_trace s!"foudn uni {repr uni_res}"
       match integrate_uni? st.forw2 st.ltx_handler uni_res st.back.bt with
@@ -134,3 +137,10 @@ partial def search (fuel : Nat ) (premises : List miniPermiseDict) (st : SearchS
     match search_step premises st with
     | .some more => search (fuel - 1) premises more
     | _ => .none
+
+
+/-
+State of things:
+- Unification integration seems to not assign goals, so that we loop
+  on performing the same unification over and over again ...
+-/

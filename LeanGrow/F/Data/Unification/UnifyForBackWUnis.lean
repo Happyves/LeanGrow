@@ -81,7 +81,7 @@ partial def CExpr.MatchAssignSolutions' (s g : CExpr) : Option (List (Nat × Nat
                   | (.sort a, .sort b) => let us := univsMerge Uout (univsUnify a.normalize b.normalize) ; go us.isSome Aout us L
                   | (.const n l, .const n' l') =>
                         if (n == n')
-                        then let us := makeUniAssigns l l' ; go us.isSome Aout us L
+                        then let us := makeUniAssigns l l' ; dbg_trace s!"Universe assignements at constant {n} : {us}"; go us.isSome Aout us L
                         else go false Aout .none L
                   | (.app f a, .app f' a') => go true Aout Uout ((f,f') :: (a,a') :: L)
                   | (.lam _ t b _, .lam _ t' b' _) => go true Aout Uout ((t,t') :: (b,b') :: L)
