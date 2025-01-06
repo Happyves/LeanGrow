@@ -21,3 +21,9 @@ elab "test" : command => do
 
 --test
 -- crashed infoview du to size ??
+
+example (r : myNat) (h : myAdd .z (myAdd .z r) = (myAdd .z r)) : myAdd .z (myAdd .z r) = r := by
+  grow
+  sorry
+
+open Lean

@@ -314,7 +314,7 @@ def CExpr.mkApp (h : CExpr) (args : List CExpr) : CExpr :=
 
 def CExpr.mkAppA (h : CExpr) (args : Array CExpr) : CExpr :=
       let rec go (sofar : CExpr) : Nat → CExpr
-            | 0 => (.app sofar (args.get! (args.size - 1)))
+            | 0 => sofar
             | n+1 => go (.app sofar (args.get! (args.size - 1 - n))) n
       go h args.size
 

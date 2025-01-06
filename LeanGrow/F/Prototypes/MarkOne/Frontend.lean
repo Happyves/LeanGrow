@@ -55,6 +55,16 @@ def Names_to_thmData (env : Environment) (L : List Name) : List miniPermiseDict 
 
 
 
+
+def Gnodify : CExpr → CExpr
+  | .app f a => .app (Gnodify f) (Gnodify a)
+  | .lam n f a i => .lam n (Gnodify f) (Gnodify a) i
+  | .forallE n f a i => .forallE n (Gnodify f) (Gnodify a) i
+  | .letE n f a z i => .letE n (Gnodify f) (Gnodify a) (Gnodify z) i
+  | .proj n i e => .proj n i (Gnodify e)
+  | .lnode i o _ => .gnode i o
+  | x => x
+
 def LCtx_to_ltx_and_goal (ctx : LocalContext) : List (Nat × CExpr) × CExpr :=
   let cctx := ctx.decls.toList.head! -- should be thm type
   match cctx with
@@ -62,11 +72,10 @@ def LCtx_to_ltx_and_goal (ctx : LocalContext) : List (Nat × CExpr) × CExpr :=
   | .some self =>
       let (hs,g) := self.type.getHypsGoal
       let (Hs,G) := ThmType_ToDAG hs hs.length g
-      (Hs.map (fun (a,b,_) => (a,b)), G.1)
+      (Hs.map (fun (a,b,_) => (a,Gnodify b)), Gnodify G.1)
 
 
 
---#exit
 
 elab "grow" : tactic => do
   let ref ← getRef
@@ -81,12 +90,12 @@ elab "grow" : tactic => do
     let fctx := init_FixCtx dEnv (ltx.map Prod.snd).toArray
     --
     let premises :=( Names_to_thmData dEnv [`myAdd_zero, `Eq.trans])--.reverse
-    let st : SearchState := ⟨⟨0,0,[(0,goal)], .ofGoal 0 goal ⟩, ltx, forw2, (fun x => (x / 42, x % 42)), ltx.length⟩
+    let st : SearchState := ⟨⟨0,0,[(0,goal)], .ofGoal 0 goal ⟩, ltx, forw2, (fun x => (x / 42, x % 42)), ltx.length, fctx⟩
     --logInfoAt ref s!"{repr premises}"
-    let res := search 10 fctx  premises st
+    let res := search 10  premises st
     match res with
     | .none => logInfoAt ref "nope"
-    | .some res! => logInfoAt ref s!"Recovered : {repr res!.back.bt}"
+    | .some res! => logInfoAt ref s!"Recovered : {repr res!.back.bt.assemble}"
 
 
 #check Eq.trans

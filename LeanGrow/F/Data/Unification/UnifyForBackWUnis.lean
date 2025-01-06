@@ -74,8 +74,8 @@ partial def CExpr.MatchAssignSolutions' (s g : CExpr) : Option (List (Nat × Nat
                   | _, _ => .none
             | nx :: L =>
                   match nx with
-                  | (.gnode i o, .lnode j _ (.some t)) => let Aup := List.assignOrFailLOCALuni' Aout t j (.gnode i o) ; go true Aup Uout L
-                  | (e, .lnode j _ (.some t)) => let Aup := List.assignOrFailLOCALuni' Aout t j (e) ; go true Aup Uout L
+                  | (.gnode i o, .lnode j _ (.some t)) => let Aup := List.assignOrFailLOCALuni' Aout t j (.gnode i o) ; dbg_trace s!"MatchAssignSolutions' match g {i} and l {j}" ; go true Aup Uout L
+                  | (e, .lnode j _ (.some t)) => let Aup := List.assignOrFailLOCALuni' Aout t j (e) ; dbg_trace s!"MatchAssignSolutions' match l {j} and expr {repr e}" ; go true Aup Uout L
                   | (.gnode i _, .gnode j _) => go (i == j) Aout Uout L
                   | (.bvar i , .bvar j) => go (i == j) Aout Uout L
                   | (.sort a, .sort b) => let us := univsMerge Uout (univsUnify a.normalize b.normalize) ; go us.isSome Aout us L

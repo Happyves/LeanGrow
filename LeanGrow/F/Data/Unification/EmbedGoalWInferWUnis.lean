@@ -35,7 +35,7 @@ def propagate_goal (fctx : FixCtx)
     | .none => .none
     | .some ce =>
         let cet := CExpr.inferType fctx ce
-        dbg_trace s!"{repr cet}"
+        dbg_trace s!"{todo_idx} of val {repr ce} of type {repr cet}"
         match CExpr.MatchAssignLFFCU todo_thm_type cet with
         | .none => .none
         | .some (l,u) =>
