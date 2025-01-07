@@ -194,6 +194,7 @@ def propagate_uni_assign_step
     | .ofBack _ n bdirs gdirs args =>
           match args.get! idx with
           | .ofAssign ce =>
+                dbg_trace s!"Uni-propa test with assign {repr ce}"
                 if ce == guni -- we could unify, but we might get .lnode _ _ = .lnode _ _ which we can't handle ? or can we ?
                 -- ↑ may actually become a problem once we unify under reductions, as == will also have be up to reductions
                 then
@@ -201,22 +202,26 @@ def propagate_uni_assign_step
                 else
                   .none
           | .ofGoal gid type =>
+                dbg_trace s!"Uni-propa test with goal id {gid} type {repr type}"
                 match guni with
                 | .gnode gidx o =>
                     let (gp,gi) := ltx_handler gidx
                     let gt := (ltx.get! gp).get! gi
                     match CExpr.MatchAssignSolutions' gt type with
-                    | .none => .none
-                    | .some res => .some (.ofAssign (.gnode gidx o), res.1, gid :: sofar.solvedGoals)
+                    | .none => dbg_trace s!"Uni-propa test none" ; .none
+                    | .some res =>
+                        dbg_trace s!"Uni-propa test with gid {gid}"
+                        .some ((.ofBack tag n bdirs gdirs (args.set! idx (.ofAssign (.gnode gidx o)))), res.1, gid :: sofar.solvedGoals)
                       -- fix ↑ from passing from Data.Unification.UnifyForBack to Data.Unification.UnifyForBackWUnis
                 | _ =>
                     -- no checks
-                    .some (.ofAssign guni, [], gid :: sofar.solvedGoals)
+                    dbg_trace s!"Uni-propa test to assign because gunni {repr guni}"
+                    .some ((.ofBack tag n bdirs gdirs (args.set! idx (.ofAssign guni))), [], gid :: sofar.solvedGoals)
           | _ => .none
     | _ => .none
   let S? := BackTree.modifyAtBackId_wRetrieve ([],[]) tag mod sofar.tree
   match S? with
-  | .some (T,next) => .some ⟨T, next.1 ++ sofar.todo, (tag, idx, guni) :: sofar.updated,
+  | .some (T,next) => dbg_trace "propagate_uni_assign_step : {repr next}" ; .some ⟨T, next.1 ++ sofar.todo, (tag, idx, guni) :: sofar.updated,
         next.2 ++ sofar.solvedGoals⟩ -- ???
   | _ => .none
 
@@ -231,6 +236,7 @@ partial def propagate_uni_assign
       match on.todo with
       | [] => .some on
       | (tag,idx,guni) :: more =>
+          dbg_trace "propagate_uni_assign more : {repr more}"
           let step? := propagate_uni_assign_step tag idx guni ltx ltx_handler ⟨on.tree, more, on.updated, on.solvedGoals⟩
           match step? with
           | .none => .none
@@ -238,7 +244,7 @@ partial def propagate_uni_assign
     let res := go ⟨init_tree, init_uni, [], []⟩
     match res with
     | .none => .none
-    | .some s => .some (s.tree, s.updated, s.solvedGoals)
+    | .some s => dbg_trace s!"Call propagate_uni_assign return {repr s.updated} and {repr s.solvedGoals}" ; .some (s.tree, s.updated, s.solvedGoals)
 
 
 
@@ -336,17 +342,27 @@ partial def propagate_uni_assign_toGoalsAssigns
 def integrate_uni?
   (ltx : List (Array CExpr)) (ltx_handler : Nat → (Nat × Nat))
   (init_uni : List (Nat × Nat × CExpr))
-  (init_tree : BackTree) : Option (BackTree × List Nat) :=
+  (init_tree : BackTree) : Option (BackTree × List (Nat × Nat × CExpr) × List Nat) :=
+    dbg_trace "Call integrate_uni?"
     match propagate_uni_assign ltx ltx_handler init_uni init_tree with
     | .some (TA,A,G) =>
         let TD := derefrenceAssignedGoals G TA
         -- don't know if doing this always is a waste of time
         -- only becomes necessary if theres a lot of solved goals ?
         let TF := propagate_uni_assign_toGoalsAssigns A TD
-        (TF, G)
+        (TF, A, G)
     | .none => .none
 
 
 def integrate_uni_full
-  (now : BackState) (newTree : BackTree) (solved : List Nat) : BackState :=
-  {now with active_goals := now.active_goals.filter (fun x => !(solved.contains x.1)), bt := newTree}
+  (now : BackState) (newTree : BackTree) (updated : List (Nat × Nat × CExpr)) (solved : List Nat) : BackState :=
+  dbg_trace s!"new active goals {repr ((now.active_goals.filter (fun x => !(solved.contains x.1))).map (fun (id,g) => (id, porpagate_at_cexpr updated g)))}"
+  {now with active_goals := ((now.active_goals.filter (fun x => !(solved.contains x.1))).map (fun (id,g) => (id, porpagate_at_cexpr updated g))), bt := newTree}
+
+/-
+Very important aspect:
+right now, we're propagating assigned goals, but *not* assigned universes,
+that may very well show up in other parts of the expreesion and get affacted by
+this assignement
+
+-/

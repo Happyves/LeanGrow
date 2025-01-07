@@ -25,6 +25,7 @@ structure SearchState where
   ltx_handler : Nat → (Nat × Nat)
   forwID : Nat
   fctx : FixCtx
+  ltx_assemmbly : List (Nat × Name × Array CExpr) -- add universe levels
 deriving Inhabited--, Repr, BEq
 
 
@@ -62,14 +63,15 @@ def tryForWith (fctx : FixCtx) (prem : miniPermiseDict) (state : SearchState) : 
   match full_matcher_rawF {fctx with current := .some prem.data} prem.data prem.order state.forw with
   | [] => .none
   | opts =>
-      let rez := (opts.map (integrate_forward_raw · prem.goal)).filter (fun x => (state.forw.find? (fun y => y.2 == x)).isNone)
+      let rez := (opts.map (fun x => (integrate_forward_raw x prem.goal, (prem.name, x.embed.reduceOption)))).filter (fun x => (state.forw.find? (fun y => y.2 == x.1)).isNone)
       let sz := rez.length
-      let add_to_forw := List.zip ((List.range sz).map (· + state.forwID)) rez
+      let add_to_forw := List.zip ((List.range sz).map (· + state.forwID)) (rez.map Prod.fst)
+      let add_to_asm := List.zip ((List.range sz).map (· + state.forwID)) (rez.map Prod.snd)
       let newforw := add_to_forw ++ state.forw
       let newforw2 := add_to_forw.foldl
         (fun sofar (idx,exp) => PageingSet sofar state.ltx_handler 42 (.failed) idx exp)
         state.forw2
-      .some {state with forw := newforw, forw2 := newforw2, forwID := state.forwID + sz}
+      .some {state with forw := newforw, forw2 := newforw2, forwID := state.forwID + sz, ltx_assemmbly := add_to_asm ++ state.ltx_assemmbly}
 
 def tryFor (fctx : FixCtx) (prems : List miniPermiseDict) (state : SearchState) : Option SearchState :=
   let rec go : List miniPermiseDict → Option SearchState
@@ -99,14 +101,14 @@ def TryStep (prems : List miniPermiseDict) (state : SearchState) : Option Search
 
 
 partial def search_step (premises : List miniPermiseDict) (st : SearchState) : Option SearchState :=
-
-  let rec uni_ltx_activeGoals  (s g : List (Nat × CExpr)) : Option (List (Nat × Nat × CExpr)) :=
+  dbg_trace s!"Search step back {repr st.back}"
+  let rec uni_ltx_activeGoals  (s g : List (Nat × CExpr)) : Option (Nat × Nat × List (Nat × Nat × CExpr)) :=
     -- try to find one unification of ltx result and an active goal
     match s, g with
     | x :: xs, y :: _ =>
         dbg_trace s!"looking at {repr x.2} and {repr y.2}"
         match (CExpr.MatchAssignSolutions' x.2 y.2) with
-        | .some (res,_) => .some res
+        | .some (res,_) => .some (x.1,y.1,res)
         | .none => uni_ltx_activeGoals xs g
     | [], _ :: ys => uni_ltx_activeGoals st.forw ys
     | _,_ => .none
@@ -115,11 +117,12 @@ partial def search_step (premises : List miniPermiseDict) (st : SearchState) : O
     -- .reverse is here to make test look good ; in practice we need to find a much more durrable
     -- solution here : we unify b after an application of Eq.trans with something from the context,
     -- when in fact we want the h from context to unify, settling b ...
-  | .some uni_res =>
+  | .some (sol,gol,uni_res) =>
       dbg_trace s!"foudn uni {repr uni_res}"
-      match integrate_uni? st.forw2 st.ltx_handler uni_res st.back.bt with
-      | .some (nbt, slved) =>
-         let nb := integrate_uni_full st.back nbt slved
+      let uni_tree := BackTree.modifyAtGoalId gol (fun _ => .ofAssign (.gnode sol (.ofBvar 42))) st.back.bt
+      match integrate_uni? st.forw2 st.ltx_handler uni_res uni_tree with
+      | .some (nbt, updt, slved) =>
+         let nb := integrate_uni_full st.back nbt updt (gol :: slved)
          .some {st with back := nb}
       | _ =>
         dbg_trace "unification didn't propagate, proceeding"
