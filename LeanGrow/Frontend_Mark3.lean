@@ -102,7 +102,8 @@ set_option linter.unusedTactic false
 
 example (l : List ℕ) (a : ℕ) (h : a ∈ l) : insert a l = l :=
   by
-  grow
+  --have := List.sublists_concat l a
+  --grow
   sorry
 
 #check List.insert_pos

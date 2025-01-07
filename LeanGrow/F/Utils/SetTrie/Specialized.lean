@@ -39,6 +39,11 @@ def SetTrieC.make [Inhabited α] (l : List CExprTrie) : SetTrieC α :=
     CExprTrie.difference CExprTrie.find_max (fun x y =>  match CExprTrie.find? y x with | [] => .none | _ :: _ => .some ())
     CExprTrie.deleteCExpr (fun ce => CExprTrie.insert ce 1 .dead) l
 
+def SetTrieC.makeWVals [Inhabited α] (l : List (CExprTrie × α)) : SetTrieC α :=
+  SetTrie.makeWVals CExprTrie.dead CExprTrie.merge! CExprTrie.count CExprTrie.find_maxes
+    CExprTrie.difference CExprTrie.find_max (fun x y =>  match CExprTrie.find? y x with | [] => .none | _ :: _ => .some ())
+    CExprTrie.deleteCExpr (fun ce => CExprTrie.insert ce 1 .dead) l
+
 
 def SetTrieC.query (Q : CExprTrie) (T : SetTrieC α) : List α :=
   SetTrie.query CExprTrie.contains Q T
@@ -53,6 +58,15 @@ def SetTrieC.queryHeaviests [Inhabited α] (Q : CExprTrie) (T : SetTrieC α) : L
 
 instance (α : Type _) : Inhabited (SetTrieC α) where
   default := (default : SetTrie α CExprTrie)
+
+def SetTrieC.map (Q : CExprTrie) (T : SetTrieC α) (f : α → α) : SetTrieC α :=
+  SetTrie.map CExprTrie.contains Q T f
+
+def SetTrieC.mapWC (Q : CExprTrie) (depth : Nat) (T : SetTrieC α) (f : α → α) : SetTrieC α :=
+  SetTrie.mapWC CExprTrie.contains Q depth T f
+
+def SetTrieC.mapDeepest (Q : CExprTrie) (T : SetTrieC α) (f : α → α) : SetTrieC α :=
+  SetTrie.mapDeepest CExprTrie.contains Q T f
 
 -- # Lists of nats
 

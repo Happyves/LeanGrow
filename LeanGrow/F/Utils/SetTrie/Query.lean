@@ -116,3 +116,43 @@ partial def queryHeaviests [Inhabited α] (inter : β → β → Bool) (weight :
             | .eq => go depth (a :: done) more
             | _ => go depth done more
   go 0 default [(0,T)]
+
+partial def map (inter : β → β → Bool) (Q : β) (T : SetTrie α β) (f : α → α) : SetTrie α β :=
+  let rec go (T : SetTrie α β) : SetTrie α β := -- will overflow for sure
+    match T with
+    | .root c => .root (c.map go)
+    | .node t c => if inter t Q then .node t (c.map go) else T
+    | .leaf a => .leaf (f a)
+  go T
+
+partial def mapWC (inter : β → β → Bool) (Q : β) (depth : Nat) (T : SetTrie α β) (f : α → α) : SetTrie α β :=
+  let rec go (d : Nat) (T : SetTrie α β) : SetTrie α β := -- will overflow for sure
+    match T with
+    | .root c => .root (c.map (go (d+1)))
+    | .node t c => if inter t Q then .node t (c.map (go (d+1))) else T
+    | .leaf a => if d ≥ depth then .leaf (f a) else T
+  go 0 T
+
+partial def mapDeepest (inter : β → β → Bool) (Q : β) (T : SetTrie α β) (f : α → α) : SetTrie α β :=
+  let rec split (pos leafs neg : List (SetTrie α β))
+    : List (SetTrie α β) → (List (SetTrie α β) × List (SetTrie α β) × List (SetTrie α β))
+      | [] => (pos,leafs,neg)
+      | nx :: more =>
+          match nx with
+          | .leaf _ => split pos ( nx :: leafs) neg more
+          | .node k _ => if inter k Q then split (nx :: pos) leafs neg more else split pos leafs (nx :: neg) more
+          | .root _ => split pos leafs neg more -- shoudn't
+  let rec go (T : SetTrie α β) : SetTrie α β :=
+    match T with
+    | .root c =>
+        let (pos,ls,neg) := split [] [] [] c
+        match pos with
+        | [] => .root ((ls.map go) ++ neg)
+        | _ => .root ((pos.map go) ++ ls ++ neg)
+    | .node t c =>
+        let (pos,ls,neg) := split [] [] [] c
+        match pos with
+        | [] => .node t ((ls.map go) ++ neg)
+        | _ => .node t ((pos.map go) ++ ls ++ neg)
+    | .leaf a => .leaf (f a)
+  go T

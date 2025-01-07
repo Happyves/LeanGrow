@@ -8,9 +8,9 @@ import LeanGrow.F.Prototypes.MarkOne.TestTypes
 example (r : myNat) : myAdd .z (myAdd .z r) = r :=
   Eq.trans (myAdd_zero (myAdd .z r)) (myAdd_zero r)
 
--- example (r : myNat) : (myAdd .z r) = r := by
---   grow
---   sorry
+example (r : myNat) : (myAdd .z r) = r := by
+  grow
+  sorry
 
 open Lean
 
@@ -22,8 +22,8 @@ elab "test" : command => do
 --test
 -- crashed infoview du to size ??
 
-example (r : myNat) (h : myAdd .z (myAdd .z r) = (myAdd .z r)) : myAdd .z (myAdd .z r) = r := by
-  grow
-  sorry
+-- example (r : myNat) (h : myAdd .z (myAdd .z r) = (myAdd .z r)) : myAdd .z (myAdd .z r) = r := by
+--   grow
+--   sorry
 
 open Lean

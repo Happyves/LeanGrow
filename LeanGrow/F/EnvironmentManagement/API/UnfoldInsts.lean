@@ -40,7 +40,7 @@ def Lean.Expr.getLamBody : Expr → Expr
 | e => e
 
 
-private def main (env : Environment) (e : Expr) : Expr :=
+private partial def main (env : Environment) (e : Expr) : Expr :=
   let rec argsHaveInst (as : Array Expr) : Nat → Bool
     | 0 => false
     | n+1 =>
@@ -50,7 +50,7 @@ private def main (env : Environment) (e : Expr) : Expr :=
             then true
             else argsHaveInst as n
         | _ => argsHaveInst as n
-  dbg_trace s!"Call on {e}"
+  --dbg_trace s!"Call on {e}"
   match e with
   | .app _ _=>
       let args := e.getAppArgs
@@ -67,7 +67,7 @@ private def main (env : Environment) (e : Expr) : Expr :=
                     let btd := (Lean.mkAppN V args).headBeta
                     match btd with
                     | .proj _ ind B =>
-                        let (H,AS) := B.getAppFnArgs
+                        let (H,AS) := (main env B).getAppFnArgs
                         match env.find? H with
                         | .some (.ctorInfo ctorval) =>
                             let idx := ctorval.numParams + ind
@@ -107,8 +107,10 @@ elab "test_2" t:term : command => do
   IO.println (← Command.liftTermElabM ( Meta.ppExpr red))
   IO.println red
 
-test_2 ((fun _ : Unit => [1] ++ [2]) ())
+-- test_2 ((fun _ : Unit => [1] ++ [2]) ())
 
 #reduce @instHAdd
 
--- test_2 ((fun _ : Unit => 1 + 1) ())
+test_2 ((fun _ : Unit => 1 + 1) ())
+
+#check instAddNat

@@ -198,4 +198,10 @@ def make' [Inhabited α] [BEq β] (emptyO : β) (merge : β → β → β) (coun
     (SetTrie.build' emptyO merge count max difference maxl find delete newkey (SetTrie.init l))
 
 
+def makeWVals [Inhabited α] [BEq β] (emptyO : β) (merge : β → β → β) (count : β → γ) (max : γ → Option (β × Nat))
+  (difference : β → β → β) (maxl : γ → Option (δ × Nat))
+  (find : β → δ → Option ι) (delete : β → δ → β) (newkey : δ → β) (l : List (β × α)) : SetTrie α β :=
+    (SetTrie.build' emptyO merge count max difference maxl find delete newkey (SetTrie.initial l))
+
+
 end SetTrie
