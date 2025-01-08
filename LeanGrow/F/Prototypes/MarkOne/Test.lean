@@ -28,6 +28,10 @@ elab "test" : command => do
 
 #check 1
 
--- example (r : myNat) : myAdd .z (myAdd .z r) = r := by
---   grow
---   sorry
+example (r : myNat) : myAdd .z (myAdd .z r) = r := by
+  grow
+  sorry
+
+#check 1
+
+-- TODO : propagate universes properly, because unification in ↑ fails because of this

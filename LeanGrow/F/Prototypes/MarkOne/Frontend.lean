@@ -32,13 +32,12 @@ def simpleImportModules (imp : Array Name) : IO Environment :=
 
 
 def Name_to_thmData (env : Environment) (n : Name) : Option miniPermiseDict :=
-  let rec mkEmbD : List (ℕ × CExpr × Bool × List ℕ) → (Array EmbedData × Array Nat)
-    | [] => (#[],#[])
+  let rec mkEmbD (thmD : Array EmbedData) (thmO : Array Nat) : List (ℕ × CExpr × Bool × List ℕ) → (Array EmbedData × Array Nat)
+    | [] => (thmD, thmO)
     | nx :: more =>
-        let (E,O) := mkEmbD more
         if nx.2.2.1
-        then (E.push (.inst nx.2.1 #[] #[]), O.push nx.1)
-        else (E.push (.nonInst nx.2.1 #[] #[]), O.push nx.1)
+        then mkEmbD (thmD.set! nx.1 (.inst nx.2.1 #[] #[])) (thmO.push nx.1) more
+        else mkEmbD (thmD.set! nx.1 (.nonInst nx.2.1 #[] #[])) (thmO.push nx.1) more
         -- push is to the right, so order is preserved
         -- parent and child datat turned out useless
   match env.find? n with
@@ -47,8 +46,9 @@ def Name_to_thmData (env : Environment) (n : Name) : Option miniPermiseDict :=
       let (hs,g) := info.type.getHypsGoal
       let (Hs,G) := ThmType_ToDAG hs hs.length g
       let HS := SinksFirst Hs
-      let (embD, orda) := mkEmbD HS
+      let (embD, orda) := mkEmbD (Array.mkArray HS.length default) #[] HS
       .some ⟨n,embD,orda,G.1⟩
+
 
 def Names_to_thmData (env : Environment) (L : List Name) : List miniPermiseDict :=
   (L.map (Name_to_thmData env)).reduceOption
@@ -89,7 +89,8 @@ elab "grow" : tactic => do
         []
     let fctx := init_FixCtx dEnv (ltx.map Prod.snd).toArray
     --
-    let premises :=( Names_to_thmData dEnv [`myAdd_zero, `Eq.trans])--.reverse
+    let premises :=(Names_to_thmData dEnv [`myAdd_zero, `Eq.trans]) --.reverse
+    dbg_trace s!"Permises: {repr premises}"
     let st : SearchState := ⟨⟨0,0,[(0,goal)], .ofGoal 0 goal ⟩, ltx, forw2, (fun x => (x / 42, x % 42)), ltx.length, fctx, []⟩
     --logInfoAt ref s!"{repr premises}"
     let res := search 10  premises st

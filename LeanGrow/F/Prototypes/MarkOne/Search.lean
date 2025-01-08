@@ -107,16 +107,18 @@ partial def search_step (premises : List miniPermiseDict) (st : SearchState) : O
     match s, g with
     | x :: xs, y :: _ =>
         dbg_trace s!"looking at {repr x.2} and {repr y.2}"
-        match (CExpr.MatchAssignSolutions' x.2 y.2) with
-        | .some (res,_) => .some (x.1,y.1,res)
-        | .none => uni_ltx_activeGoals xs g
+        let xT := CExpr.whnf st.fctx (CExpr.inferType st.fctx x.2)
+        if xT == .sort .zero
+        then
+          match (CExpr.MatchAssignSolutions' x.2 y.2) with
+          | .some (res,_) => .some (x.1,y.1,res)
+          | .none => uni_ltx_activeGoals xs g
+        else
+          uni_ltx_activeGoals xs g
     | [], _ :: ys => uni_ltx_activeGoals st.forw ys
     | _,_ => .none
 
-  match uni_ltx_activeGoals st.forw st.back.active_goals.reverse with
-    -- .reverse is here to make test look good ; in practice we need to find a much more durrable
-    -- solution here : we unify b after an application of Eq.trans with something from the context,
-    -- when in fact we want the h from context to unify, settling b ...
+  match uni_ltx_activeGoals st.forw st.back.active_goals with
   | .some (sol,gol,uni_res) =>
       dbg_trace s!"foudn uni {repr uni_res}"
       let uni_tree := BackTree.modifyAtGoalId gol (fun _ => .ofAssign (.gnode sol (.ofBvar 42))) st.back.bt

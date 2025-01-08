@@ -50,3 +50,23 @@ example (n : Nat) (h : n + n = 42) : n = n - 1 := by
 def translateLocalContext (ltx : LocalContext) (goal : Expr) : CExpr × List (Nat × CExpr) :=
   let Ltx := ltx.decls.toArray.reduceOption
   let (dict, mltx) := (Array.range (Ltx.size - 1)).foldl
+    (fun (d,l) i =>
+      let decl := Ltx.get! (i.succ)
+      let T := translateForSample d decl.type
+      ((decl.fvarId, i) :: d, (i,T) :: l)
+      )
+    ([],[])
+  let G := translateForSample dict goal
+  (G,mltx)
+
+
+elab "test_2" : tactic => Lean.Elab.Tactic.withMainContext do
+  let ref ← getRef
+  let ltx ← getLCtx
+  let goal ← Elab.Tactic.getMainTarget
+  let done := translateLocalContext ltx goal
+  logInfoAt ref (repr done)
+
+example (n : Nat) (h : n + n = 42) : n = n - 1 := by
+  test_2
+  sorry
