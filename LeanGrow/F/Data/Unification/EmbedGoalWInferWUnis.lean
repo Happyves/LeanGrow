@@ -51,9 +51,9 @@ def propagate_goal (fctx : FixCtx)
 
 partial def match_goal (fctx : FixCtx)
   (thm_data : Array EmbedData)
-  (thm_hyp_num : Nat) (thm_goal real_goal : CExpr) : Option (Array (Option CExpr)) :=
-    let rec gop (embed : Array (Option CExpr)) (paramsSofar : List (Name × Level)) : List Nat → Option (Array (Option CExpr))
-      | [] => .some embed
+  (thm_hyp_num : Nat) (thm_goal real_goal : CExpr) : Option (Array (Option CExpr) × List (Name × Level)) :=
+    let rec gop (embed : Array (Option CExpr)) (paramsSofar : List (Name × Level)) : List Nat → Option (Array (Option CExpr) × List (Name × Level))
+      | [] => .some (embed, paramsSofar)
       | n :: l =>
             let nd := thm_data.get! n
             match propagate_goal fctx embed paramsSofar n nd.cexpr with
@@ -66,6 +66,7 @@ partial def match_goal (fctx : FixCtx)
           lTrace TraceFlags.zero & s!"Matched thm goal and real goal" &
           let emb := l.foldl (fun A (i,v) => (A.set! i (Option.some v))) (Array.mkArray thm_hyp_num .none)
           gop emb u (l.map Prod.fst)
+
 
 
 #exit

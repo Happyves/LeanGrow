@@ -1,6 +1,6 @@
 
-import LeanGrow.F.Search.A.trBack
-import LeanGrow.F.Search.A.trSolve
+import LeanGrow.F.Prototypes.MarkTwo.trBack
+import LeanGrow.F.Prototypes.MarkTwo.trSolve
 import LeanGrow.F.Data.Unification.EmbedRawWInferWUnis
 import LeanGrow.F.Data.Unification.EmbedGoalWInferWUnis
 import LeanGrow.F.Search.ForwardData.Forward

@@ -5,7 +5,7 @@ import LeanGrow.F.Utils.Expr.GetHyps
 import LeanGrow.F.Data.BuildDAG.ofTypeExpr
 import LeanGrow.F.Data.BuildDAG.SinksFirst
 import LeanGrow.F.Data.Unification.EmbedRawWInferWUnis
-import LeanGrow.F.Prototypes.MarkOne.Search
+import LeanGrow.F.Prototypes.MarkTwo.Search
 
 open Lean Elab Meta Command Tactic
 

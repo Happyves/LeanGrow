@@ -135,8 +135,24 @@ partial def CExpr.MatchAssignLFFC (l r : CExpr) : Option (List (Nat × CExpr)) :
 
 
 
+def motherFucker : BEq CExpr where
+      beq :=
+            let rec go : CExpr → CExpr → Bool -- also, make efficient
+                  | .gnode i _, .gnode j _ => i == j
+                  | .lnode i _ ti, .lnode j _ tj => i == j && ti == tj
+                  | .app f a, .app f' a' => go f f' && go a a'
+                  | .lam _ f a _, .lam _ f' a' _ => go f f' && go a a'
+                  | .forallE _ f a _, .forallE _ f' a' _ => go f f' && go a a'
+                  | .letE _ f a z _, .letE _ f' a' z' _ => go f f' && go a a' && go z z'
+                  | x, y => x == y
+            go
+
+
+
+
 partial def CExpr.MatchAssignLFFCU (l r : CExpr) : Option (List (Nat × CExpr) × List (Name × Level)) :=
       let rec go (go? : Bool) (Aout : Option (List (Nat × CExpr))) (Uout : Option (List (Name × Level))) (todo : List (CExpr × CExpr)) : Option (List (Nat × CExpr) × List (Name × Level)) :=
+      dbg_trace s!"Aout : {repr Aout}\nUout : {repr Uout}\ntodo : {repr todo}\n\n"
       if go?
       then
             match todo with
@@ -146,7 +162,7 @@ partial def CExpr.MatchAssignLFFCU (l r : CExpr) : Option (List (Nat × CExpr) �
                   | _, _ => .none
             | nx :: L =>
                   match nx with
-                  | (.lnode i _ .none, e) => let Aup := List.assignOrFail Aout i e ; go true Aup Uout L
+                  | (.lnode i _ .none, e) => let Aup := @List.assignOrFail _ motherFucker Aout i e ; go true Aup Uout L
                   | (.bvar i , .bvar j) => go (i == j) Aout Uout L
                   | (.sort a, .sort b) => let us := univsMerge Uout (univsUnify b.normalize a.normalize) ; go us.isSome Aout us L
                   | (.const n l, .const n' l') =>
@@ -158,6 +174,7 @@ partial def CExpr.MatchAssignLFFCU (l r : CExpr) : Option (List (Nat × CExpr) �
                   | (.forallE _ t b _, .forallE _ t' b' _) => go true Aout Uout ((t,t') :: (b,b') :: L)
                   | (.letE _ t v b _, .letE _ t' v' b' _) => go true Aout Uout ((t,t') :: (v,v') :: (b,b') :: L)
                   | (.lit l, .lit l') => go (l == l') Aout Uout L
+                  | (.gnode i _, .gnode j _) => go (i == j) Aout Uout L -- case I had forgotten, check if we have it in other unifys as well
                   | (.proj t i b, .proj t' i' b') => go ((t == t') && (i == i')) Aout Uout ((b, b') :: L)
                   | (_ , _) => .none
       else .none
