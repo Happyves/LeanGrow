@@ -70,3 +70,35 @@ elab "test_2" : tactic => Lean.Elab.Tactic.withMainContext do
 example (n : Nat) (h : n + n = 42) : n = n - 1 := by
   test_2
   sorry
+
+
+
+
+def getRelevantArgsWTypes (proof : Expr) : MetaM (List Expr × List Expr) :=
+  match proof with
+  | .app _ _ => do
+    let as := proof.getAppArgs
+    let mut L := []
+    let mut Ts := []
+    for e in as do
+      match e with
+      | .fvar _ => continue
+      | _ =>
+        let T ← inferType e
+        let TT ← inferType T
+        if TT.isProp
+        then
+          L := e :: L
+          Ts := T :: Ts
+    return (L,Ts)
+  | _ => return ([],[])
+
+def getRelevantArgsOTypes (as : Array Expr) : MetaM (List Expr) := do
+    let mut Ts := []
+    for e in as do
+      let T ← inferType e
+      let TT ← inferType T
+      if TT.isProp
+      then
+        Ts := T :: Ts
+    return (Ts)
