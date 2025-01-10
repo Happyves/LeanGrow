@@ -89,11 +89,10 @@ elab "grow" : tactic => do
         []
     let fctx := init_FixCtx dEnv (ltx.map Prod.snd).toArray
     --
-    let premises :=(Names_to_thmData dEnv [`myAdd_zero, `Eq.trans])
-    dbg_trace s!"Permises: {repr premises}"
+    let premises :=(Names_to_thmData dEnv [`myAdd_zero, `Eq.trans].reverse)
     let st : SearchState := ⟨⟨0,0,[(0,goal)], .ofGoal 0 goal ⟩, ltx, forw2, (fun x => (x / 42, x % 42)), ltx.length, fctx, []⟩
     --logInfoAt ref s!"{repr premises}"
-    let res := search 10  premises st
+    let res := search 25 premises st
     match res with
     | .none => logInfoAt ref "nope"
     | .some res! => logInfoAt ref s!"Recovered : {repr (res!.back.bt.assemble res!.ltx_assemmbly)}"

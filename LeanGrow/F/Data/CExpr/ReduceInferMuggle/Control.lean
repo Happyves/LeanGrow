@@ -9,7 +9,7 @@ open Lean
 
 
 partial def Flow (fctx : FixCtx) (st: FlowState) : FlowState :=
-  with_lTrace TraceFlags.all in
+  with_lTrace TraceFlags.off in
   match st.insts with
   | [] => st
   | nx :: _ =>

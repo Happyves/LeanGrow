@@ -152,7 +152,6 @@ def motherFucker : BEq CExpr where
 
 partial def CExpr.MatchAssignLFFCU (l r : CExpr) : Option (List (Nat × CExpr) × List (Name × Level)) :=
       let rec go (go? : Bool) (Aout : Option (List (Nat × CExpr))) (Uout : Option (List (Name × Level))) (todo : List (CExpr × CExpr)) : Option (List (Nat × CExpr) × List (Name × Level)) :=
-      dbg_trace s!"Aout : {repr Aout}\nUout : {repr Uout}\ntodo : {repr todo}\n\n"
       if go?
       then
             match todo with

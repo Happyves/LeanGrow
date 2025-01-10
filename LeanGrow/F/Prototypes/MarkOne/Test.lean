@@ -34,4 +34,7 @@ example (r : myNat) : myAdd .z (myAdd .z r) = r := by
 
 #check 1
 
--- TODO : propagate universes properly, because unification in ↑ fails because of this
+-- reversing premises causes loop, as we constantly apply
+-- Eq.trans, building a deeper and deeper term
+-- The solution is to allow for a multitude of bachstates, which
+-- we implement in MarkTwo
