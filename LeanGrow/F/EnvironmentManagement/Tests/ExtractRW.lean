@@ -1,4 +1,5 @@
 
+
 import LeanGrow.F.EnvironmentManagement.SampleRegular.ExtractRW
 
 open Lean Meta
@@ -31,3 +32,36 @@ runTest `test1
 runTest `test2
 
 runTest `test3
+
+/-
+
+convert requires import Mathlib.Tactic which clashes with my stuff, for some reason
+
+theorem test3 (n m p k: Nat) (hnm : n = m) (hpk : p = k) (hn : n + p = 42)
+  : m + k = 42 := by
+  convert hn
+  exact hnm.symm
+  exact hpk.symm
+
+#print test3
+
+theorem test4 (n m p k: Nat) (hnm : n = m) (hpk : p = k) (hn : n  = p)
+  : m = k := by
+  convert hn
+  exact hnm.symm
+  exact hpk.symm
+
+#print test4
+
+
+theorem test5 (n m p k r s: Nat) (hnm : n = m) (hpk : p = k) (hrs : r = s) (hn : n +p +r  = 42)
+  : m + k + s = 42 := by
+  convert hn
+  exact hnm.symm
+  exact hpk.symm
+  exact hrs.symm
+
+
+#print test5
+
+-/

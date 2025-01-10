@@ -44,105 +44,100 @@ def extractRW_main (proof : Expr) : MetaM rwPartType := -- subproof, thm name an
 
 
 
+/-
+rw, simp_rw, nth_rewrite
+
+All produce terms of the form `Eq.mpr (id (congrArg _ thm-appli-for-rw) subproof)`
+-/
 
 #check Eq.mp
 #check Eq.mpr
 #check Eq.symm
 
-#exit
 
-theorem test (n m : Nat) (hnm : n = m) (hn : n = 42) : m = 42 := by
-  rw [← hnm]
-  exact hn
+/-- Requires terms to *not* be fully beta reduced -/
+partial def extractConvert_main (proof : Expr) : MetaM (List rwPartType) :=
+  let rec getEqPos (pos : Nat) (cache : List Nat) : Expr → List Nat
+    | .lam _ t b _ =>
+        match t.getAppFn' with
+        | .const n _ =>
+            if n == `Eq
+            then getEqPos pos.succ ( pos :: cache) b
+            else getEqPos pos.succ cache b
+        | _ => getEqPos pos.succ cache b
+    | _ => cache
 
+  let rec core (subproof : Expr) (ta : Array Expr) : MetaM (List rwPartType) :=
+      let Main := ta.get! 3
+      let H := Main.getAppFn
+      match H with
+      | .lam _ _ _ _ =>
+          let eq_pos := getEqPos 0 [] H -- perhaps too naive ? infer and reduce on args to check for equality ?
+          let AS := Main.getAppArgs
+          let rw_args := eq_pos.foldl (fun L i => (AS.get! i) :: L) []
+          let cleaned := rw_args.map (fun x =>
+            let (H,AS) := x.getAppFnArgs
+            if H == `Eq.symm
+            then AS.get! 3
+            else x
+            )
+          do
+            let res ← cleaned.mapM (fun final =>
+              match final with
+              | .app _ _ | .const _ _ => -- are there equalities that require not arguements ??
+                let (n,args) := final.getAppFnArgs
+                if n == `eq_of_heq
+                then
+                  core subproof args
+                else
+                  do
+                    let relArgs ← getRelevantArgsOTypes args
+                    return [.ofThm subproof n relArgs]
+              | _ => pure ([.ofLocal subproof])
+              )
+            return (res.join.filter (fun x => x != .none))
+      | _ => pure []
 
-#print test
-
-
-#check Eq.mp
-#check Eq.mpr
-#check Eq.symm
-
-#check id
-#check congrArg
+  match proof with
+  | .app _ _ =>
+      let (h,as) := proof.getAppFnArgs
+      if h == `Eq.mp || h == `Eq.mpr
+      then
+        let rwPart := as.get! 2
+        let subproof := as.get! 3
+        let (n,ta) := rwPart.getAppFnArgs
+        if n == `eq_of_heq
+        then core subproof ta
+        else pure []
+    else pure []
+  | _ => pure []
 
 #check Eq.ndrec
 #check Eq.rec
 #check Eq.recOn
 #check Eq.casesOn
 
-#check eq_of_heq
-
-#check eq_of_beq
-
-#check of_eq_true
-#check eq_true
-
-#check congrArg
-
-/-
-
-
-import Mathlib.Tactic
-
-theorem test (n m : Nat) (hnm : n = m) (hn : n = 42) : m = 42 := by
-  rw [← hnm]
-  exact hn
-
-
-#print test
-
-
-theorem test2 (n m : Nat) (hnm : n = m) (hn : n = 42) : m = 42 := by
-  convert hn
-  exact hnm.symm
-
-
-#print test2
-
-
-theorem test3 (n m p: Nat) (hnm : n = m) (hmp : m = p) (hn : n = 42) : p = 42 := by
-  rw [← hmp, ← hnm]
-  exact hn
-
-
-#print test3
-
-
-theorem test4 (n m : Nat) (hnm : n = m) (hn : n = 42) : m = 42 := by
-  nth_rewrite 1 [← hnm]
-  exact hn
-
-#print test4
-
-
-theorem test5 (n m : Nat) (hnm : n = m) (hn : n = 42) : m = 42 := by
-  cc
-
-#print test5
-
-theorem test6 (n m : Nat) (hnm : n = m) (f : Nat → Nat) : f m = f n := by
-  rw [hnm]
-
-#print test6
-
-
-theorem test7 (n m : Nat) (hnm : n = m) (f : Nat → Nat) : f m = f n := by
-  congr
-  exact hnm.symm
-
-#print test7
-
-theorem test8 (n m : Nat → Nat) (hnm : n = m) (f : Nat ) : m f = n f := by
-  apply congrFun
-  exact hnm.symm
-
-#print test8
-
-theorem test2 (n m p: Nat) : (n + m) + p = p + (n + m) := by
-  rw [add_comm]
-
-#print test2
-
-
--/
+partial def extractCongrRaw_main (proof : Expr) : MetaM rwPartType := do
+  let cproof ← whnf proof
+  match cproof with
+  | .app _ _ =>
+      let (h,as) := proof.getAppFnArgs
+      if h == `Eq.rec
+      then
+        let rwPart := as.get! 5
+        let subproof := as.get! 3
+        let (H,AS) := rwPart.getAppFnArgs
+        if H == `Eq.symm
+        then
+          let final := AS.get! 3
+          match final with
+          | .app _ _ | .const _ _ => -- are there equalities that require not arguements ??
+            let (n,args) := final.getAppFnArgs
+            let relArgs ← getRelevantArgsOTypes args
+            return .ofThm subproof n relArgs
+          | _ => pure (.ofLocal subproof)
+        else
+          let relArgs ← getRelevantArgsOTypes AS
+          return .ofThm subproof H relArgs
+      else
+  | _ => pure (.none)
