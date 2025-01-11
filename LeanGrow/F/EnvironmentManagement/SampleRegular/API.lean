@@ -102,3 +102,22 @@ def getRelevantArgsOTypes (as : Array Expr) : MetaM (List Expr) := do
       then
         Ts := T :: Ts
     return (Ts)
+
+def getRelevantArgsOTerms (as : Array Expr) : MetaM (List Expr) := do
+    let mut Ts := []
+    for e in as do
+      let T ← inferType e
+      let TT ← inferType T
+      if TT.isProp
+      then
+        Ts := e :: Ts
+    return (Ts)
+
+
+def List.lPi_make (toMerge : List (List (List α))) : List (List α) :=
+  let rec go (sofar : List (List α)) : List (List (List α)) → List (List α)
+    | [] => sofar
+    | x :: xs =>
+        let next := (sofar.map (fun y => x.map (fun z => y ++ z))).join
+        go next xs
+  go [] toMerge

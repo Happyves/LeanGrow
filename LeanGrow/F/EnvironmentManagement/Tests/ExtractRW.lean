@@ -27,44 +27,22 @@ elab "runTest" n:name : command => do
   let res ← Elab.Command.liftTermElabM (lambdaLetTelescope proof (fun _ head => extractRW_main head ) (cleanupAnnotations := true))
   IO.println (repr res)
 
+elab "runTestAll" n:name : command => do
+  let .some thm := (← getEnv).find?  n.getName | pure ()
+  let .some proof := thm.value? | pure ()
+  let res ← Elab.Command.liftTermElabM (lambdaLetTelescope proof (fun _ head => extractRWall_main head ) (cleanupAnnotations := true))
+  IO.println (repr res)
+
+
 runTest `test1
+runTestAll `test1
 
 runTest `test2
+runTestAll `test2
 
 runTest `test3
+runTestAll `test3
 
-/-
-
-convert requires import Mathlib.Tactic which clashes with my stuff, for some reason
-
-theorem test3 (n m p k: Nat) (hnm : n = m) (hpk : p = k) (hn : n + p = 42)
-  : m + k = 42 := by
-  convert hn
-  exact hnm.symm
-  exact hpk.symm
-
-#print test3
-
-theorem test4 (n m p k: Nat) (hnm : n = m) (hpk : p = k) (hn : n  = p)
-  : m = k := by
-  convert hn
-  exact hnm.symm
-  exact hpk.symm
-
-#print test4
-
-
-theorem test5 (n m p k r s: Nat) (hnm : n = m) (hpk : p = k) (hrs : r = s) (hn : n +p +r  = 42)
-  : m + k + s = 42 := by
-  convert hn
-  exact hnm.symm
-  exact hpk.symm
-  exact hrs.symm
-
-
-#print test5
-
--/
 
 
 theorem test4 (n m : Nat) (hnm : n = m) (f : Nat → Nat) : f n = f m := by
@@ -101,8 +79,14 @@ elab "runTest2" n:name : command => do
   IO.println (repr res)
 
 runTest2 `test4
+runTestAll `test4
 runTest2 `test5
+runTestAll `test5
 runTest2 `test6
+runTestAll `test6
 runTest2 `test7
+runTestAll `test7
 runTest2 `test8
+runTestAll `test8
 runTest2 `test9
+runTestAll `test9

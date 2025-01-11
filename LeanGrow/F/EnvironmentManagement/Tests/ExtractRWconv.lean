@@ -1,7 +1,10 @@
 
-import LeanGrow.F.EnvironmentManagement.SampleRegular.API
+import Mathlib.Tactic
 
 open Lean Meta
+
+
+-- convert requires import Mathlib.Tactic which clashes with my stuff, for some reason
 
 
 inductive rwPartType where
@@ -9,6 +12,17 @@ inductive rwPartType where
 | ofLocal (subproof : Expr)
 | none
 deriving Inhabited, Repr, BEq
+
+def getRelevantArgsOTypes (as : Array Expr) : MetaM (List Expr) := do
+    let mut Ts := []
+    for e in as do
+      let T ← inferType e
+      let TT ← inferType T
+      if TT.isProp
+      then
+        Ts := e :: Ts
+    return (Ts)
+
 
 def extractRW_main (proof : Expr) : MetaM rwPartType := -- subproof, thm name and args
   match proof with
@@ -32,12 +46,12 @@ def extractRW_main (proof : Expr) : MetaM rwPartType := -- subproof, thm name an
                   | .app _ _ | .const _ _ => -- are there equalities that require not arguements ??
                     let (n,args) := final.getAppFnArgs
                     do
-                      let relArgs ← getRelevantArgsOTerms args
+                      let relArgs ← getRelevantArgsOTypes args
                       return .ofThm subproof n relArgs
                   | _ => pure (.ofLocal subproof)
                 else
                   do
-                    let relArgs ← getRelevantArgsOTerms AS
+                    let relArgs ← getRelevantArgsOTypes AS
                     return .ofThm subproof H relArgs
               | _ => pure (.ofLocal subproof)
             else pure .none
@@ -94,7 +108,7 @@ partial def extractConvert_main (proof : Expr) : MetaM (List rwPartType) :=
                   core subproof args
                 else
                   do
-                    let relArgs ← getRelevantArgsOTerms args
+                    let relArgs ← getRelevantArgsOTypes args
                     return [.ofThm subproof n relArgs]
               | _ => pure ([.ofLocal subproof])
               )
@@ -140,11 +154,11 @@ partial def extractCongrRaw_main (proof : Expr) : MetaM rwPartType := do
             match final with
             | .app _ _ | .const _ _ => -- are there equalities that require not arguements ??
               let (n,args) := final.getAppFnArgs
-              let relArgs ← getRelevantArgsOTerms args
+              let relArgs ← getRelevantArgsOTypes args
               return .ofThm subproof n relArgs
             | _ => pure (.ofLocal subproof)
           else
-            let relArgs ← getRelevantArgsOTerms AS
+            let relArgs ← getRelevantArgsOTypes AS
             return .ofThm subproof H relArgs
         | _ => pure (.ofLocal subproof)
       else
@@ -161,11 +175,11 @@ partial def extractCongrRaw_main (proof : Expr) : MetaM rwPartType := do
               match final with
               | .app _ _ | .const _ _ => -- are there equalities that require not arguements ??
                 let (n,args) := final.getAppFnArgs
-                let relArgs ← getRelevantArgsOTerms args
+                let relArgs ← getRelevantArgsOTypes args
                 return .ofThm subproof n relArgs
               | _ => pure (.ofLocal subproof)
             else
-              let relArgs ← getRelevantArgsOTerms AS
+              let relArgs ← getRelevantArgsOTypes AS
               return .ofThm subproof H relArgs
           | _ => pure (.ofLocal subproof)
         else pure (.none)
@@ -187,3 +201,68 @@ def extractRWall_main (proof : Expr) : MetaM (List rwPartType) := do
         | _ => return [congrRaw]
       | _ => return conv
   | _ => return [rw]
+
+
+
+
+theorem test3 (n m p k: Nat) (hnm : n = m) (hpk : p = k) (hn : n + p = 42)
+  : m + k = 42 := by
+  convert hn
+  exact hnm.symm
+  exact hpk.symm
+
+#print test3
+
+theorem test4 (n m p k: Nat) (hnm : n = m) (hpk : p = k) (hn : n  = p)
+  : m = k := by
+  convert hn
+  exact hnm.symm
+  exact hpk.symm
+
+#print test4
+
+
+theorem test5 (n m p k r s: Nat) (hnm : n = m) (hpk : p = k) (hrs : r = s) (hn : n +p +r  = 42)
+  : m + k + s = 42 := by
+  convert hn
+  exact hnm.symm
+  exact hpk.symm
+  exact hrs.symm
+
+
+#print test5
+
+
+
+elab "runTest" n:name : command => do
+  let .some thm := (← getEnv).find?  n.getName | pure ()
+  let .some proof := thm.value? | pure ()
+  let res ← Elab.Command.liftTermElabM (lambdaLetTelescope proof (fun _ head => extractConvert_main head ) (cleanupAnnotations := true))
+  IO.println (repr res)
+
+elab "runTestAll" n:name : command => do
+  let .some thm := (← getEnv).find?  n.getName | pure ()
+  let .some proof := thm.value? | pure ()
+  let res ← Elab.Command.liftTermElabM (lambdaLetTelescope proof (fun _ head => extractRWall_main head ) (cleanupAnnotations := true))
+  IO.println (repr res)
+
+
+runTest `test3
+runTestAll `test3
+runTest `test4
+runTestAll `test4
+runTest `test5
+runTestAll `test5
+
+
+theorem test6 (n m p k: Nat) (hnm : n = m)  (hn : p + k + n  = 42)
+  : k + p + m = 42 := by
+  convert hn using 2
+  apply Nat.add_comm
+  exact hnm.symm
+
+
+#print test6
+
+runTest `test6
+runTestAll `test6
