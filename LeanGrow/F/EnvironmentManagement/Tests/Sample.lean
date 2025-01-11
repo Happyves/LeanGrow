@@ -30,3 +30,16 @@ theorem test1 (n m p : Nat) (ha : n ∣ m) (hb : n ∣ p) : n ∣ p + m := by
 #print test1
 
 runTest `test1
+
+
+
+theorem test2 (n m p : Nat) (hb : n ∣ p + m) : n ∣ Nat.gcd (2*n + (m + p)) n := by
+  rw [Nat.dvd_gcd_iff]
+  apply And.intro
+  · apply Nat.dvd_add
+    · apply Nat.dvd_mul_left
+    · rw [Nat.add_comm]
+      exact hb
+  · apply Nat.dvd_refl
+
+#print test2

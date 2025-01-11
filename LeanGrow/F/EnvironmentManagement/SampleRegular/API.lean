@@ -120,4 +120,7 @@ def List.lPi_make (toMerge : List (List (List α))) : List (List α) :=
     | x :: xs =>
         let next := (sofar.map (fun y => x.map (fun z => y ++ z))).join
         go next xs
-  go [] toMerge
+  go [[]] toMerge
+
+
+#eval List.lPi_make  [[[1,2],[3,4]], [[5,6], [7]]]
