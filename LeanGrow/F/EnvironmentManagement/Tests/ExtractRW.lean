@@ -90,3 +90,25 @@ runTest2 `test8
 runTestAll `test8
 runTest2 `test9
 runTestAll `test9
+
+
+theorem test10 (n m p : Nat) (hb : n ∣ 2 * n + (m + p)) : n ∣ Nat.gcd (2*n + (m + p)) n := by
+  rw [Nat.dvd_gcd_iff]
+  constructor
+  · exact hb
+  · apply Nat.dvd_refl
+
+
+#print test10
+
+theorem test11 (n m p : Nat) (hb : n ∣ Nat.gcd (2*n + (m + p)) n) : n ∣ 2 * n + (m + p) ∧ n ∣ n := by
+  rw [← Nat.dvd_gcd_iff]
+  assumption
+
+#print test11
+
+
+runTest `test10
+runTestAll `test10
+runTest `test11
+runTestAll `test11

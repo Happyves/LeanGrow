@@ -10,6 +10,50 @@ inductive rwPartType where
 | none
 deriving Inhabited, Repr, BEq
 
+
+def extractRW_SymmPropext (subproof core : Expr) : MetaM rwPartType :=
+  match core with
+  | .app _ _ | .const _ _ => -- are there equalities that require not arguements ??
+    let (H,AS) := core.getAppFnArgs
+    if H == `Eq.symm
+    then
+      let final := AS.get! 3
+      match final with
+      | .app _ _ | .const _ _ => -- are there equalities that require not arguements ??
+        let (H,AS) := final.getAppFnArgs
+        if H == `propext
+        then
+          let final := AS.get! 2
+          match final with
+          | .app _ _ | .const _ _ => -- are there equalities that require not arguements ??
+            let (n,args) := final.getAppFnArgs
+            do
+              let relArgs ← getRelevantArgsOTerms args
+              return .ofThm subproof n relArgs
+          | _ => pure (.ofLocal subproof)
+        else
+          do
+            let relArgs ← getRelevantArgsOTerms AS
+            return .ofThm subproof H relArgs
+      | _ => pure (.ofLocal subproof)
+    else
+      if H == `propext
+        then
+          let final := AS.get! 2
+          match final with
+          | .app _ _ | .const _ _ => -- are there equalities that require not arguements ??
+            let (n,args) := final.getAppFnArgs
+            do
+              let relArgs ← getRelevantArgsOTerms args
+              return .ofThm subproof n relArgs
+          | _ => pure (.ofLocal subproof)
+        else
+          do
+            let relArgs ← getRelevantArgsOTerms AS
+            return .ofThm subproof H relArgs
+  | _ => pure (.ofLocal subproof)
+
+
 def extractRW_main (proof : Expr) : MetaM rwPartType := -- subproof, thm name and args
   match proof with
   | .app _ _ =>
@@ -22,24 +66,7 @@ def extractRW_main (proof : Expr) : MetaM rwPartType := -- subproof, thm name an
         | .app (.app (.const ID _) _) (.app _ core) => -- id and congrArd, assuming no reduction
             if ID == `id -- to avoid false positive when its actually a `convert`
             then
-              match core with
-              | .app _ _ | .const _ _ => -- are there equalities that require not arguements ??
-                let (H,AS) := core.getAppFnArgs
-                if H == `Eq.symm
-                then
-                  let final := AS.get! 3
-                  match final with
-                  | .app _ _ | .const _ _ => -- are there equalities that require not arguements ??
-                    let (n,args) := final.getAppFnArgs
-                    do
-                      let relArgs ← getRelevantArgsOTerms args
-                      return .ofThm subproof n relArgs
-                  | _ => pure (.ofLocal subproof)
-                else
-                  do
-                    let relArgs ← getRelevantArgsOTerms AS
-                    return .ofThm subproof H relArgs
-              | _ => pure (.ofLocal subproof)
+              extractRW_SymmPropext subproof core
             else pure .none
         | _ => pure .none
       else pure .none
@@ -93,9 +120,7 @@ partial def extractConvert_main (proof : Expr) : MetaM (List rwPartType) :=
                 then
                   core subproof args
                 else
-                  do
-                    let relArgs ← getRelevantArgsOTerms args
-                    return [.ofThm subproof n relArgs]
+                  (fun x => [x]) <$> (extractRW_SymmPropext subproof final)
               | _ => pure ([.ofLocal subproof])
               )
             return (res.join.filter (fun x => x != .none))
@@ -131,47 +156,16 @@ partial def extractCongrRaw_main (proof : Expr) : MetaM rwPartType := do
       then
         let rwPart := as.get! 5
         let subproof := as.get! 3
-        match rwPart with
-        | .app _ _ | .const _ _ =>
-          let (H,AS) := rwPart.getAppFnArgs
-          if H == `Eq.symm
-          then
-            let final := AS.get! 3
-            match final with
-            | .app _ _ | .const _ _ => -- are there equalities that require not arguements ??
-              let (n,args) := final.getAppFnArgs
-              let relArgs ← getRelevantArgsOTerms args
-              return .ofThm subproof n relArgs
-            | _ => pure (.ofLocal subproof)
-          else
-            let relArgs ← getRelevantArgsOTerms AS
-            return .ofThm subproof H relArgs
-        | _ => pure (.ofLocal subproof)
+        extractRW_SymmPropext subproof rwPart
       else
         if h == `Eq.recOn || h == `Eq.casesOn
         then
           let rwPart := as.get! 4
           let subproof := as.get! 5
-          match rwPart with
-          | .app _ _ | .const _ _ =>
-            let (H,AS) := rwPart.getAppFnArgs
-            if H == `Eq.symm
-            then
-              let final := AS.get! 3
-              match final with
-              | .app _ _ | .const _ _ => -- are there equalities that require not arguements ??
-                let (n,args) := final.getAppFnArgs
-                let relArgs ← getRelevantArgsOTerms args
-                return .ofThm subproof n relArgs
-              | _ => pure (.ofLocal subproof)
-            else
-              let relArgs ← getRelevantArgsOTerms AS
-              return .ofThm subproof H relArgs
-          | _ => pure (.ofLocal subproof)
+          extractRW_SymmPropext subproof rwPart
         else pure (.none)
   | _ => pure (.none)
 
-def a := 42
 
 
 def extractRWall_main (proof : Expr) : MetaM (List rwPartType) := do

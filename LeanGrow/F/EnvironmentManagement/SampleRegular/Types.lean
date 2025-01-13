@@ -16,3 +16,10 @@ structure SampleTypeRaw where
   -- ↑↓ should be in terms of lnodes, in accordance to CExprTrie.contains to make queries work
   ltx : List (Nat × CExpr)
 deriving Inhabited, Repr, BEq
+
+structure preSampleTypeRaw where
+  kind : SampleActionType
+  thmName : Name
+  goal : Expr
+  ltx : List (Nat × Expr)
+deriving Inhabited, Repr, BEq

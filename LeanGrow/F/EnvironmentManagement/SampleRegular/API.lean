@@ -124,3 +124,28 @@ def List.lPi_make (toMerge : List (List (List α))) : List (List α) :=
 
 
 #eval List.lPi_make  [[[1,2],[3,4]], [[5,6], [7]]]
+
+
+def splitRelevantArgsOTerms (as : Array Expr) : MetaM (List Expr × List Expr) := do
+    let mut Ts := []
+    let mut L := []
+    for e in as do
+      let T ← inferType e
+      let TT ← inferType T
+      if TT.isProp
+      then
+        Ts := e :: Ts
+      else
+       L := e :: L
+    return (Ts,L)
+
+def List.lPi_make' (toMerge : List (List (List α))) : List (List α) :=
+  let rec go (sofar : List (List α)) : List (List (List α)) → List (List α)
+    | [] => sofar
+    | x :: xs =>
+        let next := (sofar.map (fun y => ([] :: x).map (fun z => y ++ z))).join
+        go next xs
+  go [[]] toMerge
+
+
+#eval List.lPi_make'  [[[1,2],[3,4]], [[5,6], [7]]]
