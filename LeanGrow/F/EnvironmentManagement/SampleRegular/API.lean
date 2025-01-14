@@ -59,6 +59,22 @@ def translateLocalContext (ltx : LocalContext) (goal : Expr) : CExpr × List (Na
   let G := translateForSample dict goal
   (G,mltx)
 
+/--
+Decalration type fvar that we skip in translateLocalContext
+seems to be introduced in tactic elaboration only, so when working
+in MetaM, use translateLocalContext'
+-/
+def translateLocalContext' (ltx : LocalContext) (goal : Expr) : CExpr × List (Nat × CExpr) :=
+  let Ltx := ltx.decls.toArray.reduceOption
+  let (dict, mltx) := (Array.range (Ltx.size)).foldl
+    (fun (d,l) i =>
+      let decl := Ltx.get! (i)
+      let T := translateForSample d decl.type
+      ((decl.fvarId, i) :: d, (i,T) :: l)
+      )
+    ([],[])
+  let G := translateForSample dict goal
+  (G,mltx)
 
 elab "test_2" : tactic => Lean.Elab.Tactic.withMainContext do
   let ref ← getRef
@@ -66,6 +82,7 @@ elab "test_2" : tactic => Lean.Elab.Tactic.withMainContext do
   let goal ← Elab.Tactic.getMainTarget
   let done := translateLocalContext ltx goal
   logInfoAt ref (repr done)
+
 
 example (n : Nat) (h : n + n = 42) : n = n - 1 := by
   test_2

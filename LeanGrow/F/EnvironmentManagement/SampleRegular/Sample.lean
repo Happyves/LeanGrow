@@ -108,8 +108,26 @@ partial def subproofs (fuel : Nat) (proof : Expr) : MetaM (List (List Expr)) := 
           ) []
           return [proof] :: (big.lPi_make'.tailD [])
 
+#check 1
 
-partial def sampleCore (proof : Expr) : MetaM (List (Name × List Expr)) := do
+def primitiveForwardBlacklist (n : Name) : MetaM Bool := do
+  let .some T := ConstantInfo.type <$> (← getEnv).find? n | pure true
+  forallTelescope T (fun xs _ => do
+    let ts ← (← xs.mapM inferType).mapM whnf
+    if ts.contains (.sort .zero) then return false else return true
+    ) true
+  -- do this in some sort of pre-process and cache way in final version
+
+
+/-
+Note:
+We avoid using thms that have no props (proofs) as args as forward steps.
+Don't know if this is truely necessary, but this could favor loops: consider for
+example Nat.succ (perhaps blacklist only those with no prop ards *and* non-prop return ?).
+Also if there are many elements of non-prop arg type (ex: ℕ),then we get too many options ?
+-/
+
+partial def sampleForwCoreWB (proof : Expr) : MetaM (List (SampleActionType × Name × List Expr)) := do
   match proof with
   | .lam _ _ _ _ => return []
   | _ =>
@@ -118,17 +136,150 @@ partial def sampleCore (proof : Expr) : MetaM (List (Name × List Expr)) := do
     | [] =>
       let (x,args?,_) ← extractApply_main proof
       match x with
-      | .some n => return  [(n,args?)]
+      | .some n =>
+          if ← primitiveForwardBlacklist n
+          then
+            let argst ← args?.mapM inferType
+            return  [(.ofF,n,argst)]
+          else return []
       | _ => return []
+    | _ =>
+      let big ← rw?.foldlM (fun sofar rw =>
+      match rw with
+      | .ofThm a x b => do
+          if ← primitiveForwardBlacklist x
+          then
+            let argst ← (a :: b).mapM inferType
+            return (.ofFrw,x, argst):: sofar
+          else
+            return sofar
+      | _ => return sofar
+      ) []
+      return big
+
+def sampleForwStepsWB (fuel : Nat) (proof : Expr) : MetaM (List preSampleTypeRaw) :=
+  let rec sampleEach (g : Expr) (seen : List Expr) (done : List preSampleTypeRaw) : List Expr → List Expr → MetaM (List preSampleTypeRaw)
+    | t :: ts, T :: Ts => do
+        let sam ← sampleForwCoreWB t
+        let step : List preSampleTypeRaw := sam.map (fun (k,n,c) => ⟨k,n,g, seen ++ Ts ++ c⟩)
+        sampleEach g (T :: seen) (step ++ done) ts Ts
+    | _,_ => return done
+  do
+    let goal ← inferType proof
+    let subproofs ← subproofs fuel proof
+    let mut res := []
+    for sp in subproofs do
+      let Ts ← sp.mapM inferType
+      let step ← sampleEach goal [] [] sp Ts
+      res := step ++ res
+    return res
+
+partial def sampleForwCore (proof : Expr) : MetaM (List (SampleActionType × Name × List Expr)) := do
+  match proof with
+  | .lam _ _ _ _ => return []
+  | _ =>
+    let rw? ← extractRWall_main proof
+    match rw? with
+    | [] =>
+      let (x,args?,_) ← extractApply_main proof
+      match x with
+      | .some n =>
+            let argst ← args?.mapM inferType
+            return  [(.ofF,n,argst)]
+      | _ => return []
+    | _ =>
+      let big ← rw?.foldlM (fun sofar rw =>
+      match rw with
+      | .ofThm a x b => do
+            let argst ← (a :: b).mapM inferType
+            return (.ofFrw,x, argst):: sofar
+      | _ => return sofar
+      ) []
+      return big
+
+def sampleForwSteps (fuel : Nat) (proof : Expr) : MetaM (List preSampleTypeRaw) :=
+  let rec sampleEach (g : Expr) (seen : List Expr) (done : List preSampleTypeRaw) : List Expr → List Expr → MetaM (List preSampleTypeRaw)
+    | t :: ts, T :: Ts => do
+        let sam ← sampleForwCore t
+        let step : List preSampleTypeRaw := sam.map (fun (k,n,c) => ⟨k,n,g, seen ++ Ts ++ c⟩)
+        sampleEach g (T :: seen) (step ++ done) ts Ts
+    | _,_ => return done
+  do
+    let goal ← inferType proof
+    let subproofs ← subproofs fuel proof
+    let mut res := []
+    for sp in subproofs do
+      let Ts ← sp.mapM inferType
+      let step ← sampleEach goal [] [] sp Ts
+      res := step ++ res
+    return res
+
+
+def dig (proof : Expr) : MetaM (List Expr) := do
+  match proof with
+  | .lam _ _ _ _ => return []
+  | _ =>
+    let rw? ← extractRWall_main proof
+    match rw? with
+    | [] =>
+      let (_,args?,_) ← extractApply_main proof
+      return args?
     | _ =>
       let big := rw?.foldl (fun sofar rw =>
       match rw with
-      | .ofThm a x b => (x, (a :: b)):: sofar
+      | .ofThm a _ b => (a :: (b ++ sofar))
+      | .ofLocal a => a :: sofar
       | _ => sofar
       ) []
       return big
 
-def sampleForwSteps (fuel : Nat) (proof : Expr) : MetaM (List preSampleTypeRaw) := do
-  let goal ← inferType proof
-  let subproofs ← subproofs fuel proof
-  sorry
+partial def digDepth (proof : Expr) : MetaM Nat :=
+  let rec go (done : List Nat) : List (Nat × Expr) → MetaM (List Nat)
+    | [] => return done
+    | (n,p) :: xs => do
+      let dug ← dig p
+      if dug.isEmpty
+      then
+        go (n :: done) xs
+      else
+        go done ((dug.map (n+1,·)) ++ xs)
+  do
+    let depths ← go [] [(0,proof)]
+    return (match depths.maximum? with | .some w => w | _ => 0)
+
+
+partial def sampleForw (fuel : Nat) (proof : Expr) : MetaM (List preSampleTypeRaw) :=
+  let rec go (done : List preSampleTypeRaw) : List Expr → MetaM (List preSampleTypeRaw)
+    | [] => return done
+    | x :: xs => do
+      let depth ← digDepth x
+      if depth < fuel
+      then
+        go done xs
+      else
+        let res ← sampleForwSteps fuel x
+        let next ← dig x
+        go (res ++ done) (next ++ xs)
+  go [] [proof]
+
+partial def SampleForw (fuel : Nat) (proof : Expr) : MetaM (List SampleTypeRaw) :=
+  let rec go (done : List SampleTypeRaw) : List Expr → MetaM (List SampleTypeRaw)
+    | [] => return done
+    | x :: xs => do
+      let depth ← digDepth x
+      if depth < fuel
+      then
+        go done xs
+      else
+        let pres ← sampleForwSteps fuel x
+        let Ltx ← getLCtx
+        let res ← pres.mapM (fun ⟨k,n,g,c⟩ => do
+          let ltx ← c.foldlM (fun s x => do
+            let fvarId ← mkFreshFVarId
+            return s.mkLocalDecl fvarId n x .default
+            ) Ltx
+          let (g',c') := translateLocalContext' ltx g
+          return ⟨k,n,g',c'⟩)
+        let next ← dig x
+        go (res ++ done) (next ++ xs)
+  go [] [proof]

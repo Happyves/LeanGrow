@@ -21,5 +21,5 @@ structure preSampleTypeRaw where
   kind : SampleActionType
   thmName : Name
   goal : Expr
-  ltx : List (Nat × Expr)
+  ltx : List (Expr)
 deriving Inhabited, Repr, BEq
