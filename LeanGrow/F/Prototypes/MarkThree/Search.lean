@@ -1,6 +1,6 @@
 
 import LeanGrow.F.Prototypes.MarkThree.trBack
-import LeanGrow.F.Prototypes.MarkThree.trSolve
+--import LeanGrow.F.Prototypes.MarkThree.trSolve
 import LeanGrow.F.Data.Unification.EmbedRawWInferWUnis
 import LeanGrow.F.Data.Unification.EmbedGoalWInferWUnis
 import LeanGrow.F.Search.ForwardData.Forward
@@ -27,6 +27,7 @@ structure SearchState where
   fctx : FixCtx -- it would be better to seperate the gnode info and lnode info
                 -- so that we can do forward and backward steps independently of backsteps
   ltx_assemmbly : List (Nat × Name × Array CExpr) -- add universe levels
+  unif_level_assign : List (Nat × (List (Name × Level))) -- (uni_id, params assignements)
 deriving Inhabited--, Repr, BEq
 
 instance : BEq SearchState where
@@ -75,15 +76,18 @@ partial def tryUniAll (st : SearchState) : List SearchState :=
     | _,_ => done
   let candidates := uni_ltx_activeGoals [] st.forw st.back.active_goals
   let interated := (candidates.map (fun (sol,gol,uni_res,us) =>
-    let uni_tree := BackTree.modifyAtGoalId gol (fun _ => .ofAssign (.gnode sol (.ofBvar 42))) st.back.bt
-    match integrate_uni? st.forw2 st.ltx_handler uni_res us uni_tree with
-    | .some (nbt, updt, slved) =>
-        let nb := integrate_uni_full st.back nbt updt us (gol :: slved)
-        Option.some {st with back := nb}
+    let uni_tree := BackTree.modifyAtGoalId gol (fun
+      | .ofGoal j t bdirs gdirs ts => .ofGoal j t bdirs gdirs ((.ofUni st.back.id_gen_assign (.gnode sol (.ofBvar 42))) :: ts)
+      | x => x) st.back.bt
+    match integrate_uni? st.back.id_gen_assign st.back.id_gen_goal st.forw2 st.ltx_handler uni_res uni_tree with
+    | .some (nbt, ngs, ngi) =>
+        let nb := integrate_uni_full st.back nbt ngs ngi
+        Option.some {st with back := nb, unif_level_assign := (st.back.id_gen_assign, us) ::st.unif_level_assign }
     | _ => .none
     )).reduceOption
   interated
 
+#exit
 
 def tryForWith (fctx : FixCtx) (prem : miniPermiseDict) (state : SearchState) : Option SearchState :=
   match full_matcher_rawF {fctx with current := .some prem.data} prem.data prem.order state.forw with

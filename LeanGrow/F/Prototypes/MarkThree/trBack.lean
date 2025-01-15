@@ -47,6 +47,21 @@ def propagate_lnode_and_tag (thm_data : Array EmbedData) (backwardId : Nat)
   (assigned, fixed)
 
 
+partial def BackTree.modifyAtGoalId (id : Nat) (mod : BackTree → BackTree) : BackTree → BackTree
+  | .ofGoal j t bdirs gdirs ts =>
+      if gdirs.contains id
+      then .ofGoal j t bdirs gdirs (ts.map (BackTree.modifyAtGoalId  id mod))
+      else .ofGoal j t bdirs gdirs ts
+  | .ofPropa i j t bdirs gdirs ts =>
+      if gdirs.contains id
+      then .ofPropa i j t bdirs gdirs (ts.map (BackTree.modifyAtGoalId  id mod))
+      else .ofPropa i j t bdirs gdirs ts
+  | .ofBack i n bdirs gdirs ts =>
+      match gdirs.findIdx? (fun l => l.contains id) with
+      | .none => .ofBack i n bdirs gdirs ts
+      | .some j => .ofBack i n bdirs gdirs (ts.set! j (BackTree.modifyAtGoalId id mod (ts.get! j)))
+  | x => x
+
 
 
 
@@ -200,7 +215,6 @@ structure PropUniState where
   tree : BackTree
   todo : List (Nat × Nat × CExpr)
   updated : List (Nat × Nat × CExpr)
-  solvedGoals : List Nat
 
 
 def propagate_uni_assign_step
@@ -208,12 +222,12 @@ def propagate_uni_assign_step
   (ltx : List (Array CExpr)) (ltx_handler : Nat → (Nat × Nat))
   (sofar : PropUniState)
   : Option PropUniState :=
-  let mod : BackTree → Option (BackTree × Option (List (Nat × Nat × CExpr) × List Nat))
+  let mod : BackTree → Option (BackTree × Option (List (Nat × Nat × CExpr)))
     | .ofBack _ n bdirs gdirs args =>
           match args.get! idx with
           | .ofAssign ce => -- just check, don't affect
                 match CExpr.MatchAssignSolutions' guni ce with
-                | .some _ => .some (.ofBack tag n bdirs gdirs args, .some ([], []))
+                | .some _ => .some (.ofBack tag n bdirs gdirs args, .some ([]))
                 | _ => .none
           | .ofGoal gid type gbd ggd sols =>
                 dbg_trace s!"Uni-propa test with goal id {gid} type {repr type}"
@@ -225,18 +239,17 @@ def propagate_uni_assign_step
                     | .none => dbg_trace s!"Uni-propa test none" ; .none
                     | .some res =>
                         dbg_trace s!"Uni-propa test with gid {gid}"
-                        .some ((.ofBack tag n bdirs gdirs (args.set! idx ( .ofGoal gid type gbd ggd (.ofUni uni_id (.gnode gidx o) :: sols)))), .some (res.1, gid :: sofar.solvedGoals))
+                        .some ((.ofBack tag n bdirs gdirs (args.set! idx ( .ofGoal gid type gbd ggd (.ofUni uni_id (.gnode gidx o) :: sols)))), .some (res.1))
                       -- fix ↑ from passing from Data.Unification.UnifyForBack to Data.Unification.UnifyForBackWUnis
                 | _ =>
                     -- no checks
                     dbg_trace s!"Uni-propa test to assign because gunni {repr guni}"
-                    .some ((.ofBack tag n bdirs gdirs (args.set! idx ( .ofGoal gid type gbd ggd (.ofUni uni_id (guni) :: sols)))), .some ([], gid :: sofar.solvedGoals))
+                    .some ((.ofBack tag n bdirs gdirs (args.set! idx ( .ofGoal gid type gbd ggd (.ofUni uni_id (guni) :: sols)))), .some ([]))
           | _ => .none
     | _ => .none
   let S? := BackTree.modifyAtBackId_wRetrieve tag mod sofar.tree
   match S? with
-  | .some (T, .some next) => dbg_trace "propagate_uni_assign_step : {repr next}" ; .some ⟨T, next.1 ++ sofar.todo, (tag, idx, guni) :: sofar.updated,
-        next.2 ++ sofar.solvedGoals⟩ -- ???
+  | .some (T, .some next) => dbg_trace "propagate_uni_assign_step : {repr next}" ; .some ⟨T, next ++ sofar.todo, (tag, idx, guni) :: sofar.updated⟩ -- ???
   | _ => .none
 
 
@@ -245,20 +258,20 @@ partial def propagate_uni_assign
   (ltx : List (Array CExpr)) (ltx_handler : Nat → (Nat × Nat))
   (init_uni : List (Nat × Nat × CExpr)) (uni_id : Nat)
   (init_tree : BackTree) :
-  Option (BackTree × List (Nat × Nat × CExpr) × List Nat) :=
+  Option (BackTree × List (Nat × Nat × CExpr)) :=
     let rec go (ON : PropUniState) : Option PropUniState :=
       match ON.todo with
       | [] => .some ON
       | (tag,idx,guni) :: more =>
           dbg_trace "propagate_uni_assign more : {repr more}"
-          let step? := propagate_uni_assign_step tag idx guni uni_id ltx ltx_handler ⟨ON.tree, more, ON.updated, ON.solvedGoals⟩
+          let step? := propagate_uni_assign_step tag idx guni uni_id ltx ltx_handler ⟨ON.tree, more, ON.updated⟩
           match step? with
           | .none => .none
           | .some step => go step
-    let res := go ⟨init_tree, init_uni, [], []⟩
+    let res := go ⟨init_tree, init_uni, []⟩
     match res with
     | .none => .none
-    | .some s => dbg_trace s!"Call propagate_uni_assign return {repr s.updated} and {repr s.solvedGoals}" ; .some (s.tree, s.updated, s.solvedGoals)
+    | .some s => dbg_trace s!"Call propagate_uni_assign return {repr s.updated}" ; .some (s.tree, s.updated)
 
 
 
@@ -408,28 +421,20 @@ partial def propagate_uni_assign_toGoalsAssigns (uni_id : Nat)
 
 
 
-def integrate_uni?
+def integrate_uni? (uni_id id_gen_goal : Nat)
   (ltx : List (Array CExpr)) (ltx_handler : Nat → (Nat × Nat))
-  (init_uni : List (Nat × Nat × CExpr)) (us : List (Name × Level))
-  (init_tree : BackTree) : Option (BackTree × List (Nat × Nat × CExpr) × List Nat) :=
+  (init_uni : List (Nat × Nat × CExpr))
+  (init_tree : BackTree) : Option (BackTree × List (Nat × CExpr) × Nat) :=
     dbg_trace "Call integrate_uni?"
-    match propagate_uni_assign ltx ltx_handler init_uni init_tree with
-    | .some (TA,A,G) =>
-        let TD := derefrenceAssignedGoals G TA
-        -- don't know if doing this always is a waste of time
-        -- only becomes necessary if theres a lot of solved goals ?
-        let TF := propagate_uni_levels us (propagate_uni_assign_toGoalsAssigns A TD)
-        (TF, A, G)
+    match propagate_uni_assign ltx ltx_handler init_uni uni_id init_tree with
+    | .some (TA,A) =>
+        propagate_uni_assign_toGoalsAssigns uni_id A id_gen_goal TA
     | .none => .none
 
 
 def integrate_uni_full
-  (now : BackState) (newTree : BackTree) (updated : List (Nat × Nat × CExpr)) (assiP : List (Name × Level)) (solved : List Nat) : BackState :=
-  let u_ps := assiP.map Prod.fst
-  let u_ls := assiP.map Prod.snd
-  let newG := ((now.active_goals.filter (fun x => !(solved.contains x.1))).map (fun (id,g) => (id, CExpr.instantiateLevelParams (porpagate_at_cexpr updated g) u_ps u_ls)))
-  dbg_trace s!"new active goals {repr newG}"
-  {now with active_goals := ((now.active_goals.filter (fun x => !(solved.contains x.1))).map (fun (id,g) => (id, porpagate_at_cexpr updated g))), bt := newTree}
+  (now : BackState) (newTree : BackTree)  (ngs : List (Nat × CExpr)) (ngi : Nat) : BackState :=
+  {now with bt := newTree, active_goals := ngs ++ now.active_goals, id_gen_assign := now.id_gen_assign.succ, id_gen_goal := ngi}
 
 
 
