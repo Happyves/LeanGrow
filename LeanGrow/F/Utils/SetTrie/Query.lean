@@ -68,6 +68,18 @@ partial def query (inter : β → β → Bool) (Q : β) (T : SetTrie α β) : Li
         | .leaf a => go (a :: done) more
   go [] [T]
 
+partial def queryWret (inter : β → β → Bool) (Q : β) (T : SetTrie α β) : List α × List (SetTrie α β) :=
+  let rec go (done : List α) (ret : List (SetTrie α β)) : List (SetTrie α β) → List α × List (SetTrie α β)
+    | [] => (done, ret)
+    | nx :: more =>
+        match nx with
+        | .root c => go done ret (c ++ more)
+        | .node t c => if inter t Q then go done ret (c ++ more) else go done (nx :: ret) more
+        | .leaf a => go (a :: done) ret more
+  go [] [] [T]
+
+
+
 /-- Ignores entries with key of number (not actual key size ; example Trie size) ≤ then depth-/
 partial def queryWC (inter : β → β → Bool) (Q : β) (depth : Nat) (T : SetTrie α β) : List α :=
   let rec go (done : List α) : List (Nat × SetTrie α β) → List α

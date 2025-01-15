@@ -283,3 +283,51 @@ partial def SampleForw (fuel : Nat) (proof : Expr) : MetaM (List SampleTypeRaw) 
         let next ← dig x
         go (res ++ done) (next ++ xs)
   go [] [proof]
+
+
+partial def sampleBackCore (proof : Expr) : MetaM (List (SampleActionType × Name × List Expr)) := do
+  match proof with
+  | .lam _ _ _ _ => return []
+  | _ =>
+    let rw? ← extractRWall_main proof
+    match rw? with
+    | [] =>
+      let (x,argst,_) ← extractApply_main proof
+      match x with
+      | .some n => return  [(.ofB,n,argst)]
+      | _ => return []
+    | _ =>
+      let big ← rw?.foldlM (fun sofar rw =>
+      match rw with
+      | .ofThm a x b => return (.ofBrw,x, (a :: b)):: sofar
+      | _ => return sofar
+      ) []
+      return big
+
+
+def sampleBackSteps (fuel : Nat) (proof : Expr) : MetaM (List preSampleTypeRaw) := do
+  let goal ← inferType proof
+  let res ← sampleBackCore proof
+  let mut R : List preSampleTypeRaw := []
+  for (k,n,as) in res do
+    let sbs ← as.mapM (subproofs fuel)
+    let sps := (sbs.lPi_make'.tailD [])
+    for ctx in sps do
+      let ts ← (ctx.mapM inferType)
+      R := ⟨k,n,goal,ts⟩ :: R
+  return R
+
+partial def sampleBack (fuel : Nat) (proof : Expr) : MetaM (List preSampleTypeRaw) :=
+  let Fuel := fuel+1
+  let rec go (done : List preSampleTypeRaw) : List Expr → MetaM (List preSampleTypeRaw)
+    | [] => return done
+    | x :: xs => do
+      let depth ← digDepth x
+      if depth < Fuel
+      then
+        go done xs
+      else
+        let res ← sampleBackSteps fuel x
+        let next ← dig x
+        go (res ++ done) (next ++ xs)
+  go [] [proof]
