@@ -79,7 +79,7 @@ private def List.getSome : List (Option α) → Option α
 partial def BackTree.modifyAtBackId_wRetrieve (id : Nat)
   (mod : BackTree → Option (BackTree × Option α) ) : BackTree → Option (BackTree × Option α)
   | .fail => .some (.fail, .none)
-  | .ofUni ai ce => .some (.ofUni ai ce, .none)
+  | .ofUni ai ti pi ce => .some (.ofUni ai ti pi ce, .none)
   | .ofAssign ce => .some (.ofAssign ce, .none)
   | .ofGoal j t bdirs gdirs ts =>
       if bdirs.contains id
@@ -128,7 +128,7 @@ def List.replaceByListWhen (toAdd : List α) (p : α → Bool) : List α → Lis
 partial def BackTree.modifyAtGoalId_wUpdates (id : Nat) (rep : List Nat) (newBid : Nat) (mod : BackTree → BackTree) : BackTree → BackTree
   | .fail => .fail
   | .ofAssign ce => .ofAssign ce
-  | .ofUni ai ce => .ofUni ai ce
+  | .ofUni ai ti pi ce => .ofUni ai ti pi ce
   | .ofGoal j t bdirs gdirs ts =>
       if j == id
       then mod (.ofGoal j t bdirs gdirs ts)
@@ -239,12 +239,12 @@ def propagate_uni_assign_step
                     | .none => dbg_trace s!"Uni-propa test none" ; .none
                     | .some res =>
                         dbg_trace s!"Uni-propa test with gid {gid}"
-                        .some ((.ofBack tag n bdirs gdirs (args.set! idx ( .ofGoal gid type gbd ggd (.ofUni uni_id (.gnode gidx o) :: sols)))), .some (res.1))
+                        .some ((.ofBack tag n bdirs gdirs (args.set! idx ( .ofGoal gid type gbd ggd (.ofUni uni_id tag idx (.gnode gidx o) :: sols)))), .some (res.1))
                       -- fix ↑ from passing from Data.Unification.UnifyForBack to Data.Unification.UnifyForBackWUnis
                 | _ =>
                     -- no checks
                     dbg_trace s!"Uni-propa test to assign because gunni {repr guni}"
-                    .some ((.ofBack tag n bdirs gdirs (args.set! idx ( .ofGoal gid type gbd ggd (.ofUni uni_id (guni) :: sols)))), .some ([]))
+                    .some ((.ofBack tag n bdirs gdirs (args.set! idx ( .ofGoal gid type gbd ggd (.ofUni uni_id tag idx (guni) :: sols)))), .some ([]))
           | _ => .none
     | _ => .none
   let S? := BackTree.modifyAtBackId_wRetrieve tag mod sofar.tree

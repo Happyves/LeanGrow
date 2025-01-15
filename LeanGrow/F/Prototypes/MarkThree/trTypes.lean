@@ -7,7 +7,7 @@ import LeanGrow.F.Data.CExpr.Types
 inductive BackTree where
 | fail
 | ofAssign (value : CExpr)
-| ofUni (uniId : Nat) (value : CExpr)
+| ofUni (uniId tag pos : Nat) (value : CExpr)
 | ofPropa (uniId goal_id : Nat) (newtype : CExpr) (bdirs : (List Nat)) (gdirs : (List Nat)) (args : List BackTree)
 | ofGoal (id : Nat) (type : CExpr) (bdirs : (List Nat)) (gdirs : (List Nat)) (args : List BackTree)
 | ofBack (id : Nat) (thm : Lean.Name) (bdirs : Array (List Nat)) (gdirs : Array (List Nat)) (args : Array BackTree) -- add levels
