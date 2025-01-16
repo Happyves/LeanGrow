@@ -64,7 +64,73 @@ without working on the BackTree
 
 -/
 
-#exit
+
+private def uniClash? (a b : List (Nat × Nat × CExpr)) : Bool :=
+  let rec go : List (Nat × Nat × CExpr) → Bool
+    | [] => true
+    | (xt,xp,xv) :: xs =>
+        match b.find? (fun y => y.1 == xt && y.2.1 == xp) with
+        | .some (_,_,w) =>
+            if xv == w then go xs else false
+        | _ => go xs
+  go a
+
+private def uniClash?Big (knowClashes : List (Nat × Nat)) (unif_assign : List (Nat × (List (Nat × Nat × CExpr)))) (a b : List Nat) : Option (List (Nat × Nat)) :=
+  let main (x y : Nat) : Option (Nat × Nat) :=
+    let p := if x < y then (x,y) else (y,x)
+    if knowClashes.contains p
+    then .none
+    else
+      match unif_assign.find? (fun z => z.1 == x) with
+      | .some (_,Ax) =>
+          match unif_assign.find? (fun z => z.1 == y) with
+          | .some (_,Bx) =>
+              if uniClash? Ax Bx then .some p else .none
+          | _ => .none
+      | _ => .none
+  let rec go : List Nat → List Nat → Option (List (Nat × Nat))
+    | x :: xs, y :: ys =>
+        match main x y with
+        | .some p => .some (p :: knowClashes)
+        | _ => go xs (y :: ys)
+    | [], _ :: ys => go a ys
+    | _,_ => .none
+  go a b
+
+
+private def candidMerge (knowClashes : List (Nat × Nat)) (unif_assign : List (Nat × (List (Nat × Nat × CExpr))))
+  (n : Name) (argNum : Nat) -- add levels !
+  (todo : Array (List (CExpr × List Nat))) : List (CExpr × List Nat) × List (Nat × Nat) :=
+  let rec go (knowClashes : List (Nat × Nat)) (sofar : List ((Array CExpr) × List Nat)) : Nat → (List ((Array CExpr) × List Nat) × List (Nat × Nat))
+    | 0 => (sofar, knowClashes)
+    | n+1 =>
+        let choices := todo.get! n
+        let () choices.map (fun (ce,constr) =>
+          sofar.foldl (fun (passed,nkC) (argsVals,innerConstr) =>
+            let relCons := constr.filter (innerConstr.contains · )
+            match uniClash?Big nkC unif_assign constr relCons with
+            | .none => ((argsVals.set! n ce, relCons ++ innerConstr) :: passed ,nkC)
+            | .some NkC => (passed, NkC)
+            ) ([],knowClashes)
+          ) -- for all choices, join, deleting empty ... aahhh
+  let (pruned, nextKC) := go knowClashes [(Array.mkArray argNum .failed,[])] argNum
+  (pruned.map (fun (as,cs) => (CExpr.mkAppA (.const n []) as, cs)) ,nextKC)
+
+
+--#exit
+
 partial def BackTree.assemble?
-  (ltx_assemmbly : List (Nat × Name × Array CExpr)) (bt : BackTree) : List CExpr :=
-  let rec go
+  (ltx_assemmbly : List (Nat × Name × Array CExpr))
+  (unif_assign : List (Nat × (List (Nat × Nat × CExpr))))
+  (bt : BackTree) : List CExpr :=
+  let rec go (knowClashes : List (Nat × Nat)) : BackTree → (List (CExpr × List Nat) × List (Nat × Nat))
+    | .ofGoal _ _ _ _ ts => ts.foldl (fun (sols,kC) t =>
+        let (msols,nkC) := go kC t
+        (msols ++ sols, nkC)
+        ) ([],knowClashes)
+    | .ofBack _ n _ _ ts =>
+        let (_,candid,nkC) := ts.foldl (fun (i,sols,kC) t =>
+          let (msols,nkC) := go kC t
+          (i+1, sols.set! i msols, nkC)
+          ) (0,(Array.mkArray ts.size [] : Array (List (CExpr × List Nat))),knowClashes)
+        candidMerge nkC unif_assign n ts.size candid

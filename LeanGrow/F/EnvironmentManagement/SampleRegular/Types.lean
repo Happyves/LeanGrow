@@ -1,6 +1,6 @@
 
 import LeanGrow.F.Data.CExpr.Types
-
+import Lean
 
 open Lean
 
@@ -22,4 +22,5 @@ structure preSampleTypeRaw where
   thmName : Name
   goal : Expr
   ltx : List (Expr)
-deriving Inhabited, Repr, BEq
+  Ltx : LocalContext
+deriving Inhabited--, Repr, BEq

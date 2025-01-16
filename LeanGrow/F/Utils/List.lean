@@ -95,11 +95,11 @@ def List.orderedJoin [BEq α] (r : α → α → Prop) [DecidableRel r] (L : Lis
   | nx :: more => List.orderedJoin r (List.orderedUnion r nx L) more
 
 
--- # split
+-- -- # split
 
--- probably in mathlib
-def List.splitOn (p : α → Bool) (l : List α) : List α × List α :=
-  let rec go (pos : List α) (neg : List α) : List α → List α × List α
-    | [] => (pos,neg)
-    | x :: xs => if p x then go (x :: pos) neg xs else go pos (x :: neg) xs
-  go [] [] l
+-- -- probably in mathlib
+-- def List.splitOn (p : α → Bool) (l : List α) : List α × List α :=
+--   let rec go (pos : List α) (neg : List α) : List α → List α × List α
+--     | [] => (pos,neg)
+--     | x :: xs => if p x then go (x :: pos) neg xs else go pos (x :: neg) xs
+--   go [] [] l

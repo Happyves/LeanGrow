@@ -27,7 +27,7 @@ structure SearchState where
   fctx : FixCtx -- it would be better to seperate the gnode info and lnode info
                 -- so that we can do forward and backward steps independently of backsteps
   ltx_assemmbly : List (Nat × Name × Array CExpr) -- add universe levels
-  unif_level_assign : List (Nat × (List (Name × Level))) -- (uni_id, params assignements)
+  unif_assign : List (Nat × (List (Nat × Nat × CExpr) × List (Name × Level))) -- (uni_id, params assignements)
 deriving Inhabited--, Repr, BEq
 
 instance : BEq SearchState where
@@ -79,15 +79,15 @@ partial def tryUniAll (st : SearchState) : List SearchState :=
     let uni_tree := BackTree.modifyAtGoalId gol (fun
       | .ofGoal j t bdirs gdirs ts => .ofGoal j t bdirs gdirs ((.ofUni st.back.id_gen_assign (.gnode sol (.ofBvar 42))) :: ts)
       | x => x) st.back.bt
-    match integrate_uni? st.back.id_gen_assign st.back.id_gen_goal st.forw2 st.ltx_handler uni_res uni_tree with
-    | .some (nbt, ngs, ngi) =>
+    match integrate_uni? st.back.id_gen_assign st.back.id_gen_goal (us.map Prod.fst) (us.map Prod.snd) st.forw2 st.ltx_handler uni_res uni_tree with
+    | .some (uni_assi, nbt, ngs, ngi) =>
         let nb := integrate_uni_full st.back nbt ngs ngi
-        Option.some {st with back := nb, unif_level_assign := (st.back.id_gen_assign, us) ::st.unif_level_assign }
+        Option.some {st with back := nb, unif_assign := (st.back.id_gen_assign, uni_assi, us) :: st.unif_assign }
     | _ => .none
     )).reduceOption
   interated
 
-#exit
+
 
 def tryForWith (fctx : FixCtx) (prem : miniPermiseDict) (state : SearchState) : Option SearchState :=
   match full_matcher_rawF {fctx with current := .some prem.data} prem.data prem.order state.forw with
