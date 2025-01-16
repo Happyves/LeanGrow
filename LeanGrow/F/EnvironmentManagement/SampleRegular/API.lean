@@ -166,3 +166,4 @@ def List.lPi_make' (toMerge : List (List (List α))) : List (List α) :=
 
 
 #eval List.lPi_make'  [[[1,2],[3,4]], [[5,6], [7]]]
+#eval List.lPi_make'  [[[1,2],[3,4]], [[5,6], [7]], []]

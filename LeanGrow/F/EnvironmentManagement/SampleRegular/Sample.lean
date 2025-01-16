@@ -72,14 +72,14 @@ partial def contextualize (fuel : Nat) (proof : Expr) : MetaM (List (List Expr))
           return [prop] :: (big.lPi_make'.tailD [])
 
 
-partial def subproofs (fuel : Nat) (proof : Expr) : MetaM (List (List Expr)) := do
-  dbg_trace s!"Looking at {← ppExpr proof}"
+partial def subproofs (fuel : Nat) (proof : Expr) : MetaM (List Expr × List (List Expr)) := do
+  --dbg_trace s!"Looking at {← ppExpr proof}"
   if fuel = 0
   then
-    return [[proof]]
+    return ([], [[proof]])
   else
     match proof with
-    | .lam _ _ _ _ => return [[]]
+    | .lam _ _ _ _ => return ([proof],[]) -- we ignore ∀ typed parts, as they won't show up durring proof search
     | _ =>
       let rw? ← extractRWall_main proof
       match rw? with
@@ -87,26 +87,31 @@ partial def subproofs (fuel : Nat) (proof : Expr) : MetaM (List (List Expr)) := 
         let (_,args?,np) ← extractApply_main proof
         match np ++ args? with -- else apps using no further props aren't recognized
         | [] =>
-          return [[proof]]
+          return ([], [[proof]])
         | _ =>
           if args?.isEmpty
           then
-            return [[proof]]
+            return ([], [[proof]])
           else
-            let ctxs ← args?.mapM (subproofs (fuel - 1))
-            return [proof] :: (ctxs.lPi_make'.tailD []) -- tail because lPi_make' will always start with []
+            let pre ← args?.mapM (subproofs (fuel - 1))
+            let (todos,ctxs) := pre.unzip
+            return (todos.join, [proof] :: (ctxs.lPi_make'.tailD [])) -- tail because lPi_make' will always start with []
       | _ =>
-          let big ← rw?.foldlM (fun sofar rw => do
+          let (Todos, big) ← rw?.foldlM (fun (sT,sofar) rw => do
           match rw with
           | .ofLocal next =>
-              let ctxs ← [next].mapM (subproofs (fuel - 1))
-              return (ctxs) ++ sofar
+              let pre ← [next].mapM (subproofs (fuel - 1))
+              let (todos,ctxs) := pre.unzip
+              return (todos.join ++ sT, (ctxs) ++ sofar)
           | .ofThm a _ b =>
-              let ctxs ← (a :: b).mapM (subproofs (fuel - 1))
-              return (ctxs) ++ sofar
-          | .none => return sofar
-          ) []
-          return [proof] :: (big.lPi_make'.tailD [])
+              let pre ← (a :: b).mapM (subproofs (fuel - 1))
+              let (todos,ctxs) := pre.unzip
+              return (todos.join ++ sT, (ctxs) ++ sofar)
+          | .none => return (sT,sofar)
+          ) ([],[])
+          return (Todos, [proof] :: (big.lPi_make'.tailD []))
+
+
 
 #check 1
 
@@ -166,13 +171,15 @@ def sampleForwStepsWB (fuel : Nat) (proof : Expr) : MetaM (List preSampleTypeRaw
     | _,_ => return done
   do
     let goal ← inferType proof
-    let subproofs ← subproofs fuel proof
+    let (todos,subproofs) ← subproofs fuel proof
     let mut res := []
     for sp in subproofs do
       let Ts ← sp.mapM inferType
       let step ← sampleEach goal [] [] sp Ts
       res := step ++ res
     return res
+
+
 
 partial def sampleForwCore (proof : Expr) : MetaM (List (SampleActionType × Name × List Expr)) := do
   match proof with
@@ -197,7 +204,7 @@ partial def sampleForwCore (proof : Expr) : MetaM (List (SampleActionType × Nam
       ) []
       return big
 
-def sampleForwSteps (fuel : Nat) (proof : Expr) : MetaM (List preSampleTypeRaw) :=
+def sampleForwSteps (fuel : Nat) (proof : Expr) : MetaM (List Expr × List preSampleTypeRaw) :=
   let rec sampleEach (g : Expr) (seen : List Expr) (done : List preSampleTypeRaw) : List Expr → List Expr → MetaM (List preSampleTypeRaw)
     | t :: ts, T :: Ts => do
         let sam ← sampleForwCore t
@@ -206,13 +213,14 @@ def sampleForwSteps (fuel : Nat) (proof : Expr) : MetaM (List preSampleTypeRaw) 
     | _,_ => return done
   do
     let goal ← inferType proof
-    let subproofs ← subproofs fuel proof
+    let (todos,subproofs) ← subproofs fuel proof
     let mut res := []
     for sp in subproofs do
       let Ts ← sp.mapM inferType
       let step ← sampleEach goal [] [] sp Ts
       res := step ++ res
-    return res
+    return (todos, res)
+
 
 
 def dig (proof : Expr) : MetaM (List Expr) := do
@@ -248,30 +256,47 @@ partial def digDepth (proof : Expr) : MetaM Nat :=
     return (match depths.maximum? with | .some w => w | _ => 0)
 
 
-partial def sampleForw (fuel : Nat) (proof : Expr) : MetaM (List preSampleTypeRaw) :=
-  let rec go (done : List preSampleTypeRaw) : List Expr → MetaM (List preSampleTypeRaw)
-    | [] => return done
+partial def sampleForw (fuel : Nat) (proof : Expr) : MetaM (List Expr × List preSampleTypeRaw) :=
+  let rec go (done : List preSampleTypeRaw) (td : List Expr) : List Expr → MetaM (List Expr × List preSampleTypeRaw)
+    | [] => return (td,done)
     | x :: xs => do
       let depth ← digDepth x
       if depth < fuel
       then
-        go done xs
+        go done td xs
       else
-        let res ← sampleForwSteps fuel x
+        let (todos,res) ← sampleForwSteps fuel x
         let next ← dig x
-        go (res ++ done) (next ++ xs)
-  go [] [proof]
+        go (res ++ done) (todos ++ td) (next ++ xs)
+  go [] [] [proof]
 
-partial def SampleForw (fuel : Nat) (proof : Expr) : MetaM (List SampleTypeRaw) :=
-  let rec go (done : List SampleTypeRaw) : List Expr → MetaM (List SampleTypeRaw)
+
+partial def sampleForwAll (fuel : Nat) (proof : Expr) : MetaM (List preSampleTypeRaw) :=
+  let rec go (done : List preSampleTypeRaw) : List (Expr × LocalContext) → MetaM (List preSampleTypeRaw)
     | [] => return done
+    | (x,ctx) :: xs => do
+      withLCtx ctx (← getLocalInstances) do
+        lambdaLetTelescope x
+          (fun _ head => do
+              let (td,res) ← sampleForw fuel head
+              let here ← getLCtx
+              go (res ++ done) ((td.map (·,here)) ++ xs)
+          )
+  go [] [(proof, {})]
+
+
+
+
+partial def SampleForw (fuel : Nat) (proof : Expr) : MetaM (List Expr × List SampleTypeRaw) :=
+  let rec go (done : List SampleTypeRaw) (td : List Expr) : List Expr → MetaM (List Expr × List SampleTypeRaw)
+    | [] => return (td,done)
     | x :: xs => do
       let depth ← digDepth x
       if depth < fuel
       then
-        go done xs
+        go done td xs
       else
-        let pres ← sampleForwSteps fuel x
+        let (todos,pres) ← sampleForwSteps fuel x
         let Ltx ← getLCtx
         let res ← pres.mapM (fun ⟨k,n,g,c⟩ => do
           let ltx ← c.foldlM (fun s x => do
@@ -281,8 +306,22 @@ partial def SampleForw (fuel : Nat) (proof : Expr) : MetaM (List SampleTypeRaw) 
           let (g',c') := translateLocalContext' ltx g
           return ⟨k,n,g',c'⟩)
         let next ← dig x
-        go (res ++ done) (next ++ xs)
-  go [] [proof]
+        go (res ++ done) (todos ++ td) (next ++ xs)
+  go [] [] [proof]
+
+partial def SampleForwAll (fuel : Nat) (proof : Expr) : MetaM (List SampleTypeRaw) :=
+  let rec go (done : List SampleTypeRaw) : List (Expr × LocalContext) → MetaM (List SampleTypeRaw)
+    | [] => return done
+    | (x,ctx) :: xs => do
+      withLCtx ctx (← getLocalInstances) do
+        lambdaLetTelescope x
+          (fun _ head => do
+              let (td,res) ← SampleForw fuel head
+              let here ← getLCtx
+              go (res ++ done) ((td.map (·,here)) ++ xs)
+          )
+  go [] [(proof, {})]
+
 
 
 partial def sampleBackCore (proof : Expr) : MetaM (List (SampleActionType × Name × List Expr)) := do
@@ -305,29 +344,47 @@ partial def sampleBackCore (proof : Expr) : MetaM (List (SampleActionType × Nam
       return big
 
 
-def sampleBackSteps (fuel : Nat) (proof : Expr) : MetaM (List preSampleTypeRaw) := do
+def sampleBackSteps (fuel : Nat) (proof : Expr) : MetaM (List Expr × List preSampleTypeRaw) := do
   let goal ← inferType proof
   let res ← sampleBackCore proof
   let mut R : List preSampleTypeRaw := []
+  let mut T := []
   for (k,n,as) in res do
-    let sbs ← as.mapM (subproofs fuel)
+    let pre ← as.mapM (subproofs fuel)
+    let (td,sbs) := pre.unzip
+    T := td.join :: T
     let sps := (sbs.lPi_make'.tailD [])
     for ctx in sps do
       let ts ← (ctx.mapM inferType)
       R := ⟨k,n,goal,ts⟩ :: R
-  return R
+  return (T.join, R)
 
-partial def sampleBack (fuel : Nat) (proof : Expr) : MetaM (List preSampleTypeRaw) :=
+partial def sampleBack (fuel : Nat) (proof : Expr) : MetaM (List Expr × List preSampleTypeRaw) :=
   let Fuel := fuel+1
-  let rec go (done : List preSampleTypeRaw) : List Expr → MetaM (List preSampleTypeRaw)
-    | [] => return done
+  let rec go (done : List preSampleTypeRaw) (td : List Expr) : List Expr → MetaM (List Expr × List preSampleTypeRaw)
+    | [] => return (td, done)
     | x :: xs => do
       let depth ← digDepth x
       if depth < Fuel
       then
-        go done xs
+        go done td xs
       else
-        let res ← sampleBackSteps fuel x
+        let (ntd,res) ← sampleBackSteps fuel x
         let next ← dig x
-        go (res ++ done) (next ++ xs)
-  go [] [proof]
+        go (res ++ done) (ntd ++ td) (next ++ xs)
+  go [] [] [proof]
+
+
+
+partial def sampleBackAll (fuel : Nat) (proof : Expr) : MetaM (List preSampleTypeRaw) :=
+  let rec go (done : List preSampleTypeRaw) : List (Expr × LocalContext) → MetaM (List preSampleTypeRaw)
+    | [] => return done
+    | (x,ctx) :: xs => do
+      withLCtx ctx (← getLocalInstances) do
+        lambdaLetTelescope x
+          (fun _ head => do
+              let (td,res) ← sampleBack fuel head
+              let here ← getLCtx
+              go (res ++ done) ((td.map (·,here)) ++ xs)
+          )
+  go [] [(proof, {})]
