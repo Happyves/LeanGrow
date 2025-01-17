@@ -23,6 +23,12 @@ def sample_self (n : Name) (type : Expr) : SampleTypeRaw :=
 
 #check getLocalInstances
 
+def List.MySplitOn (p : α → Bool) (l : List α) : List α × List α :=
+  let rec go (pos : List α) (neg : List α) : List α → List α × List α
+    | [] => (pos,neg)
+    | x :: xs => if p x then go (x :: pos) neg xs else go pos (x :: neg) xs
+  go [] [] l
+
 
 partial def contextualize (fuel : Nat) (proof : Expr) : MetaM (List (List Expr)) := do
   dbg_trace s!"Looking at {← ppExpr proof}"
@@ -76,10 +82,14 @@ partial def subproofs (fuel : Nat) (proof : Expr) : MetaM (List Expr × List (Li
   dbg_trace s!"(Subproofs) Looking at {← ppExpr proof}"
   if fuel = 0
   then
-    return ([], [[proof]])
+    match proof with
+    | .lam _ _ _ _ => return ([proof],[[]])
+    | .fvar _ => return ([],[[]]) -- will be incontect anyway
+    | _ => return ([], [[proof]])
   else
     match proof with
-    | .lam _ _ _ _ => return ([proof],[]) -- we ignore ∀ typed parts, as they won't show up durring proof search
+    | .lam _ _ _ _ => return ([proof],[[]]) -- we ignore ∀ typed parts, as they won't show up durring proof search
+    | .fvar _ => return ([],[[]]) -- will be incontect anyway
     | _ =>
       let rw? ← extractRWall_main proof
       match rw? with
@@ -94,6 +104,7 @@ partial def subproofs (fuel : Nat) (proof : Expr) : MetaM (List Expr × List (Li
             return ([], [[proof]])
           else
             let pre ← args?.mapM (subproofs (fuel - 1))
+            --dbg_trace s!"(Subproofs) pre todos {← pre.mapM (fun (x,y) => (x.mapM ppExpr))}"
             let (todos,ctxs) := pre.unzip
             return (todos.join, [proof] :: (ctxs.lPi_make'.tailD [])) -- tail because lPi_make' will always start with []
       | _ =>
@@ -115,22 +126,41 @@ partial def subproofs (fuel : Nat) (proof : Expr) : MetaM (List Expr × List (Li
 
 #check 1
 
+/-- **Todo** : add this to forward steps ; true means blacklisted-/
 def primitiveForwardBlacklist (n : Name) : MetaM Bool := do
   let .some T := ConstantInfo.type <$> (← getEnv).find? n | pure true
   forallTelescope T (fun xs _ => do
-    let ts ← (← xs.mapM inferType).mapM whnf
-    if ts.contains (.sort .zero) then return false else return true
+    let Ts ← (xs.mapM inferType)
+    let ts ← ( ← Ts.mapM inferType).mapM whnf
+    dbg_trace s!"{xs}\n{Ts}\n{ts}"
+    if Ts.any (fun | .forallE _ _ _ _ => true | _ => false)
+    then return true
+    else if ts.contains (.sort .zero)
+         then return false
+         else return true
     ) true
   -- do this in some sort of pre-process and cache way in final version
 
+--#exit
 
+#eval primitiveForwardBlacklist `Nat.rec
+#check Nat.rec
+#eval primitiveForwardBlacklist `Nat.le_antisymm
+#check Nat.le_antisymm
 /-
-Note:
-We avoid using thms that have no props (proofs) as args as forward steps.
+Note on ↑ :
+- We avoid using thms that have no props (proofs) as args as forward steps.
 Don't know if this is truely necessary, but this could favor loops: consider for
 example Nat.succ (perhaps blacklist only those with no prop ards *and* non-prop return ?).
 Also if there are many elements of non-prop arg type (ex: ℕ),then we get too many options ?
+
+- We also discard theorems using hyps with ∀s as forward steps, as in search,
+such terms will never be in the forward context.
+
+- actually, we should discard them if there are non-prop types as sinks ?
 -/
+
+--#exit
 
 partial def sampleForwCoreWB (proof : Expr) : MetaM (List (SampleActionType × Name × List Expr)) := do
   match proof with
@@ -184,6 +214,7 @@ partial def sampleForwCoreWB (proof : Expr) : MetaM (List (SampleActionType × N
 partial def sampleForwCore (proof : Expr) : MetaM (List (SampleActionType × Name × List Expr)) := do
   match proof with
   | .lam _ _ _ _ => return []
+  | .fvar _ => return [] -- will be incontect anyway
   | _ =>
     let rw? ← extractRWall_main proof
     match rw? with
@@ -191,18 +222,21 @@ partial def sampleForwCore (proof : Expr) : MetaM (List (SampleActionType × Nam
       let (x,args?,_) ← extractApply_main proof
       match x with
       | .some n =>
-            let argst ← args?.mapM inferType
+            let argst ← ((args?.filter (fun | .fvar _ => false | _ => true)).filter (fun | .lam _ _ _ _ => false | _ => true)).mapM inferType
+            -- ↑ 2nd filter might be useless once we add blacklisting
+            --dbg_trace s!"(sampleForwCore) args {repr argst}"
             return  [(.ofF,n,argst)]
       | _ => return []
     | _ =>
       let big ← rw?.foldlM (fun sofar rw =>
       match rw with
       | .ofThm a x b => do
-            let argst ← (a :: b).mapM inferType
+            let argst ← ((a :: b).filter (fun | .fvar _ => false | _ => true)).mapM inferType
             return (.ofFrw,x, argst):: sofar
       | _ => return sofar
       ) []
       return big
+
 
 def sampleForwSteps (fuel : Nat) (proof : Expr) : MetaM (List Expr × List preSampleTypeRaw) :=
   let rec sampleEach (g : Expr) (seen : List Expr) (done : List preSampleTypeRaw) : List Expr → List Expr → MetaM (List preSampleTypeRaw)
@@ -215,6 +249,7 @@ def sampleForwSteps (fuel : Nat) (proof : Expr) : MetaM (List Expr × List preSa
   do
     let goal ← inferType proof
     let (todos,subproofs) ← subproofs fuel proof
+    --dbg_trace s!"(sampleForwSteps) todos : {todos} ; subproofs {subproofs}"
     let mut res := []
     for sp in subproofs do
       let Ts ← sp.mapM inferType
@@ -347,31 +382,45 @@ partial def SampleForwAll (fuel : Nat) (proof : Expr) : MetaM (List SampleTypeRa
   go [] [(proof, {})]
 
 
+-- find a solution to avoid env ?!? Suffix check, thoug it will fail
+-- if someone names thm with .rec for example ...
+def isRecursor (env : Environment) (n : Name) : Bool :=
+  (isAuxRecursor env n) || (isRecCore env n)
 
-partial def sampleBackCore (proof : Expr) : MetaM (List (SampleActionType × Name × List Expr)) := do
+
+partial def sampleBackCore (env : Environment) (proof : Expr) : MetaM (List (SampleActionType × Name × List Expr)) := do
   match proof with
   | .lam _ _ _ _ => return []
+  | .fvar _ => return []
   | _ =>
     let rw? ← extractRWall_main proof
     match rw? with
     | [] =>
       let (x,argst,_) ← extractApply_main proof
       match x with
-      | .some n => return  [(.ofB,n,argst)]
+      | .some n =>
+          if isRecursor env n
+          then
+            return  [(.ofRec,n,argst.filter (fun | .fvar _ => false | _ => true))]
+          else
+            return  [(.ofB,n,argst.filter (fun | .fvar _ => false | _ => true))]
       | _ => return []
     | _ =>
       let big ← rw?.foldlM (fun sofar rw =>
       match rw with
-      | .ofThm a x b => return (.ofBrw,x, (a :: b)):: sofar
+      | .ofThm a x b => return (.ofBrw,x, (a :: b).filter (fun | .fvar _ => false | _ => true)):: sofar
       | _ => return sofar
       ) []
       return big
 
 
-def sampleBackSteps (fuel : Nat) (proof : Expr) : MetaM (List Expr × List preSampleTypeRaw) := do
+
+
+
+def sampleBackSteps (env : Environment) (fuel : Nat) (proof : Expr) : MetaM (List Expr × List preSampleTypeRaw) := do
   let goal ← inferType proof
   let Lctx ← getLCtx
-  let res ← sampleBackCore proof
+  let res ← sampleBackCore env proof
   let mut R : List preSampleTypeRaw := []
   let mut T := []
   for (k,n,as) in res do
@@ -384,7 +433,7 @@ def sampleBackSteps (fuel : Nat) (proof : Expr) : MetaM (List Expr × List preSa
       R := ⟨k,n,goal,ts,Lctx⟩ :: R
   return (T.join, R)
 
-partial def sampleBack (fuel : Nat) (proof : Expr) : MetaM (List Expr × List preSampleTypeRaw) :=
+partial def sampleBack (env : Environment) (fuel : Nat) (proof : Expr) : MetaM (List Expr × List preSampleTypeRaw) :=
   let Fuel := fuel+1
   let rec go (done : List preSampleTypeRaw) (td : List Expr) : List Expr → MetaM (List Expr × List preSampleTypeRaw)
     | [] => return (td, done)
@@ -394,22 +443,30 @@ partial def sampleBack (fuel : Nat) (proof : Expr) : MetaM (List Expr × List pr
       then
         go done td xs
       else
-        let (ntd,res) ← sampleBackSteps fuel x
+        let (ntd,res) ← sampleBackSteps env fuel x
         let next ← dig x
         go (res ++ done) (ntd ++ td) (next ++ xs)
   go [] [] [proof]
 
 
 
-partial def sampleBackAll (fuel : Nat) (proof : Expr) : MetaM (List preSampleTypeRaw) :=
+partial def sampleBackAll (env : Environment) (fuel : Nat) (proof : Expr) : MetaM (List preSampleTypeRaw) :=
   let rec go (done : List preSampleTypeRaw) : List (Expr × LocalContext) → MetaM (List preSampleTypeRaw)
     | [] => return done
     | (x,ctx) :: xs => do
       withLCtx ctx (← getLocalInstances) do
         lambdaLetTelescope x
           (fun _ head => do
-              let (td,res) ← sampleBack fuel head
+              let (td,res) ← sampleBack env fuel head
               let here ← getLCtx
               go (res ++ done) ((td.map (·,here)) ++ xs)
           )
   go [] [(proof, {})]
+
+
+/-
+Notes:
+- Maybe get rid of dig depth constraitnt ? Or change it to digdepth ≥ 1 ?
+  In any case, we want to keep the same samples when increasing fuel
+
+-/

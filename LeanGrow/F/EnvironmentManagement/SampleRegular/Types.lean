@@ -5,7 +5,7 @@ import Lean
 open Lean
 
 inductive SampleActionType where -- sync with Ranking.WithStats.Types
-| ofF | ofB | ofFrw | ofBrw | ofOther
+| ofF | ofB | ofFrw | ofBrw | ofRec
 deriving Inhabited, Repr, BEq
 
 

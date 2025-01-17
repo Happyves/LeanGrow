@@ -1,7 +1,7 @@
 
 import LeanGrow.F.EnvironmentManagement.SampleRegular.Sample
 
-
+--import Mathlib.Data.List.Basic
 
 open Lean Meta
 
@@ -129,6 +129,13 @@ runTest 8 `test2
 -- runTest3 8 `test2
 
 
+def List.MyreduceOption : List (Option α) → List α
+  | [] => []
+  | .some x :: xs => x :: (xs.MyreduceOption)
+  | _ :: xs => xs.MyreduceOption
+
+
+
 elab "runTest4" i:num n:name : command => do
   let .some thm := (← getEnv).find?  n.getName | pure ()
   let .some proof := thm.value? | pure ()
@@ -141,7 +148,7 @@ elab "runTest4" i:num n:name : command => do
           let out ← withLCtx ctx (← getLocalInstances) do
             let ppc ← c.mapM ppExpr
             let ppg ← ppExpr g
-            return (s!"Context:\nGoal: {ppg}\nKind : {repr k}\nName : {n}\n" : Format) ++ (Std.Format.join (ppc.map (fun y => y ++ ("\n" : Format))))
+            return (s!"Context:\n{← (ctx.decls.toList.MyreduceOption.map (LocalDecl.type)).mapM ppExpr}\nGoal: {ppg}\nKind : {repr k}\nName : {n}\nSampled:\n" : Format) ++ (Std.Format.join (ppc.map (fun y => y ++ ("\n" : Format))))
           all := out :: all
         return all
         : MetaM _)
@@ -199,7 +206,7 @@ elab "runTest6" i:num n:name : command => do
   let iter := i.getNat
   let res ← Elab.Command.liftTermElabM
     (do
-      let res ← sampleBackAll iter proof
+      let res ← sampleBackAll (← getEnv) iter proof
       let mut all := []
       for ⟨k,n,g,c,ctx⟩ in res do
         let out ← withLCtx ctx (← getLocalInstances) do
@@ -238,7 +245,7 @@ def fac : Nat → Nat
 | 0 => 1
 | n+1 => n.succ * fac n
 
-theorem test4 (n : Nat) : fac n ≥ 1 := by
+theorem test4 (m : Nat) : fac m ≥ 1 := by
   apply @Nat.rec (fun m => fac m ≥ 1)
   -- induction' n with n ih
   · apply Nat.le_refl
