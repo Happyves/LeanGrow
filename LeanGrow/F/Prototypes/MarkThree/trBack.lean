@@ -206,8 +206,19 @@ def integrate_backstep_main
   (thm_name : Name) (thm_data_size : Nat) (target_goal_id : Nat)
   (assigned newgoals : List (Nat × CExpr))
   (state : BackState) : BackState :=
+  let rec extractTarget (found : CExpr) : List (Nat × CExpr) → (CExpr × List (Nat × CExpr))
+    | [] => (found,[])
+    | (n,ce) :: xs =>
+        if n == target_goal_id
+        then extractTarget ce xs
+        else
+          let (res,L) := (extractTarget found xs)
+          (res, (n,ce) :: L) -- important that order be preserved in the context of ↓
   let ⟨G,T⟩ := integrate_backstep thm_name thm_data_size target_goal_id assigned newgoals state.id_gen_back state.id_gen_goal state.bt
-  let nG := G ++ (state.active_goals)
+  let (ta,gs) := extractTarget .failed state.active_goals
+  let nG := gs ++ G ++ [(target_goal_id,ta)] -- new goals and initial one we be placed
+  -- at the back. Reason : durring search, we look for backsteps form goals from left to right
+  -- so placing the new goals at the top causes BFS, the initial at top DFS, so we do a mix
   ⟨state.id_gen_back + 1, state.id_gen_goal + G.length, state.id_gen_assign, nG,T⟩
 
 

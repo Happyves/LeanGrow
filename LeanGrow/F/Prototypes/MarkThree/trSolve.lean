@@ -105,32 +105,51 @@ private def candidMerge (knowClashes : List (Nat × Nat)) (unif_assign : List (N
     | 0 => (sofar, knowClashes)
     | n+1 =>
         let choices := todo.get! n
-        let () choices.map (fun (ce,constr) =>
-          sofar.foldl (fun (passed,nkC) (argsVals,innerConstr) =>
+        let (res,okC) := choices.foldl (fun (st,kC) (ce,constr) =>
+          let (new,ikC) := sofar.foldl (fun (passed,nkC) (argsVals,innerConstr) =>
             let relCons := constr.filter (innerConstr.contains · )
             match uniClash?Big nkC unif_assign constr relCons with
             | .none => ((argsVals.set! n ce, relCons ++ innerConstr) :: passed ,nkC)
             | .some NkC => (passed, NkC)
-            ) ([],knowClashes)
-          ) -- for all choices, join, deleting empty ... aahhh
+            ) ([],kC)
+          (new :: st,ikC)
+          ) ([], knowClashes)
+        (res.join, okC)
   let (pruned, nextKC) := go knowClashes [(Array.mkArray argNum .failed,[])] argNum
   (pruned.map (fun (as,cs) => (CExpr.mkAppA (.const n []) as, cs)) ,nextKC)
 
 
---#exit
 
 partial def BackTree.assemble?
   (ltx_assemmbly : List (Nat × Name × Array CExpr))
   (unif_assign : List (Nat × (List (Nat × Nat × CExpr))))
-  (bt : BackTree) : List CExpr :=
-  let rec go (knowClashes : List (Nat × Nat)) : BackTree → (List (CExpr × List Nat) × List (Nat × Nat))
+  (knowClashes : List (Nat × Nat))
+  (bt : BackTree) : List CExpr × List (Nat × Nat) :=
+  let rec go (knowClashes : List (Nat × Nat)) (addedConstr : List Nat) : BackTree → (List (CExpr × List Nat) × List (Nat × Nat))
     | .ofGoal _ _ _ _ ts => ts.foldl (fun (sols,kC) t =>
-        let (msols,nkC) := go kC t
+        let (msols,nkC) := go kC addedConstr t
         (msols ++ sols, nkC)
         ) ([],knowClashes)
     | .ofBack _ n _ _ ts =>
         let (_,candid,nkC) := ts.foldl (fun (i,sols,kC) t =>
-          let (msols,nkC) := go kC t
+          let (msols,nkC) := go kC addedConstr t
           (i+1, sols.set! i msols, nkC)
           ) (0,(Array.mkArray ts.size [] : Array (List (CExpr × List Nat))),knowClashes)
         candidMerge nkC unif_assign n ts.size candid
+    | .ofAssign val => ([(unfoldAddedGnodes ltx_assemmbly val,[])],[]) -- just realized we don't make assigns anymore ?!?
+    | .ofUni id val =>
+        match uniClash?Big knowClashes unif_assign [id] addedConstr with
+        | .none => ([(unfoldAddedGnodes ltx_assemmbly val,[id])],[])
+        | .some p => ([], p ++ knowClashes)
+    | .ofPropa uid _ _ _ _ sols =>
+        match uniClash?Big knowClashes unif_assign [uid] addedConstr with
+        | .some p => ([],p ++ knowClashes)
+        | .none =>
+            let newConstr := uid :: addedConstr
+            sols.foldl (fun (sols,kC) t =>
+              let (msols,nkC) := go kC newConstr t
+              (msols ++ sols, nkC)
+              ) ([],knowClashes)
+    | .fail => ([],[])
+  let (res, ukC) := go knowClashes [] bt
+  (res.map Prod.fst, ukC)
