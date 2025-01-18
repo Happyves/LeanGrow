@@ -47,20 +47,20 @@ def propagate_lnode_and_tag (thm_data : Array EmbedData) (backwardId : Nat)
   (assigned, fixed)
 
 
-partial def BackTree.modifyAtGoalId (id : Nat) (mod : BackTree → BackTree) : BackTree → BackTree
-  | .ofGoal j t bdirs gdirs ts =>
-      if gdirs.contains id
-      then .ofGoal j t bdirs gdirs (ts.map (BackTree.modifyAtGoalId  id mod))
-      else .ofGoal j t bdirs gdirs ts
-  | .ofPropa i j t bdirs gdirs ts =>
-      if gdirs.contains id
-      then .ofPropa i j t bdirs gdirs (ts.map (BackTree.modifyAtGoalId  id mod))
-      else .ofPropa i j t bdirs gdirs ts
-  | .ofBack i n bdirs gdirs ts =>
-      match gdirs.findIdx? (fun l => l.contains id) with
-      | .none => .ofBack i n bdirs gdirs ts
-      | .some j => .ofBack i n bdirs gdirs (ts.set! j (BackTree.modifyAtGoalId id mod (ts.get! j)))
-  | x => x
+-- partial def BackTree.modifyAtGoalId (id : Nat) (mod : BackTree → BackTree) : BackTree → BackTree
+--   | .ofGoal j t bdirs gdirs ts =>
+--       if gdirs.contains id
+--       then .ofGoal j t bdirs gdirs (ts.map (BackTree.modifyAtGoalId  id mod))
+--       else .ofGoal j t bdirs gdirs ts
+--   | .ofPropa i j t bdirs gdirs ts =>
+--       if gdirs.contains id
+--       then .ofPropa i j t bdirs gdirs (ts.map (BackTree.modifyAtGoalId  id mod))
+--       else .ofPropa i j t bdirs gdirs ts
+--   | .ofBack i n bdirs gdirs ts =>
+--       match gdirs.findIdx? (fun l => l.contains id) with
+--       | .none => .ofBack i n bdirs gdirs ts
+--       | .some j => .ofBack i n bdirs gdirs (ts.set! j (BackTree.modifyAtGoalId id mod (ts.get! j)))
+--   | x => x
 
 
 
@@ -147,6 +147,31 @@ partial def BackTree.modifyAtGoalId_wUpdates (id : Nat) (rep : List Nat) (newBid
       match gdirs.findIdx? (fun l => l.contains id) with
       | .none => .ofBack i n bdirs gdirs ts
       | .some j => .ofBack i n (bdirs.set! j (newBid :: (bdirs.get! j))) (gdirs.set! j (List.replaceByListWhen (id :: rep) (fun x => x == id) (gdirs.get! j))) (ts.set! j (BackTree.modifyAtGoalId_wUpdates id rep newBid mod (ts.get! j)))
+
+
+partial def BackTree.modifyAtGoalId_wUpdatesG (id : Nat) (newGid : Nat) (mod : BackTree → BackTree) : BackTree → BackTree
+  | .fail => .fail
+  | .ofAssign ce => .ofAssign ce
+  | .ofUni ai  ce => .ofUni ai  ce
+  | .ofGoal j t bdirs gdirs ts =>
+      if j == id
+      then mod (.ofGoal j t bdirs gdirs ts)
+      else
+        if gdirs.contains id
+        then .ofGoal j t bdirs gdirs ts
+        else .ofGoal j t (bdirs) (newGid :: gdirs) (ts.map (BackTree.modifyAtGoalId_wUpdatesG id newGid mod))
+  | .ofPropa i j t bdirs gdirs ts =>
+      if j == id
+      then mod (.ofPropa i j t bdirs gdirs ts)
+      else
+        if gdirs.contains id
+        then .ofPropa i j t bdirs gdirs ts
+        else .ofPropa i j t (bdirs) (newGid :: gdirs) (ts.map (BackTree.modifyAtGoalId_wUpdatesG id newGid mod))
+  | .ofBack i n bdirs gdirs ts =>
+      match gdirs.findIdx? (fun l => l.contains id) with
+      | .none => .ofBack i n bdirs gdirs ts
+      | .some j => .ofBack i n bdirs (gdirs.set! j (newGid :: (gdirs.get! j))) (ts.set! j (BackTree.modifyAtGoalId_wUpdatesG id newGid mod (ts.get! j)))
+
 
 
 
@@ -434,6 +459,10 @@ partial def propagate_uni_assign_toGoalsAssigns (uni_id : Nat) (paramNames : Lis
     | x => (x,new_goals,id_gen_goal)
   go id_gen_goal [] [] updated init_tree
 
+
+-- TODO in ↑ : propagate gdirs of new goals !
+
+#exit
 
 
 def integrate_uni? (uni_id id_gen_goal : Nat) (paramNames : List Name) (lvls : List Level)

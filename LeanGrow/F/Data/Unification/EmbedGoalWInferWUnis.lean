@@ -21,7 +21,7 @@ def merge_if_compatibleG (embed : Array (Option CExpr)) (assignOutput : List (Na
         match im with
         | .none => go (embed.set! t l) (t :: toPropagate) rest
         | .some i => if i == l then go embed toPropagate rest else .none
-  with_lTrace [TraceFlags.zero] in
+  with_lTrace TraceFlags.off in
   let res := go embed [] assignOutput
   lTrace TraceFlags.zero & s!"Running merge_if_compatibleG.\nOn embed:{repr embed}\nOn assignOuput:{repr assignOutput}\nReturn:{repr res}\n\n" & res
 
@@ -35,7 +35,7 @@ def propagate_goal (fctx : FixCtx)
     | .none => .none
     | .some ce =>
         let cet := CExpr.inferType fctx ce
-        dbg_trace s!"{todo_idx} of val {repr ce} of type {repr cet}"
+        --dbg_trace s!"{todo_idx} of val {repr ce} of type {repr cet}"
         match CExpr.MatchAssignLFFCU todo_thm_type cet with
         | .none => .none
         | .some (l,u) =>
@@ -44,7 +44,7 @@ def propagate_goal (fctx : FixCtx)
               match exp, us with
               | .some exp', .some us' => .some (exp',us')
               | _, _ => .none
-  with_lTrace [TraceFlags.zero] in
+  with_lTrace TraceFlags.off in
   lTrace TraceFlags.zero & s!"Ran embed_next_raw.\nOn embed:{repr embedSofar}\nOn todo id {todo_idx} with cexpr {repr todo_thm_type}\nReturn:{repr res}\n\n" & res
 
 
@@ -59,7 +59,7 @@ partial def match_goal (fctx : FixCtx)
             match propagate_goal fctx embed paramsSofar n nd.cexpr with
             | .none => .none
             | .some ((emb, toFront), us) => gop emb us (toFront ++ l)
-    with_lTrace [TraceFlags.zero] in
+    with_lTrace TraceFlags.off in
     match CExpr.MatchAssignLFFCU thm_goal real_goal with -- real_goal is a cexpr wrt. ltx
     | .none => .none
     | .some (l, u) =>

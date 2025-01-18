@@ -35,7 +35,7 @@ def merge_if_compatible (embed : Array (Option CExpr)) (assignOutput : List (Nat
         match im with
         | .none => go (embed.set! t l) (t :: toPropagate) rest
         | .some i => if i == l then go embed toPropagate rest else .none
-  with_lTrace [TraceFlags.zero] in
+  with_lTrace TraceFlags.off in
   let res := go embed [] assignOutput
   lTrace TraceFlags.zero & s!"Running merge_if_compatible.\nOn embed:{repr embed}\nOn assignOuput:{repr assignOutput}\nReturn:{repr res}\n\n" & res
 
@@ -46,7 +46,7 @@ def embed_next_raw (ltx : List (Nat × CExpr))
   -- actually, ltx_l should be a structure from Search (discrimi tree) ? should make search for nex embed easier then trying all options
   (embedSofar : Array (Option CExpr)) (paramsSofar : List (Name × Level)) (todo_idx : Nat) (todo_data : EmbedData) :
   List (((Array (Option CExpr)) × (List Nat)) × List (Name × Level)) :=
-  with_lTrace [TraceFlags.zero, .one] in
+  with_lTrace TraceFlags.off in
   -- find matching ltx expressions
   let candidates := ltx.foldl (init := []) (fun r (k, v) =>
       match CExpr.MatchAssignLFFCU todo_data.cexpr v with
@@ -84,7 +84,7 @@ def propagate_raw (fctx : FixCtx)
               match exp, us with
               | .some exp', .some us' => .some (exp',us')
               | _, _ => .none
-  with_lTrace [TraceFlags.zero] in
+  with_lTrace TraceFlags.off in
   lTrace TraceFlags.zero & s!"Ran embed_next_raw.\nOn embed:{repr embedSofar}\nOn todo id {todo_idx} with cexpr {repr todo_thm_type}\nReturn:{repr res}\n\n" & res
 
 
@@ -99,7 +99,7 @@ deriving BEq, Inhabited, Repr
 
 partial def full_matcher_raw (fctx : FixCtx)
   (thm_data : Array EmbedData) (thm_order : Array Nat) (ltx : List (Nat × CExpr)) : List EmbedStruct :=
-  with_lTrace [TraceFlags.zero, .one, .two] in
+  with_lTrace TraceFlags.all in
   let rec main (embedSofar :  Array (Option CExpr)) (paramsSofar : List (Name × Level)) (instances : List Nat) (unassignedNodes : List Nat) (assignedFrontier : List Nat) : List EmbedStruct :=
     lTrace TraceFlags.two & s!"Call to main with {repr embedSofar}, {instances}, {unassignedNodes}, {assignedFrontier}.\n\n" &
     match assignedFrontier with
@@ -125,7 +125,7 @@ partial def full_matcher_raw (fctx : FixCtx)
         lTrace TraceFlags.one & s!"Trying to propagate {n} of cexpr {repr nd}.\n\n" &
         match propagate_raw fctx embedSofar paramsSofar n nd.cexpr with
         | .none => lTrace TraceFlags.zero & s!"Propagation failed, returning [].\n\n" & []
-        | .some ((emb, toFront), us) => lTrace TraceFlags.zero & s!"Propagation succeded!" & main emb us instances (unassignedNodes.filter (fun x => x ∈ (n :: toFront))) (List.union toFront l) -- no duplicates
+        | .some ((emb, toFront), us) => lTrace TraceFlags.zero & s!"Propagation succeded!" & main emb us instances (unassignedNodes.filter (fun x => ¬ x ∈ (n :: toFront))) (List.union toFront l) -- no duplicates
   main (Array.mkArray thm_data.size .none) [] [] thm_order.toList []
 
 
@@ -144,6 +144,7 @@ partial def full_matcher_rawF (fctx : FixCtx)
     match todo with
     | [] => done
     | ⟨embedSofar, paramsSofar, instances, unassignedNodes, assignedFrontier⟩ :: more =>
+        --dbg_trace s!"embedSofar : {repr embedSofar}\nunassignedNodes : {unassignedNodes}\nassignedFrontier : {assignedFrontier}\n"
         match assignedFrontier with
         | [] =>
             match unassignedNodes with
@@ -166,7 +167,8 @@ partial def full_matcher_rawF (fctx : FixCtx)
             let nd := thm_data.get! n
             match propagate_raw fctx embedSofar paramsSofar n nd.cexpr with
             | .none => main more done
-            | .some ((emb, toFront), us) => main (⟨emb, us, instances, (unassignedNodes.filter (fun x => x ∈ (n :: toFront))), (toFront.foldl (fun x y => List.orderedInsertOrLeave (· ≤ ·) y x) l)⟩ :: more) done  -- no duplicates
+            | .some ((emb, toFront), us) => main (⟨emb, us, instances, (unassignedNodes.filter (fun x => ¬ x ∈ (n :: toFront))), (toFront.foldl (fun x y => List.orderedInsertOrLeave (· ≤ ·) y x) l)⟩ :: more) done  -- no duplicates
+      --dbg_trace "(DEBUG full_matcher_rawF)"
       main [⟨(Array.mkArray thm_data.size .none), [], [], thm_order.toList, []⟩] []
 
 

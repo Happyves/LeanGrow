@@ -15,7 +15,6 @@ example (r : myNat) : myAdd .z (myAdd .z r) = r := by
 
 #check 1
 
--- Now order of premises is irrellevant and we don't loop with Eq.trans
 
 /-
 Take-aways :

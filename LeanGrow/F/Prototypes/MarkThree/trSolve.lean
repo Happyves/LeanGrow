@@ -124,7 +124,7 @@ partial def BackTree.assemble?
   (ltx_assemmbly : List (Nat × Name × Array CExpr))
   (unif_assign : List (Nat × (List (Nat × Nat × CExpr))))
   (knowClashes : List (Nat × Nat))
-  (bt : BackTree) : List CExpr × List (Nat × Nat) :=
+  (bt : BackTree) : List (CExpr × List Nat) × List (Nat × Nat) :=
   let rec go (knowClashes : List (Nat × Nat)) (addedConstr : List Nat) : BackTree → (List (CExpr × List Nat) × List (Nat × Nat))
     | .ofGoal _ _ _ _ ts => ts.foldl (fun (sols,kC) t =>
         let (msols,nkC) := go kC addedConstr t
@@ -136,7 +136,7 @@ partial def BackTree.assemble?
           (i+1, sols.set! i msols, nkC)
           ) (0,(Array.mkArray ts.size [] : Array (List (CExpr × List Nat))),knowClashes)
         candidMerge nkC unif_assign n ts.size candid
-    | .ofAssign val => ([(unfoldAddedGnodes ltx_assemmbly val,[])],[]) -- just realized we don't make assigns anymore ?!?
+    | .ofAssign val => ([(unfoldAddedGnodes ltx_assemmbly val,[])],[])
     | .ofUni id val =>
         match uniClash?Big knowClashes unif_assign [id] addedConstr with
         | .none => ([(unfoldAddedGnodes ltx_assemmbly val,[id])],[])
@@ -151,5 +151,24 @@ partial def BackTree.assemble?
               (msols ++ sols, nkC)
               ) ([],knowClashes)
     | .fail => ([],[])
-  let (res, ukC) := go knowClashes [] bt
-  (res.map Prod.fst, ukC)
+  go knowClashes [] bt
+
+def unfoldLNodes (unif_assign : List (Nat × (List (Nat × Nat × CExpr)))) -- add levels
+  (unis : List Nat) (ce : CExpr) : CExpr :=
+  let rec getVals (done : List (Nat × Nat × CExpr)) : List (Nat × (List (Nat × Nat × CExpr))) → List (Nat × Nat × CExpr)
+    | [] => done
+    | (id,x) :: xs => if unis.contains id then getVals (x ++ done) xs else getVals done xs
+  let Vals := getVals [] unif_assign
+  let rec go : CExpr → CExpr
+    | .app f a =>  (.app (go f) (go a))
+    | .lam n f a i => .lam n (go f) (go a) i
+    | .forallE n f a i => .forallE n (go f) (go a) i
+    | .letE n f a z i => .letE n (go f) (go a) z i
+    | .proj n i f => .proj n i (go f)
+    | .gnode _ _ =>.failed -- so, run it after unfoldAddedGnodes
+    | .lnode pos _ (.some tag) =>
+        match Vals.find? (fun (x,y,_) => x == tag && y == pos) with
+        | .some (_,_,ce) => ce
+        | _ => .failed
+    | x => x
+  go ce

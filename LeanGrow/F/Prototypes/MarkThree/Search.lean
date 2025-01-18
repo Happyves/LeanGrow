@@ -44,13 +44,12 @@ def tryBackOn (fctx : FixCtx) (premises : List miniPermiseDict)
     | [] => .none
     | p :: ps =>
         if back_memo.contains p.name
-        then
-          --dbg_trace s!"Back Trying premise {p.name}"
+        then findBack ps
+        else
           let res? := match_goal {fctx with current := p.data} p.data p.data.size p.goal active_goal
           match res? with
           | .some (res,us) => .some (p,res,us)
           | _ => findBack ps
-        else findBack ps
   match findBack premises with
   | .none => .none
   | .some (prem,res,us) =>
@@ -85,7 +84,8 @@ partial def tryUniAll (st : SearchState) : SearchState :=
     match s, g with
     | x :: xs, y :: _ =>
         if st.uni_memo.contains (x.1,y.1)
-        then
+        then uni_ltx_activeGoals done xs g
+        else
           let xT := CExpr.whnf st.fctx (CExpr.inferType st.fctx x.2)
           if xT == .sort .zero
           then
@@ -93,12 +93,11 @@ partial def tryUniAll (st : SearchState) : SearchState :=
             | .some (res,us) => uni_ltx_activeGoals ((x.1,y.1,res,us) :: done) xs g
             | .none => uni_ltx_activeGoals done xs g
           else uni_ltx_activeGoals done xs g
-        else uni_ltx_activeGoals done xs g
     | [], _ :: ys => uni_ltx_activeGoals done st.forw ys
     | _,_ => done
   let candidates := uni_ltx_activeGoals [] st.forw st.back.active_goals
   let interated := (candidates.foldl (fun S (sol,gol,uni_res,us) =>
-    let uni_tree := BackTree.modifyAtGoalId gol (fun
+    let uni_tree := BackTree.modifyAtGoalId_wUpdatesG gol st.back.id_gen_assign (fun
       | .ofGoal j t bdirs gdirs ts => .ofGoal j t bdirs gdirs ((.ofUni st.back.id_gen_assign (.gnode sol (.ofBvar 42))) :: ts)
       | x => x) st.back.bt
     match integrate_uni? st.back.id_gen_assign st.back.id_gen_goal (us.map Prod.fst) (us.map Prod.snd) st.forw2 st.ltx_handler uni_res uni_tree with
@@ -116,6 +115,7 @@ def tryForWith (fctx : FixCtx) (prem : miniPermiseDict) (state : SearchState) : 
   | [] => .none
   | opts =>
       let rez := (opts.map (fun x => (integrate_forward_raw x prem.goal, (prem.name, x.embed.reduceOption)))).filter (fun x => (state.forw.find? (fun y => y.2 == x.1)).isNone)
+      --dbg_trace s!"\n(DEBUG) Forw, opts : {repr (opts.map (EmbedStruct.embed))}\n"
       let sz := rez.length
       let add_to_forw := List.zip ((List.range sz).map (· + state.forwID)) (rez.map Prod.fst)
       let add_to_asm := List.zip ((List.range sz).map (· + state.forwID)) (rez.map Prod.snd)
@@ -151,12 +151,14 @@ partial def search (fuel : Nat) (premises : List miniPermiseDict) (st : SearchSt
     | 0, _ => .none
     | n+1, nx =>
       let st := search_step premises nx
+      dbg_trace s!"(search) loop {n+1}\nBacktree:\n{repr st.back.bt}\nGoals:\n{repr st.back.active_goals}\nForward:{repr st.forw}\nBack memo:\n{st.back_memo}\nUni memo:\n{st.uni_memo}\nUni clashes:\n{st.uni_claches}\n\n"
+      let tmp := (st.unif_assign.map (fun (a,b,_) => (a,b)))
       let (sols?,kC) := BackTree.assemble?
-        st.ltx_assemmbly (st.unif_assign.map (fun (a,b,_) => (a,b)))
+        st.ltx_assemmbly tmp
         st.uni_claches st.back.bt
       match sols? with
       | [] => loop n {st with uni_claches := kC}
-      | tada :: _ => .some (tada)
+      | (tada, ah?) :: _ => .some (unfoldLNodes tmp ah? tada)
   loop fuel st
 
 
