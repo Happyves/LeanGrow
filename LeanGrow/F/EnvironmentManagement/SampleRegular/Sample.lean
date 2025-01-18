@@ -385,7 +385,8 @@ partial def SampleForwAll (fuel : Nat) (proof : Expr) : MetaM (List SampleTypeRa
 -- find a solution to avoid env ?!? Suffix check, thoug it will fail
 -- if someone names thm with .rec for example ...
 def isRecursor (env : Environment) (n : Name) : Bool :=
-  (isAuxRecursor env n) || (isRecCore env n)
+  (isAuxRecursor env n) || (isRecCore env n) || n == `Nat.recAux || n == `Nat.casesAuxOn
+  -- cause the aux ones aren't recognized, at least in this version
 
 
 partial def sampleBackCore (env : Environment) (proof : Expr) : MetaM (List (SampleActionType × Name × List Expr)) := do
