@@ -102,7 +102,7 @@ partial def tryUniAll (st : SearchState) : SearchState :=
       | x => x) st.back.bt
     match integrate_uni? st.back.id_gen_assign st.back.id_gen_goal (us.map Prod.fst) (us.map Prod.snd) st.forw2 st.ltx_handler uni_res uni_tree with
     | .some (uni_assi, nbt, ngs, ngi) =>
-        let nb := integrate_uni_full st.back nbt ngs ngi
+        let nb := integrate_uni_full st.back nbt ngs ngi gol
         {st with back := nb, unif_assign := (st.back.id_gen_assign, uni_assi, us) :: st.unif_assign, uni_memo := (sol,gol) :: st.uni_memo}
     | _ => S
     )) st
@@ -140,9 +140,11 @@ def tryFor (prems : List miniPermiseDict) (state : SearchState) : Option SearchS
 
 partial def search_step (premises : List miniPermiseDict) (st : SearchState) : SearchState :=
   let unistep := tryUniAll st
+  --dbg_trace s!"(unistep)\nBacktree:\n{repr unistep.back.bt}\nGoals:\n{repr unistep.back.active_goals}\nForward:{repr unistep.forw}\nBack memo:\n{unistep.back_memo}\nUni memo:\n{unistep.uni_memo}\nUni clashes:\n{unistep.uni_claches}\n\n"
   let forwstep := match tryFor premises unistep with | .some new => new | _ => unistep
-  match tryBack st.fctx premises st.back_memo forwstep.back with
-  | .some (nb,nf,nm) => {st with back := nb, fctx := nf, back_memo := nm}
+  --dbg_trace s!"(forward)\nBacktree:\n{repr forwstep.back.bt}\nGoals:\n{repr forwstep.back.active_goals}\nForward:{repr forwstep.forw}\nBack memo:\n{forwstep.back_memo}\nUni memo:\n{forwstep.uni_memo}\nUni clashes:\n{forwstep.uni_claches}\n\n"
+  match tryBack forwstep.fctx premises forwstep.back_memo forwstep.back with
+  | .some (nb,nf,nm) => {forwstep with back := nb, fctx := nf, back_memo := nm}
   | _ => forwstep
 
 

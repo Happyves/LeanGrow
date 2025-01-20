@@ -165,7 +165,6 @@ def unfoldLNodes (unif_assign : List (Nat × (List (Nat × Nat × CExpr)))) -- a
     | .forallE n f a i => .forallE n (go f) (go a) i
     | .letE n f a z i => .letE n (go f) (go a) z i
     | .proj n i f => .proj n i (go f)
-    | .gnode _ _ =>.failed -- so, run it after unfoldAddedGnodes
     | .lnode pos _ (.some tag) =>
         match Vals.find? (fun (x,y,_) => x == tag && y == pos) with
         | .some (_,_,ce) => ce
