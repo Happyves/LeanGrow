@@ -124,6 +124,14 @@ structure test6 where
 
 example : test6.a (test6.mk 1 2) = 1 := rfl
 
+
+#check List.cons.inj
+#check List.noConfusion
+
+#eval (do return ((← getEnv).find? `List.cons.inj).isSome : CoreM _)
+#eval (do return ((← getEnv).find? `List.noConfusion).isSome : CoreM _)
+
+
 #exit
 
 
