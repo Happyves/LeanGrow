@@ -81,3 +81,73 @@ def factor (T : CExprTrie) (idx : Nat) (dirs : List oDirs) : CExpr :=
 
 def buildRWtype (T : CExprTrie) (idx : Nat) (dirs : List oDirs) (replacement : CExpr) : CExpr :=
   CExprTrie.factor_with T idx dirs (fun _ => replacement)
+
+/-
+Problem of dependent rewites.
+Example : we have f : (n : Nat) → (p : P n) → X for a predicate P and we want to show f 2 p₁ = f (1+1) p₂.
+There is no simple solution to this, so for the moment, fust infer type  of assumed rewritten type,
+and if it returns .failed (check that we fail durring inference !), then don't carry out the rewrite.
+-/
+
+
+#check Eq.rec
+
+
+def test  {α : Sort _} {β : Sort _} {a : α} {c : β} {motive : (b : α) → a = b → (d : β) → c = d → Sort _}
+  (ha : motive a rfl c rfl)
+  {b : α} {d : β} (ta : a = b) (tc : c = d) : motive b ta d tc :=
+    have inter : motive a rfl d tc :=
+      @Eq.rec β c (fun x hx => motive a rfl x hx) ha d tc
+    @Eq.rec α a (fun x hx => motive x hx d tc) inter b ta
+
+noncomputable
+def test2  {α : Sort _} {β : Sort _} {a : α} {c : β} {motive : (b : α) → a = b → (β : Sort _) → (d : β) → HEq c d → Sort _}
+  (ha : motive a rfl β c HEq.rfl)
+  {b : α} {d : β} (ta : a = b) (tc : HEq c d) : motive b ta β d tc :=
+    have inter : motive a rfl β d tc :=
+      @HEq.rec β c (@fun γ x hx => motive a rfl γ x hx) ha β d tc
+    @Eq.rec α a (fun x hx => motive x hx β d tc) inter b ta
+
+#check HEq.rfl
+
+
+noncomputable
+def test3  {α : Sort _} {β : Sort _} {γ : Sort _} {a : α} {c : β}
+  {motive : (b : α) → a = b → (β : Sort _) → (d : β) → HEq c d → Sort _}
+  (ha : motive a rfl β c HEq.rfl)
+  {b : α} {d : γ} (ta : a = b) (tc : HEq c d) : motive b ta γ d tc :=
+    have inter : motive a rfl γ d tc :=
+      @HEq.rec β c (@fun γ x hx => motive a rfl γ x hx) ha γ d tc
+    @Eq.rec α a (fun x hx => motive x hx γ d tc) inter b ta
+
+
+-- noncomputable
+-- def test4  {α : Sort _} {β : (α : Sort _) → α → Sort _} {a : α} {c : β α a}
+--   {motive : (b : α) → a = b → (γ : (α : Sort _) → α → Sort _) → (d : γ α b) → HEq c d → Sort _}
+--   (ha : motive a rfl β c HEq.rfl)
+--   {b : α} {d : β α b} (ta : a = b) (tc : HEq c d) : motive b ta β d tc :=
+--     have inter : motive a rfl β (by rw [ta] ; exact d) (sorry ):=
+--       @HEq.rec (β α a) c (@fun γ x hx => motive a rfl (_) x hx) ha d tc
+--     @Eq.rec α a (fun x hx => motive x hx γ d tc) inter b ta
+
+-- #check HEq.subst
+-- #check HEq.trans
+
+inductive dHEq : {α : Sort _} → (a : α) → {β : α → Sort _} → β a → Prop where
+  | refl (a : α) : @dHEq α a (fun _ => α) a
+
+#check dHEq.rec
+
+#exit
+
+example (l : List Nat) (x : Nat) :
+  let p1 : l.length < (x :: l).reverse.length := by rw [List.length_reverse] ; dsimp ; exact Nat.lt.base (List.length l) ;
+  let p2 : l.length < (l.reverse ++ [x]).length := by rw [List.length_append, List.length_reverse] ; dsimp ; exact Nat.lt.base (List.length l)
+  ((x :: l).reverse).get  ⟨l.length, p1 ⟩ =
+  List.get (l.reverse ++ [x]) ⟨l.length, p2⟩ :=
+  by
+  intro p1 p2
+  have h : HEq p1 p2 := proof_irrel_heq p1 p2
+  apply @test3 (List Nat) (l.length < (x :: l).reverse.length) (l.length < (l.reverse ++ [x]).length)
+          (x :: l).reverse p1
+          (fun L leq γ p peq => ((x :: l).reverse).get ⟨l.length, p1⟩ = L.get ⟨l.length, (by )⟩)
