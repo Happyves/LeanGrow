@@ -53,10 +53,14 @@ def tryBackOn (fctx : FixCtx) (premises : List miniPermiseDict)
   match findBack premises with
   | .none => .none
   | .some (prem,res,us) =>
-      --dbg_trace s!"Back candidate {repr (prem,res)}"
+      -- dbg_trace s!"(tryBackOn) prem res {repr (prem,res)}"
       let (assi,newg) := propagate_lnode_and_tag prem.data state.id_gen_back res us
+      --dbg_trace s!"(tryBackOn) assi newg {repr assi} {repr newg}"
       let nbs := integrate_backstep_main prem.name prem.data.size active_goal_id assi newg state
+      -- dbg_trace s!"(tryBackOn) after integ {repr nbs.active_goals}"
       .some (nbs, {fctx with ltxTypes := (state.id_gen_back, prem.data) :: fctx.ltxTypes},prem.name)
+
+--#exit
 
 def tryBack (fctx : FixCtx) (premises : List miniPermiseDict)
   (back_memo : List (Nat × List Name))
@@ -96,19 +100,23 @@ partial def tryUniAll (st : SearchState) : SearchState :=
     | [], _ :: ys => uni_ltx_activeGoals done st.forw ys
     | _,_ => done
   let candidates := uni_ltx_activeGoals [] st.forw st.back.active_goals
+  --dbg_trace s!"(tryUniAll) candidates {repr candidates}"
   let interated := (candidates.foldl (fun S (sol,gol,uni_res,us) =>
     let uni_tree := BackTree.modifyAtGoalId_wUpdatesG gol st.back.id_gen_assign (fun
       | .ofGoal j t bdirs gdirs ts => .ofGoal j t bdirs gdirs ((.ofUni st.back.id_gen_assign (.gnode sol (.ofBvar 42))) :: ts)
+      | .ofPropa i j t bdirs gdirs ts => .ofPropa i j t bdirs gdirs ((.ofUni st.back.id_gen_assign (.gnode sol (.ofBvar 42))) :: ts)
       | x => x) st.back.bt
-    match integrate_uni? st.back.id_gen_assign st.back.id_gen_goal (us.map Prod.fst) (us.map Prod.snd) st.forw2 st.ltx_handler uni_res uni_tree with
+    match integrate_uni? st.back.id_gen_assign st.back.id_gen_goal (us.map Prod.fst) (us.map Prod.snd) st.fctx uni_res uni_tree with
     | .some (uni_assi, nbt, ngs, ngi) =>
+        --dbg_trace s!"(tryUniAll) ngs {repr ngs}"
         let nb := integrate_uni_full st.back nbt ngs ngi gol
+        --dbg_trace s!"(tryUniAll) nb.active_goals {repr nb.active_goals}"
         {st with back := nb, unif_assign := (st.back.id_gen_assign, uni_assi, us) :: st.unif_assign, uni_memo := (sol,gol) :: st.uni_memo}
     | _ => S
     )) st
   interated
 
-
+--#exit
 
 def tryForWith (fctx : FixCtx) (prem : miniPermiseDict) (state : SearchState) : Option SearchState :=
   match full_matcher_rawF {fctx with current := .some prem.data} prem.data prem.order state.forw with

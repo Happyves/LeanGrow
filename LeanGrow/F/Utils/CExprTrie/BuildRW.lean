@@ -82,6 +82,9 @@ def factor (T : CExprTrie) (idx : Nat) (dirs : List oDirs) : CExpr :=
 def buildRWtype (T : CExprTrie) (idx : Nat) (dirs : List oDirs) (replacement : CExpr) : CExpr :=
   CExprTrie.factor_with T idx dirs (fun _ => replacement)
 
+end CExprTrie
+
+
 /-
 Problem of dependent rewites.
 Example : we have f : (n : Nat) → (p : P n) → X for a predicate P and we want to show f 2 p₁ = f (1+1) p₂.
@@ -127,16 +130,26 @@ def test3  {α : Sort _} {β : Sort _} {γ : Sort _} {a : α} {c : β}
 --   (ha : motive a rfl β c HEq.rfl)
 --   {b : α} {d : β α b} (ta : a = b) (tc : HEq c d) : motive b ta β d tc :=
 --     have inter : motive a rfl β (by rw [ta] ; exact d) (sorry ):=
---       @HEq.rec (β α a) c (@fun γ x hx => motive a rfl (_) x hx) ha d tc
+--       @HEq.rec (β α a) c (@fun γ x hx => motive a rfl β x hx) ha d tc
 --     @Eq.rec α a (fun x hx => motive x hx γ d tc) inter b ta
 
 -- #check HEq.subst
 -- #check HEq.trans
 
-inductive dHEq : {α : Sort _} → (a : α) → {β : α → Sort _} → β a → Prop where
-  | refl (a : α) : @dHEq α a (fun _ => α) a
+inductive dHEq : (α : Sort _) → (β : α → Sort _) → (a b: α) → β a → β b → Prop where
+  | refl (β : α → Sort _) (x : β a) : dHEq α β a a x x
 
 #check dHEq.rec
+
+theorem dHEq.rfl (α : Sort _) (β : α → Sort _) (a : α) (x : β a) : dHEq α β a a x x :=
+  dHEq.refl β x
+
+theorem dHEq.symm (α : Sort _) (β : α → Sort _) (a b : α) (x : β a) (y : β b) (h : dHEq α β a b x y) : dHEq α β b a y x :=
+  @dHEq.rec α (fun B Ba Bb z w _ => dHEq α B Bb Ba w z) (fun B Bx => dHEq.refl B Bx) β a b x y h
+
+#check HEq.symm
+
+#check HEq.ndrec
 
 #exit
 

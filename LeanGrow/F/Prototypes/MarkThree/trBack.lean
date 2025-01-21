@@ -3,6 +3,9 @@ import LeanGrow.F.Prototypes.MarkThree.trTypes
 import LeanGrow.F.Data.Unification.UnifyForBackWUnis
 import LeanGrow.F.Utils.Array
 import Mathlib.Data.List.Basic
+import LeanGrow.F.Data.CExpr.ReduceInferMuggle.Control
+
+
 
 open Lean
 
@@ -190,18 +193,24 @@ def integrate_backstep
   (assigned newgoals : List (Nat × CExpr))
   (id_gen_back : Nat) (id_gen_goal : Nat)
   (backTree : BackTree) : IntegBack :=
+    --dbg_trace s!"(integrate_backstep) target_goal_id {target_goal_id}\n assigned {repr assigned}\n newgoals {repr newgoals} \nid_gen_back {id_gen_back} id_gen_goal {id_gen_goal}\nT {repr backTree}"
     let common := (newgoals.foldl (fun (l,i) (pos,type) => (((pos,i,type) :: l),i+1)) ([], id_gen_goal)).1
+    --dbg_trace s!"(integrate_backstep) common {repr common}"
     let new_dirs := common.map (fun x => x.2.1)
+    --dbg_trace s!"(integrate_backstep) new_dirs {repr new_dirs}"
     let dirs_new := common.foldl
       (fun A (pos,gId,_) => A.set! pos [gId])
       (Array.mkArray thm_data_size [])
+    --dbg_trace s!"(integrate_backstep) dirs_new {repr dirs_new}"
     let new_leaves_1 := (Array.mkArray thm_data_size .fail)
     let new_leaves_2 := assigned.foldl
       (fun A (pos, val) => A.set! pos (.ofAssign val))
       new_leaves_1
+    --dbg_trace s!"(integrate_backstep) new_leaves_2 {repr new_leaves_2}"
     let new_leaves_3 := common.foldl
       (fun A (pos, gId, type) => A.set! pos (.ofGoal gId type [] [] []))
       new_leaves_2
+    --dbg_trace s!"(integrate_backstep) new_leaves_3 {repr new_leaves_3}"
     let new_branches : BackTree → BackTree := fun X =>
       match X with
       | .ofGoal j t bdirs gdirs ts =>
@@ -212,10 +221,10 @@ def integrate_backstep
           ((.ofBack id_gen_back thm_name (Array.mkArray thm_data_size []) dirs_new new_leaves_3) :: ts)
       | _ => .fail
     let finalT := BackTree.modifyAtGoalId_wUpdates target_goal_id new_dirs id_gen_back new_branches backTree
-    --dbg_trace s!"(inter back) finalT : {repr finalT}\n\n"
+    --dbg_trace s!"(integrate_backstep) fstout {repr (common.map Prod.snd)} \nfinalT : {repr finalT}\n\n"
     ⟨common.map Prod.snd, finalT⟩
 
-
+--#exit
 
 /-
 Just realized:
@@ -239,22 +248,28 @@ def extractTarget (target_goal_id : Nat) (found : CExpr) : List (Nat × CExpr) �
     | [] => (found,[])
     | (n,ce) :: xs =>
         if n == target_goal_id
-        then extractTarget target_goal_id ce xs
+        then
+          extractTarget target_goal_id ce xs
         else
           let (res,L) := (extractTarget target_goal_id found xs)
           (res, (n,ce) :: L) -- important that order be preserved in the context of ↓
+
+--#exit
 
 def integrate_backstep_main
   (thm_name : Name) (thm_data_size : Nat) (target_goal_id : Nat)
   (assigned newgoals : List (Nat × CExpr))
   (state : BackState) : BackState :=
   let ⟨G,T⟩ := integrate_backstep thm_name thm_data_size target_goal_id assigned newgoals state.id_gen_back state.id_gen_goal state.bt
+  --dbg_trace s!"(integrate_backstep_main) \nG {repr G}\nT {repr T}"
   let (ta,gs) := extractTarget target_goal_id .failed state.active_goals
+  --dbg_trace s!"(integrate_backstep_main) \nta {repr ta}\ngs {repr gs}"
   let nG := gs ++ G ++ [(target_goal_id,ta)] -- new goals and initial one we be placed
   -- at the back. Reason : durring search, we look for backsteps form goals from left to right
   -- so placing the new goals at the top causes BFS, the initial at top DFS, so we do a mix
   ⟨state.id_gen_back + 1, state.id_gen_goal + G.length, state.id_gen_assign, nG,T⟩
 
+--#exit
 
 structure PropUniState where
   tree : BackTree
@@ -262,9 +277,11 @@ structure PropUniState where
   updated : List (Nat × Nat × CExpr)
 
 
-def propagate_uni_assign_step
+#check CExpr.inferType
+
+def propagate_uni_assign_step (fctx : FixCtx)
   (tag idx : Nat) (guni : CExpr) (uni_id : Nat)
-  (ltx : List (Array CExpr)) (ltx_handler : Nat → (Nat × Nat))
+  --(ltx : List (Array CExpr)) (ltx_handler : Nat → (Nat × Nat))
   (sofar : PropUniState)
   : Option PropUniState :=
   let mod : BackTree → Option (BackTree × Option (List (Nat × Nat × CExpr)))
@@ -276,21 +293,23 @@ def propagate_uni_assign_step
                 | _ => .none
           | .ofGoal gid type gbd ggd sols =>
                 --dbg_trace s!"Uni-propa test with goal id {gid} type {repr type}"
-                match guni with
-                | .gnode gidx o =>
-                    let (gp,gi) := ltx_handler gidx
-                    let gt := (ltx.get! gp).get! gi
-                    match CExpr.MatchAssignSolutions' gt type with
-                    | .none => --dbg_trace s!"Uni-propa test none" ;
-                         .none
-                    | .some res =>
-                        --dbg_trace s!"Uni-propa test with gid {gid}"
-                        .some ((.ofBack tag n bdirs gdirs (args.set! idx ( .ofGoal gid type gbd ggd (.ofUni uni_id (.gnode gidx o) :: sols)))), .some (res.1))
-                      -- fix ↑ from passing from Data.Unification.UnifyForBack to Data.Unification.UnifyForBackWUnis
-                | _ =>
-                    -- no checks
-                    --dbg_trace s!"Uni-propa test to assign because gunni {repr guni}"
-                    .some ((.ofBack tag n bdirs gdirs (args.set! idx ( .ofGoal gid type gbd ggd (.ofUni uni_id (guni) :: sols)))), .some ([]))
+                let gt := CExpr.inferType fctx guni
+                -- match guni with
+                -- | .gnode gidx _ =>
+                --     let (gp,gi) := ltx_handler gidx
+                --     let gt := (ltx.get! gp).get! gi
+                --     dbg_trace s!"PLEASE : {repr gt}"
+                match CExpr.MatchAssignSolutions' gt type with
+                | .none => --dbg_trace s!"Uni-propa test none" ;
+                      .none
+                | .some res =>
+                    --dbg_trace s!"Uni-propa test with gid {gid}"
+                    .some ((.ofBack tag n bdirs gdirs (args.set! idx ( .ofGoal gid type gbd ggd (.ofUni uni_id (guni) :: sols)))), .some (res.1))
+                  -- fix ↑ from passing from Data.Unification.UnifyForBack to Data.Unification.UnifyForBackWUnis
+                -- | _ => dbg_trace s!"PLEASE NO"
+                --     -- no checks
+                --     --dbg_trace s!"Uni-propa test to assign because gunni {repr guni}"
+                --     .some ((.ofBack tag n bdirs gdirs (args.set! idx ( .ofGoal gid type gbd ggd (.ofUni uni_id (guni) :: sols)))), .some ([]))
           | _ => .none
     | _ => .none
   let S? := BackTree.modifyAtBackId_wRetrieve tag mod sofar.tree
@@ -301,8 +320,7 @@ def propagate_uni_assign_step
 
 
 
-partial def propagate_uni_assign
-  (ltx : List (Array CExpr)) (ltx_handler : Nat → (Nat × Nat))
+partial def propagate_uni_assign (fctx : FixCtx)
   (init_uni : List (Nat × Nat × CExpr)) (uni_id : Nat)
   (init_tree : BackTree) :
   Option (BackTree × List (Nat × Nat × CExpr)) :=
@@ -311,7 +329,8 @@ partial def propagate_uni_assign
       | [] => .some ON
       | (tag,idx,guni) :: more =>
           --dbg_trace "propagate_uni_assign more : {repr more}"
-          let step? := propagate_uni_assign_step tag idx guni uni_id ltx ltx_handler ⟨ON.tree, more, ON.updated⟩
+          let step? := propagate_uni_assign_step fctx tag idx guni uni_id ⟨ON.tree, more, ON.updated⟩
+          --dbg_trace s!"(propagate_uni_assign) at {repr (tag,idx,guni)}\nUpdated {repr (PropUniState.updated <$> step?)}"
           match step? with
           | .none => .none
           | .some step => go step
@@ -354,12 +373,15 @@ def customSplit (toPropa : List (Nat × Nat × CExpr)) (bdirs : Array (List Nat)
         then entry i dirs (sofar.modify i (fun L => (t,p,v) :: L)) todo more
         else entry i dirs sofar ((t,p,v) :: todo) more
   let rec go (sofar : Array (List (Nat × Nat × CExpr))) (todo : List (Nat × Nat × CExpr)) : Nat → Array (List (Nat × Nat × CExpr))
-    | 0 => (entry 0 (bdirs.get! 0) sofar [] todo).1
+    | 0 => sofar --(entry 0 (bdirs.get! 0) sofar [] todo).1
     | n+1 =>
         let (next, nextTD) := entry n (bdirs.get! n) sofar [] todo
         go next nextTD n
-  go tofill toPropa tofill.size
+  let res := go tofill toPropa tofill.size
+  --dbg_trace s!"(customSplit)\n toPropa {repr toPropa} bdirs {bdirs} res {repr res}"
+  res
 
+--#exit
 
 -- def customSplit' (toPropa : List (Nat)) (gdirs : Array (List Nat)) : Array (List (Nat)) :=
 --   let tofill := Array.mkArray gdirs.size []
@@ -415,6 +437,19 @@ def porpagate_at_cexpr (ancestors : List (Nat × Nat × CExpr)) (paramNames : Li
 #check CExpr.instantiateLevelParams
 
 
+partial def CExpr.hasFailed (E : CExpr) : Bool :=
+      let rec go : List CExpr → Bool
+      | [] => false
+      | nx :: L =>
+            match nx with
+            | .failed => true
+            | .app f a => go (f :: a :: L)
+            | .lam _ t b _ => go (t :: b :: L)
+            | .forallE _ t b _ => go (t :: b :: L)
+            | .letE _ t v b _ => go (t :: v :: b :: L)
+            | .proj _ _ b => go (b :: L)
+            | _ => go L
+      go [E]
 
 
 partial def propagate_uni_assign_toGoalsAssigns (uni_id : Nat) (paramNames : List Name) (lvls : List Level)
@@ -435,7 +470,9 @@ partial def propagate_uni_assign_toGoalsAssigns (uni_id : Nat) (paramNames : Lis
               update, new_new_goals,  new_id_gen_goal)
     | .ofGoal gid type gbd ggd sols =>
         let propad? := (porpagate_at_cexpr (splitable ++ ancestors) paramNames lvls type)
-        if propad? == type -- cause I'm lazy, make efficient ; basicly checks if it contained propaded vals or not
+        --dbg_trace s!""
+        --dbg_trace s!"(propagate_uni_assign_toGoalsAssigns)\npropad? : {repr propad?}\ntype : {repr type}"
+        if propad? == type || (CExpr.hasFailed propad?) -- cause I'm lazy, make efficient ; basicly checks if it contained propaded vals or not
         then
           let (fsols,ngs,ngi) := sols.foldl (fun (tsols,tngs,tngi) T =>
             let (r,rngs,rngi) := go tngi tngs ancestors splitable T
@@ -454,7 +491,8 @@ partial def propagate_uni_assign_toGoalsAssigns (uni_id : Nat) (paramNames : Lis
           (propa!,(ngi,propad?) :: ngs, ngi+1)
     | .ofPropa uid gid type gbd ggd sols => -- same as ↑
         let propad? := (porpagate_at_cexpr (splitable ++ ancestors) paramNames lvls type)
-        if propad? == type -- cause I'm lazy, make efficient ; basicly checks if it contained propaded vals or not
+        --dbg_trace s!"(propagate_uni_assign_toGoalsAssigns)\npropad? : {repr propad?}\ntype : {repr type}"
+        if propad? == type || (CExpr.hasFailed propad?) -- cause I'm lazy, make efficient ; basicly checks if it contained propaded vals or not
         then
           let (fsols,ngs,ngi) := sols.foldl (fun (tsols,tngs,tngi) T =>
             let (r,rngs,rngi) := go tngi tngs ancestors splitable T
@@ -481,11 +519,11 @@ partial def propagate_uni_assign_toGoalsAssigns (uni_id : Nat) (paramNames : Lis
 
 
 def integrate_uni? (uni_id id_gen_goal : Nat) (paramNames : List Name) (lvls : List Level)
-  (ltx : List (Array CExpr)) (ltx_handler : Nat → (Nat × Nat))
+  (fctx : FixCtx)
   (init_uni : List (Nat × Nat × CExpr))
   (init_tree : BackTree) : Option (List (Nat × Nat × CExpr) × BackTree × List (Nat × CExpr) × Nat) :=
     --dbg_trace "Call integrate_uni?"
-    match propagate_uni_assign ltx ltx_handler init_uni uni_id init_tree with
+    match propagate_uni_assign fctx init_uni uni_id init_tree with
     | .some (TA,A) =>
         (A, propagate_uni_assign_toGoalsAssigns uni_id paramNames lvls A id_gen_goal TA)
     | .none => .none

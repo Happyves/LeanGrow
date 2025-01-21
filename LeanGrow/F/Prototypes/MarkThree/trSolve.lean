@@ -67,11 +67,11 @@ without working on the BackTree
 
 private def uniClash? (a b : List (Nat × Nat × CExpr)) : Bool :=
   let rec go : List (Nat × Nat × CExpr) → Bool
-    | [] => true
+    | [] => false
     | (xt,xp,xv) :: xs =>
         match b.find? (fun y => y.1 == xt && y.2.1 == xp) with
         | .some (_,_,w) =>
-            if xv == w then go xs else false
+            if xv == w then go xs else true
         | _ => go xs
   go a
 
@@ -101,55 +101,83 @@ private def uniClash?Big (knowClashes : List (Nat × Nat)) (unif_assign : List (
 private def candidMerge (knowClashes : List (Nat × Nat)) (unif_assign : List (Nat × (List (Nat × Nat × CExpr))))
   (n : Name) (argNum : Nat) -- add levels !
   (todo : Array (List (CExpr × List Nat))) : List (CExpr × List Nat) × List (Nat × Nat) :=
+  --dbg_trace "(candidMerge)"
   let rec go (knowClashes : List (Nat × Nat)) (sofar : List ((Array CExpr) × List Nat)) : Nat → (List ((Array CExpr) × List Nat) × List (Nat × Nat))
     | 0 => (sofar, knowClashes)
     | n+1 =>
+        --dbg_trace s!"▸ Generation {repr sofar}"
         let choices := todo.get! n
+        --dbg_trace s!"Choices {repr choices}"
         let (res,okC) := choices.foldl (fun (st,kC) (ce,constr) =>
+          --dbg_trace s!"Choice contr {constr} and term {repr ce}"
           let (new,ikC) := sofar.foldl (fun (passed,nkC) (argsVals,innerConstr) =>
+            --dbg_trace s!"Candidate {repr argsVals}"
             let relCons := constr.filter (innerConstr.contains · )
+            --dbg_trace s!"relCons {repr relCons}"
             match uniClash?Big nkC unif_assign constr relCons with
-            | .none => ((argsVals.set! n ce, relCons ++ innerConstr) :: passed ,nkC)
-            | .some NkC => (passed, NkC)
+            | .none => --dbg_trace s!"pass !"
+                ((argsVals.set! n ce, relCons ++ innerConstr) :: passed ,nkC)
+            | .some NkC => --dbg_trace s!"no pass"
+                (passed, NkC)
             ) ([],kC)
           (new :: st,ikC)
           ) ([], knowClashes)
-        (res.join, okC)
+        go okC res.join n
   let (pruned, nextKC) := go knowClashes [(Array.mkArray argNum .failed,[])] argNum
   (pruned.map (fun (as,cs) => (CExpr.mkAppA (.const n []) as, cs)) ,nextKC)
 
-
+--#exit
 
 partial def BackTree.assemble?
   (ltx_assemmbly : List (Nat × Name × Array CExpr))
   (unif_assign : List (Nat × (List (Nat × Nat × CExpr))))
   (knowClashes : List (Nat × Nat))
   (bt : BackTree) : List (CExpr × List Nat) × List (Nat × Nat) :=
+  --dbg_trace "(assembly)\n"
   let rec go (knowClashes : List (Nat × Nat)) (addedConstr : List Nat) : BackTree → (List (CExpr × List Nat) × List (Nat × Nat))
-    | .ofGoal _ _ _ _ ts => ts.foldl (fun (sols,kC) t =>
+    | .ofGoal i _ _ _ ts =>
+      let res :=
+      ts.foldl (fun (sols,kC) t =>
         let (msols,nkC) := go kC addedConstr t
         (msols ++ sols, nkC)
         ) ([],knowClashes)
-    | .ofBack _ n _ _ ts =>
+        --dbg_trace s!"Goal {i}, returning {repr res}"
+      res
+    | .ofBack i n _ _ ts =>
         let (_,candid,nkC) := ts.foldl (fun (i,sols,kC) t =>
           let (msols,nkC) := go kC addedConstr t
           (i+1, sols.set! i msols, nkC)
           ) (0,(Array.mkArray ts.size [] : Array (List (CExpr × List Nat))),knowClashes)
-        candidMerge nkC unif_assign n ts.size candid
-    | .ofAssign val => ([(unfoldAddedGnodes ltx_assemmbly val,[])],[])
+        let res := candidMerge nkC unif_assign n ts.size candid
+        --dbg_trace s!"Back {i}, returning {repr res}" ;
+        res
+    | .ofAssign val =>
+        --dbg_trace s!"Assing, returning {repr (unfoldAddedGnodes ltx_assemmbly val)}"
+        ([(unfoldAddedGnodes ltx_assemmbly val,[])],[])
     | .ofUni id val =>
+        --dbg_trace s!"Uni {id}"
         match uniClash?Big knowClashes unif_assign [id] addedConstr with
-        | .none => ([(unfoldAddedGnodes ltx_assemmbly val,[id])],[])
-        | .some p => ([], p ++ knowClashes)
+        | .none =>
+            --dbg_trace s!"No clash, returning {repr (unfoldAddedGnodes ltx_assemmbly val)}"
+            ([(unfoldAddedGnodes ltx_assemmbly val,[id])],[])
+        | .some p =>
+            --dbg_trace s!"Clash {p}"
+            ([], p ++ knowClashes)
     | .ofPropa uid _ _ _ _ sols =>
+        --dbg_trace s!"Propa {uid}"
         match uniClash?Big knowClashes unif_assign [uid] addedConstr with
-        | .some p => ([],p ++ knowClashes)
+        | .some p =>
+            --dbg_trace s!"Clash {p}"
+            ([],p ++ knowClashes)
         | .none =>
             let newConstr := uid :: addedConstr
+            let res :=
             sols.foldl (fun (sols,kC) t =>
               let (msols,nkC) := go kC newConstr t
               (msols ++ sols, nkC)
               ) ([],knowClashes)
+            --dbg_trace s!"No clash, retunring {repr res}"
+            res
     | .fail => ([],[])
   go knowClashes [] bt
 
