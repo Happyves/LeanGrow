@@ -136,10 +136,12 @@ def test3  {α : Sort _} {β : Sort _} {γ : Sort _} {a : α} {c : β}
 -- #check HEq.subst
 -- #check HEq.trans
 
-inductive dHEq : (α : Sort _) → (β : α → Sort _) → (a b: α) → β a → β b → Prop where
+inductive dHEq : (α : Sort _) → (β : α → Sort _) → (a b : α) → β a → β b → Prop where
   | refl (β : α → Sort _) (x : β a) : dHEq α β a a x x
 
 #check dHEq.rec
+
+
 
 theorem dHEq.rfl (α : Sort _) (β : α → Sort _) (a : α) (x : β a) : dHEq α β a a x x :=
   dHEq.refl β x
@@ -150,6 +152,38 @@ theorem dHEq.symm (α : Sort _) (β : α → Sort _) (a b : α) (x : β a) (y : 
 #check HEq.symm
 
 #check HEq.ndrec
+
+noncomputable
+def dHEq.ndrec {α : Sort _} {motive : (β : α → Sort u_2) → (a b : α) → (a_1 : β a) → (a_2 : β b) → Sort _}
+    (m : {a : α} → (β : α → Sort _) → (x : β a) → motive β a a x x)
+    {β : α → Sort _} {a b : α} {x : β a} {y : β b} (t : dHEq α β a b x y) : motive β a b x y :=
+    @dHEq.rec α (fun B Ba Bb z w _ => motive B Ba Bb z w) m β a b x y t
+
+theorem eq_of_dheq {a : α} {x y : β a} (h : dHEq α β a a x y) : Eq x y :=
+  have : (a b : α) → (z : β a) → (w : β b) → dHEq α β a b z w → (h : Eq a b) → Eq (cast (congrArg β h) z) w :=
+    fun _ _ _ _ h₁ =>
+      h₁.rec (fun _ _ _ => rfl)
+  this a a x y h rfl
+
+#check congrArg
+
+-- def dHEq.subst (α : Sort _) (β : α → Sort _) (a b : α) (x : β a) (y : β b) (h : dHEq α β a b x y)
+--   (P : (β : α → Sort _) → (c : α) → β c → Sort _) (hp : P β a x): P β b y :=
+--   @dHEq.ndrec α (fun _ _ _ _ _ => P β a x) (fun _ _  => hp) β a b x y h
+
+-- noncomputable
+-- def test4 {α : Sort _} {β : Sort _} {γ : β → Sort _} {a : α} {c : β} {f : γ c}
+--   {motive : (b : α) → a = b → (d : β) → (e : γ d) → dHEq β γ c d f e → Sort _}
+--   (ha : motive a rfl c f (@dHEq.refl β c γ f))
+--   {b : α} {d : β} {e : γ d} (ta : a = b) (tc : dHEq β γ c d f e) : motive b ta d e tc :=
+--     have inter : motive a rfl d e tc :=
+--       @dHEq.rec β (@fun γ c d f e H => motive a rfl d e) ha γ d tc
+--     @Eq.rec α a (fun x hx => motive x hx γ d tc) inter b ta
+
+inductive DHEq : (α : Sort _) → (β : α → Sort _) → (a b : α) → β a → β b → Prop where
+  | refl (a : α) (x : β a) : DHEq α β a a x x
+
+#check DHEq.rec
 
 #exit
 
@@ -162,5 +196,7 @@ example (l : List Nat) (x : Nat) :
   intro p1 p2
   have h : HEq p1 p2 := proof_irrel_heq p1 p2
   apply @test3 (List Nat) (l.length < (x :: l).reverse.length) (l.length < (l.reverse ++ [x]).length)
-          (x :: l).reverse p1
-          (fun L leq γ p peq => ((x :: l).reverse).get ⟨l.length, p1⟩ = L.get ⟨l.length, (by )⟩)
+          (x :: l).reverse p1 (fun z zeq B y yeq => ((l.length < (x :: l).reverse.length) = B)) rfl
+          (l.reverse ++ [x]) p2 (List.reverse_cons x l) h
+
+#check List.reverse_cons
