@@ -185,7 +185,47 @@ inductive DHEq : (α : Sort _) → (β : α → Sort _) → (a b : α) → β a 
 
 #check DHEq.rec
 
-#exit
+theorem DHEq.rfl (α : Sort _) (β : α → Sort _) (a : α) (x : β a) : DHEq α β a a x x :=
+  DHEq.refl a x
+
+theorem DHEq.symm (α : Sort _) (β : α → Sort _) (a b : α) (x : β a) (y : β b) (h : DHEq α β a b x y) : DHEq α β b a y x :=
+  @DHEq.rec α β a (fun b z w _ => DHEq α β b a w z) (fun x => DHEq.refl a x) b x y h
+
+noncomputable
+def DHEq.ndrec {α : Sort _} {β : α → Sort _} {a : α}
+  {motive : (b : α) → (x : β a) → (y : β b) → Sort _}
+  (refl : (x : β a) → motive a x x)
+  {b : α} {x : β a}  {y : β b} (t : DHEq α β a b x y) : motive b x y :=
+    @DHEq.rec α β a (fun b z w _ => motive b z w) refl b x y t
+
+theorem eq_of_Dheq {a : α} {x y : β a} (h : DHEq α β a a x y) : Eq x y :=
+  have : (a b : α) → (z : β a) → (w : β b) → DHEq α β a b z w → (h : Eq a b) → Eq (cast (congrArg β h) z) w :=
+    fun _ _ _ _ h₁ =>
+      h₁.rec (fun _ _=> rfl)
+  this a a x y h rfl
+
+noncomputable
+def DHEq.subst (α : Sort _) (β : α → Sort _) (a b : α) (x : β a) (y : β b) (h : DHEq α β a b x y)
+  (P : (c : α) → β c → Sort _) (hp : ∀ x, P a x) : P b y :=
+  @DHEq.ndrec α β a (fun b _ y => P b y) (fun x  => hp x) b x y h
+
+noncomputable
+def test4 {α : Sort _} {β : Sort _} {γ : β → Sort _} {a : α} {c : β} {f : γ c}
+  {motive : (b : α) → a = b → (d : β) → (e : γ d) → Sort _}
+  (ha : ∀ f, motive a rfl c f)
+  {b : α} {d : β} {e : γ d} (ta : a = b) (tc : DHEq β γ c d f e) : motive b ta d e :=
+    have inter : motive a rfl d e  :=
+      @DHEq.ndrec β γ c (@fun d _ e => motive a rfl d e) ha d f e tc
+    @Eq.rec α a (fun x hx => motive x hx d e) inter b ta
+
+--#exit
+
+theorem proof_irrel_Dheq {p : α → Prop} {a b : α} (eq : a = b) (hp : p a) (hq : p b) : DHEq α p a b hp hq := by
+  have fst := proof_irrel_heq hp hq
+  apply @test3 α (p a) (p b) a hp
+    (fun c ceq q d _ => DHEq α p a c hp (by rw [← ceq] ; exact hp))
+    (DHEq.refl a hp) b hq
+    eq fst
 
 example (l : List Nat) (x : Nat) :
   let p1 : l.length < (x :: l).reverse.length := by rw [List.length_reverse] ; dsimp ; exact Nat.lt.base (List.length l) ;
@@ -194,9 +234,22 @@ example (l : List Nat) (x : Nat) :
   List.get (l.reverse ++ [x]) ⟨l.length, p2⟩ :=
   by
   intro p1 p2
-  have h : HEq p1 p2 := proof_irrel_heq p1 p2
-  apply @test3 (List Nat) (l.length < (x :: l).reverse.length) (l.length < (l.reverse ++ [x]).length)
-          (x :: l).reverse p1 (fun z zeq B y yeq => ((l.length < (x :: l).reverse.length) = B)) rfl
-          (l.reverse ++ [x]) p2 (List.reverse_cons x l) h
+  --have h : HEq p1 p2 := proof_irrel_heq p1 p2
+  have H := @test4
+    (List Nat) (List Nat) (fun X => (l.length < X.length))
+    (x :: l).reverse (x :: l).reverse p1
+    (fun b _ d e => (x :: l).reverse.get ⟨l.length, p1⟩ = d.get ⟨l.length, e⟩)
+    (fun _ => rfl)
+    (l.reverse ++ [x]) (l.reverse ++ [x]) p2
+    (List.reverse_cons x l)
+    (by apply proof_irrel_Dheq
+        apply List.reverse_cons
+        )
+  exact H
 
 #check List.reverse_cons
+
+#check proof_irrel_heq
+#check propext
+#check iff_of_true
+#check proof_irrel

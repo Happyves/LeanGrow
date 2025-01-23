@@ -55,6 +55,11 @@ def List.productWith (f : α → β → γ) (l : List α) (L : List β) : List �
 
 #eval List.productWith (fun a b => a+b) [1,2] [3,4]
 
+def List.MYpwFilter (R : α → α → Prop) [DecidableRel R] (l : List α) : List α :=
+  l.foldr (fun x IH => if ∀ y ∈ IH, R x y then x :: IH else IH) []
+
+def List.MYdedup [BEq α] (l : List α) : List α :=
+  l.MYpwFilter (· != ·)
 
 
 partial def cexprReduceShallow (fctx : FixCtx) (bvarCtx : List CExpr) (fuel : Nat) (e : CExpr) : List CExpr :=
@@ -71,12 +76,15 @@ partial def cexprReduceShallow (fctx : FixCtx) (bvarCtx : List CExpr) (fuel : Na
       | .app f a =>
         let F := cexprReduceShallow fctx bvarCtx (fuel - 1) f
         let A := cexprReduceShallow fctx bvarCtx (fuel - 1) a
-        let combi := List.productWith (fun x y => CExpr.app x y) F A
-        red :: del :: combi
+        let combi := (List.productWith (fun x y => CExpr.app x y) F A) --.map (cexprWhnf fctx bvarCtx) -- do we ?
+        red :: del :: (combi.MYdedup.filter (fun x => x != red && x != del))
       | .lam n t b i =>
-        red :: del :: ((cexprReduceShallow fctx (t :: bvarCtx) (fuel - 1) b).map (CExpr.lam n t · i))
+        let res := ((cexprReduceShallow fctx (t :: bvarCtx) (fuel - 1) b).map (CExpr.lam n t · i))
+        red :: del :: (res.MYdedup.filter (fun x => x != red && x != del))
       | .forallE n t b i =>
-        red :: del :: ((cexprReduceShallow fctx (t :: bvarCtx) (fuel - 1) b).map (CExpr.forallE n t · i))
+        let res := ((cexprReduceShallow fctx (t :: bvarCtx) (fuel - 1) b).map (CExpr.forallE n t · i))
+        red :: del :: (res.MYdedup.filter (fun x => x != red && x != del))
       | .proj n i a =>
-        red :: del :: ((cexprReduceShallow fctx (bvarCtx) (fuel - 1) a).map (CExpr.proj n i ·))
+        let res := ((cexprReduceShallow fctx (bvarCtx) (fuel - 1) a).map (CExpr.proj n i ·))
+        red :: del :: (res.MYdedup.filter (fun x => x != red && x != del))
       | x => [x]
