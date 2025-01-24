@@ -11,4 +11,4 @@ structure ActionType where
   ofOther : Unit -- induction, noConfusion, quotient stuff ?
 deriving Inhabited, Repr, BEq
 
-def HypGoalThmState := SetTrieC (SetTrieC ActionType)
+def HypGoalThmState := SetTrieC (Nat × CExprTrie × (List (Nat × ActionType)))

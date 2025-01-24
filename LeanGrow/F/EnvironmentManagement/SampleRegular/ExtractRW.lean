@@ -181,3 +181,26 @@ def extractRWall_main (proof : Expr) : MetaM (List rwPartType) := do
         | _ => return [congrRaw]
       | _ => return conv
   | _ => return [rw]
+
+
+/-
+
+**TODO**
+
+```
+import Mathlib.Tactic
+
+theorem testVanilla (a b : Nat) (h1 : a < 3) (h2 : b < 3) (eq: a = b) : Fin.mk a h1 = ⟨b,h2⟩ := by
+  simp_rw [eq]
+
+#print testVanilla
+
+theorem testVanilla2 (a b : Nat) (h1 : a < 3) (h2 : b < 3) (eq: a = b) : Fin.mk a h1 = ⟨b,h2⟩ := by
+  congr
+
+#print testVanilla2
+```
+
+testVanilla2 we can handle, but testVanilla will be flawed...
+
+-/
