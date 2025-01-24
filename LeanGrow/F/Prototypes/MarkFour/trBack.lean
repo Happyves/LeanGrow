@@ -104,6 +104,16 @@ partial def BackTree.modifyAtBackId_wRetrieve (id : Nat)
           let Ts := res.reduceOption
           .some (.ofPropa i j t bdirs gdirs (Ts.map Prod.fst), (Ts.map Prod.snd).getSome)
       else .some (.ofPropa i j t bdirs gdirs ts, .none)
+  | .ofIntro i t bvs bdirs gdirs ts =>
+      if bdirs.contains id
+      then
+        let res := ts.map (BackTree.modifyAtBackId_wRetrieve  id mod)
+        if res.hasNone
+        then .none
+        else
+          let Ts := res.reduceOption
+          .some (.ofIntro i t bvs bdirs gdirs (Ts.map Prod.fst), (Ts.map Prod.snd).getSome)
+      else .some (.ofIntro i t bvs bdirs gdirs ts, .none)
   | .ofBack i n bdirs gdirs ts =>
         if i == id
         then
@@ -145,16 +155,23 @@ partial def BackTree.modifyAtGoalId_wUpdates (id : Nat) (rep : List Nat) (newBid
       if j == id
       then mod (.ofPropa i j t bdirs gdirs ts)
       else
-        if gdirs.contains id
+        if ! gdirs.contains id
         then .ofPropa i j t bdirs gdirs ts
         else .ofPropa i j t (newBid :: bdirs) (rep ++ gdirs) (ts.map (BackTree.modifyAtGoalId_wUpdates id rep newBid mod))
+  | .ofIntro i t bvs bdirs gdirs ts =>
+      if i == id
+      then mod (.ofIntro i t bvs bdirs gdirs ts)
+      else
+        if ! gdirs.contains id
+        then .ofIntro i t bvs bdirs gdirs ts
+        else .ofIntro i t bvs (newBid :: bdirs) (rep ++ gdirs) (ts.map (BackTree.modifyAtGoalId_wUpdates id rep newBid mod))
   | .ofBack i n bdirs gdirs ts =>
       --dbg_trace s!"(modifyAtGoalId_wUpdates) B {i}\n"
       match gdirs.findIdx? (fun l => l.contains id) with
       | .none => .ofBack i n bdirs gdirs ts
       | .some j => .ofBack i n (bdirs.set! j (newBid :: (bdirs.get! j))) (gdirs.set! j (List.replaceByListWhen (id :: rep) (fun x => x == id) (gdirs.get! j))) (ts.set! j (BackTree.modifyAtGoalId_wUpdates id rep newBid mod (ts.get! j)))
 
---#exit
+
 
 partial def BackTree.modifyAtGoalId_wUpdatesG (id : Nat) (newGid : Nat) (mod : BackTree → BackTree) : BackTree → BackTree
   | .fail => .fail
@@ -174,6 +191,13 @@ partial def BackTree.modifyAtGoalId_wUpdatesG (id : Nat) (newGid : Nat) (mod : B
         if ! gdirs.contains id
         then .ofPropa i j t bdirs gdirs ts
         else .ofPropa i j t (bdirs) (newGid :: gdirs) (ts.map (BackTree.modifyAtGoalId_wUpdatesG id newGid mod))
+  | .ofIntro i t bvs bdirs gdirs ts =>
+      if i == id
+      then mod (.ofIntro i t bvs bdirs gdirs ts)
+      else
+        if ! gdirs.contains id
+        then .ofIntro i t bvs bdirs gdirs ts
+        else .ofIntro i t bvs (bdirs) (newGid :: gdirs) (ts.map (BackTree.modifyAtGoalId_wUpdatesG id newGid mod))
   | .ofBack i n bdirs gdirs ts =>
       match gdirs.findIdx? (fun l => l.contains id) with
       | .none => .ofBack i n bdirs gdirs ts
@@ -181,6 +205,19 @@ partial def BackTree.modifyAtGoalId_wUpdatesG (id : Nat) (newGid : Nat) (mod : B
 
 
 
+def intro? (e : CExpr) (f_id_gen : Nat) : Option (Nat × CExpr × List (Nat × CExpr)) :=
+  let rec go (c : Nat) (bvs : List (Nat × CExpr)) : CExpr → Option (Nat × CExpr × List (Nat × CExpr))
+    | .forallE _ t b _ =>
+        if t.hasLNodesF then .none else go (c+1) ((c,t) :: bvs) b
+    | e => .some (c, e, bvs)
+  match e with
+  | .forallE _ _ _ _ => go f_id_gen [] e
+  | _ => .none
+
+
+
+
+--#exit
 
 
 structure IntegBack where
@@ -188,11 +225,11 @@ structure IntegBack where
   tree : BackTree
 
 
-def integrate_backstep
+def integrate_backstep (f_id_gen : Nat)
   (thm_name : Name) (thm_data_size : Nat) (target_goal_id : Nat)
   (assigned newgoals : List (Nat × CExpr))
   (id_gen_back : Nat) (id_gen_goal : Nat)
-  (backTree : BackTree) : IntegBack :=
+  (backTree : BackTree) : Nat × List (Nat × CExpr) × IntegBack :=
     --dbg_trace s!"(integrate_backstep) target_goal_id {target_goal_id}\n assigned {repr assigned}\n newgoals {repr newgoals} \nid_gen_back {id_gen_back} id_gen_goal {id_gen_goal}\nT {repr backTree}"
     let common := (newgoals.foldl (fun (l,i) (pos,type) => (((pos,i,type) :: l),i+1)) ([], id_gen_goal)).1
     --dbg_trace s!"(integrate_backstep) common {repr common}"
@@ -207,9 +244,13 @@ def integrate_backstep
       (fun A (pos, val) => A.set! pos (.ofAssign val))
       new_leaves_1
     --dbg_trace s!"(integrate_backstep) new_leaves_2 {repr new_leaves_2}"
-    let new_leaves_3 := common.foldl
-      (fun A (pos, gId, type) => A.set! pos (.ofGoal gId type [] [] []))
-      new_leaves_2
+    let (new_leaves_3,nfid,ngns) := common.foldl
+      (fun (A,fid,ngns) (pos, gId, type) =>
+          match intro? type fid with
+          | .none => (A.set! pos (.ofGoal gId type [] [] []),fid,ngns)
+          | .some (nfig,ng,ngnodes) => (A.set! pos (.ofIntro gId ng ngnodes [] [] []),nfig,ngnodes ++ ngns)
+          )
+      (new_leaves_2,f_id_gen,[])
     --dbg_trace s!"(integrate_backstep) new_leaves_3 {repr new_leaves_3}"
     let new_branches : BackTree → BackTree := fun X =>
       match X with
@@ -219,10 +260,14 @@ def integrate_backstep
       | .ofPropa i j t bdirs gdirs ts =>
         .ofPropa i j t (id_gen_back :: bdirs) (new_dirs ++ gdirs)
           ((.ofBack id_gen_back thm_name (Array.mkArray thm_data_size []) dirs_new new_leaves_3) :: ts)
+      | .ofIntro i t bvs bdirs gdirs ts =>
+        .ofIntro i t bvs (id_gen_back :: bdirs) (new_dirs ++ gdirs)
+          ((.ofBack id_gen_back thm_name (Array.mkArray thm_data_size []) dirs_new new_leaves_3) :: ts)
+
       | _ => .fail
     let finalT := BackTree.modifyAtGoalId_wUpdates target_goal_id new_dirs id_gen_back new_branches backTree
     --dbg_trace s!"(integrate_backstep) fstout {repr (common.map Prod.snd)} \nfinalT : {repr finalT}\n\n"
-    ⟨common.map Prod.snd, finalT⟩
+    (nfid, ngns,⟨common.map Prod.snd, finalT⟩)
 
 --#exit
 
@@ -256,20 +301,20 @@ def extractTarget (target_goal_id : Nat) (found : CExpr) : List (Nat × CExpr) �
 
 --#exit
 
-def integrate_backstep_main
+def integrate_backstep_main (f_id_gen : Nat)
   (thm_name : Name) (thm_data_size : Nat) (target_goal_id : Nat)
   (assigned newgoals : List (Nat × CExpr))
-  (state : BackState) : BackState :=
-  let ⟨G,T⟩ := integrate_backstep thm_name thm_data_size target_goal_id assigned newgoals state.id_gen_back state.id_gen_goal state.bt
+  (state : BackState) : Nat × List (Nat × CExpr) × BackState :=
+  let (nfid,ngnds,⟨G,T⟩) := integrate_backstep f_id_gen thm_name thm_data_size target_goal_id assigned newgoals state.id_gen_back state.id_gen_goal state.bt
   --dbg_trace s!"(integrate_backstep_main) \nG {repr G}\nT {repr T}"
   let (ta,gs) := extractTarget target_goal_id .failed state.active_goals
   --dbg_trace s!"(integrate_backstep_main) \nta {repr ta}\ngs {repr gs}"
   let nG := gs ++ G ++ [(target_goal_id,ta)] -- new goals and initial one we be placed
   -- at the back. Reason : durring search, we look for backsteps form goals from left to right
   -- so placing the new goals at the top causes BFS, the initial at top DFS, so we do a mix
-  ⟨state.id_gen_back + 1, state.id_gen_goal + G.length, state.id_gen_assign, nG,T⟩
+  (nfid,ngnds,⟨state.id_gen_back + 1, state.id_gen_goal + G.length, state.id_gen_assign, nG,T⟩)
 
---#exit
+
 
 structure PropUniState where
   tree : BackTree
@@ -452,80 +497,137 @@ partial def CExpr.hasFailed (E : CExpr) : Bool :=
       go [E]
 
 
-partial def propagate_uni_assign_toGoalsAssigns (uni_id : Nat) (paramNames : List Name) (lvls : List Level)
-  (updated : List (Nat × Nat × CExpr)) (id_gen_goal : Nat) (init_tree : BackTree) : BackTree × List (Nat × CExpr) × Nat :=
-  let rec go (id_gen_goal : Nat) (new_goals : List (Nat × CExpr)) (ancestors : List (Nat × Nat × CExpr)) (splitable : List (Nat × Nat × CExpr)) : BackTree → BackTree × List (Nat × CExpr) × Nat
-    | .fail => (.fail,[],id_gen_goal)
+partial def propagate_uni_assign_toGoalsAssigns (f_id_gen : Nat)
+  (uni_id : Nat) (paramNames : List Name) (lvls : List Level)
+  (updated : List (Nat × Nat × CExpr)) (id_gen_goal : Nat) (init_tree : BackTree) : Nat × List (Nat × List (Nat × CExpr)) × BackTree × List (Nat × CExpr) × Nat :=
+  let rec go (id_gen_goal nf_id_gen : Nat) (new_goals : List (Nat × CExpr)) (new_gnodes_wGid : List (Nat × List (Nat × CExpr)))
+    (ancestors : List (Nat × Nat × CExpr)) (splitable : List (Nat × Nat × CExpr)) : BackTree → Nat × List (Nat × List (Nat × CExpr)) × BackTree × List (Nat × CExpr) × Nat
+    | .fail => (nf_id_gen, [],.fail,[],id_gen_goal)
     | .ofBack id n bdirs gdirs args =>
           let (here, next) := List.splitMore (fun x => x == id) splitable
           let sp := customSplit next bdirs
           let new_ancestors := here ++ ancestors
-          let (update, new_new_goals, new_id_gen_goal, local_new_goals) : Array BackTree × List (Nat × CExpr) × Nat × Array (List Nat) := (args.foldl
-            (fun ((A,ngs,gi,lng),I) T =>
-              let (newT,nngs, ngi) := go gi ngs new_ancestors (sp.get! I) T
-              ((A.set! I newT,nngs,ngi, lng.set! I (((List.range (ngi - gi)).map (· + gi)) ++ (lng.get! I))), I+1)
+          let (new_f_id_gen, new_gnode, update, new_new_goals, new_id_gen_goal, local_new_goals) : Nat × List (Nat × List (Nat × CExpr)) × Array BackTree × List (Nat × CExpr) × Nat × Array (List Nat) := (args.foldl
+            (fun ((nf,ngn, A,ngs,gi,lng),I) T =>
+              let (nnf,nngn,newT,nngs, ngi) := go nf gi ngs ngn new_ancestors (sp.get! I) T
+              ((nnf, nngn, A.set! I newT,nngs,ngi, lng.set! I (((List.range (ngi - gi)).map (· + gi)) ++ (lng.get! I))), I+1)
               )
-            ((Array.mkArray args.size BackTree.fail, new_goals, id_gen_goal, Array.mkArray args.size []), 0)).1
-          (.ofBack id n bdirs (local_new_goals.foldl (fun (A,i) L => (A.set! i (L ++ (A.get! i)), i+1)) (gdirs,0)).1
-              update, new_new_goals,  new_id_gen_goal)
+            ((nf_id_gen, new_gnodes_wGid,Array.mkArray args.size BackTree.fail, new_goals, id_gen_goal, Array.mkArray args.size []), 0)).1
+          (new_f_id_gen, new_gnode, .ofBack id n bdirs (local_new_goals.foldl (fun (A,i) L => (A.set! i (L ++ (A.get! i)), i+1)) (gdirs,0)).1 update, new_new_goals,  new_id_gen_goal)
     | .ofGoal gid type gbd ggd sols =>
         let propad? := (porpagate_at_cexpr (splitable ++ ancestors) paramNames lvls type)
         --dbg_trace s!""
         --dbg_trace s!"(propagate_uni_assign_toGoalsAssigns)\npropad? : {repr propad?}\ntype : {repr type}"
         if propad? == type || (CExpr.hasFailed propad?) -- cause I'm lazy, make efficient ; basicly checks if it contained propaded vals or not
         then
-          let (fsols,ngs,ngi) := sols.foldl (fun (tsols,tngs,tngi) T =>
-            let (r,rngs,rngi) := go tngi tngs ancestors splitable T
-            (r :: tsols,rngs,rngi)
-            ) ([],new_goals,id_gen_goal)
-          (.ofGoal gid type gbd (((List.range (ngi - id_gen_goal)).map (· + id_gen_goal)) ++ ggd) fsols, ngs,ngi)
+          let (new_f_id_gen, new_gnode,fsols,ngs,ngi) := sols.foldl (fun (nf,ngn,tsols,tngs,tngi) T =>
+            let (nnf,nngn,r,rngs,rngi) := go tngi nf tngs ngn ancestors splitable T
+            (nnf,nngn,r :: tsols,rngs,rngi)
+            ) (nf_id_gen, new_gnodes_wGid,[],new_goals,id_gen_goal)
+          (new_f_id_gen, new_gnode, .ofGoal gid type gbd (((List.range (ngi - id_gen_goal)).map (· + id_gen_goal)) ++ ggd) fsols, ngs,ngi)
         else
-          let (fsols,ngs,ngi) := sols.foldl (fun (tsols,tngs,tngi) T =>
-            let (r,rngs,rngi) := go tngi tngs ancestors splitable T
-            (r :: tsols,rngs,rngi)
-            ) ([],new_goals,id_gen_goal)
-          let propa! : BackTree := .ofGoal gid type gbd (((List.range ((ngi + 1) - id_gen_goal)).map (· + id_gen_goal)) ++ ggd)
-            ((.ofPropa uni_id (ngi) propad? gbd (((List.range ((ngi) - id_gen_goal)).map (· + id_gen_goal)) ++ ggd)
-              -- just realised we're not using new ids, so multiple copies of backs and goals 0_0
-                fsols) :: fsols)
-          (propa!,(ngi,propad?) :: ngs, ngi+1)
+          let (new_f_id_gen, new_gnode, fsols,ngs,ngi) := sols.foldl (fun (nf,ngn,tsols,tngs,tngi) T =>
+            let (nnf,nngn, r,rngs,rngi) := go tngi nf tngs ngn ancestors splitable T
+            (nnf,nngn,r :: tsols,rngs,rngi)
+            ) (nf_id_gen, new_gnodes_wGid,[],new_goals,id_gen_goal)
+          match intro? propad? nf_id_gen with
+          | .none =>
+              let propa! : BackTree := .ofGoal gid type gbd (((List.range ((ngi + 1) - id_gen_goal)).map (· + id_gen_goal)) ++ ggd)
+                ((.ofPropa uni_id (ngi) propad? gbd (((List.range ((ngi) - id_gen_goal)).map (· + id_gen_goal)) ++ ggd)
+                  -- just realised we're not using new ids, so multiple copies of backs and goals 0_0
+                    fsols) :: fsols)
+              (new_f_id_gen, new_gnode,propa!,(ngi,propad?) :: ngs, ngi+1)
+          | .some (ff_id_gen, f_goal, add_gnodes) =>
+              let propa! : BackTree := .ofGoal gid type gbd (((List.range ((ngi + 2) - id_gen_goal)).map (· + id_gen_goal)) ++ ggd)
+                ((.ofPropa uni_id (ngi) propad? gbd (((List.range ((ngi+1) - id_gen_goal)).map (· + id_gen_goal)) ++ ggd)
+                  -- just realised we're not using new ids, so multiple copies of backs and goals 0_0
+                    ((.ofIntro (ngi+1) f_goal add_gnodes [] [] [])
+                        :: fsols)
+                    ) :: fsols)
+              (ff_id_gen, (ngi+1, add_gnodes) :: new_gnode,propa!, (ngi+1, f_goal):: (ngi,propad?) :: ngs, ngi+2)
     | .ofPropa uid gid type gbd ggd sols => -- same as ↑
         let propad? := (porpagate_at_cexpr (splitable ++ ancestors) paramNames lvls type)
+        --dbg_trace s!""
         --dbg_trace s!"(propagate_uni_assign_toGoalsAssigns)\npropad? : {repr propad?}\ntype : {repr type}"
         if propad? == type || (CExpr.hasFailed propad?) -- cause I'm lazy, make efficient ; basicly checks if it contained propaded vals or not
         then
-          let (fsols,ngs,ngi) := sols.foldl (fun (tsols,tngs,tngi) T =>
-            let (r,rngs,rngi) := go tngi tngs ancestors splitable T
-            (r :: tsols,rngs,rngi)
-            ) ([],new_goals,id_gen_goal)
-          (.ofPropa uid gid type gbd (((List.range (ngi - id_gen_goal)).map (· + id_gen_goal)) ++ ggd) fsols, ngs,ngi)
+          let (new_f_id_gen, new_gnode,fsols,ngs,ngi) := sols.foldl (fun (nf,ngn,tsols,tngs,tngi) T =>
+            let (nnf,nngn,r,rngs,rngi) := go tngi nf tngs ngn ancestors splitable T
+            (nnf,nngn,r :: tsols,rngs,rngi)
+            ) (nf_id_gen, new_gnodes_wGid,[],new_goals,id_gen_goal)
+          (new_f_id_gen, new_gnode, .ofPropa uid gid type gbd (((List.range (ngi - id_gen_goal)).map (· + id_gen_goal)) ++ ggd) fsols, ngs,ngi)
         else
-          let (fsols,ngs,ngi) := sols.foldl (fun (tsols,tngs,tngi) T =>
-            let (r,rngs,rngi) := go tngi tngs ancestors splitable T
-            (r :: tsols,rngs,rngi)
-            ) ([],new_goals,id_gen_goal)
-          let propa! : BackTree := .ofPropa uid gid type gbd (((List.range ((ngi + 1) - id_gen_goal)).map (· + id_gen_goal)) ++ ggd)
-            ((.ofPropa uni_id (ngi) propad? gbd (((List.range ((ngi) - id_gen_goal)).map (· + id_gen_goal)) ++ ggd)
-              -- just realised we're not using new ids, so multiple copies of backs and goals 0_0
-                fsols) :: fsols)
-          (propa!,(ngi,propad?) :: ngs, ngi+1)
-    | x => (x,new_goals,id_gen_goal)
-  go id_gen_goal [] [] updated init_tree
+          let (new_f_id_gen, new_gnode, fsols,ngs,ngi) := sols.foldl (fun (nf,ngn,tsols,tngs,tngi) T =>
+            let (nnf,nngn, r,rngs,rngi) := go tngi nf tngs ngn ancestors splitable T
+            (nnf,nngn,r :: tsols,rngs,rngi)
+            ) (nf_id_gen, new_gnodes_wGid,[],new_goals,id_gen_goal)
+          match intro? propad? nf_id_gen with
+          | .none =>
+              let propa! : BackTree := .ofPropa uid gid type gbd (((List.range ((ngi + 1) - id_gen_goal)).map (· + id_gen_goal)) ++ ggd)
+                ((.ofPropa uni_id (ngi) propad? gbd (((List.range ((ngi) - id_gen_goal)).map (· + id_gen_goal)) ++ ggd)
+                  -- just realised we're not using new ids, so multiple copies of backs and goals 0_0
+                    fsols) :: fsols)
+              (new_f_id_gen, new_gnode,propa!,(ngi,propad?) :: ngs, ngi+1)
+          | .some (ff_id_gen, f_goal, add_gnodes) =>
+              let propa! : BackTree := .ofPropa uid gid type gbd (((List.range ((ngi + 2) - id_gen_goal)).map (· + id_gen_goal)) ++ ggd)
+                ((.ofPropa uni_id (ngi) propad? gbd (((List.range ((ngi+1) - id_gen_goal)).map (· + id_gen_goal)) ++ ggd)
+                  -- just realised we're not using new ids, so multiple copies of backs and goals 0_0
+                    ((.ofIntro (ngi+1) f_goal add_gnodes [] [] [])
+                        :: fsols)
+                    ) :: fsols)
+              (ff_id_gen, (ngi+1, add_gnodes) :: new_gnode,propa!, (ngi+1, f_goal):: (ngi,propad?) :: ngs, ngi+2)
+    | .ofIntro gid type bvs gbd ggd sols => -- same as ↑
+        let propad? := (porpagate_at_cexpr (splitable ++ ancestors) paramNames lvls type)
+        --dbg_trace s!""
+        --dbg_trace s!"(propagate_uni_assign_toGoalsAssigns)\npropad? : {repr propad?}\ntype : {repr type}"
+        if propad? == type || (CExpr.hasFailed propad?) -- cause I'm lazy, make efficient ; basicly checks if it contained propaded vals or not
+        then
+          let (new_f_id_gen, new_gnode,fsols,ngs,ngi) := sols.foldl (fun (nf,ngn,tsols,tngs,tngi) T =>
+            let (nnf,nngn,r,rngs,rngi) := go tngi nf tngs ngn ancestors splitable T
+            (nnf,nngn,r :: tsols,rngs,rngi)
+            ) (nf_id_gen, new_gnodes_wGid,[],new_goals,id_gen_goal)
+          (new_f_id_gen, new_gnode, .ofIntro gid type bvs gbd (((List.range (ngi - id_gen_goal)).map (· + id_gen_goal)) ++ ggd) fsols, ngs,ngi)
+        else
+          let (new_f_id_gen, new_gnode, fsols,ngs,ngi) := sols.foldl (fun (nf,ngn,tsols,tngs,tngi) T =>
+            let (nnf,nngn, r,rngs,rngi) := go tngi nf tngs ngn ancestors splitable T
+            (nnf,nngn,r :: tsols,rngs,rngi)
+            ) (nf_id_gen, new_gnodes_wGid,[],new_goals,id_gen_goal)
+          match intro? propad? nf_id_gen with
+          | .none =>
+              let propa! : BackTree := .ofIntro gid type bvs gbd (((List.range ((ngi + 1) - id_gen_goal)).map (· + id_gen_goal)) ++ ggd)
+                ((.ofPropa uni_id (ngi) propad? gbd (((List.range ((ngi) - id_gen_goal)).map (· + id_gen_goal)) ++ ggd)
+                  -- just realised we're not using new ids, so multiple copies of backs and goals 0_0
+                    fsols) :: fsols)
+              (new_f_id_gen, new_gnode,propa!,(ngi,propad?) :: ngs, ngi+1)
+          | .some (ff_id_gen, f_goal, add_gnodes) =>
+              let propa! : BackTree := .ofIntro gid type bvs gbd (((List.range ((ngi + 2) - id_gen_goal)).map (· + id_gen_goal)) ++ ggd)
+                ((.ofPropa uni_id (ngi) propad? gbd (((List.range ((ngi+1) - id_gen_goal)).map (· + id_gen_goal)) ++ ggd)
+                  -- just realised we're not using new ids, so multiple copies of backs and goals 0_0
+                    ((.ofIntro (ngi+1) f_goal add_gnodes [] [] [])
+                        :: fsols)
+                    ) :: fsols)
+              (ff_id_gen, (ngi+1, add_gnodes) :: new_gnode,propa!, (ngi+1, f_goal):: (ngi,propad?) :: ngs, ngi+2)
+    | x => (nf_id_gen, new_gnodes_wGid, x,new_goals,id_gen_goal)
+  go id_gen_goal f_id_gen [] [] [] updated init_tree
 
 
--- TODO in ↑ : propagate gdirs of new goals !
+-- TODO in ↑ : propagate gdirs of new goals ! Did I do this ?
+
+#check 1
+
 
 --#exit
 
 
-def integrate_uni? (uni_id id_gen_goal : Nat) (paramNames : List Name) (lvls : List Level)
+def integrate_uni? (f_id_gen : Nat)
+  (uni_id id_gen_goal : Nat) (paramNames : List Name) (lvls : List Level)
   (fctx : FixCtx)
   (init_uni : List (Nat × Nat × CExpr))
-  (init_tree : BackTree) : Option (List (Nat × Nat × CExpr) × BackTree × List (Nat × CExpr) × Nat) :=
+  (init_tree : BackTree) : Option (List (Nat × Nat × CExpr) × Nat × List (Nat × List (Nat × CExpr)) × BackTree × List (Nat × CExpr) × Nat) :=
     --dbg_trace "Call integrate_uni?"
     match propagate_uni_assign fctx init_uni uni_id init_tree with
     | .some (TA,A) =>
-        (A, propagate_uni_assign_toGoalsAssigns uni_id paramNames lvls A id_gen_goal TA)
+        (A, propagate_uni_assign_toGoalsAssigns f_id_gen uni_id paramNames lvls A id_gen_goal TA)
     | .none => .none
 
 
