@@ -227,7 +227,7 @@ theorem proof_irrel_Dheq {p : α → Prop} {a b : α} (eq : a = b) (hp : p a) (h
     (DHEq.refl a hp) b hq
     eq fst
 
-example (l : List Nat) (x : Nat) :
+theorem testPara (l : List Nat) (x : Nat) :
   let p1 : l.length < (x :: l).reverse.length := by rw [List.length_reverse] ; dsimp ; exact Nat.lt.base (List.length l) ;
   let p2 : l.length < (l.reverse ++ [x]).length := by rw [List.length_append, List.length_reverse] ; dsimp ; exact Nat.lt.base (List.length l)
   ((x :: l).reverse).get  ⟨l.length, p1 ⟩ =
@@ -253,3 +253,28 @@ example (l : List Nat) (x : Nat) :
 #check propext
 #check iff_of_true
 #check proof_irrel
+
+
+inductive dhEq : (α : Sort _) → (β : α → Sort _) → (a b : α) → β a → β b → Prop where
+  | refl (x : (by exact β a)) : dhEq α β a a x x
+
+#check dhEq.rec
+#check DHEq.rec
+
+
+noncomputable
+def test5 {α : Sort _} {γ : α → Prop} {a : α} {f : γ a}
+  {motive : (b : α) → (d : α) → (e : γ d) → Sort _}
+  (ha : motive a a f)
+  {b : α} {e : γ b} (ta : a = b) : motive b b e :=
+    @test4 α α γ
+      a a f
+      (fun b _ d e => motive b d e)
+      (fun p => by rw [proof_irrel p f] ; exact ha)
+      b b e
+      ta
+      (by apply proof_irrel_Dheq
+          apply ta
+          )
+
+#check HEq.subst
