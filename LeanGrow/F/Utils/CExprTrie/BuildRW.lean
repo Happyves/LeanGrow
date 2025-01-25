@@ -328,7 +328,66 @@ theorem Dheq_of_heq {a b : α} {x : β a} {y : β b} (h1 : a = b) (h2 : HEq x y)
   sorry
 
 
-#exit
+#check PSigma.rec
+#check PSigma
+#check PSigma.ext
+#print PSigma.ext
+
+noncomputable
+def test7  {α : Sort _} {β : α → Sort _}  {a : α} {c : β a}
+  {motive : (b : α) → (d : β b) → Sort _}
+  (ha : motive a c)
+  {b : α} {d : β b} (ta : a = b) (tc : HEq c d) : motive b d :=
+    have wow := @PSigma.ext α β ⟨a,c⟩ ⟨b,d⟩ ta tc
+    @Eq.ndrec (@PSigma α β) ⟨a,c⟩ (fun z => motive z.fst z.snd) ha ⟨b,d⟩ wow
+
+#check Fin.mk
+#check FIN.mk
+
+#check HEq.subst
+
+
 
 theorem testin2 (x y : FIN) (h1 : x.n = y.n) (h2 : HEq x.v y.v) : x = y :=
-  @test6 Nat Fin x.n x.v
+  --@test6 Nat Fin x.n x.v
+  -- @test3 Nat (Fin x.n) (Fin y.n) x.n x.v
+  --   (fun b eq β d heq => HEq x )
+  @test7 Nat Fin x.n x.v (fun b d => x = ⟨b,d⟩) rfl y.n y.v h1 h2
+
+theorem testPara2 (l : List Nat) (x : Nat) :
+  let p1 : l.length < (x :: l).reverse.length := by rw [List.length_reverse] ; dsimp ; exact Nat.lt.base (List.length l) ;
+  let p2 : l.length < (l.reverse ++ [x]).length := by rw [List.length_append, List.length_reverse] ; dsimp ; exact Nat.lt.base (List.length l)
+  ((x :: l).reverse).get  ⟨l.length, p1 ⟩ =
+  List.get (l.reverse ++ [x]) ⟨l.length, p2⟩ :=
+  by
+  intro p1 p2
+  apply @test7 (List Nat) (fun X => l.length < X.length)
+    (x :: l).reverse p1
+    (fun b d => ((x :: l).reverse).get  ⟨l.length, p1⟩ = List.get b ⟨l.length, d⟩)
+    rfl (l.reverse ++ [x]) p2
+    (List.reverse_cons x l)
+    (proof_irrel_heq p1 p2)
+
+-- from mathlib
+theorem Fin.val_eq_val (a b : Fin n) : (a : Nat) = b ↔ a = b :=
+  ext_iff.symm
+
+-- from mathlib
+theorem Fin.heq_ext_iff {k l : Nat} (h : k = l) {i : Fin k} {j : Fin l} :
+    HEq i j ↔ (i : Nat) = (j : Nat) := by
+  subst h
+  simp [Fin.val_eq_val]
+
+theorem testPara3 (l : List Nat) (x : Nat) :
+  let p1 : l.length < (x :: l).reverse.length := by rw [List.length_reverse] ; dsimp ; exact Nat.lt.base (List.length l) ;
+  let p2 : l.length < (l.reverse ++ [x]).length := by rw [List.length_append, List.length_reverse] ; dsimp ; exact Nat.lt.base (List.length l)
+  ((x :: l).reverse).get  ⟨l.length, p1 ⟩ =
+  List.get (l.reverse ++ [x]) ⟨l.length, p2⟩ :=
+  by
+  intro p1 p2
+  apply @test7 (List Nat) (fun X => Fin X.length)
+    (x :: l).reverse ⟨l.length, p1⟩
+    (fun b d => ((x :: l).reverse).get  ⟨l.length, p1⟩ = List.get b d)
+    rfl (l.reverse ++ [x]) ⟨l.length, p2⟩
+    (List.reverse_cons x l)
+    (by rw [Fin.heq_ext_iff] ; rw [List.reverse_cons])
