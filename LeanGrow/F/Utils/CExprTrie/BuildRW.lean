@@ -3,6 +3,8 @@
 import LeanGrow.F.Utils.CExprTrie.Types
 import LeanGrow.F.Utils.List
 
+-- import Lean
+
 open Lean
 
 namespace CExprTrie
@@ -278,3 +280,55 @@ def test5 {α : Sort _} {γ : α → Prop} {a : α} {f : γ a}
           )
 
 #check HEq.subst
+
+
+#check Fin.ext
+
+@[ext]
+structure FIN where
+  n : Nat
+  v : Fin n
+
+#check FIN.ext
+#print FIN.ext
+
+-- open Lean in
+-- #eval (do let r := (← getEnv).find? `FIN.ext ; if r.isSome then IO.println "yes" : CoreM _)
+-- -- requires Lean as import, but output yes
+
+#check FIN.ext.match_1
+#check FIN.rec
+
+#check test3
+
+
+
+theorem testin (x y : FIN) (h1 : x.n = y.n) (h2 : HEq x.v y.v) : x = y :=
+  have hmm : (⟨x.n,x.v⟩ : FIN) = ⟨y.n,y.v⟩ := sorry
+  hmm
+
+#print testin
+
+noncomputable
+def test6 {α : Sort _} {γ : α → Sort _} {a : α} {f : γ a}
+  {motive : (b : α) → (d : α) → (e : γ d) → Sort _}
+  (ha : ∀ f, motive a a f)
+  {b : α} {e : γ b} (eq1 : a = b) (eq2 : DHEq α γ a b f e) : motive b b e :=
+    @test4 α α γ
+      a a f
+      (fun b _ d e => motive b d e)
+      (fun p => ha p)
+      b b e
+      eq1 eq2
+
+#check test6
+
+
+theorem Dheq_of_heq {a b : α} {x : β a} {y : β b} (h1 : a = b) (h2 : HEq x y) : DHEq α β a b x y :=
+  sorry
+
+
+#exit
+
+theorem testin2 (x y : FIN) (h1 : x.n = y.n) (h2 : HEq x.v y.v) : x = y :=
+  @test6 Nat Fin x.n x.v
