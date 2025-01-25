@@ -126,6 +126,22 @@ private def candidMerge (knowClashes : List (Nat × Nat)) (unif_assign : List (N
   let (pruned, nextKC) := go knowClashes [(Array.mkArray argNum .failed,[])] argNum
   (pruned.map (fun (as,cs) => (CExpr.mkAppA (.const n []) as, cs)) ,nextKC)
 
+
+def lamdifyGnode (gi : Nat) (e : CExpr) : CExpr :=
+  let rec go (depth : Nat) : CExpr → CExpr
+    | .app f a => .app (go depth f) (go depth a)
+    | .lam n f a i => .lam n (go depth f) (go (depth+1) a) i
+    | .forallE n f a i => .forallE n (go depth f) (go (depth+1) a) i
+    | .letE n f a z i => .letE n (go depth f) (go depth a) (go (depth+1) z) i
+    | .proj n i x => .proj n i (go depth x)
+    | .gnode i o =>
+        if i == gi
+        then .bvar depth
+        else .gnode i o
+    | x => x
+  go 0 e
+
+
 --#exit
 
 partial def BackTree.assemble?
@@ -135,7 +151,7 @@ partial def BackTree.assemble?
   (bt : BackTree) : List (CExpr × List Nat) × List (Nat × Nat) :=
   --dbg_trace "(assembly)\n"
   let rec go (knowClashes : List (Nat × Nat)) (addedConstr : List Nat) : BackTree → (List (CExpr × List Nat) × List (Nat × Nat))
-    | .ofGoal i _ _ _ ts =>
+    | .ofGoal _ _ _ _ ts =>
       let res :=
       ts.foldl (fun (sols,kC) t =>
         let (msols,nkC) := go kC addedConstr t
@@ -143,7 +159,7 @@ partial def BackTree.assemble?
         ) ([],knowClashes)
         --dbg_trace s!"Goal {i}, returning {repr res}"
       res
-    | .ofBack i n _ _ ts =>
+    | .ofBack _ n _ _ ts =>
         let (_,candid,nkC) := ts.foldl (fun (i,sols,kC) t =>
           let (msols,nkC) := go kC addedConstr t
           (i+1, sols.set! i msols, nkC)
@@ -178,8 +194,23 @@ partial def BackTree.assemble?
               ) ([],knowClashes)
             --dbg_trace s!"No clash, retunring {repr res}"
             res
+    | .ofIntro _ _ bvs _ _ ts =>
+      let (res, nkC) :=
+      ts.foldl (fun (sols,kC) t =>
+        let (msols,nkC) := go kC addedConstr t
+        (msols ++ sols, nkC)
+        ) ([],knowClashes)
+        --dbg_trace s!"Goal {i}, returning {repr res}"
+      let R := res.map (fun (ce,cstr) =>
+        let r := bvs.foldl (fun cex (gi,t) =>
+          .lam `grow t (lamdifyGnode gi cex) .default
+          ) ce
+        (r,cstr))
+      (R,nkC)
     | .fail => ([],[])
   go knowClashes [] bt
+
+--#exit
 
 def unfoldLNodes (unif_assign : List (Nat × (List (Nat × Nat × CExpr)))) -- add levels
   (unis : List Nat) (ce : CExpr) : CExpr :=

@@ -205,10 +205,10 @@ partial def BackTree.modifyAtGoalId_wUpdatesG (id : Nat) (newGid : Nat) (mod : B
 
 
 
-def intro? (e : CExpr) (f_id_gen : Nat) : Option (Nat × CExpr × List (Nat × CExpr)) :=
+partial def intro? (e : CExpr) (f_id_gen : Nat) : Option (Nat × CExpr × List (Nat × CExpr)) :=
   let rec go (c : Nat) (bvs : List (Nat × CExpr)) : CExpr → Option (Nat × CExpr × List (Nat × CExpr))
     | .forallE _ t b _ =>
-        if t.hasLNodesF then .none else go (c+1) ((c,t) :: bvs) b
+        if t.hasLNodesF then .none else go (c+1) ((c,t) :: bvs) (CExpr.instantiate (.gnode c (.ofBvar 42)) b) -- no shifts needed ?
     | e => .some (c, e, bvs)
   match e with
   | .forallE _ _ _ _ => go f_id_gen [] e
@@ -217,7 +217,6 @@ def intro? (e : CExpr) (f_id_gen : Nat) : Option (Nat × CExpr × List (Nat × C
 
 
 
---#exit
 
 
 structure IntegBack where
@@ -519,7 +518,7 @@ partial def propagate_uni_assign_toGoalsAssigns (f_id_gen : Nat)
         --dbg_trace s!""
         --dbg_trace s!"(propagate_uni_assign_toGoalsAssigns)\npropad? : {repr propad?}\ntype : {repr type}"
         if propad? == type || (CExpr.hasFailed propad?) -- cause I'm lazy, make efficient ; basicly checks if it contained propaded vals or not
-        then
+        then -- no point in trying intro, as we try it at the originating backstep, and nothing changed
           let (new_f_id_gen, new_gnode,fsols,ngs,ngi) := sols.foldl (fun (nf,ngn,tsols,tngs,tngi) T =>
             let (nnf,nngn,r,rngs,rngi) := go tngi nf tngs ngn ancestors splitable T
             (nnf,nngn,r :: tsols,rngs,rngi)

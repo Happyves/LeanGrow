@@ -20,8 +20,8 @@ deriving Inhabited, Repr, BEq
 
 structure SearchState where
   back : BackState
-  forw : List (Nat × CExpr)
-  forw2 : List (Array CExpr)
+  forw : List (List Nat × List (Nat × CExpr))
+  forw2 : List (List Nat × List (Array CExpr))
   ltx_handler : Nat → (Nat × Nat)
   forwID : Nat
   fctx : FixCtx -- it would be better to seperate the gnode info and lnode info
@@ -37,9 +37,11 @@ instance : BEq SearchState where
   beq := fun a b => (a.back == b.back) && (a.forw == b.forw)
 
 
+
 def tryBackOn (fctx : FixCtx) (premises : List miniPermiseDict)
-  (back_memo : List Name)
-  (active_goal : CExpr) (active_goal_id : Nat) (state : BackState) : Option (BackState × FixCtx × Name) :=
+  (back_memo : List Name) (forwID : Nat)
+  (gnodeTypes : List (Array CExpr)) (gnodeTypesHandler : Nat → (Nat × Nat))
+  (active_goal : CExpr) (active_goal_id : Nat) (state : BackState) : Option (Nat × List (Nat × CExpr) × BackState × FixCtx × Name) :=
   let rec findBack : List miniPermiseDict → Option (miniPermiseDict × Array (Option CExpr) × List (Name × Level))
     | [] => .none
     | p :: ps =>
@@ -56,29 +58,71 @@ def tryBackOn (fctx : FixCtx) (premises : List miniPermiseDict)
       -- dbg_trace s!"(tryBackOn) prem res {repr (prem,res)}"
       let (assi,newg) := propagate_lnode_and_tag prem.data state.id_gen_back res us
       --dbg_trace s!"(tryBackOn) assi newg {repr assi} {repr newg}"
-      let nbs := integrate_backstep_main prem.name prem.data.size active_goal_id assi newg state
+      let (new_forwID, introGnodes, nbs) := integrate_backstep_main forwID prem.name prem.data.size active_goal_id assi newg state
       -- dbg_trace s!"(tryBackOn) after integ {repr nbs.active_goals}"
-      .some (nbs, {fctx with ltxTypes := (state.id_gen_back, prem.data) :: fctx.ltxTypes},prem.name)
+      let newforw2 := introGnodes.foldl
+        (fun sofar (idx,exp) => PageingSet sofar gnodeTypesHandler 42 (CExpr.failed) idx exp)
+        gnodeTypes
+      .some (new_forwID, introGnodes, nbs, {fctx with gnodeTypes := newforw2, ltxTypes := (state.id_gen_back, prem.data) :: fctx.ltxTypes},prem.name)
 
---#exit
 
-def tryBack (fctx : FixCtx) (premises : List miniPermiseDict)
-  (back_memo : List (Nat × List Name))
-  (state : BackState) : Option (BackState × FixCtx × List (Nat × List Name)) :=
-  let rec go : List (Nat × CExpr) → Option (BackState × FixCtx × List (Nat × List Name))
+def updateLtxIntros (forw : List (List Nat × List (Nat × CExpr)))
+  (forw2 : List (List Nat × List (Array CExpr))) (ltx_handler : Nat → (Nat × Nat))
+  (target_id id_gen_back : Nat) (toAdd : List (Nat × CExpr)) :
+  List (List Nat × List (Nat × CExpr)) × List (List Nat × List (Array CExpr)) :=
+  let nf := List.findModify (fun x => x.1.contains target_id) (fun (yg,ye) => (id_gen_back :: yg, toAdd ++ ye)) forw
+  let nf2 := List.findModify (fun x => x.1.contains target_id) (fun (yg,ye) => (id_gen_back :: yg,
+    toAdd.foldl (fun sofar (zn,ze) => PageingSet sofar ltx_handler 42 .failed zn ze) ye)) forw2
+  (nf,nf2)
+
+
+def tryBack (premises : List miniPermiseDict) (st : SearchState) : Option (SearchState) :=
+  let rec go : List (Nat × CExpr) → Option (SearchState)
     | [] => .none
     | (id,g) :: more =>
-        match back_memo.find? (fun x => x.1 == id) with
+        match st.back_memo.find? (fun x => x.1 == id) with
         | .some (_,nms) =>
-            match tryBackOn fctx premises nms g id state with
-            | .some (newb,newf,add) => .some (newb,newf, back_memo.findModify (fun x => x.1 == id) (fun (n,l) => (n, add :: l)))
+            match tryBackOn st.fctx premises nms st.forwID st.fctx.gnodeTypes st.fctx.gnodeTypesHandler g id st.back with
+            | .some (newfid,ngno,newb,newf,add) =>
+              let (nf,nf2) := updateLtxIntros st.forw st.forw2 st.ltx_handler id st.back.id_gen_back ngno -- already incremented in newb
+              .some {st with forw := nf, forw2 := nf2, forwID := newfid, back := newb, fctx := newf, back_memo := st.back_memo.findModify (fun x => x.1 == id) (fun (n,l) => (n, add :: l))}
             | _ => go more
         | _ =>
-          match tryBackOn fctx premises [] g id state with
-          | .some (newb,newf,add) => .some (newb,newf, (id,[add]) :: back_memo)
+          match tryBackOn st.fctx premises [] st.forwID st.fctx.gnodeTypes st.fctx.gnodeTypesHandler g id st.back with
+          | .some (newfid,ngno,newb,newf,add) =>
+              let (nf,nf2) := updateLtxIntros st.forw st.forw2 st.ltx_handler id st.back.id_gen_back ngno -- already incremented in newb
+              .some {st with forw := nf, forw2 := nf2, forwID := newfid, back := newb, fctx := newf, back_memo := st.back_memo.findModify (fun x => x.1 == id) (fun (n,l) => (n, add :: l))}
           | _ => go more
-  go state.active_goals
+  go st.back.active_goals
 
+
+def tryForWith (fctx : FixCtx) (prem : miniPermiseDict) (state : SearchState) : Option SearchState :=
+  match full_matcher_rawF {fctx with current := .some prem.data} prem.data prem.order state.forw with
+  | [] => .none
+  | opts =>
+      let rez := (opts.map (fun x => (integrate_forward_raw x prem.goal, (prem.name, x.embed.reduceOption)))).filter (fun x => (state.forw.find? (fun y => y.2 == x.1)).isNone)
+      --dbg_trace s!"\n(DEBUG) Forw, opts : {repr (opts.map (EmbedStruct.embed))}\n"
+      let sz := rez.length
+      let add_to_forw := List.zip ((List.range sz).map (· + state.forwID)) (rez.map Prod.fst)
+      let add_to_asm := List.zip ((List.range sz).map (· + state.forwID)) (rez.map Prod.snd)
+      let newforw := add_to_forw ++ state.forw
+      let newforw2 := add_to_forw.foldl
+        (fun sofar (idx,exp) => PageingSet sofar state.ltx_handler 42 (.failed) idx exp)
+        state.forw2
+      .some {state with forw := newforw, forw2 := newforw2, forwID := state.forwID + sz, ltx_assemmbly := add_to_asm ++ state.ltx_assemmbly}
+      -- potiential bug: newforw2 should also be added to FixCtx !!!
+
+def tryFor (prems : List miniPermiseDict) (state : SearchState) : Option SearchState :=
+  let rec go : List miniPermiseDict → Option SearchState
+    | [] => .none
+    | x :: xs =>
+        match tryForWith state.fctx x state with
+        | .some s => .some s
+        | _ => go xs
+  go prems
+
+
+#exit
 
 partial def tryUniAll (st : SearchState) : SearchState :=
   let rec uni_ltx_activeGoals
@@ -116,31 +160,8 @@ partial def tryUniAll (st : SearchState) : SearchState :=
     )) st
   interated
 
---#exit
+#exit
 
-def tryForWith (fctx : FixCtx) (prem : miniPermiseDict) (state : SearchState) : Option SearchState :=
-  match full_matcher_rawF {fctx with current := .some prem.data} prem.data prem.order state.forw with
-  | [] => .none
-  | opts =>
-      let rez := (opts.map (fun x => (integrate_forward_raw x prem.goal, (prem.name, x.embed.reduceOption)))).filter (fun x => (state.forw.find? (fun y => y.2 == x.1)).isNone)
-      --dbg_trace s!"\n(DEBUG) Forw, opts : {repr (opts.map (EmbedStruct.embed))}\n"
-      let sz := rez.length
-      let add_to_forw := List.zip ((List.range sz).map (· + state.forwID)) (rez.map Prod.fst)
-      let add_to_asm := List.zip ((List.range sz).map (· + state.forwID)) (rez.map Prod.snd)
-      let newforw := add_to_forw ++ state.forw
-      let newforw2 := add_to_forw.foldl
-        (fun sofar (idx,exp) => PageingSet sofar state.ltx_handler 42 (.failed) idx exp)
-        state.forw2
-      .some {state with forw := newforw, forw2 := newforw2, forwID := state.forwID + sz, ltx_assemmbly := add_to_asm ++ state.ltx_assemmbly}
-
-def tryFor (prems : List miniPermiseDict) (state : SearchState) : Option SearchState :=
-  let rec go : List miniPermiseDict → Option SearchState
-    | [] => .none
-    | x :: xs =>
-        match tryForWith state.fctx x state with
-        | .some s => .some s
-        | _ => go xs
-  go prems
 
 
 
