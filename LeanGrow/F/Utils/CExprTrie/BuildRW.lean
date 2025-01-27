@@ -391,3 +391,117 @@ theorem testPara3 (l : List Nat) (x : Nat) :
     rfl (l.reverse ++ [x]) ⟨l.length, p2⟩
     (List.reverse_cons x l)
     (by rw [Fin.heq_ext_iff] ; rw [List.reverse_cons])
+
+@[ext]
+structure FSigma {α : Sort _} {ι : Sort _} (β : ι → α → Sort _) where
+  fst : α
+  snd : (i : ι) → β i fst
+
+
+#check FSigma.rec
+#check FSigma.ext
+
+-- from mathlib
+theorem hfunext {α α' : Sort u} {β : α → Sort v} {β' : α' → Sort v} {f : ∀a, β a} {f' : ∀a, β' a}
+    (hα : α = α') (h : ∀a a', HEq a a' → HEq (f a) (f' a')) : HEq f f' := by
+  subst hα
+  have : ∀a, HEq (f a) (f' a) := λ a => h a a (HEq.refl a)
+  have : β = β' := by funext a
+                      exact type_eq_of_heq (this a)
+  subst this
+  apply heq_of_eq
+  funext a
+  exact eq_of_heq (this a)
+
+noncomputable
+def test8  {α : Sort _} {β : α → Sort _}  {a : α} {c : β a}
+  {motive : (b : α) → (d : β b) → Sort _}
+  (ha : motive a c)
+  {b : α} {d : β b} (ta : a = b) (tc : HEq c d) : motive b d :=
+    have wow := @FSigma.ext α Nat (fun _ => β) ⟨a,(fun _ => c)⟩ ⟨b,(fun _ => d)⟩
+      ta (by apply hfunext ; rfl ; intro _ _ _ ; apply tc)
+    @Eq.ndrec (@FSigma α Nat (fun _ => β)) ⟨a,(fun _ => c)⟩ (fun z => motive z.fst (z.snd 0)) ha ⟨b,(fun _ => d)⟩ wow
+
+
+#check funext
+
+noncomputable
+def test9  {α : Sort _} {β γ : α → Sort _}  {a : α} {c : β a} {e : γ a}
+  {motive : (b : α) → (d : β b) → (f : γ b) →  Sort _}
+  (ha : motive a c e) {b : α} {d : β b} {f : γ b}
+  (ta : a = b) (tc : HEq c d) (te : HEq e f) : motive b d f :=
+    have wow := @FSigma.ext α Nat (fun | 0 => β | _ => γ) ⟨a,(fun | 0 => c | _+1 => e)⟩ ⟨b,(fun | 0 => d | _+1 => f)⟩
+      ta (by
+            apply hfunext
+            · rfl
+            · intro x y hq
+              replace hq := eq_of_heq hq
+              cases x
+              · cases y
+                · exact tc
+                · contradiction
+              · cases y
+                · contradiction
+                · exact te
+              )
+    @Eq.ndrec (@FSigma α Nat (fun | 0 => β | _ => γ)) ⟨a,(fun | 0 => c | _+1 => e)⟩ (fun z => motive z.fst (z.snd 0) (z.snd 1)) ha ⟨b,(fun | 0 => d | _+1 => f)⟩ wow
+
+
+noncomputable
+def test10  {α : Sort _} {β γ δ: α → Sort _}  {a : α} {c : β a} {e : γ a} {g : δ a}
+  {motive : (b : α) → (d : β b) → (f : γ b) → (h : δ b) → Sort _}
+  (ha : motive a c e g) {b : α} {d : β b} {f : γ b} {h : δ b}
+  (ta : a = b) (tc : HEq c d) (te : HEq e f) (tg : HEq g h) : motive b d f h :=
+    have wow := @FSigma.ext α Nat (fun | 0 => β | 1 => γ | _ => δ) ⟨a,(fun | 0 => c | 1 => e | _+2 => g)⟩ ⟨b,(fun | 0 => d | 1 => f | _+2 => h)⟩
+      ta (by
+            apply hfunext
+            · rfl
+            · intro x y hq
+              replace hq := eq_of_heq hq
+              cases x
+              · cases y
+                · exact tc
+                · contradiction
+              · cases y
+                · contradiction
+                · rename_i z w
+                  cases z
+                  · cases w
+                    · exact te
+                    · rw [Nat.succ_inj'] at hq
+                      contradiction
+                  · cases w
+                    · rw [Nat.succ_inj'] at hq
+                      contradiction
+                    · exact tg
+              )
+    @Eq.ndrec (@FSigma α Nat (fun | 0 => β | 1 => γ | _ => δ)) ⟨a,(fun | 0 => c | 1 => e | _+2 => g)⟩  (fun z => motive z.fst (z.snd 0) (z.snd 1) (z.snd 2)) ha ⟨b,(fun | 0 => d | 1 => f | _+2 => h)⟩ wow
+
+
+
+-- structure RSigma {α : Sort _} {ι : Sort _} (β : ι → α → Sort _) where
+--   fst : α
+--   snd : (i : ι) → β i fst
+
+-- def RSigma : Nat → Sort _ → Prop
+-- | 0, α => α
+-- | n+1, α => ∀ β : α → Prop, (RSigma n β)
+
+@[ext]
+structure TSigma {α : Sort _} {ι : Sort _} {κ : Sort _} (β : ι → α → Sort _) (γ : (j : κ) → (i : ι) → (a : α) → β i a → Sort _) where
+  fst : α
+  snd : (i : ι) → β i fst
+  thd : (j : κ) → (i : ι) → γ j i fst (snd i)
+
+#check TSigma.ext
+
+noncomputable
+def test11  {α : Sort _} {β : α → Sort _} {γ : (a : α) → β a → Sort _}  {a : α} {c : β a} {e : γ a c}
+  {motive : (b : α) → (d : β b) → (f : γ b d) →  Sort _}
+  (ha : motive a c e) {b : α} {d : β b} {f : γ b d}
+  (ta : a = b) (tc : HEq c d) (te : HEq e f) : motive b d f :=
+    have wow := @TSigma.ext α Unit Unit (fun _ => β) (fun _ _ => γ) ⟨a,(fun _ => c),(fun _ _ => e)⟩ ⟨b,(fun _ => d),(fun _ _ => f)⟩
+      ta (by apply hfunext ; rfl ; intro _ _ _ ; apply tc) (by apply hfunext ; rfl ; intro _ _ _ ; apply hfunext ; rfl ; intro _ _ _ ; apply te)
+    @Eq.ndrec (@TSigma α Unit Unit (fun _ => β) (fun _ _ => γ)) ⟨a,(fun _ => c),(fun _ _ => e)⟩ (fun z => motive z.fst (z.snd ()) (z.thd () ()) ) ha ⟨b,(fun _ => d),(fun _ _ => f)⟩ wow
+
+-- For example for rewrites with {n : Nat} {e : Fin n} {h : P n e}
