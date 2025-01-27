@@ -5,6 +5,7 @@ import LeanGrow.F.Data.Unification.EmbedRawWInferWUnis
 import LeanGrow.F.Data.Unification.EmbedGoalWInferWUnis
 import LeanGrow.F.Search.ForwardData.Forward
 import LeanGrow.F.Utils.Paging
+import LeanGrow.F.Prototypes.MarkFour.IntroTree
 
 #check 1
 
@@ -20,8 +21,8 @@ deriving Inhabited, Repr, BEq
 
 structure SearchState where
   back : BackState
-  forw : List (List Nat × List (Nat × CExpr))
-  forw2 : List (List Nat × List (Array CExpr))
+  forw : IntroTree
+  forw2 : List (Array CExpr)
   ltx_handler : Nat → (Nat × Nat)
   forwID : Nat
   fctx : FixCtx -- it would be better to seperate the gnode info and lnode info
@@ -66,14 +67,16 @@ def tryBackOn (fctx : FixCtx) (premises : List miniPermiseDict)
       .some (new_forwID, introGnodes, nbs, {fctx with gnodeTypes := newforw2, ltxTypes := (state.id_gen_back, prem.data) :: fctx.ltxTypes},prem.name)
 
 
-def updateLtxIntros (forw : List (List Nat × List (Nat × CExpr)))
-  (forw2 : List (List Nat × List (Array CExpr))) (ltx_handler : Nat → (Nat × Nat))
+def updateLtxIntros (forw : IntroTree)
+  (forw2 : List (Array CExpr)) (ltx_handler : Nat → (Nat × Nat))
   (target_id id_gen_back : Nat) (toAdd : List (Nat × CExpr)) :
-  List (List Nat × List (Nat × CExpr)) × List (List Nat × List (Array CExpr)) :=
-  let nf := List.findModify (fun x => x.1.contains target_id) (fun (yg,ye) => (id_gen_back :: yg, toAdd ++ ye)) forw
-  let nf2 := List.findModify (fun x => x.1.contains target_id) (fun (yg,ye) => (id_gen_back :: yg,
-    toAdd.foldl (fun sofar (zn,ze) => PageingSet sofar ltx_handler 42 .failed zn ze) ye)) forw2
-  (nf,nf2)
+  IntroTree × List (Array CExpr) :=
+  match toAdd with
+  | [] => (forw.addStdBack target_id id_gen_back, forw2)
+  | _ =>
+    let nf := forw.addIntroBack target_id id_gen_back toAdd
+    let nf2 := toAdd.foldl (fun sofar (zn,ze) => PageingSet sofar ltx_handler 42 .failed zn ze) forw2
+    (nf,nf2)
 
 
 def tryBack (premises : List miniPermiseDict) (st : SearchState) : Option (SearchState) :=
@@ -111,6 +114,9 @@ def tryForWith (fctx : FixCtx) (prem : miniPermiseDict) (state : SearchState) : 
         state.forw2
       .some {state with forw := newforw, forw2 := newforw2, forwID := state.forwID + sz, ltx_assemmbly := add_to_asm ++ state.ltx_assemmbly}
       -- potiential bug: newforw2 should also be added to FixCtx !!!
+
+
+#exit
 
 def tryFor (prems : List miniPermiseDict) (state : SearchState) : Option SearchState :=
   let rec go : List miniPermiseDict → Option SearchState
