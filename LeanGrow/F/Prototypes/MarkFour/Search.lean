@@ -124,7 +124,7 @@ def tryFor (prems : List miniPermiseDict) (state : SearchState) : Option SearchS
   go prems
 
 
-
+#exit
 
 partial def tryUniAll (st : SearchState) : SearchState :=
   let rec main (tars : List Nat) (ltx: List (Nat × CExpr))
