@@ -1,11 +1,10 @@
 
 import LeanGrow.F.Prototypes.MarkFour.trBack
 import LeanGrow.F.Prototypes.MarkFour.trSolve
-import LeanGrow.F.Data.Unification.EmbedRawWInferWUnis
 import LeanGrow.F.Data.Unification.EmbedGoalWInferWUnis
-import LeanGrow.F.Search.ForwardData.Forward
+import LeanGrow.F.Prototypes.MarkFour.Forward
 import LeanGrow.F.Utils.Paging
-import LeanGrow.F.Prototypes.MarkFour.IntroTree
+import LeanGrow.F.Prototypes.MarkFour.IntroTreeEmbed
 
 #check 1
 
@@ -103,20 +102,17 @@ def tryForWith (fctx : FixCtx) (prem : miniPermiseDict) (state : SearchState) : 
   match full_matcher_rawF {fctx with current := .some prem.data} prem.data prem.order state.forw with
   | [] => .none
   | opts =>
-      let rez := (opts.map (fun x => (integrate_forward_raw x prem.goal, (prem.name, x.embed.reduceOption)))).filter (fun x => (state.forw.find? (fun y => y.2 == x.1)).isNone)
-      --dbg_trace s!"\n(DEBUG) Forw, opts : {repr (opts.map (EmbedStruct.embed))}\n"
+      let rez := (opts.map (fun x => ((integrate_forward_raw x prem.goal, x.topGoals), prem.name, x.embed.reduceOption))).filter (fun x => !(state.forw.has? x.1.1))
       let sz := rez.length
       let add_to_forw := List.zip ((List.range sz).map (· + state.forwID)) (rez.map Prod.fst)
       let add_to_asm := List.zip ((List.range sz).map (· + state.forwID)) (rez.map Prod.snd)
-      let newforw := add_to_forw ++ state.forw
+      let newforw := state.forw.addForws add_to_forw
       let newforw2 := add_to_forw.foldl
-        (fun sofar (idx,exp) => PageingSet sofar state.ltx_handler 42 (.failed) idx exp)
+        (fun sofar (idx,exp,_) => PageingSet sofar state.ltx_handler 42 (.failed) idx exp)
         state.forw2
       .some {state with forw := newforw, forw2 := newforw2, forwID := state.forwID + sz, ltx_assemmbly := add_to_asm ++ state.ltx_assemmbly}
       -- potiential bug: newforw2 should also be added to FixCtx !!!
 
-
-#exit
 
 def tryFor (prems : List miniPermiseDict) (state : SearchState) : Option SearchState :=
   let rec go : List miniPermiseDict → Option SearchState
@@ -128,29 +124,47 @@ def tryFor (prems : List miniPermiseDict) (state : SearchState) : Option SearchS
   go prems
 
 
-#exit
+
 
 partial def tryUniAll (st : SearchState) : SearchState :=
+  let rec main (tars : List Nat) (ltx: List (Nat × CExpr))
+    (done : List (Nat × Nat × List (Nat × Nat × CExpr) × List (Name × Level)))
+    (s g : List (Nat × CExpr)) :
+    List (Nat × Nat × List (Nat × Nat × CExpr) × List (Name × Level)) :=
+    match s, g with
+    | x :: xs, y :: ys =>
+        if tars.contains y.1
+        -- think about storing active goals in a way that we can match them with
+        -- the coresponding ltx more efficiently
+        then
+          if st.uni_memo.contains (x.1,y.1)
+          then main tars ltx done xs g
+          else
+            let xT := CExpr.whnf st.fctx (CExpr.inferType st.fctx x.2)
+            if xT == .sort .zero
+            -- should definitely store this info instead of recomputing every time
+            then
+              match (CExpr.MatchAssignSolutions' x.2 y.2) with
+              | .some (res,us) => main tars ltx ((x.1,y.1,res,us) :: done) xs g
+              | .none => main tars ltx done xs g
+            else main tars ltx done xs g
+          else main tars ltx done s ys
+    | [], _ :: ys => main tars ltx done ltx ys
+    | _,_ => done
   let rec uni_ltx_activeGoals
     (done : List (Nat × Nat × List (Nat × Nat × CExpr) × List (Name × Level)))
-    (s g : List (Nat × CExpr)) : List (Nat × Nat × List (Nat × Nat × CExpr) × List (Name × Level)) :=
-    -- try to find all (new) unifications of ltx result and an active goal
-    match s, g with
-    | x :: xs, y :: _ =>
-        if st.uni_memo.contains (x.1,y.1)
-        then uni_ltx_activeGoals done xs g
-        else
-          let xT := CExpr.whnf st.fctx (CExpr.inferType st.fctx x.2)
-          if xT == .sort .zero
-          then
-            match (CExpr.MatchAssignSolutions' x.2 y.2) with
-            | .some (res,us) => uni_ltx_activeGoals ((x.1,y.1,res,us) :: done) xs g
-            | .none => uni_ltx_activeGoals done xs g
-          else uni_ltx_activeGoals done xs g
-    | [], _ :: ys => uni_ltx_activeGoals done st.forw ys
-    | _,_ => done
-  let candidates := uni_ltx_activeGoals [] st.forw st.back.active_goals
-  --dbg_trace s!"(tryUniAll) candidates {repr candidates}"
+    (g : List (Nat × CExpr)) : List IntroTree →
+    List (Nat × Nat × List (Nat × Nat × CExpr) × List (Name × Level))
+      | [] => done
+      | nx :: more =>
+        match nx with
+        | .leaf gids ltx =>
+          let next := main gids ltx [] ltx g
+          uni_ltx_activeGoals (next ++ done) g more
+        | .node gids ltx kwd =>
+          let next := main gids ltx [] ltx g
+          uni_ltx_activeGoals (next ++ done) g ((kwd.map Prod.snd) ++ more)
+  let candidates := uni_ltx_activeGoals [] st.back.active_goals [st.forw]
   let interated := (candidates.foldl (fun S (sol,gol,uni_res,us) =>
     let uni_tree := BackTree.modifyAtGoalId_wUpdatesG gol st.back.id_gen_assign (fun
       | .ofGoal j t bdirs gdirs ts => .ofGoal j t bdirs gdirs ((.ofUni st.back.id_gen_assign (.gnode sol (.ofBvar 42))) :: ts)
@@ -165,6 +179,8 @@ partial def tryUniAll (st : SearchState) : SearchState :=
     | _ => S
     )) st
   interated
+
+
 
 #exit
 
