@@ -456,3 +456,29 @@ def testSort2 (t : (n : Nat) → Sort n) : (n : Nat) → Sort n
 def testBump := fun (α : Sort _) => α → Nat
 
 #check testBump
+
+--@[ext] -- fails
+def SSigma {α : Sort _} {β : α → Sort _} (γ : (a : α) → β a → Sort _) :=
+  @PSigma α (fun a => @PSigma (β a) (γ a))
+
+
+def testSSigma {α : Sort _} {β : α → Sort _} {γ : (a : α) → β a → Sort _}  {a : α} {c : β a} {e : γ a c} :
+  SSigma γ := ⟨a,⟨c,e⟩⟩
+
+#check PSigma.ext
+
+noncomputable
+def test13  {α : Sort _} {β : α → Sort _} {γ : (a : α) → β a → Sort _}  {a : α} {c : β a} {e : γ a c}
+  {motive : (b : α) → (d : β b) → (f : γ b d) →  Sort _}
+  (ha : motive a c e) {b : α} {d : β b} {f : γ b d}
+  (ta : a = b) (tc : HEq c d) (te : HEq e f) : motive b d f :=
+    have fst : (⟨a,⟨c,e⟩⟩ : SSigma γ) = ⟨b,⟨d,f⟩⟩ :=
+      @PSigma.ext α (fun a => @PSigma (β a) (γ a)) ⟨a,⟨c,e⟩⟩ ⟨b,⟨d,f⟩⟩ ta
+        (by dsimp
+            have e1 : β b = β a := by rw [ta]
+            have e2 : HEq (γ b) (γ a) := by rw [ta]
+            have : @PSigma.mk (β b) (γ b) d f = @PSigma.mk (β a) (γ a) (cast e1 d) (HEq.elim e2 f) := sorry)
+    sorry
+
+
+#check HEq.elim
