@@ -36,4 +36,6 @@ partial def mctsTree.selectExploit (T : mctsTree) : SearchState × List Nat :=
 - else, add aps from kids till above rand, and select that child
 → uniform proba on noes of tree
 
+Also, generate array of rands and use it as input for rest
+
 -/
