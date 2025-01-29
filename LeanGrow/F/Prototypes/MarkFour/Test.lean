@@ -5,13 +5,20 @@ import LeanGrow.F.Prototypes.MarkFour.TestTypes
 #check 1
 
 
+example (L : List Nat) (a b : Nat) (h_dL : ∀ x, x ∈ L → b ∣ x) (h_dB : a ∣ b) :
+  a ∣ L.sum := by
+    apply PremOne
+    intro x xl
+    exact Nat.dvd_trans h_dB (h_dL x xl)
 
+--#exit
 
 #check 1
 
-example (r : myNat) : myAdd .z (myAdd .z r) = r := by
-  grow
-  sorry
+example (L : List Nat) (a b : Nat) (h_dL : ∀ x, x ∈ L → b ∣ x) (h_dB : a ∣ b) :
+  a ∣ L.sum := by
+    grow
+    sorry
 
 #check 1
 

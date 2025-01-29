@@ -3,17 +3,14 @@
 #check 1
 
 
-inductive myNat where
-| z : myNat | s : myNat → myNat
+def List.sum : List Nat → Nat
+  | [] => 0
+  | x :: xs => x + xs.sum
+
+theorem PremOne (L : List Nat) (y : Nat) (h : ∀ x, x ∈ L → y ∣ x) : y ∣ L.sum := sorry
+
+#check Nat.dvd_trans
 
 
-def myAdd (l : myNat) : myNat → myNat
-  | .z => l
-  | .s r => .s (myAdd l r)
-
-theorem myAdd_zero (r : myNat) : myAdd .z r = r := by
-  apply @myNat.rec (fun x => myAdd .z x = x)
-  · rfl
-  · intro a ah
-    unfold myAdd
-    rw [ah]
+set_option pp.all true in
+#check PremOne

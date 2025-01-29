@@ -146,7 +146,9 @@ def isStructureLike! (env : Environment) (constName : Name) : Option (Name × Co
 def ConstantInfo.toCstInfo (env : Environment) (n : Name) (i : ConstantInfo) : CstInfo :=
   let rec main :  ConstantInfo → CstInfo
     | .axiomInfo v => .noVal v.levelParams v.type.toCExpr
-    | .defnInfo v | .thmInfo v | .opaqueInfo v => .wVal v.levelParams v.type.toCExpr v.value.toCExpr
+    | .defnInfo v | .thmInfo v | .opaqueInfo v =>
+
+        .wVal v.levelParams v.type.toCExpr v.value.toCExpr
     | .quotInfo v => .quot v.levelParams v.type.toCExpr v
     | .inductInfo v => .indu v.levelParams v.type.toCExpr v
     | .ctorInfo v => .ctor v.levelParams v.type.toCExpr v
