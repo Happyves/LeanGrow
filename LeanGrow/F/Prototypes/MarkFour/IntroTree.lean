@@ -14,34 +14,34 @@ deriving Inhabited, Repr, BEq
 
 namespace IntroTree
 
-partial def addStdBack (target_id id_gen_back : Nat) (T : IntroTree) : IntroTree :=
+partial def addStdBack (target_id : Nat) (newGs : List Nat) (T : IntroTree) : IntroTree :=
   let rec find (done : List (List Nat × IntroTree)) (go : IntroTree → IntroTree) : List (List Nat × IntroTree) → List (List Nat × IntroTree)
     | [] => done
     | (xl,xt) :: xs =>
         if xl.contains target_id
-        then (id_gen_back :: xl, go xt) :: (done ++ xs)
+        then (newGs ++ xl, go xt) :: (done ++ xs)
         else find ((xl,xt) :: done) go xs
   match T with
-  | .leaf gids ltx => .leaf (id_gen_back :: gids) ltx
+  | .leaf gids ltx => .leaf (newGs ++ gids) ltx
   | .node gids ltx kidsWdirs =>
       if gids.contains target_id
-      then .node (id_gen_back :: gids) ltx kidsWdirs
-      else .node gids ltx (find [] (addStdBack target_id id_gen_back) kidsWdirs)
+      then .node (newGs ++ gids) ltx kidsWdirs
+      else .node gids ltx (find [] (addStdBack target_id newGs) kidsWdirs)
 
 
-partial def addIntroBack (target_id id_gen_back : Nat) (new : List (Nat × CExpr)) (T : IntroTree) : IntroTree :=
+partial def addIntroBack (target_id : Nat) (newGs : List Nat) (new : List (Nat × CExpr)) (T : IntroTree) : IntroTree :=
   let rec find (done : List (List Nat × IntroTree)) (go : IntroTree → IntroTree) : List (List Nat × IntroTree) → List (List Nat × IntroTree)
     | [] => done
     | (xl,xt) :: xs =>
         if xl.contains target_id
-        then (id_gen_back :: xl, go (xt)) :: (done ++ xs)
+        then (newGs ++ xl, go (xt)) :: (done ++ xs)
         else find ((xl,xt) :: done) go xs
   match T with
-  | .leaf gids ltx => .node gids ltx [([id_gen_back], .leaf [id_gen_back] new)]
+  | .leaf gids ltx => .node gids ltx [(newGs, .leaf newGs new)]
   | .node gids ltx kidsWdirs =>
       if gids.contains target_id
-      then .node gids ltx (([id_gen_back], .leaf [id_gen_back] new) :: kidsWdirs)
-      else .node gids ltx (find [] (addIntroBack target_id id_gen_back new) kidsWdirs)
+      then .node gids ltx ((newGs, .leaf newGs new) :: kidsWdirs)
+      else .node gids ltx (find [] (addIntroBack target_id newGs new) kidsWdirs)
 
 partial def has? (ce : CExpr) (T : IntroTree) : Bool :=
   let rec go : List IntroTree → Bool

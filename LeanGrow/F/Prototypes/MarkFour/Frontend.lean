@@ -16,14 +16,8 @@ def init_FixCtx (env : Environment) (init_gnodeTypes : Array CExpr) : FixCtx :=
   let modules := env.header.moduleNames
   let T := env.constants.map₁.fold
     (fun sofar name info =>
-      if (Name.isPrefixOf `Init modules[env.const2ModIdx[name].get! (α := Nat)]!) || (Name.isPrefixOf `LeanGrow.F.Prototypes.MarkOne.TestTypes modules[env.const2ModIdx[name].get! (α := Nat)]!)
-      then
-      -- dbg
-        if (Name.isPrefixOf `LeanGrow.F.Prototypes.MarkOne.TestTypes modules[env.const2ModIdx[name].get! (α := Nat)]!)
-        then
-          dbg_trace s!"Addding {name} with type {repr info.type.toCExpr}"
-          sofar.insert name.toString (ConstantInfo.toCstInfo env name info)
-        else sofar.insert name.toString (ConstantInfo.toCstInfo env name info)
+      if (Name.isPrefixOf `Init modules[env.const2ModIdx[name].get! (α := Nat)]!) || (Name.isPrefixOf `LeanGrow.F.Prototypes.MarkFour.TestTypes modules[env.const2ModIdx[name].get! (α := Nat)]!)
+      then sofar.insert name.toString (ConstantInfo.toCstInfo env name info)
       else sofar
       )
     CTrie.empty
@@ -180,21 +174,44 @@ elab "grow" : tactic => do
   let dEnv ← simpleImportModules #[`LeanGrow.F.Prototypes.MarkFour.TestTypes]
   Elab.Tactic.withMainContext do
     let Ltx ←  getLCtx
-
+    --dbg_trace s!"testing : {(Ltx.decls.toList.reduceOption.map LocalDecl.type)}"
     let (ltx, goal) := LCtx_to_ltx_and_goal Ltx
     let forw2 := ltx.foldl
         (fun sofar (idx,exp) => PageingSet sofar (fun x => (x / 42, x % 42)) 42 (.failed) idx exp)
         []
     let fctx := init_FixCtx dEnv (ltx.map Prod.snd).toArray
-    dbg_trace s!"Test {repr (CExpr.inferType fctx (.const `List.sum []))}"
+    --dbg_trace s!"Test {repr (CExpr.inferType fctx (.const `List.sum []))}"
     let outer_premises := (Names_to_thmData dEnv [`Nat.dvd_trans, `PremOne].reverse)
     let inner_premises := (ltx.map (fun (n,ce) => AllHyp_to_thmData n ce)).reduceOption
     let st : SearchState := ⟨⟨0,1,0,[(0,goal)], .ofGoal 0 goal [] [] [] ⟩, .leaf [0] ltx, forw2, (fun x => (x / 42, x % 42)), ltx.length, fctx, [], [], [],[],[]⟩
     --logInfoAt ref s!"{repr premises}"
-    let res := search 20 (inner_premises ++ outer_premises) st
+    let res := search 10 (inner_premises ++ outer_premises) st
     match res with
     | .none => logInfoAt ref "nope"
     | .some res! => logInfoAt ref s!"Recovered : {repr res!}"
 
 
 #check Eq.trans
+
+
+elab "growin" : tactic => do
+  let ref ← getRef
+  let dEnv ← simpleImportModules #[`LeanGrow.F.Prototypes.MarkFour.TestTypes]
+  Elab.Tactic.withMainContext do
+    let Ltx ←  getLCtx
+    --dbg_trace s!"testing : {(Ltx.decls.toList.reduceOption.map LocalDecl.type)}"
+    let (ltx, goal) := LCtx_to_ltx_and_goal Ltx
+    let forw2 := ltx.foldl
+        (fun sofar (idx,exp) => PageingSet sofar (fun x => (x / 42, x % 42)) 42 (.failed) idx exp)
+        []
+    let fctx := init_FixCtx dEnv (ltx.map Prod.snd).toArray
+    --dbg_trace s!"Test {repr (CExpr.inferType fctx (.const `List.sum []))}"
+    let outer_premises := (Names_to_thmData dEnv [`Nat.dvd_trans, `PremOne].reverse)
+    let inner_premises := (ltx.map (fun (n,ce) => AllHyp_to_thmData n ce)).reduceOption
+    let testin := ltx.filter (fun (_,x) => match x with | .forallE _ _ _ _ => false | _ => true)
+    let st : SearchState := ⟨⟨0,1,0,[(0,goal)], .ofGoal 0 goal [] [] [] ⟩, .leaf [0] testin, forw2, (fun x => (x / 42, x % 42)), ltx.length, fctx, [], [], [],[],[]⟩
+    --logInfoAt ref s!"{repr premises}"
+    let res := search 10 (inner_premises ++ outer_premises) st
+    match res with
+    | .none => logInfoAt ref "nope"
+    | .some res! => logInfoAt ref s!"Recovered : {repr res!}"

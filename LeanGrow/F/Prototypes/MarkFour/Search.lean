@@ -71,12 +71,12 @@ def tryBackOn (fctx : FixCtx) (premises : List miniPermiseDict)
 
 def updateLtxIntros (forw : IntroTree)
   (forw2 : List (Array CExpr)) (ltx_handler : Nat → (Nat × Nat))
-  (target_id id_gen_back : Nat) (toAdd : List (Nat × CExpr)) :
+  (target_id : Nat) (newGs : List Nat) (toAdd : List (Nat × CExpr)) :
   IntroTree × List (Array CExpr) :=
   match toAdd with
-  | [] => (forw.addStdBack target_id id_gen_back, forw2)
+  | [] => (forw.addStdBack target_id newGs, forw2)
   | _ =>
-    let nf := forw.addIntroBack target_id id_gen_back toAdd
+    let nf := forw.addIntroBack target_id newGs toAdd
     let nf2 := toAdd.foldl (fun sofar (zn,ze) => PageingSet sofar ltx_handler 42 .failed zn ze) forw2
     (nf,nf2)
 
@@ -90,14 +90,16 @@ def tryBack (premises : List miniPermiseDict) (st : SearchState) : Option (Searc
         | .some (_,nms) =>
             match tryBackOn st.fctx premises nms st.forwID st.fctx.gnodeTypes st.fctx.gnodeTypesHandler g id st.back with
             | .some (newfid,ngno,newb,newf,add) =>
-              let (nf,nf2) := updateLtxIntros st.forw st.forw2 st.ltx_handler id st.back.id_gen_back ngno -- already incremented in newb
-              .some {st with forw := nf, forw2 := nf2, forwID := newfid, back := newb, fctx := newf, back_memo := st.back_memo.findModify (fun x => x.1 == id) (fun (n,l) => (n, add :: l))}
+              let newGs := (List.range (newb.id_gen_goal - st.back.id_gen_goal)).map (· + st.back.id_gen_goal)
+              let (nf,nf2) := updateLtxIntros st.forw st.forw2 st.ltx_handler id newGs ngno -- already incremented in newb
+              .some {st with forw := nf, forw2 := nf2, forwID := newfid, back := newb, fctx := newf, back_memo := st.back_memo.findModifyAdd (fun x => x.1 == id) (fun (n,l) => (n, add :: l)) (id,[add])}
             | _ => go more
         | _ =>
           match tryBackOn st.fctx premises [] st.forwID st.fctx.gnodeTypes st.fctx.gnodeTypesHandler g id st.back with
           | .some (newfid,ngno,newb,newf,add) =>
-              let (nf,nf2) := updateLtxIntros st.forw st.forw2 st.ltx_handler id st.back.id_gen_back ngno -- already incremented in newb
-              .some {st with forw := nf, forw2 := nf2, forwID := newfid, back := newb, fctx := newf, back_memo := st.back_memo.findModify (fun x => x.1 == id) (fun (n,l) => (n, add :: l))}
+              let newGs := (List.range (newb.id_gen_goal - st.back.id_gen_goal)).map (· + st.back.id_gen_goal)
+              let (nf,nf2) := updateLtxIntros st.forw st.forw2 st.ltx_handler id newGs ngno -- already incremented in newb
+              .some {st with forw := nf, forw2 := nf2, forwID := newfid, back := newb, fctx := newf, back_memo := st.back_memo.findModifyAdd (fun x => x.1 == id) (fun (n,l) => (n, add :: l)) (id,[add])}
           | _ => go more
   go st.back.active_goals
 
@@ -143,15 +145,26 @@ partial def tryUniAll (st : SearchState) : SearchState :=
         -- the coresponding ltx more efficiently
         then
           if st.uni_memo.contains (x.1,y.1)
+          -- actually, we should add the pair if it doesn't match, so that we dont try again
           then main tars ltx done xs g
           else
             let xT := CExpr.whnf st.fctx (CExpr.inferType st.fctx x.2)
             if xT == .sort .zero
             -- should definitely store this info instead of recomputing every time
             then
-              match (CExpr.MatchAssignSolutions' x.2 y.2) with
-              | .some (res,us) => main tars ltx ((x.1,y.1,res,us) :: done) xs g
-              | .none => main tars ltx done xs g
+              if x.1 == 4 && y.1 == 8
+              then
+                match (CExpr.MatchAssignSolutions' x.2 y.2) with
+                | .some (res,us) =>
+                      dbg_trace s!"HMMM yes"
+                      main tars ltx ((x.1,y.1,res,us) :: done) xs g
+                | .none =>
+                      dbg_trace s!"HMMM no"
+                      main tars ltx done xs g
+              else
+                match (CExpr.MatchAssignSolutions' x.2 y.2) with
+                | .some (res,us) => main tars ltx ((x.1,y.1,res,us) :: done) xs g
+                | .none => main tars ltx done xs g
             else main tars ltx done xs g
           else main tars ltx done s ys
     | [], _ :: ys => main tars ltx done ltx ys
@@ -174,11 +187,12 @@ partial def tryUniAll (st : SearchState) : SearchState :=
     let uni_tree := BackTree.modifyAtGoalId_wUpdatesG gol st.back.id_gen_assign (fun
       | .ofGoal j t bdirs gdirs ts => .ofGoal j t bdirs gdirs ((.ofUni st.back.id_gen_assign (.gnode sol (.ofBvar 42))) :: ts)
       | .ofPropa i j t bdirs gdirs ts => .ofPropa i j t bdirs gdirs ((.ofUni st.back.id_gen_assign (.gnode sol (.ofBvar 42))) :: ts)
+      | .ofIntro i j t bdirs gdirs ts => .ofIntro i j t bdirs gdirs ((.ofUni st.back.id_gen_assign (.gnode sol (.ofBvar 42))) :: ts)
       | x => x) st.back.bt
     match integrate_uni? st.forwID st.back.id_gen_assign st.back.id_gen_goal (us.map Prod.fst) (us.map Prod.snd) st.fctx uni_res uni_tree with
     | .some (uni_assi, nfid, nfwdI, nbt, ngs, ngi) =>
         let (nF,nF2) := nfwdI.foldl (fun (IF,IF2) (tgId,nltx) =>
-          updateLtxIntros IF IF2 st.ltx_handler tgId gol nltx) (st.forw, st.forw2)
+          updateLtxIntros IF IF2 st.ltx_handler tgId [gol] nltx) (st.forw, st.forw2)
         let nb := integrate_uni_full st.back nbt ngs ngi gol
         {st with forwID := nfid, forw := nF, forw2 := nF2, back := nb, unif_assign := (st.back.id_gen_assign, uni_assi, us) :: st.unif_assign, uni_memo := (sol,gol) :: st.uni_memo}
     | _ => S
@@ -188,7 +202,7 @@ partial def tryUniAll (st : SearchState) : SearchState :=
 
 
 
-
+--#exit
 
 
 
@@ -199,7 +213,7 @@ partial def search_step (premises : List miniPermiseDict) (st : SearchState) : S
   --dbg_trace s!"(unistep)\nBacktree:\n{repr unistep.back.bt}\nGoals:\n{repr unistep.back.active_goals}\nForward:{repr unistep.forw}\nBack memo:\n{unistep.back_memo}\nUni memo:\n{unistep.uni_memo}\nUni clashes:\n{unistep.uni_claches}\n\n"
   let forwstep := match tryFor premises unistep with | .some new => new | _ => unistep
   --dbg_trace s!"(forward)\nBacktree:\n{repr forwstep.back.bt}\nGoals:\n{repr forwstep.back.active_goals}\nForward:{repr forwstep.forw}\nBack memo:\n{forwstep.back_memo}\nUni memo:\n{forwstep.uni_memo}\nUni clashes:\n{forwstep.uni_claches}\n\n"
-  match tryBack premises st with
+  match tryBack premises forwstep with
   | .some res => res
   | _ => forwstep
 
@@ -209,7 +223,7 @@ partial def search (fuel : Nat) (premises : List miniPermiseDict) (st : SearchSt
     | 0, _ => .none
     | n+1, nx =>
       let st := search_step premises nx
-      --dbg_trace s!"(search) loop {n+1}\nBacktree:\n{repr st.back.bt}\nGoals:\n{repr st.back.active_goals}\nForward:{repr st.forw}\nBack memo:\n{st.back_memo}\nUni memo:\n{st.uni_memo}\nUni clashes:\n{st.uni_claches}\n\n"
+      dbg_trace s!"(search) loop {n+1}\nBacktree:\n{repr st.back.bt}\nGoals:\n{repr st.back.active_goals}\nForward:{repr st.forw}\nBack memo:\n{st.back_memo}\nUni memo:\n{st.uni_memo}\nUni clashes:\n{st.uni_claches}\n\n"
       let tmp := (st.unif_assign.map (fun (a,b,_) => (a,b)))
       let (sols?,kC) := BackTree.assemble?
         st.ltx_assemmbly tmp
@@ -217,6 +231,7 @@ partial def search (fuel : Nat) (premises : List miniPermiseDict) (st : SearchSt
       match sols? with
       | [] => loop n {st with uni_claches := kC}
       | (tada, ah?) :: _ => .some (unfoldLNodes tmp ah? tada)
+  dbg_trace s!"(search) loop init\nBacktree:\n{repr st.back.bt}\nGoals:\n{repr st.back.active_goals}\nForward:{repr st.forw}\nBack memo:\n{st.back_memo}\nUni memo:\n{st.uni_memo}\nUni clashes:\n{st.uni_claches}\n\n"
   loop fuel st
 
 

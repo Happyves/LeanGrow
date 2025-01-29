@@ -23,6 +23,16 @@ example (L : List Nat) (a b : Nat) (h_dL : ∀ x, x ∈ L → b ∣ x) (h_dB : a
 #check 1
 
 
+
+example (L : List Nat) (a b : Nat) (h_dL : ∀ x, x ∈ L → b ∣ x) (h_dB : a ∣ b) :
+  a ∣ L.sum := by
+    growin
+    sorry
+
+
+#check 1
+
+
 /-
 Take-aways :
 

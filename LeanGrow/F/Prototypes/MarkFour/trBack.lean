@@ -243,13 +243,13 @@ def integrate_backstep (f_id_gen : Nat)
       (fun A (pos, val) => A.set! pos (.ofAssign val))
       new_leaves_1
     --dbg_trace s!"(integrate_backstep) new_leaves_2 {repr new_leaves_2}"
-    let (new_leaves_3,nfid,ngns) := common.foldl
-      (fun (A,fid,ngns) (pos, gId, type) =>
+    let (new_leaves_3,nfid,ngns,commonFix) := common.foldl
+      (fun (A,fid,ngns,cF) (pos, gId, type) =>
           match intro? type fid with
-          | .none => (A.set! pos (.ofGoal gId type [] [] []),fid,ngns)
-          | .some (nfig,ng,ngnodes) => (A.set! pos (.ofIntro gId ng ngnodes [] [] []),nfig,ngnodes ++ ngns)
+          | .none => (A.set! pos (.ofGoal gId type [] [] []),fid,ngns,(pos, gId, type):: cF)
+          | .some (nfig,ng,ngnodes) => (A.set! pos (.ofIntro gId ng ngnodes [] [] []),nfig,ngnodes ++ ngns, (pos, gId, ng):: cF)
           )
-      (new_leaves_2,f_id_gen,[])
+      (new_leaves_2,f_id_gen,[],[])
     --dbg_trace s!"(integrate_backstep) new_leaves_3 {repr new_leaves_3}"
     let new_branches : BackTree → BackTree := fun X =>
       match X with
@@ -266,7 +266,7 @@ def integrate_backstep (f_id_gen : Nat)
       | _ => .fail
     let finalT := BackTree.modifyAtGoalId_wUpdates target_goal_id new_dirs id_gen_back new_branches backTree
     --dbg_trace s!"(integrate_backstep) fstout {repr (common.map Prod.snd)} \nfinalT : {repr finalT}\n\n"
-    (nfid, ngns,⟨common.map Prod.snd, finalT⟩)
+    (nfid, ngns,⟨commonFix.map Prod.snd, finalT⟩)
 
 --#exit
 
@@ -354,6 +354,14 @@ def propagate_uni_assign_step (fctx : FixCtx)
                 --     -- no checks
                 --     --dbg_trace s!"Uni-propa test to assign because gunni {repr guni}"
                 --     .some ((.ofBack tag n bdirs gdirs (args.set! idx ( .ofGoal gid type gbd ggd (.ofUni uni_id (guni) :: sols)))), .some ([]))
+          | .ofIntro gid type bvs gbd ggd sols =>
+                -- like ↑ ; ofPropa not needed, as can only be child of ofGoal, but ofIntro acts as a special ofGoal
+                let gt := CExpr.inferType fctx guni
+                match CExpr.MatchAssignSolutions' gt type with
+                | .none =>
+                      .none
+                | .some res =>
+                    .some ((.ofBack tag n bdirs gdirs (args.set! idx (.ofIntro gid type bvs gbd ggd (.ofUni uni_id (guni) :: sols)))), .some (res.1))
           | _ => .none
     | _ => .none
   let S? := BackTree.modifyAtBackId_wRetrieve tag mod sofar.tree

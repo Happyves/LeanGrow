@@ -195,18 +195,18 @@ partial def BackTree.assemble?
             --dbg_trace s!"No clash, retunring {repr res}"
             res
     | .ofIntro _ _ bvs _ _ ts =>
-      let (res, nkC) :=
-      ts.foldl (fun (sols,kC) t =>
-        let (msols,nkC) := go kC addedConstr t
-        (msols ++ sols, nkC)
-        ) ([],knowClashes)
-        --dbg_trace s!"Goal {i}, returning {repr res}"
-      let R := res.map (fun (ce,cstr) =>
-        let r := bvs.foldl (fun cex (gi,t) =>
-          .lam `grow t (lamdifyGnode gi cex) .default
-          ) ce
-        (r,cstr))
-      (R,nkC)
+        let (res, nkC) :=
+        ts.foldl (fun (sols,kC) t =>
+          let (msols,nkC) := go kC addedConstr t
+          (msols ++ sols, nkC)
+          ) ([],knowClashes)
+          --dbg_trace s!"Goal {i}, returning {repr res}"
+        let R := res.map (fun (ce,cstr) =>
+          let r := bvs.foldl (fun cex (gi,t) =>
+            .lam `grow t (lamdifyGnode gi cex) .default
+            ) ce
+          (r,cstr))
+        (R,nkC)
     | .fail => ([],[])
   go knowClashes [] bt
 
