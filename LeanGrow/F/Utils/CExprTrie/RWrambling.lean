@@ -467,18 +467,62 @@ def testSSigma {α : Sort _} {β : α → Sort _} {γ : (a : α) → β a → So
 
 #check PSigma.ext
 
+theorem eqRec_heq' {α : Sort u} {φ : α → Sort v} {a a' : α} : (h : a = a') → (p : φ a) → HEq (Eq.rec (motive := fun x _ => φ x) p h) p
+  | rfl, p => HEq.refl p
+
 noncomputable
 def test13  {α : Sort _} {β : α → Sort _} {γ : (a : α) → β a → Sort _}  {a : α} {c : β a} {e : γ a c}
   {motive : (b : α) → (d : β b) → (f : γ b d) →  Sort _}
   (ha : motive a c e) {b : α} {d : β b} {f : γ b d}
   (ta : a = b) (tc : HEq c d) (te : HEq e f) : motive b d f :=
-    have fst : (⟨a,⟨c,e⟩⟩ : SSigma γ) = ⟨b,⟨d,f⟩⟩ :=
+    -- have fst : HEq (⟨c,e⟩ : PSigma (γ a)) (⟨d,f⟩ : PSigma (γ b))  :=
+    --   @PSigma.ext α
+    have snd : (⟨a,⟨c,e⟩⟩ : SSigma γ) = ⟨b,⟨d,f⟩⟩ :=
       @PSigma.ext α (fun a => @PSigma (β a) (γ a)) ⟨a,⟨c,e⟩⟩ ⟨b,⟨d,f⟩⟩ ta
         (by dsimp
-            have e1 : β b = β a := by rw [ta]
-            have e2 : HEq (γ b) (γ a) := by rw [ta]
-            have : @PSigma.mk (β b) (γ b) d f = @PSigma.mk (β a) (γ a) (cast e1 d) (HEq.elim e2 f) := sorry)
+            apply heq_of_eqRec_eq (by rw [ta])
+            apply PSigma.ext
+            · apply eq_of_heq
+              apply HEq.trans _ tc
+              apply heq_of_eqRec_eq (by rw [ta])
+              dsimp
+              sorry
+            · dsimp
+              sorry
+            -- have e1 : β b = β a := by rw [ta]
+            -- have e2 : HEq (γ b) (γ a) := by rw [ta]
+            -- have : @PSigma.mk (β b) (γ b) d f = @PSigma.mk (β a) (γ a) (cast e1 d) (HEq.elim e2 f) := sorry
+            )
     sorry
 
 
 #check HEq.elim
+#check heq_of_eqRec_eq
+
+#print TSigma.ext
+
+#check TSigma.rec
+
+example: ∀ {α : Sort u_1} {ι : Sort u_2} {κ : Sort u_3}
+  {β : ι → α → Sort u_4} {γ : κ → (i : ι) → (a : α) → β i a → Sort u_5} (x y : TSigma β γ),
+  x.fst = y.fst → HEq x.snd y.snd → HEq x.thd y.thd → x = y := by
+    intro α ι κ β γ x y
+    apply @TSigma.rec α ι κ β γ (fun y => x.fst = y.fst → HEq x.snd y.snd → HEq x.thd y.thd → x = y)
+    intro f s t e1 --e2 e3
+    dsimp
+    dsimp at e1
+    revert t s
+    apply @Eq.rec α x.fst (fun f _ => ∀ (s : (i : ι) → β i f) (t : (j : κ) → (i : ι) → γ j i f (s i)), HEq x.snd s → HEq x.thd t → x = { fst := f, snd := s, thd := t }) _ _ e1
+    intro s t e2 --e2 e3
+    dsimp
+    revert t
+    replace e2 := eq_of_heq e2
+    apply @Eq.rec _ x.snd (fun s _ => ∀ (t : (j : κ) → (i : ι) → γ j i x.fst (s i)), HEq x.thd t → x = { fst := x.fst, snd := s, thd := t }) _ _ e2
+    intro t e3
+    replace e3 := eq_of_heq e3
+    apply @Eq.rec _ x.thd (fun t _ => x = { fst := x.fst, snd := x.snd, thd := t }) _ _ e3
+    rfl
+
+-- combine this technique and the ext Eq rec for motives ?
+
+#check HEq.rec
