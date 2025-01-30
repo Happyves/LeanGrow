@@ -14,6 +14,7 @@ def mctsTree.getBestChild? (T : mctsTree) : Option (Nat × mctsTree) :=
         | .leaf _ sc aps _ =>  if sc*mA > mS*aps then go sc aps c nx more else go mS mA (c+1) cand more
         | .node _ sc aps _ _ => if sc*mA > mS*aps then go sc aps c nx more else go mS mA (c+1) cand more
   match T with
+  | .root _  kids => go 0 1 0 T kids
   | .node _ _ _ _ kids => go 0 1 0 T kids
   | _ => .none
 
@@ -50,7 +51,7 @@ partial def mctsTree.getApps (T : mctsTree) : Nat :=
 partial def mctsTree.size (T : mctsTree) : Nat :=
   let rec go (c : Nat) : List mctsTree → Nat
     | [] => c
-    | .root _ k :: _ => go 1 k
+    | .root _ k :: _ => go 0 k -- 0 so that rand in [0,Tsize] is 0 if only root
     | .leaf _ _ _ _ :: ts => go (c.succ) ts
     | .node _ _ _ _ k  :: ts => go (c.succ) (k ++ ts)
   go 0 [T]
@@ -70,5 +71,45 @@ partial def mctsTree.selectExplore_core (T : mctsTree) (rand : Nat): SearchState
 
 
 def mctsTree.selectExplore (T : mctsTree) : IO (SearchState × List Nat) := do
-  let r ← IO.rand 0 T.size
+  let r ← IO.rand 0 T.size -- same with get apps ? getApps
   return (T.selectExplore_core r)
+
+
+def mctsTree.expandExploit (st : SearchState) : ActType × SearchState :=
+  sorry
+-- ↑ will be based on a variant of ↓, where we also take note of the action type
+#check search_step
+-- here, we'll want to select the highest scoring action according to current weights
+
+
+def mctsTree.expandExplore (st : SearchState) : ActType × SearchState :=
+  sorry
+-- here, we'll want to take a random action among all available ones
+-- so we should have as SetTrieC will all theorems in it to take from
+-- and choose whether to try induction etc.
+
+-- We should do the following combos for select × expand : (exploit,exploit), (explore,exploit)  and (exploit,explore)
+-- (explore,explore) will be trash ?
+
+
+def mctsTree.simulate (st : SearchState) : Nat :=
+  sorry
+-- will return the score of the states gained from expantion
+-- will boil down to running a fixed number of `search_step` and ranking the final state
+
+
+
+/-- Affects the order by potentially prepending a leaf.
+Expects dirs in same order as outputted by selection -/
+def mctsTree.propagateWith (T : mctsTree) (addAT : ActType) (addST : SearchState) (addScore : Nat) (dirs : List Nat) : mctsTree :=
+  let rec go : mctsTree → List Nat → mctsTree
+    | .root s k, [] => .root s ((.leaf addAT addScore 1 addST) :: k)
+    | .root s k, x :: xs => .root s (k.modifyNth (go · xs) x)
+    | .leaf a s p S, [] => .node a (s+addScore) (p.succ) S ([(.leaf addAT addScore 1 addST)])
+    | .node a s p S k, [] => .node a (s+addScore) (p.succ) S ((.leaf addAT addScore 1 addST) :: k)
+    | .node a s p S k, x :: xs => .node a (s+addScore) (p.succ) S (k.modifyNth (go · xs) x)
+    | _, _ => .root default []
+  go T dirs.reverse
+
+
+-- TODO : incorporate info of mctsTree to HypGoalState
