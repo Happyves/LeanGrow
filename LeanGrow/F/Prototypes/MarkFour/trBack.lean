@@ -203,7 +203,39 @@ partial def BackTree.modifyAtGoalId_wUpdatesG (id : Nat) (newGid : Nat) (mod : B
       | .none => .ofBack i n bdirs gdirs ts
       | .some j => .ofBack i n bdirs (gdirs.set! j (newGid :: (gdirs.get! j))) (ts.set! j (BackTree.modifyAtGoalId_wUpdatesG id newGid mod (ts.get! j)))
 
+partial def BackTree.modifyAtGoalId (id : Nat) (mod : BackTree → BackTree) : BackTree → BackTree
+  | .fail => .fail
+  | .ofAssign ce => .ofAssign ce
+  | .ofUni ai  ce => .ofUni ai  ce
+  | .ofGoal j t bdirs gdirs ts =>
+      if j == id
+      then mod (.ofGoal j t bdirs gdirs ts)
+      else
+        if ! gdirs.contains id
+        then .ofGoal j t bdirs gdirs ts
+        else .ofGoal j t (bdirs) ( gdirs) (ts.map (BackTree.modifyAtGoalId id mod))
+  | .ofPropa i j t bdirs gdirs ts =>
+      if j == id
+      then mod (.ofPropa i j t bdirs gdirs ts)
+      else
+        if ! gdirs.contains id
+        then .ofPropa i j t bdirs gdirs ts
+        else .ofPropa i j t (bdirs) (gdirs) (ts.map (BackTree.modifyAtGoalId id mod))
+  | .ofIntro i t bvs bdirs gdirs ts =>
+      if i == id
+      then mod (.ofIntro i t bvs bdirs gdirs ts)
+      else
+        if ! gdirs.contains id
+        then .ofIntro i t bvs bdirs gdirs ts
+        else .ofIntro i t bvs (bdirs) ( gdirs) (ts.map (BackTree.modifyAtGoalId id mod))
+  | .ofBack i n bdirs gdirs ts =>
+      match gdirs.findIdx? (fun l => l.contains id) with
+      | .none => .ofBack i n bdirs gdirs ts
+      | .some j => .ofBack i n bdirs (gdirs.set! j ((gdirs.get! j))) (ts.set! j (BackTree.modifyAtGoalId id mod (ts.get! j)))
 
+
+
+--#exit
 
 partial def intro? (e : CExpr) (f_id_gen : Nat) : Option (Nat × CExpr × List (Nat × CExpr)) :=
   let rec go (c : Nat) (bvs : List (Nat × CExpr)) : CExpr → Option (Nat × CExpr × List (Nat × CExpr))
@@ -511,12 +543,16 @@ partial def propagate_uni_assign_toGoalsAssigns (f_id_gen : Nat)
     (ancestors : List (Nat × Nat × CExpr)) (splitable : List (Nat × Nat × CExpr)) : BackTree → Nat × List (Nat × List (Nat × CExpr)) × BackTree × List (Nat × CExpr) × Nat
     | .fail => (nf_id_gen, [],.fail,[],id_gen_goal)
     | .ofBack id n bdirs gdirs args =>
+          --dbg_trace s!"(propagate_uni_assign_toGoalsAssigns) at ofBack {id}\nancestors : {repr ancestors}\nsplitable : {repr splitable}\n"
           let (here, next) := List.splitMore (fun x => x == id) splitable
+          --dbg_trace s!"(propagate_uni_assign_toGoalsAssigns) here : {repr here}\nnext : {repr next}\n"
           let sp := customSplit next bdirs
+          --dbg_trace s!"(propagate_uni_assign_toGoalsAssigns) sp : {repr sp}"
           let new_ancestors := here ++ ancestors
+          --dbg_trace s!"(propagate_uni_assign_toGoalsAssigns) new_ancestors : {repr new_ancestors}"
           let (new_f_id_gen, new_gnode, update, new_new_goals, new_id_gen_goal, local_new_goals) : Nat × List (Nat × List (Nat × CExpr)) × Array BackTree × List (Nat × CExpr) × Nat × Array (List Nat) := (args.foldl
             (fun ((nf,ngn, A,ngs,gi,lng),I) T =>
-              let (nnf,nngn,newT,nngs, ngi) := go nf gi ngs ngn new_ancestors (sp.get! I) T
+              let (nnf,nngn,newT,nngs, ngi) := go gi nf ngs ngn new_ancestors (sp.get! I) T -- order of id_gen_goal and nf_id_gen cause 2h long debug session, ya bum
               ((nnf, nngn, A.set! I newT,nngs,ngi, lng.set! I (((List.range (ngi - gi)).map (· + gi)) ++ (lng.get! I))), I+1)
               )
             ((nf_id_gen, new_gnodes_wGid,Array.mkArray args.size BackTree.fail, new_goals, id_gen_goal, Array.mkArray args.size []), 0)).1
@@ -524,33 +560,42 @@ partial def propagate_uni_assign_toGoalsAssigns (f_id_gen : Nat)
     | .ofGoal gid type gbd ggd sols =>
         let propad? := (porpagate_at_cexpr (splitable ++ ancestors) paramNames lvls type)
         --dbg_trace s!""
-        --dbg_trace s!"(propagate_uni_assign_toGoalsAssigns)\npropad? : {repr propad?}\ntype : {repr type}"
+        --dbg_trace s!"(propagate_uni_assign_toGoalsAssigns) at goal {gid}\nnew_goals : {repr new_goals}"
         if propad? == type || (CExpr.hasFailed propad?) -- cause I'm lazy, make efficient ; basicly checks if it contained propaded vals or not
         then -- no point in trying intro, as we try it at the originating backstep, and nothing changed
+          --dbg_trace s!"(propagate_uni_assign_toGoalsAssigns) no propagation, recursing"
           let (new_f_id_gen, new_gnode,fsols,ngs,ngi) := sols.foldl (fun (nf,ngn,tsols,tngs,tngi) T =>
             let (nnf,nngn,r,rngs,rngi) := go tngi nf tngs ngn ancestors splitable T
             (nnf,nngn,r :: tsols,rngs,rngi)
             ) (nf_id_gen, new_gnodes_wGid,[],new_goals,id_gen_goal)
+          --dbg_trace s!"(propagate_uni_assign_toGoalsAssigns) of no propagation, local return ngs {repr ngs} ngi {ngi}"
           (new_f_id_gen, new_gnode, .ofGoal gid type gbd (((List.range (ngi - id_gen_goal)).map (· + id_gen_goal)) ++ ggd) fsols, ngs,ngi)
         else
+          --dbg_trace s!"(propagate_uni_assign_toGoalsAssigns) yes propagation, recursing\nSanity {id_gen_goal}"
           let (new_f_id_gen, new_gnode, fsols,ngs,ngi) := sols.foldl (fun (nf,ngn,tsols,tngs,tngi) T =>
             let (nnf,nngn, r,rngs,rngi) := go tngi nf tngs ngn ancestors splitable T
             (nnf,nngn,r :: tsols,rngs,rngi)
             ) (nf_id_gen, new_gnodes_wGid,[],new_goals,id_gen_goal)
+          --dbg_trace s!"(propagate_uni_assign_toGoalsAssigns) of yes propagation, local return ngs {repr ngs}"
+          --dbg_trace s!"(propagate_uni_assign_toGoalsAssigns) trying intro?"
           match intro? propad? nf_id_gen with
           | .none =>
+              --dbg_trace s!"(propagate_uni_assign_toGoalsAssigns) intro? returned none\nSanity {repr sols} {repr ngi}"
               let propa! : BackTree := .ofGoal gid type gbd (((List.range ((ngi + 1) - id_gen_goal)).map (· + id_gen_goal)) ++ ggd)
                 ((.ofPropa uni_id (ngi) propad? gbd (((List.range ((ngi) - id_gen_goal)).map (· + id_gen_goal)) ++ ggd)
                   -- just realised we're not using new ids, so multiple copies of backs and goals 0_0
                     fsols) :: fsols)
+              --dbg_trace s!"(propagate_uni_assign_toGoalsAssigns) local return {repr (propa!,(ngi,propad?) :: ngs, ngi+1)}"
               (new_f_id_gen, new_gnode,propa!,(ngi,propad?) :: ngs, ngi+1)
           | .some (ff_id_gen, f_goal, add_gnodes) =>
+              --dbg_trace s!"(propagate_uni_assign_toGoalsAssigns) intro? returned {repr (ff_id_gen, f_goal, add_gnodes)}"
               let propa! : BackTree := .ofGoal gid type gbd (((List.range ((ngi + 2) - id_gen_goal)).map (· + id_gen_goal)) ++ ggd)
                 ((.ofPropa uni_id (ngi) propad? gbd (((List.range ((ngi+1) - id_gen_goal)).map (· + id_gen_goal)) ++ ggd)
                   -- just realised we're not using new ids, so multiple copies of backs and goals 0_0
                     ((.ofIntro (ngi+1) f_goal add_gnodes [] [] [])
                         :: fsols)
                     ) :: fsols)
+              --dbg_trace s!"(propagate_uni_assign_toGoalsAssigns) local return {repr (propa!, (ngi+1, f_goal):: (ngi,propad?) :: ngs, ngi+2)}"
               (ff_id_gen, (ngi+1, add_gnodes) :: new_gnode,propa!, (ngi+1, f_goal):: (ngi,propad?) :: ngs, ngi+2)
     | .ofPropa uid gid type gbd ggd sols => -- same as ↑
         let propad? := (porpagate_at_cexpr (splitable ++ ancestors) paramNames lvls type)
@@ -614,7 +659,9 @@ partial def propagate_uni_assign_toGoalsAssigns (f_id_gen : Nat)
                         :: fsols)
                     ) :: fsols)
               (ff_id_gen, (ngi+1, add_gnodes) :: new_gnode,propa!, (ngi+1, f_goal):: (ngi,propad?) :: ngs, ngi+2)
-    | x => (nf_id_gen, new_gnodes_wGid, x,new_goals,id_gen_goal)
+    | x =>
+      --dbg_trace s!"(propagate_uni_assign_toGoalsAssigns) Uni Assi case return {repr (nf_id_gen, new_gnodes_wGid, x,new_goals,id_gen_goal)}"
+      (nf_id_gen, new_gnodes_wGid, x,new_goals,id_gen_goal)
   go id_gen_goal f_id_gen [] [] [] updated init_tree
 
 
@@ -634,6 +681,7 @@ def integrate_uni? (f_id_gen : Nat)
     --dbg_trace "Call integrate_uni?"
     match propagate_uni_assign fctx init_uni uni_id init_tree with
     | .some (TA,A) =>
+        dbg_trace s!"(integrate_uni?) propagate_uni_assign :\n{repr TA}\n{repr A}"
         (A, propagate_uni_assign_toGoalsAssigns f_id_gen uni_id paramNames lvls A id_gen_goal TA)
     | .none => .none
 

@@ -34,6 +34,12 @@ example (L : List Nat) (a b : Nat) (h_dL : ∀ x, x ∈ L → b ∣ x) (h_dB : a
 
 
 /-
+
+TODO:
+at back, allow for gnodes via Id and fix assembly
+
+
+Old:
 Take-aways :
 
 - separate FixCtx into enivronement info, gnode info and lnode info.

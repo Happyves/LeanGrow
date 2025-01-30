@@ -85,7 +85,7 @@ def tryBack (premises : List miniPermiseDict) (st : SearchState) : Option (Searc
   let rec go : List (Nat × CExpr) → Option (SearchState)
     | [] => .none
     | (id,g) :: more =>
-        dbg_trace s!"tryBack on {id}"
+        --dbg_trace s!"tryBack on {id}"
         match st.back_memo.find? (fun x => x.1 == id) with
         | .some (_,nms) =>
             match tryBackOn st.fctx premises nms st.forwID st.fctx.gnodeTypes st.fctx.gnodeTypesHandler g id st.back with
@@ -156,10 +156,10 @@ partial def tryUniAll (st : SearchState) : SearchState :=
               then
                 match (CExpr.MatchAssignSolutions' x.2 y.2) with
                 | .some (res,us) =>
-                      dbg_trace s!"HMMM yes"
+                      --dbg_trace s!"HMMM yes"
                       main tars ltx ((x.1,y.1,res,us) :: done) xs g
                 | .none =>
-                      dbg_trace s!"HMMM no"
+                      --dbg_trace s!"HMMM no"
                       main tars ltx done xs g
               else
                 match (CExpr.MatchAssignSolutions' x.2 y.2) with
@@ -182,18 +182,23 @@ partial def tryUniAll (st : SearchState) : SearchState :=
         | .node gids ltx kwd =>
           let next := main gids ltx [] ltx g
           uni_ltx_activeGoals (next ++ done) g ((kwd.map Prod.snd) ++ more)
+  --dbg_trace s!"\n\n(tryUniAll) init tree : {repr st.back.bt}\n"
   let candidates := uni_ltx_activeGoals [] st.back.active_goals [st.forw]
+  --dbg_trace s!"(tryUniAll) candidates : {repr candidates}\n"
   let interated := (candidates.foldl (fun S (sol,gol,uni_res,us) =>
-    let uni_tree := BackTree.modifyAtGoalId_wUpdatesG gol st.back.id_gen_assign (fun
+    let uni_tree := BackTree.modifyAtGoalId gol (fun
       | .ofGoal j t bdirs gdirs ts => .ofGoal j t bdirs gdirs ((.ofUni st.back.id_gen_assign (.gnode sol (.ofBvar 42))) :: ts)
       | .ofPropa i j t bdirs gdirs ts => .ofPropa i j t bdirs gdirs ((.ofUni st.back.id_gen_assign (.gnode sol (.ofBvar 42))) :: ts)
       | .ofIntro i j t bdirs gdirs ts => .ofIntro i j t bdirs gdirs ((.ofUni st.back.id_gen_assign (.gnode sol (.ofBvar 42))) :: ts)
       | x => x) st.back.bt
+    --dbg_trace s!"(tryUniAll) uni_tree : {repr uni_tree}\n"
     match integrate_uni? st.forwID st.back.id_gen_assign st.back.id_gen_goal (us.map Prod.fst) (us.map Prod.snd) st.fctx uni_res uni_tree with
     | .some (uni_assi, nfid, nfwdI, nbt, ngs, ngi) =>
+        --dbg_trace s!"(tryUniAll) integrate_uni? output : {repr (uni_assi, nfid, nfwdI, nbt, ngs, ngi) }\n"
         let (nF,nF2) := nfwdI.foldl (fun (IF,IF2) (tgId,nltx) =>
           updateLtxIntros IF IF2 st.ltx_handler tgId [gol] nltx) (st.forw, st.forw2)
         let nb := integrate_uni_full st.back nbt ngs ngi gol
+        --dbg_trace s!"(tryUniAll) integrate_uni_full output : {repr nb}\n"
         {st with forwID := nfid, forw := nF, forw2 := nF2, back := nb, unif_assign := (st.back.id_gen_assign, uni_assi, us) :: st.unif_assign, uni_memo := (sol,gol) :: st.uni_memo}
     | _ => S
     )) st
@@ -223,7 +228,7 @@ partial def search (fuel : Nat) (premises : List miniPermiseDict) (st : SearchSt
     | 0, _ => .none
     | n+1, nx =>
       let st := search_step premises nx
-      dbg_trace s!"(search) loop {n+1}\nBacktree:\n{repr st.back.bt}\nGoals:\n{repr st.back.active_goals}\nForward:{repr st.forw}\nBack memo:\n{st.back_memo}\nUni memo:\n{st.uni_memo}\nUni clashes:\n{st.uni_claches}\n\n"
+      --dbg_trace s!"(search) loop {n+1}\nBacktree:\n{repr st.back.bt}\nGoals:\n{repr st.back.active_goals}\nForward:{repr st.forw}\nBack memo:\n{st.back_memo}\nUni memo:\n{st.uni_memo}\nUni clashes:\n{st.uni_claches}\n\n"
       let tmp := (st.unif_assign.map (fun (a,b,_) => (a,b)))
       let (sols?,kC) := BackTree.assemble?
         st.ltx_assemmbly tmp
@@ -231,7 +236,7 @@ partial def search (fuel : Nat) (premises : List miniPermiseDict) (st : SearchSt
       match sols? with
       | [] => loop n {st with uni_claches := kC}
       | (tada, ah?) :: _ => .some (unfoldLNodes tmp ah? tada)
-  dbg_trace s!"(search) loop init\nBacktree:\n{repr st.back.bt}\nGoals:\n{repr st.back.active_goals}\nForward:{repr st.forw}\nBack memo:\n{st.back_memo}\nUni memo:\n{st.uni_memo}\nUni clashes:\n{st.uni_claches}\n\n"
+  --dbg_trace s!"(search) loop init\nBacktree:\n{repr st.back.bt}\nGoals:\n{repr st.back.active_goals}\nForward:{repr st.forw}\nBack memo:\n{st.back_memo}\nUni memo:\n{st.uni_memo}\nUni clashes:\n{st.uni_claches}\n\n"
   loop fuel st
 
 
