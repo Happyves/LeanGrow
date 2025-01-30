@@ -36,6 +36,39 @@ partial def mctsTree.selectExploit (T : mctsTree) : SearchState × List Nat :=
 - else, add aps from kids till above rand, and select that child
 → uniform proba on noes of tree
 
-Also, generate array of rands and use it as input for rest
-
 -/
+
+
+partial def mctsTree.getApps (T : mctsTree) : Nat :=
+  let rec go (c : Nat) : List mctsTree → Nat
+    | [] => c
+    | .root _ k :: _ => go c k
+    | .leaf _ _ a _ :: ts => go (a+c) ts
+    | .node _ _ a _ k  :: ts => go (a+c) (k ++ ts)
+  go 0 [T]
+
+partial def mctsTree.size (T : mctsTree) : Nat :=
+  let rec go (c : Nat) : List mctsTree → Nat
+    | [] => c
+    | .root _ k :: _ => go 1 k
+    | .leaf _ _ _ _ :: ts => go (c.succ) ts
+    | .node _ _ _ _ k  :: ts => go (c.succ) (k ++ ts)
+  go 0 [T]
+
+partial def mctsTree.selectExplore_core (T : mctsTree) (rand : Nat): SearchState × List Nat :=
+  let rec go (s : Nat) : List (mctsTree × List Nat) → SearchState × List Nat
+    | [] => (default,[])
+    | (.root st k, _) :: _ =>
+          if rand = 0 then (st,[]) else go 1 (k.map (fun x => (x,[])))
+    | (.leaf _ _ _ st, dirs) :: ts =>
+          if rand = s then (st,dirs) else go (s+1) ts
+    | (.node _ _ _ st k, dirs) :: ts =>
+          if rand = s then (st,dirs) else go (s+1) ((k.enum.map (fun (p,t) => (t, p :: dirs)) ) ++ ts)
+  go 0 [(T,[])]
+
+#eval List.enum [3,3,3]
+
+
+def mctsTree.selectExplore (T : mctsTree) : IO (SearchState × List Nat) := do
+  let r ← IO.rand 0 T.size
+  return (T.selectExplore_core r)
