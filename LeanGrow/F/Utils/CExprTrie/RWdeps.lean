@@ -53,3 +53,53 @@ def getFromOdirs (odirs : List oDirs) (ce : CExpr) : CExpr × List CExpr :=
     | [], ce => (ce, bvarCtx)
     | _, _ => (.failed, [])
   go [] odirs ce
+
+
+def getHeadPosPriorArgs (odirs : List oDirs) (ce : CExpr) : Nat × CExpr × List (CExpr) × List CExpr :=
+  let od := odirs.tailD []
+  dbg_trace s!"od : {repr od}"
+  let rec appDirsCount (c : Nat) : List oDirs → Nat × List oDirs
+    | .apf :: more => appDirsCount (c+1) more
+    | _ :: more => (c,more)
+    | [] => (c,[])
+  let (priorArgsNum, appDirs) := appDirsCount 0 od
+  dbg_trace s!"(priorArgsNum, appDirs) : {repr (priorArgsNum, appDirs)}"
+  let (base, baseCtx) := getFromOdirs appDirs ce
+  dbg_trace s!"(base, baseCtx) : {repr (base, baseCtx)}"
+  let rec fst (as : List CExpr) : Nat → CExpr → CExpr × List CExpr
+    | 0, ce => (ce, as)
+    | n+1, .app f a => fst (a :: as) n f
+    | _,_ => (.failed,[])
+  let (hf,Args) := fst [] priorArgsNum base
+  dbg_trace s!"(hf,Args) : {repr (hf,Args)}"
+  let rec snd (c : Nat) : CExpr → Nat × CExpr
+    | .app f _ => snd (c+1) f
+    | x => (c,x)
+  let (pos,H) := snd 0 hf
+  dbg_trace s!"(pos,H) : {repr (pos,H)}"
+  (pos,H,Args,baseCtx)
+
+
+def testExpr : CExpr :=
+  .lam `n
+    (.const `Nat [])
+    (.app
+      (.app
+        (.app
+          (.app
+            (.const `PSigma.mk [])
+            (.const `Nat [])
+            )
+          (.const `Fin [])
+          )
+        (.const `fourtytwo [])
+        )
+      (.const `someFin42 [])
+      )
+  .default
+
+#check PSigma.mk
+#check Fin
+
+
+#eval getHeadPosPriorArgs [.apa,.apf,.apf,.apf,.laa] testExpr

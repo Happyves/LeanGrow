@@ -526,3 +526,44 @@ example: ∀ {α : Sort u_1} {ι : Sort u_2} {κ : Sort u_3}
 -- combine this technique and the ext Eq rec for motives ?
 
 #check HEq.rec
+
+#check PSigma.rec
+
+
+def HList : List (Type u) → Type u
+| [] => PUnit
+| α :: αs => α × HList αs
+
+
+def PHList : List (Type u) → Type u
+| [] => PUnit
+| α :: αs => @PSigma α (fun a => PHList αs)
+
+
+def mkFun : List (Sort u) → Sort (u+1)
+  | [] => Sort u
+  | t :: ts => t → (mkFun ts)
+
+def mkFun' (h : Sort u) : List (Sort u) → Sort u
+  | [] => h
+  | t :: ts => t → (mkFun' h ts)
+
+@[reducible]
+def mkDeps (h : Sort u) : Nat → Sort u
+  | 0 => h
+  | n+1 =>
+      let hm := (List.range (n+1)).map (mkDeps h)
+      mkFun' h hm
+decreasing_by
+  sorry
+
+example : mkDeps (2+2=4) 1 = ((2+2=4) → (2+2=4) ):= rfl
+
+example : mkDeps (2+2=4) 2 = ((2+2=4) → ((2+2=4) → (2+2=4)) → (2+2=4)):= rfl
+
+@[reducible]
+def mkFun'' (h : Sort u) : List (Sort u) → (t : Sort u) → (x : t) → Sort u
+  | [] => fun _ _ => h
+  | t :: ts => fun _ _ => (x : t) → mkFun'' h ts t x
+
+#reduce (types := true) mkFun'' Unit [Unit,Unit] Unit ()
