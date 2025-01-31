@@ -1,6 +1,8 @@
 
 
 import LeanGrow.F.RL.Types
+--import LeanGrow.F.Ranking.WithStats.API
+-- painfull import clash due to technical debt...
 
 open Lean
 
@@ -75,14 +77,14 @@ def mctsTree.selectExplore (T : mctsTree) : IO (SearchState × List Nat) := do
   return (T.selectExplore_core r)
 
 
-def mctsTree.expandExploit (st : SearchState) : ActType × SearchState :=
+def mctsTree.expandExploit (st : SearchState) : List (ActType × SearchState) :=
   sorry
 -- ↑ will be based on a variant of ↓, where we also take note of the action type
 #check search_step
--- here, we'll want to select the highest scoring action according to current weights
+-- here, we'll want to select the highests scoring actions according to current weights
 
 
-def mctsTree.expandExplore (st : SearchState) : ActType × SearchState :=
+def mctsTree.expandExplore (st : SearchState) : List (ActType × SearchState) :=
   sorry
 -- here, we'll want to take a random action among all available ones
 -- so we should have as SetTrieC will all theorems in it to take from
@@ -112,4 +114,29 @@ def mctsTree.propagateWith (T : mctsTree) (addAT : ActType) (addST : SearchState
   go T dirs.reverse
 
 
--- TODO : incorporate info of mctsTree to HypGoalState
+-- TODO : incorporate info of mctsTree to HypGoalThmState
+-- Idea to integrate : make use of all nodes of the mctsTree, where the scores and
+-- appearances should determine how much impact the modification on HypGoalThmState should
+-- be made
+
+def getHGTSkeys (st : SearchState) : List ((CExprTrie Nat) × List CExpr) :=
+  -- replace with newer version of CExprTrie.
+  -- first output should be ltx, second output is list of goals
+  -- as list, where distinctions between ltxs of IntroTree
+  sorry
+
+
+partial def mctsTree.getKidsActData (T : mctsTree) : List (ActType × Nat × Nat) :=
+  let rec go (done : List (ActType × Nat × Nat)) : List mctsTree → List (ActType × Nat × Nat)
+    | [] => done
+    | .root _ _ :: _ => []
+    | .leaf a sc ap _ :: ts => go ((a,sc,ap) :: done) ts
+    | .node a sc ap _ _  :: ts => go ((a,sc,ap) :: done) ts
+  go [] [T]
+
+def the_update (depth -- the depth of the node in the mctsTree
+  score apps : Nat) (totalDepth : Float) -- convert once
+  (total_over_kids : Float) -- ∑ i ∈ getKidsActData, score i * apps i
+  : Float :=
+  ((totalDepth - depth.toFloat) / totalDepth)
+  * ((score.toFloat * apps.toFloat) / total_over_kids)

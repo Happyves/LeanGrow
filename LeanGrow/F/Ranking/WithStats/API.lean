@@ -35,9 +35,7 @@ def HypGoalThmState.make (samples : List (CExprTrie × List (CExpr × ActionType
       (t,(sz,CExprTrie.ofList toT, Acts))
       ))
 
-/-
-To investigate : add samples online to HypGoalThmState
--/
+
 
 
 def HypGoalThmState.insert (scores : HypGoalThmState) (hyps : CExprTrie) (goal : CExpr)
@@ -56,6 +54,16 @@ def HypGoalThmState.updateAll (scores : HypGoalThmState) (hyps : CExprTrie) (goa
         ) []
       (xs,xt,mod))
 
+/-
+Investigate potential bug and confusion:
+We want an update that takes a current HypGoalThmState, and a pair of
+(hyps : CExprTrie) (goal : CExpr), and updates all entries of HypGoalThmState
+that are *contained* in hyps (and in goal, if we choose to replace it with
+a CExprTrie).
+There may be a bug in SetTrieC.map, in the order expected by CExprTrie.contains
+and the one expected in SetTrie.map ...
+-/
+
 def HypGoalThmState.updateDeepest (scores : HypGoalThmState) (hyps : CExprTrie) (goal : CExpr)
   (up : ActionType → ActionType) : HypGoalThmState :=
     SetTrieC.mapDeepest hyps scores (fun (xs,xt,xa) =>
@@ -65,14 +73,29 @@ def HypGoalThmState.updateDeepest (scores : HypGoalThmState) (hyps : CExprTrie) 
         ) []
       (xs,xt,mod))
 
-def ActionType.upFor (thm : ByteArray) (up : Option Nat → Option Nat) (A : ActionType) : ActionType:=
+def ActionType.upFor (thm : ByteArray) (up : Option (Nat × Float) → Option (Nat × Float)) (A : ActionType) : ActionType:=
   {A with ofFor := A.ofFor.upsert thm up}
 
-def ActionType.upBack (thm : ByteArray) (up : Option Nat → Option Nat) (A : ActionType) : ActionType:=
+def ActionType.upBack (thm : ByteArray) (up : Option (Nat × Float) → Option (Nat × Float)) (A : ActionType) : ActionType:=
   {A with ofBack := A.ofBack.upsert thm up}
 
-def ActionType.upForRW (thm : ByteArray) (up : Option Nat → Option Nat) (A : ActionType) : ActionType:=
+def ActionType.upForRW (thm : ByteArray) (up : Option (Nat × Float) → Option (Nat × Float)) (A : ActionType) : ActionType:=
   {A with ofForRW := A.ofForRW.upsert thm up}
 
-def ActionType.upBackRW (thm : ByteArray) (up : Option Nat → Option Nat) (A : ActionType) : ActionType:=
+def ActionType.upBackRW (thm : ByteArray) (up : Option (Nat × Float) → Option (Nat × Float)) (A : ActionType) : ActionType:=
   {A with ofBackRW := A.ofBackRW.upsert thm up}
+
+
+-- TODO: add purging operation, where we delete thms from the ActionType
+-- entries that have too low scores ; this way, durring proof search,
+-- we can simply try all entries of the ActionType, and we don't have to
+-- do the ranking at that stage
+-- (call it HypGoalThmState.RulesOfNature)
+-- This is why we have entries (Nat × Float) for (appearances, score).
+-- After a long traning sessions, we consider averaged scores, and keep
+-- only the best ; we can then make a structure similar to HypGoalThmState
+-- but where entries correspond to small lists of embedding data, corresponding
+-- to the best scoring thms.
+-- Problem is that scoring information will be lost if we train on new data
+-- So maybe still store the HypGoalThmState for future training, but don't
+-- use it for search.
