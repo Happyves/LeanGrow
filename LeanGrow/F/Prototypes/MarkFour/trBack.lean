@@ -257,7 +257,7 @@ structure IntegBack where
 
 
 def integrate_backstep (f_id_gen : Nat)
-  (thm_name : Name) (thm_data_size : Nat) (target_goal_id : Nat)
+  (thm_name : BackType) (thm_data_size : Nat) (target_goal_id : Nat)
   (assigned newgoals : List (Nat × CExpr))
   (id_gen_back : Nat) (id_gen_goal : Nat)
   (backTree : BackTree) : Nat × List (Nat × CExpr) × IntegBack :=
@@ -333,7 +333,7 @@ def extractTarget (target_goal_id : Nat) (found : CExpr) : List (Nat × CExpr) �
 --#exit
 
 def integrate_backstep_main (f_id_gen : Nat)
-  (thm_name : Name) (thm_data_size : Nat) (target_goal_id : Nat)
+  (thm_name : BackType) (thm_data_size : Nat) (target_goal_id : Nat)
   (assigned newgoals : List (Nat × CExpr))
   (state : BackState) : Nat × List (Nat × CExpr) × BackState :=
   let (nfid,ngnds,⟨G,T⟩) := integrate_backstep f_id_gen thm_name thm_data_size target_goal_id assigned newgoals state.id_gen_back state.id_gen_goal state.bt
@@ -681,7 +681,7 @@ def integrate_uni? (f_id_gen : Nat)
     --dbg_trace "Call integrate_uni?"
     match propagate_uni_assign fctx init_uni uni_id init_tree with
     | .some (TA,A) =>
-        dbg_trace s!"(integrate_uni?) propagate_uni_assign :\n{repr TA}\n{repr A}"
+        --dbg_trace s!"(integrate_uni?) propagate_uni_assign :\n{repr TA}\n{repr A}"
         (A, propagate_uni_assign_toGoalsAssigns f_id_gen uni_id paramNames lvls A id_gen_goal TA)
     | .none => .none
 

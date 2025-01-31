@@ -47,7 +47,7 @@ def Name_to_thmData (env : Environment) (n : Name) : Option miniPermiseDict :=
       let (Hs,G) := ThmType_ToDAG hs hs.length g
       let HS := SinksFirst Hs
       let (embD, orda) := mkEmbD (Array.mkArray HS.length default) #[] HS
-      .some ⟨.none,n,embD,orda,G.1⟩
+      .some ⟨.ofThm n,embD,orda,G.1⟩
 
 
 def Names_to_thmData (env : Environment) (L : List Name) : List miniPermiseDict :=
@@ -164,7 +164,7 @@ def AllHyp_to_thmData (gid : Nat) (type : CExpr) : Option miniPermiseDict :=
       let (Hs,G) := cThmType_ToDAG hs hs.length g
       let HS := SinksFirst Hs
       let (embD, orda) := mkEmbD (Array.mkArray HS.length default) #[] HS
-      .some ⟨.some gid, `dummy ,embD,orda,G.1⟩
+      .some ⟨.ofLocal gid ,embD,orda,G.1⟩
   | _ => .none
 
 
@@ -211,7 +211,7 @@ elab "growin" : tactic => do
     let testin := ltx.filter (fun (_,x) => match x with | .forallE _ _ _ _ => false | _ => true)
     let st : SearchState := ⟨⟨0,1,0,[(0,goal)], .ofGoal 0 goal [] [] [] ⟩, .leaf [0] testin, forw2, (fun x => (x / 42, x % 42)), ltx.length, fctx, [], [], [],[],[]⟩
     --logInfoAt ref s!"{repr premises}"
-    let res := search 10 (inner_premises ++ outer_premises) st
+    let res := search 15 (inner_premises ++ outer_premises) st
     match res with
     | .none => logInfoAt ref "nope"
     | .some res! => logInfoAt ref s!"Recovered : {repr res!}"

@@ -33,6 +33,16 @@ example (L : List Nat) (a b : Nat) (h_dL : ∀ x, x ∈ L → b ∣ x) (h_dB : a
 #check 1
 
 
+example (L : List Nat) (a b : Nat) (h_dL : ∀ x, x ∈ L → b ∣ x) (h_dB : a ∣ b) :
+  a ∣ L.sum := by
+    apply Nat.dvd_trans h_dB
+    apply PremOne
+    --exact h_dL
+    -- ↑ grow ; ↓ growin
+    intro x xl
+    apply h_dL x xl
+
+
 /-
 
 TODO:
