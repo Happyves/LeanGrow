@@ -102,5 +102,55 @@ def testExpr : CExpr :=
 #check Fin
 
 
--- #eval getHeadPosPriorArgs [.apa,.apf,.apf,.apf,.laa] testExpr
--- #eval getHeadPosPriorArgs [.apa,.apf,.laa] testExpr
+#eval getHeadPosPriorArgs [.apa,.apf,.apf,.apf,.laa] testExpr
+#eval getHeadPosPriorArgs [.apa,.apf,.laa] testExpr
+
+
+inductive DepTree where
+| leaf (idx : Nat) (deps : List Nat) | node (idx : Nat) (deps : List Nat) (kids : List DepTree)
+deriving Inhabited, Repr, BEq
+
+
+partial def getRelBvInd (type : CExpr) (depth : Nat) : List Nat :=
+  let rec go (done : List Nat) : List (CExpr × Nat) → List Nat
+    | [] => done
+    | (.app f a, d) :: m => go done ((f,d) :: (a,d) :: m)
+    | (.lam _ f a _, d) :: m => go done ((f,d) :: (a,d+1) :: m)
+    | (.forallE _ f a _, d) :: m => go done ((f,d) :: (a,d+1) :: m)
+    | (.letE _ f a z _, d) :: m => go done ((f,d) :: (a,d) :: (z,d+1) :: m)
+    | (.proj _ _ f , d) :: m => go done ((f,d) :: m)
+    | (.bvar i, d) :: m =>
+        let cal := i - d
+        if (depth > cal) && (i ≥ d)
+        then go (cal :: done) m
+        else go done m
+    | _ :: m => go done m
+  go [] [(type, 0)]
+
+
+
+def buildDepTree_ofType (type : CExpr) (init : Nat) : DepTree :=
+  let rec skipToInit : CExpr → Nat → CExpr
+    | .forallE _ _ b _, n+1 => skipToInit b n
+    | x, 0 => x
+    | _,_ => .failed
+  let rT := skipToInit type init
+  let rec main (dt : DepTree) (depth : Nat) : CExpr → DepTree
+    | .forallE _ t b _ =>
+        let bvs := getRelBvInd t depth
+        let off := init + depth
+        let pos := bvs.map (off - ·)
+
+        sorry
+    | _ => dt -- head reched
+    /- Actually, holy fuck, the output type may change when we rewrite an input,
+    which may incure further dependencies !!! (if the output is itself an input
+    to some application) Hence the name dtt Hell
+    -/
+  main (.leaf init []) 0 rT
+
+/-
+Dependencies may not even form trees...
+For example, we could have motives based on {α : Sort _} {β γ: α → Sort _} {δ : (a : α) → β a → γ a → Sort _}
+
+-/

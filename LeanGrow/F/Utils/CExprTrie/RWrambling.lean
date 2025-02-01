@@ -503,7 +503,7 @@ def test13  {α : Sort _} {β : α → Sort _} {γ : (a : α) → β a → Sort 
 
 #check TSigma.rec
 
-example: ∀ {α : Sort u_1} {ι : Sort u_2} {κ : Sort u_3}
+theorem customExt : ∀ {α : Sort u_1} {ι : Sort u_2} {κ : Sort u_3}
   {β : ι → α → Sort u_4} {γ : κ → (i : ι) → (a : α) → β i a → Sort u_5} (x y : TSigma β γ),
   x.fst = y.fst → HEq x.snd y.snd → HEq x.thd y.thd → x = y := by
     intro α ι κ β γ x y
@@ -528,6 +528,9 @@ example: ∀ {α : Sort u_1} {ι : Sort u_2} {κ : Sort u_3}
 #check HEq.rec
 
 #check PSigma.rec
+
+#print customExt
+#print TSigma.ext
 
 
 def HList : List (Type u) → Type u
@@ -567,3 +570,25 @@ def mkFun'' (h : Sort u) : List (Sort u) → (t : Sort u) → (x : t) → Sort u
   | t :: ts => fun _ _ => (x : t) → mkFun'' h ts t x
 
 #reduce (types := true) mkFun'' Unit [Unit,Unit] Unit ()
+
+
+noncomputable
+def test14  {α : Sort _} {β : α → Sort _} {γ : (a : α) → β a → Sort _}  {a : α} {c : β a} {e : γ a c}
+  {motive : (b : α) → (d : β b) → (f : γ b d) →  Sort _}
+  (ha : motive a c e) {b : α} {d : β b} {f : γ b d}
+  (ta : a = b) (tc : HEq c d) (te : HEq e f) : motive b d f :=
+    have snd : (⟨a,⟨c,e⟩⟩ : SSigma γ) = ⟨b,⟨d,f⟩⟩ :=
+      @PSigma.ext α (fun a => @PSigma (β a) (γ a)) ⟨a,⟨c,e⟩⟩ ⟨b,⟨d,f⟩⟩ ta
+        (by dsimp
+            revert d f
+            apply @Eq.rec α a (fun b _ => ∀ {d : β b} {f : γ b d}, HEq c d → HEq e f → HEq (⟨c, e⟩ : PSigma (γ a)) (⟨d, f⟩ : PSigma (γ b))) _ _ ta
+            intro d f e1
+            replace e1 := eq_of_heq e1
+            revert f
+            apply @Eq.rec (β a) c (fun d _ => ∀ {f : γ a d}, HEq e f → HEq (⟨c, e⟩ : PSigma (γ a)) (⟨d, f⟩ : PSigma (γ a))) _ _ e1
+            intro f e2
+            replace e2 := eq_of_heq e2
+            apply heq_of_eq
+            congr
+            )
+    @Eq.rec (SSigma γ) ⟨a,⟨c,e⟩⟩ (fun x _ => motive x.1 x.2.1 x.2.2) ha _ snd
