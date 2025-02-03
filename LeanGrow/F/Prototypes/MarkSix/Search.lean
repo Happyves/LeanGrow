@@ -1,9 +1,9 @@
 
-import LeanGrow.F.Prototypes.MarkFive.trBack
-import LeanGrow.F.Prototypes.MarkFive.trSolve
+import LeanGrow.F.Prototypes.MarkSix.trBack
+import LeanGrow.F.Prototypes.MarkSix.trSolve
 import LeanGrow.F.Data.Unification.EmbedGoalWInferWUnis
-import LeanGrow.F.Prototypes.MarkFive.Forward
-import LeanGrow.F.Prototypes.MarkFive.IntroTreeEmbed
+import LeanGrow.F.Prototypes.MarkSix.Forward
+import LeanGrow.F.Prototypes.MarkSix.IntroTreeEmbed
 
 #check 1
 
@@ -108,7 +108,8 @@ def tryForWith (fctx : FixCtx) (prem : miniPermiseDict) (state : SearchState) : 
   | opts =>
       let preRez := opts.map (fun x => ((integrate_forward_raw x prem.goal, x.topGoals), prem.name, x.embed.reduceOption))
       let rez := (preRez.map (fun ((ce,l),b,a) =>
-        let vers := (cexprReduceShallow fctx 2 ce) -- here we don't filter, else we loose the un-reduce version
+        let vers := [ce] --(cexprReduceShallow fctx 2 ce) -- massive debt from Mark5
+          -- here we don't filter, else we loose the un-reduce version
         vers.map (fun x => ((x,l),b,a))
         )).join.filter (fun x => !(state.forw.has? x.1.1))
       let sz := rez.length

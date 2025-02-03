@@ -1,5 +1,5 @@
 
-import LeanGrow.F.Prototypes.MarkFive.trTypes
+import LeanGrow.F.Prototypes.MarkSix.trTypes
 import LeanGrow.F.Data.Unification.UnifyForBackWUnis
 import LeanGrow.F.Utils.Array
 import Mathlib.Data.List.Basic
@@ -294,7 +294,8 @@ def integrate_backstep (fctx : FixCtx) (f_id_gen : Nat)
       (fun (A,fid,ngns,cF,ngi) (pos, type) =>
           match intro? type fid with
           | .none =>
-              let vers := (cexprReduceShallow fctx 2 type).filter (fun x => x != type)
+              let vers := [] -- massive debt from Mark5
+                --(cexprReduceShallow fctx 2 type).filter (fun x => x != type)
               let (red, nngi) := vers.foldl (fun (L,i) x => ((pos,i,x) :: L, i+1)) ([],ngi+1)
               (A.set! pos (.ofGoal ngi type []
                 (red.map (fun x => x.2.1))
@@ -306,7 +307,8 @@ def integrate_backstep (fctx : FixCtx) (f_id_gen : Nat)
                   (fun sofar (idx,exp) => PageingSet sofar fctx.gnodeTypesHandler 42 (.failed) idx exp)
                   fctx.gnodeTypes
               let fix_fctx := {fctx with gnodeTypes := newforw2}
-              let vers := (cexprReduceShallow fix_fctx 2 ng).filter (fun x => x != ng)
+              let vers := [] -- massive debt from Mark5
+                --(cexprReduceShallow fix_fctx 2 ng).filter (fun x => x != ng)
               let (red, nngi) := vers.foldl (fun (L,i) x => ((pos,i,x) :: L, i+1)) ([],ngi+1)
               (A.set! pos (.ofIntro ngi ng ngnodes []
                 (red.map (fun x => x.2.1))
@@ -618,7 +620,8 @@ partial def propagate_uni_assign_toGoalsAssigns (fctx : FixCtx) (f_id_gen : Nat)
           match intro? propad? new_f_id_gen with
           | .none =>
               --dbg_trace s!"(propagate_uni_assign_toGoalsAssigns) intro? returned none\nSanity {repr sols} {repr ngi}"
-              let vers := (cexprReduceShallow fctx 2 propad?).filter (fun x => x != propad?)
+              let vers := [] -- massive debt from Mark5
+                -- (cexprReduceShallow fctx 2 propad?).filter (fun x => x != propad?)
               let (red, nngi) := vers.foldl (fun (L,i) x => ((i,x) :: L, i+1)) ([],ngi+1)
               let redG := (.ofPropa uni_id (ngi) propad? gbd
                 (((List.range ((nngi) - id_gen_goal)).map (· + id_gen_goal)) ++ ggd)
@@ -633,7 +636,8 @@ partial def propagate_uni_assign_toGoalsAssigns (fctx : FixCtx) (f_id_gen : Nat)
                   (fun sofar (idx,exp) => PageingSet sofar fctx.gnodeTypesHandler 42 (.failed) idx exp)
                   fctx.gnodeTypes
               let fix_fctx := {fctx with gnodeTypes := newforw2}
-              let vers := (cexprReduceShallow fix_fctx 2 f_goal).filter (fun x => x != f_goal)
+              let vers := [] -- massive debt from Mark5
+                -- (cexprReduceShallow fix_fctx 2 f_goal).filter (fun x => x != f_goal)
               let (red, nngi) := vers.foldl (fun (L,i) x => ((i,x) :: L, i+1)) ([],ngi+1)
               let redG := (.ofPropa uni_id (nngi+1) propad? gbd
                 (((List.range ((nngi+1) - id_gen_goal)).map (· + id_gen_goal)) ++ ggd)
@@ -662,7 +666,8 @@ partial def propagate_uni_assign_toGoalsAssigns (fctx : FixCtx) (f_id_gen : Nat)
           match intro? propad? new_f_id_gen with
           | .none =>
               --dbg_trace s!"(propagate_uni_assign_toGoalsAssigns) intro? returned none\nSanity {repr sols} {repr ngi}"
-              let vers := (cexprReduceShallow fctx 2 propad?).filter (fun x => x != propad?)
+              let vers := [] -- massive debt from Mark5
+                --(cexprReduceShallow fctx 2 propad?).filter (fun x => x != propad?)
               let (red, nngi) := vers.foldl (fun (L,i) x => ((i,x) :: L, i+1)) ([],ngi+1)
               let redG := (.ofPropa uni_id (ngi) propad? gbd
                 (((List.range ((nngi) - id_gen_goal)).map (· + id_gen_goal)) ++ ggd)
@@ -677,7 +682,8 @@ partial def propagate_uni_assign_toGoalsAssigns (fctx : FixCtx) (f_id_gen : Nat)
                   (fun sofar (idx,exp) => PageingSet sofar fctx.gnodeTypesHandler 42 (.failed) idx exp)
                   fctx.gnodeTypes
               let fix_fctx := {fctx with gnodeTypes := newforw2}
-              let vers := (cexprReduceShallow fix_fctx 2 f_goal).filter (fun x => x != f_goal)
+              let vers := [] -- massive debt from Mark5
+                --(cexprReduceShallow fix_fctx 2 f_goal).filter (fun x => x != f_goal)
               let (red, nngi) := vers.foldl (fun (L,i) x => ((i,x) :: L, i+1)) ([],ngi+1)
               let redG := (.ofPropa uni_id (nngi+1) propad? gbd
                 (((List.range ((nngi+1) - id_gen_goal)).map (· + id_gen_goal)) ++ ggd)
@@ -706,7 +712,8 @@ partial def propagate_uni_assign_toGoalsAssigns (fctx : FixCtx) (f_id_gen : Nat)
           match intro? propad? new_f_id_gen with
           | .none =>
               --dbg_trace s!"(propagate_uni_assign_toGoalsAssigns) intro? returned none\nSanity {repr sols} {repr ngi}"
-              let vers := (cexprReduceShallow fctx 2 propad?).filter (fun x => x != propad?)
+              let vers := [] -- massive debt from Mark5
+                --(cexprReduceShallow fctx 2 propad?).filter (fun x => x != propad?)
               let (red, nngi) := vers.foldl (fun (L,i) x => ((i,x) :: L, i+1)) ([],ngi+1)
               let redG := (.ofPropa uni_id (ngi) propad? gbd
                 (((List.range ((nngi) - id_gen_goal)).map (· + id_gen_goal)) ++ ggd)
@@ -721,7 +728,8 @@ partial def propagate_uni_assign_toGoalsAssigns (fctx : FixCtx) (f_id_gen : Nat)
                   (fun sofar (idx,exp) => PageingSet sofar fctx.gnodeTypesHandler 42 (.failed) idx exp)
                   fctx.gnodeTypes
               let fix_fctx := {fctx with gnodeTypes := newforw2}
-              let vers := (cexprReduceShallow fix_fctx 2 f_goal).filter (fun x => x != f_goal)
+              let vers := [] -- massive debt from Mark5
+                --(cexprReduceShallow fix_fctx 2 f_goal).filter (fun x => x != f_goal)
               let (red, nngi) := vers.foldl (fun (L,i) x => ((i,x) :: L, i+1)) ([],ngi+1)
               let redG := (.ofPropa uni_id (nngi+1) propad? gbd
                 (((List.range ((nngi+1) - id_gen_goal)).map (· + id_gen_goal)) ++ ggd)

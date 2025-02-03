@@ -137,32 +137,48 @@ structure DepDagNode where
 deriving Inhabited, Repr, BEq
 
 
-def build_DepDag_ofType (type : CExpr) (init : Nat) : List DepDagNode :=
+def build_DepDag_ofType (type : CExpr) (init : Nat) : DepDagNode × List DepDagNode :=
   let rec skipToInit : CExpr → Nat → CExpr
     | .forallE _ _ b _, n+1 => skipToInit b n
     | x, 0 => x
     | _,_ => .failed
   let rT := skipToInit type init
-  let rec main (dd : List DepDagNode) (depBvs : List Nat) (depth : Nat) : CExpr → List DepDagNode
+  let rec main (dd : List DepDagNode) (depBvs : List Nat) (depth : Nat) : CExpr → DepDagNode × List DepDagNode
     | .forallE _ t b _ =>
         let bvs := getRelBvInd t depBvs depth
         let off := init + depth
-        let pos := bvs.map (off - ·)
+        let pos := bvs.map (off - · - 1)
         let next_depBvs := if bvs.isEmpty then (depBvs.map Nat.succ) else 0 :: (depBvs.map Nat.succ)
-        main (⟨off, t, bvs, pos⟩ :: dd) next_depBvs (depth+1) b
-    | h => -- head reched
+        let next_dd := if bvs.isEmpty then dd else ⟨off, t, bvs, pos⟩ :: dd
+        main next_dd next_depBvs (depth+1) b
+    | h => -- head reached
     /- Actually, holy fuck, the output type may change when we rewrite an input,
     which may incure further dependencies !!! (if the output is itself an input
     to some application) Hence the name dtt Hell
     -/
         let bvs := getRelBvInd h depBvs depth
         let off := init + depth
-        let pos := bvs.map (off - ·)
-        ⟨off, h, bvs, pos⟩ :: dd
+        let pos := bvs.map (off - · - 1)
+        (⟨off, h, bvs, pos⟩, dd)
   main [] [0] 1 rT
 
 open Meta Elab Term
 
-elab "test1" t:term : command => Command.liftTermElabM do
+elab "test1" n:num t:term : command => Command.liftTermElabM do
+  let N := n.getNat
   let et ← elabTermAndSynthesize t .none
   let cet := et.toCExprF
+  let res := build_DepDag_ofType cet N
+  IO.println (repr res)
+
+--#exit
+
+test1 5 (∀ {α : Sort _} {β γ: α → Sort _} {δ : (a : α) → β a → γ a → Sort _}
+  {a : α} {b : β a} {c : γ a} {d : δ a b c}
+  {motive : (w : α) → (x : β w) → (y : γ w) → (z : δ w x y) →  Sort _}, motive a b c d)
+  -- 5 refers to a rewrite of `a`
+
+test1 6 (∀ {α : Sort _} {β γ: α → Sort _} {δ : (a : α) → β a → γ a → Sort _}
+  {a : α} {b : β a} {c : γ a} {d : δ a b c}
+  {motive : (w : α) → (x : β w) → (y : γ w) → (z : δ w x y) →  Sort _}, motive a b c d)
+  -- 6 refers to a erwrite of `b`
