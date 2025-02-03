@@ -592,3 +592,44 @@ def test14  {α : Sort _} {β : α → Sort _} {γ : (a : α) → β a → Sort 
             congr
             )
     @Eq.rec (SSigma γ) ⟨a,⟨c,e⟩⟩ (fun x _ => motive x.1 x.2.1 x.2.2) ha _ snd
+
+@[ext]
+structure ISigma {α : Sort _} (β : α → Nat → Sort _) where
+  fst : α
+  snd : (n : Nat) → β fst n
+
+
+noncomputable
+def test15 {α : Sort _} {β γ: α → Sort _} {δ : (a : α) → β a → γ a → Sort _}
+  {a : α} {b : β a} {c : γ a} {d : δ a b c}
+  {motive : (w : α) → (x : β w) → (y : γ w) → (z : δ w x y) →  Sort _} (H : motive a b c d)
+  {e : α} {f : β e} {g : γ e} {h : δ e f g}
+  (ta : a = e) (tb : HEq b f) (tc : HEq c g) (td : HEq d h) : motive e f g h :=
+  let Inter {α : Sort _} {β γ: α → Sort _} {δ : (a : α) → β a → γ a → Sort _} :=
+    -- @ISigma α (fun a n =>
+    --   @ISigma
+    --   -- match n with
+    --   -- | 0 =>
+    --   -- | m+1 =>
+    --   )
+    @PSigma α (fun a => @PSigma (β a) (fun b => @PSigma (γ a) (δ a b)))
+  have inter : (⟨a,⟨b,⟨c,d⟩⟩⟩ : @Inter α β γ δ) = ⟨e,⟨f,⟨g,h⟩⟩⟩ :=
+    @PSigma.ext α (fun a => @PSigma (β a) (fun b => @PSigma (γ a) (δ a b)))
+      ⟨a,⟨b,⟨c,d⟩⟩⟩ ⟨e,⟨f,⟨g,h⟩⟩⟩ ta
+      (by dsimp
+          revert f g h
+          rw [← ta]
+          --apply @Eq.rec α a (fun e _ => ∀ {f : β e} {g : γ e} {h : δ e f g}, HEq b f → HEq c g → HEq d h → HEq (⟨b, ⟨c, d⟩⟩ : (b : β a) ×' PSigma (δ a b)) (⟨f, ⟨g, h⟩⟩ : (b : β e) ×' PSigma (δ e b))) _ _ ta
+          intro f g h e1
+          replace e1 := eq_of_heq e1
+          revert g h
+          apply @Eq.rec (β a) b (fun f _ => ∀ {g : γ a} {h : δ a f g}, HEq c g → HEq d h → HEq (⟨b, ⟨c, d⟩⟩ : (b : β a) ×' PSigma (δ a b)) (⟨f, ⟨g, h⟩⟩ : (b : β a) ×' PSigma (δ a b))) _ _ e1
+          intro g h e2
+          replace e2 := eq_of_heq e2
+          revert h
+          apply @Eq.rec (γ a) c (fun g _ => ∀ {h : δ a b g}, HEq d h → HEq (⟨b, ⟨c, d⟩⟩ : (b : β a) ×' PSigma (δ a b)) (⟨b, ⟨g, h⟩⟩ : (b : β a) ×' PSigma (δ a b))) _ _ e2
+          intro h e3
+          replace e3 := eq_of_heq e3
+          congr
+          )
+  @Eq.rec (@Inter α β γ δ) ⟨a,⟨b,⟨c,d⟩⟩⟩ (fun x _ => motive x.1 x.2.1 x.2.2.1 x.2.2.2) H _ inter
