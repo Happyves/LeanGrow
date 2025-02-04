@@ -633,3 +633,82 @@ def test15 {α : Sort _} {β γ: α → Sort _} {δ : (a : α) → β a → γ a
           congr
           )
   @Eq.rec (@Inter α β γ δ) ⟨a,⟨b,⟨c,d⟩⟩⟩ (fun x _ => motive x.1 x.2.1 x.2.2.1 x.2.2.2) H _ inter
+
+
+#check test7
+
+example (F : (n : Nat) → Fin n → Nat) (A B : List Unit) (eq : A = B) (h : 2 < A.length)
+  (todo : F A.length ⟨2,h⟩ = 37) : True := by
+    have := @test7 (List Unit) (fun A => 2 < A.length) A h
+      (fun A HA => F A.length ⟨2,HA⟩ = 37) todo B
+      (@Eq.subst (List Unit) (fun A => 2 < A.length) _ _ eq h) eq (by apply proof_irrel_heq)
+    apply True.intro
+
+#check test11
+
+
+example (F : (n : Nat) → Fin n → Nat) (A B : List Unit) (eq : A = B) (h : 2 < A.length)
+  (todo : F A.length ⟨2,h⟩ = 37) : True := by
+    have fst : A.length = B.length := by rw [eq]
+    have snd := @test7 Nat (fun X => 2 < X) A.length h
+      (fun X XP => F X ⟨2,XP⟩ = 37) todo B.length
+      (Eq.subst fst h) fst (by apply proof_irrel_heq)
+    apply True.intro
+
+#check cast
+#check Eq.subst
+
+noncomputable
+def Eq.cast {α : Sort _} {motive : α → Sort _} {a b : α} (h₁ : Eq a b) (h₂ : motive a) : motive b :=
+  Eq.ndrec h₂ h₁
+
+#check @Eq.cast Nat Fin 4 (2+2) rfl ⟨0, by decide⟩
+#reduce @Eq.cast Nat Fin 4 (2+2) rfl ⟨0, by decide⟩
+  -- reduces to Fin 4
+#check cast (show Fin 4 = Fin (2+2) from rfl) ⟨0, by decide⟩
+#reduce cast (show Fin 4 = Fin (2+2) from rfl) ⟨0, by decide⟩
+
+noncomputable
+def test16  {α : Sort _} {β : α → Sort _}  {a : α} {c : β a}
+  {motive : (b : α) → (d : β b) → Sort _}
+  (ha : motive a c)
+  {b : α} (ta : a = b)
+    : -- and tc can be solve with proof_irrel if β is predicate
+    let P : β a = β b := by rw [ta]
+    let d := cast P c
+    motive b d := by
+      intro P d
+      apply @test7 α β a c motive ha b d ta
+       (by apply HEq.symm ; apply cast_heq)
+
+
+theorem testPara4 (l : List Nat) (x : Nat) :
+  let p1 : l.length < (x :: l).reverse.length := by rw [List.length_reverse] ; dsimp ; exact Nat.lt.base (List.length l) ;
+  let p2 : l.length < (l.reverse ++ [x]).length := by rw [List.length_append, List.length_reverse] ; dsimp ; exact Nat.lt.base (List.length l)
+  ((x :: l).reverse).get  ⟨l.length, p1 ⟩ =
+  List.get (l.reverse ++ [x]) ⟨l.length, p2⟩ :=
+  by
+  intro p1 p2
+  have := @test16 (List Nat) (fun X => Fin X.length)
+    (x :: l).reverse ⟨l.length, p1⟩
+    (fun b d => ((x :: l).reverse).get  ⟨l.length, p1⟩ = List.get b d)
+    rfl (l.reverse ++ [x])
+    (List.reverse_cons x l)
+  sorry
+
+
+noncomputable -- 16 is for foward, 17 for backward
+def test17  {α : Sort _} {β : α → Sort _}  {a : α} {c : β a}
+  {motive : (b : α) → (d : β b) → Sort _}
+  {b : α} (ta : a = b) -- this should come from thm
+  (ha :
+    let P : β a = β b := by rw [ta]
+    let d := cast P c
+    motive b d
+    )-- so this will be the new goal
+    :
+    motive a c := by
+      let P : β a = β b := by rw [ta]
+      let d := cast P c
+      apply @test7 α β b d motive ha a c ta.symm
+       (by apply cast_heq)

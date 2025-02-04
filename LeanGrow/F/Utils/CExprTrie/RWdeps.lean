@@ -177,8 +177,61 @@ test1 5 (∀ {α : Sort _} {β γ: α → Sort _} {δ : (a : α) → β a → γ
   {a : α} {b : β a} {c : γ a} {d : δ a b c}
   {motive : (w : α) → (x : β w) → (y : γ w) → (z : δ w x y) →  Sort _}, motive a b c d)
   -- 5 refers to a rewrite of `a`
+  -- Context: the above could be the type of SomeRec and we want to rw 2+2=4 in
+  -- SomeRec Nat Fin Fin (fun _ _ _ => Nat) (2+2) 1 1 42 (fun _ _ _ _ => ())
 
 test1 6 (∀ {α : Sort _} {β γ: α → Sort _} {δ : (a : α) → β a → γ a → Sort _}
   {a : α} {b : β a} {c : γ a} {d : δ a b c}
   {motive : (w : α) → (x : β w) → (y : γ w) → (z : δ w x y) →  Sort _}, motive a b c d)
   -- 6 refers to a erwrite of `b`
+
+
+/-
+A rewrite in an application that has an output-type that depends on that argument shouldn't
+be that much of a problem though. In the case where the ouptut is a argument to a further application,
+we make a first rewrite showing equality of the initial application and its version with the initial
+rewrite. Then, we use this equality and try to perform the rewrite in the upper application.
+We should prohibit rewrites when the head of the application depends on the rewrite, and it's an
+input to further rewrites. Can explored ths in further research
+
+Example of annoying dependence: we have
+- F : (n : Nat) → Fin n
+- G : (x : Fin 42) → Nat
+and we want to rewrite 42 = 2*21 in G (F 42)
+```
+example (F : (n : Nat) → Fin n) (G : (x : Fin 42) → Nat) (h : G (F 42) = 37) : True := by
+  have eq : 42 = 2*21 := rfl
+  rw [eq] at h -- fails
+```
+Example of a dependence we want to handle:
+- F : (n : Nat) → Fin n → Nat
+- A B : List Unit
+- eq : A = B
+- h : 2 < A.length
+and we want to rewite eq in F A.length ⟨2,h⟩
+
+-/
+
+#check HEq.ndrec
+#check HEq.subst
+
+noncomputable
+def HEq.cast {p : (T : Sort _) → T → Sort _} {a : α} {b : β} (h₁ : HEq a b) (h₂ : p α a) : p β b :=
+  HEq.ndrecOn h₁ h₂
+
+
+/-
+There are 3 "versions" of rewriting:
+- conversion : we want to unify two terms, that share a motive
+  This should be solved with the PSigma methods with *known* motive args
+  In search, this will be interpreted as a backstep with remain goals the HEqs
+- congruence : the goal is a an (h)equality of two terms that share a motive
+  Same as with conversion (the args are known), but the actual motive will
+  be an (h)equality and the init-motive.arg will be refl
+  Again, in search, this will be a backstep
+- Forward/Backward steps : here, we want to use a single equality that is
+  the result of some lemma, on a pattern somewhere.
+  Here, we want to use cast and cast_heq on the dependent terms of the pattern,
+  so that the only remaining goals/args are those of the used theorem
+
+-/
