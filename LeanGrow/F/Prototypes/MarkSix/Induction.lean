@@ -208,3 +208,6 @@ testin False
 /-
 Next, run exfalso trigger on the proof of false, in case there is
 -/
+
+
+-- # Induction

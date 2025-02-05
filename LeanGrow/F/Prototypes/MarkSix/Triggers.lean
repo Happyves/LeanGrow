@@ -35,4 +35,7 @@ We should reapply triggers on the new goals added by triggers: for example, when
 applying induction, we expect the new induction step goal to be a ∀, that we'll
 want to run intro on...
 
+Somehow, we should incorporate the state into the decision whether to pull the trigger ?
+For induction, for example, we have this as an action in the RL/Sampling context
+
 -/
