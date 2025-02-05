@@ -210,4 +210,29 @@ Next, run exfalso trigger on the proof of false, in case there is
 -/
 
 
+#check_failure Nat.le.noConfusion
+-- FIX IN ABOVE : discard predicates
+
+
 -- # Induction
+
+/-
+Nachlass:
+- induct on gnodes only ?
+- else, also constants and applicaitons with fun has induc at head of type
+- add info if binding type is induc/qot in binder ?
+- revert all props depending on the gnode into the motive
+  (then solve goal by adding them back into an app on the rec proof term)
+- For inductive predicates (or parameterised inductives), revert subterms ?
+
+-/
+
+
+#check Eq.rec
+#check Exists.rec
+#check Nat.le.rec
+#check List.Mem.rec
+
+-- # Exfalso
+
+-- # Induct on fun matcher
