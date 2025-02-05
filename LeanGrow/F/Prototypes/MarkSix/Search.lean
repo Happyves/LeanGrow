@@ -1,7 +1,6 @@
 
 import LeanGrow.F.Prototypes.MarkSix.trBack
 import LeanGrow.F.Prototypes.MarkSix.trSolve
-import LeanGrow.F.Data.Unification.EmbedGoalWInferWUnis
 import LeanGrow.F.Prototypes.MarkSix.Forward
 import LeanGrow.F.Prototypes.MarkSix.IntroTreeEmbed
 
@@ -16,21 +15,6 @@ structure miniPermiseDict where
   goal : CExpr
 deriving Inhabited, Repr, BEq
 
-
-structure SearchState where
-  back : BackState
-  forw : IntroTree
-  forw2 : List (Array CExpr)
-  ltx_handler : Nat → (Nat × Nat)
-  forwID : Nat
-  fctx : FixCtx -- it would be better to seperate the gnode info and lnode info
-                -- so that we can do forward and backward steps independently of backsteps
-  ltx_assemmbly : List (Nat × BackType × Array CExpr) -- add universe levels
-  unif_assign : List (Nat × (List (Nat × Nat × CExpr) × List (Name × Level))) -- (uni_id, params assignements)
-  back_memo : List (Nat × List BackType)
-  uni_memo : List (Nat × Nat)
-  uni_claches : List (Nat × Nat)
-deriving Inhabited--, Repr, BEq
 
 instance : BEq SearchState where
   beq := fun a b => (a.back == b.back) && (a.forw == b.forw)

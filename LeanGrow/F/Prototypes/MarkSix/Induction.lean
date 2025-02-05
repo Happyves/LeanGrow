@@ -1,22 +1,29 @@
 
 import Lean
+import LeanGrow.F.Data.CExpr.ReduceInferMuggle.Reduce
 
+-- # Play
 
 #check Nat.noConfusion
 #check List.noConfusion
 
 example (n : Nat) : 0 ≠ n.succ := Nat.noConfusion
 
+
 example (n : Nat) : 0 ≠ n.succ := by
   intro con
   apply Nat.noConfusion con
 
-example (n : Nat) (con : n.succ = 0) : 2+2 = 5 := by
+theorem testinNC (n : Nat) (con : n.succ = 0) : 2+2 = 5 := by
   apply Nat.noConfusion con
 
 
 #check Lean.mkNoConfusionCoreImp
 #check Lean.Meta.mkNoConfusion
+
+#print testinNC
+
+--#exit
 
 /-
 For noConfusion :
@@ -35,6 +42,13 @@ theorem Nat.succ.inj' {m n : Nat} : m.succ = n.succ → m = n :=
   apply Nat.noConfusion x
   apply id
 
+
+example {m n : Nat} : m.succ = n.succ → True :=
+  by
+  intro x
+  apply Nat.noConfusion x
+  intro inj
+  apply True.intro
 
 /-
 For injectivity:
@@ -127,4 +141,70 @@ def ackermann : Nat → Nat → Nat
 Maybe we can check if there are functions in the goal that have such a matcher,
 add factor the goal into the motive of match_1, where the factor on the function
 inputs. This way, in each subgoal, we can unfold the function efforlessly.
+Replace this by Joachim Breitners functional induction at some point.
+
+-/
+
+
+
+-- # NoConfusion
+
+
+#check Ne
+
+open Lean Elab Meta Term
+
+elab "testin" t:term : command => Command.liftTermElabM do
+  let e ← elabTermAndSynthesize t .none
+  IO.println (repr e)
+
+testin (0 ≠ 2)
+testin ¬ (0 = 2)
+testin (0 = 2) → False
+
+def tryNoConfusion (fctx : FixCtx) (ltxType : CExpr) : Option CExpr :=
+  let main (T l r : CExpr) : Option CExpr :=
+    let (T', params) := (CExpr.whnf fctx T).getApp
+    match T' with
+    | .const n us =>
+        let N := n.toString
+        match fctx.cstData.find? N with
+        | .some (.indu _ _ _) =>
+            let (l',_) := (CExpr.whnf fctx l).getApp
+            let (r',_) := (CExpr.whnf fctx r).getApp
+            match l', r' with
+            | .const nl _, .const nr _ =>
+                match fctx.cstData.find? nl.toString, fctx.cstData.find? nr.toString with
+                | .some (.ctor _ _ clV), .some (.ctor _ _ crV) =>
+                    if clV.cidx != crV.cidx
+                    then
+                      let proof_of_false :=
+                        .app (
+                          .app (
+                            .app (
+                              .app ((CExpr.const (Name.str (Name.str Name.anonymous N) "noConfusion") (us ++ [0])).mkApp params) (.const `False [])
+                               ) l ) r ) ltxType
+                      .some proof_of_false
+                    else
+                      .none
+                | _, _ => .none
+            | _, _ => .none
+        | _ => .none
+    | _ => .none
+  match ltxType with
+  | .app (.app (.app (.const `Ne _) T ) l) r => main T l r
+  | .app (.const `Not _) (.app (.app (.app (.const `Eq _) T ) l) r) => main T l r
+  | .forallE _ (.app (.app (.app (.const `Eq _) T ) l) r) (.const `False _) _ => main T l r
+  | _ => .none
+
+
+#check Nat.noConfusion
+testin False
+#check False
+#check Name
+#check List.noConfusion
+#check List
+
+/-
+Next, run exfalso trigger on the proof of false, in case there is
 -/

@@ -1,15 +1,10 @@
 
 
 import LeanGrow.F.Data.CExpr.Types
-
+import LeanGrow.F.Prototypes.MarkSix.trTypes
 
 open Lean
 
-
-inductive IntroTree where
-| leaf (gids : List Nat) (ltx : List (Nat × CExpr))
-| node (gids : List Nat) (ltx : List (Nat × CExpr)) (kidsWdirs : List (List Nat × IntroTree))
-deriving Inhabited, Repr, BEq
 
 
 namespace IntroTree

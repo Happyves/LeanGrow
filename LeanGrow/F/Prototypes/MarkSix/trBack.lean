@@ -5,7 +5,7 @@ import LeanGrow.F.Utils.Array
 import Mathlib.Data.List.Basic
 import LeanGrow.F.Data.CExpr.ReduceInferMuggle.Reduce
 import LeanGrow.F.Utils.Paging
-
+import LeanGrow.F.Prototypes.MarkSix.Triggers
 
 
 
@@ -297,6 +297,13 @@ def integrate_backstep (fctx : FixCtx) (f_id_gen : Nat)
               let vers := [] -- massive debt from Mark5
                 --(cexprReduceShallow fctx 2 type).filter (fun x => x != type)
               let (red, nngi) := vers.foldl (fun (L,i) x => ((pos,i,x) :: L, i+1)) ([],ngi+1)
+              let initTrig : TriggerState := ⟨fid, id_gen_back, id_gen_goal, 42, [],[],[]⟩
+              let res_st := pullBackTriggers initTrig fctx type
+              -- Ok fuck this, I'm getting crushed under technical debt
+              /-
+              The idea is to run pullBackTriggers on the goal type, and similarly for forward
+              types, to introduce the new branches .. Jesus even typing this is a pain
+              -/
               (A.set! pos (.ofGoal ngi type []
                 (red.map (fun x => x.2.1))
                 (red.map (fun (_,id,ty) => .ofGoal id ty [] [] []))),
