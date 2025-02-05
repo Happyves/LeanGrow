@@ -2,6 +2,8 @@
 import LeanGrow.F.Utils.CExprTrie.Types
 import Lean
 import LeanGrow.F.Data.CExpr.API
+import Mathlib.Data.List.Sort
+import LeanGrow.F.Data.CExpr.ReduceInferMuggle.Reduce
 
 open Lean
 
@@ -57,7 +59,7 @@ def getFromOdirs (odirs : List oDirs) (ce : CExpr) : CExpr × List CExpr :=
   go [] odirs ce
 
 
-def getHeadPosPriorArgs (odirs : List oDirs) (ce : CExpr) : Nat × CExpr × List (CExpr) × List CExpr :=
+def getHeadPosPriorArgs (odirs : List oDirs) (ce : CExpr) : Nat × CExpr × CExpr × List (CExpr) × List CExpr × List oDirs :=
   let od := odirs.tailD []
   --dbg_trace s!"od : {repr od}"
   let rec appDirsCount (c : Nat) : List oDirs → Nat × List oDirs
@@ -79,7 +81,8 @@ def getHeadPosPriorArgs (odirs : List oDirs) (ce : CExpr) : Nat × CExpr × List
     | x => (c,x)
   let (pos,H) := snd 0 hf
   --dbg_trace s!"(pos,H) : {repr (pos,H)}"
-  ((pos-1),H,Args,baseCtx)
+  ((pos-1),H, base, Args,baseCtx, appDirs)
+  -- base will be needed for the motive, so we recycle it ; same with Appdirs
 
 
 def testExpr : CExpr :=
@@ -132,35 +135,41 @@ partial def getRelBvInd (type : CExpr) (depBvs : List Nat) (depth : Nat) : List 
 structure DepDagNode where
   pos : Nat
   type : CExpr
+  ctx : List CExpr
   depsBv : List Nat
   depsPos : List Nat
 deriving Inhabited, Repr, BEq
 
 
+--#exit
+
+-- we stoped considering a bvarcontext since we gave up on rw under binders
 def build_DepDag_ofType (type : CExpr) (init : Nat) : DepDagNode × List DepDagNode :=
-  let rec skipToInit : CExpr → Nat → CExpr
-    | .forallE _ _ b _, n+1 => skipToInit b n
-    | x, 0 => x
-    | _,_ => .failed
-  let rT := skipToInit type init
-  let rec main (dd : List DepDagNode) (depBvs : List Nat) (depth : Nat) : CExpr → DepDagNode × List DepDagNode
+  let rec skipToInit (bvs : List CExpr) : CExpr → Nat → CExpr × List CExpr
+    | .forallE _ t b _, n+1 => skipToInit (t :: bvs) b n
+    | x, 0 => (x, bvs)
+    | _,_ => (.failed, [])
+  let (rT,bvPreArgs) := skipToInit [] type init
+  let rec main (dd : List DepDagNode) (bvc : List CExpr) (depBvs : List Nat) (depth : Nat) : CExpr → DepDagNode × List DepDagNode
     | .forallE _ t b _ =>
-        let bvs := getRelBvInd t depBvs depth
+        let bvs := (getRelBvInd t depBvs depth).eraseDups.insertionSort (· ≤ · )
         let off := init + depth
-        let pos := bvs.map (off - · - 1)
+        let pos := bvs.map (off - · - 1) -- important to keep order
         let next_depBvs := if bvs.isEmpty then (depBvs.map Nat.succ) else 0 :: (depBvs.map Nat.succ)
-        let next_dd := if bvs.isEmpty then dd else ⟨off, t, bvs, pos⟩ :: dd
-        main next_dd next_depBvs (depth+1) b
+        let next_dd := if bvs.isEmpty then dd else ⟨off, t, bvc, bvs, pos⟩ :: dd
+        main next_dd (t :: bvc) next_depBvs (depth+1) b
     | h => -- head reached
     /- Actually, holy fuck, the output type may change when we rewrite an input,
     which may incure further dependencies !!! (if the output is itself an input
     to some application) Hence the name dtt Hell
     -/
-        let bvs := getRelBvInd h depBvs depth
+        let bvs := (getRelBvInd h depBvs depth).eraseDups.insertionSort (· ≤ · )
         let off := init + depth
         let pos := bvs.map (off - · - 1)
-        (⟨off, h, bvs, pos⟩, dd)
-  main [] [0] 1 rT
+        (⟨off, h, bvc, bvs, pos⟩, dd)
+  main [] bvPreArgs [0] 1 rT
+
+
 
 open Meta Elab Term
 
@@ -184,6 +193,10 @@ test1 6 (∀ {α : Sort _} {β γ: α → Sort _} {δ : (a : α) → β a → γ
   {a : α} {b : β a} {c : γ a} {d : δ a b c}
   {motive : (w : α) → (x : β w) → (y : γ w) → (z : δ w x y) →  Sort _}, motive a b c d)
   -- 6 refers to a erwrite of `b`
+
+test1 0 (∀ (n : Nat) (x : Fin n) (y : Fin (n+2)), x.val + y.val = 42)
+test1 1 (∀ (n : Nat) (x : Fin n) (y : Fin (n+2)), x.val + y.val = 42)
+test1 2 (∀ (n : Nat) (x : Fin n) (y : Fin (n+2)), x.val + y.val = 42)
 
 
 /-
@@ -235,3 +248,82 @@ There are 3 "versions" of rewriting:
   so that the only remaining goals/args are those of the used theorem
 
 -/
+
+
+private def subsAndBump (bid : Nat) (e : CExpr) : CExpr :=
+  let rec go (d : Nat) : CExpr → CExpr
+    | .app f a => .app (go d f) (go d a)
+    | .lam n t b i => .lam n (go d t) (go (d+1) b) i
+    | .forallE n t b i => .forallE n (go d t) (go (d+1) b) i
+    | .letE n t b z i => .letE n (go d t) (go d b) (go (d+1) z) i
+    | .proj n i e => .proj n i (go d e)
+    | .bvar i =>
+        if i == bid
+        then .bvar d
+        else
+          if i < d
+          then .bvar i
+          else .bvar (i+1)
+    | x => x
+  go 0 e
+
+
+--#exit
+
+/-
+Random important note.
+Since we allow for the pattern to occure under binders, the types we consider
+may refer to loose bvars refering to these bindings.
+This may cause prblems at the nested-rws-due-to-dep-output-type ...
+-/
+
+-- Ok, so from now on I assume we're not rewriting in or under binders
+-- since this causes issues everywhere, and shouldn't appear in our
+-- search procedure anyway ?
+
+
+/-- Should produce the α, β, γ of our tests -/
+def DepDagNode.factorType (fctx : FixCtx) (dn : DepDagNode) : CExpr :=
+  let rec go (sofar : CExpr) : List Nat → CExpr
+    | [] => sofar
+    | bv :: bvs =>
+        let type := CExpr.inferType fctx (dn.ctx.getD bv .failed)
+          -- massive bug potential here ; if types depend on each other
+          -- we must add to fctx ; should be solved in ReduceSmart via bvarCtx
+        let next := .lam `grow type (subsAndBump bv sofar) .default
+        go next bvs
+  go dn.type dn.depsBv
+
+
+#check (default : FixCtx)
+
+
+elab "test2" n:num t:term : command => Command.liftTermElabM do
+  let N := n.getNat
+  let et ← elabTermAndSynthesize t .none
+  let cet := et.toCExprF
+  let (_,nodes) := build_DepDag_ofType cet N
+  let res := nodes.map (DepDagNode.factorType default)
+  IO.println (repr res)
+
+#check 1
+
+-- test2 1 (∀ (n : Nat) (x : Fin n) (y : Fin (n+2)), x.val + y.val = 42)
+-- fails due to the absolte messs that is type inference
+
+/-- Should produce the α, β a, γ a b of our tests
+Should be the type of dn.pos -/
+def DepDagNode.factoredType (fctx : FixCtx) (dn : DepDagNode) (Args : List CExpr) (init : Nat) : -- Args from getHeadPosPriorArgs
+  CExpr :=
+    let facto := DepDagNode.factorType fctx dn
+    let revRelPos := dn.depsPos.reverse.map (· - init) -- so init was pointless ?
+    let relArgs := revRelPos.map (fun n => Args.getD n .failed)
+    facto.mkApp relArgs
+
+
+def makeMotiveRW (deps : List DepDagNode) (Args : List CExpr) (base : CExpr)
+  (appdirs : List oDirs) (ce : CExpr) (init : Nat) : CExpr :=
+  let relPos := deps.map (fun x => x.pos - init)
+  sorry
+  -- start at base, add arg if irrelevant, bvar if relevant ; bvars will have to account for binders in appdirs ; but we assume none
+  -- intergrate in ce at appdirs ; wrap in lambda ; mk app with relevant args
