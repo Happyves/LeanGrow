@@ -382,25 +382,42 @@ def makeMotiveRW (deps : List DepDagNode) (Args : List CExpr) (base : CExpr)
   (appdirs : List oDirs) (ce : CExpr) (init : Nat) : CExpr :=
   let relPos := deps.map (fun x => x.pos - init) -- shift by init was indeed pointless
   let off := deps.length
-  let bbase := BumpBy off base
+  let bbase := BumpBy off base -- make room for the λ of the motive
   let (app_res, _) := Args.foldl (fun (sofar,i) x =>
+    -- if arg isn't affected by rewrite, leave as is, else replace by bvar refering to λ of motive
     if relPos.contains i
     then
       (.app sofar (.bvar (off - i)), i+1)
     else
-      (.app sofar (BumpBy off (Args.getD i .failed)), i+1)
+      (.app sofar (BumpBy off x), i+1)
     ) (bbase,0)
   let unwrappedMotive := AddAt appdirs -- reverse ?
-    app_res ce
-  let revRelPos := relPos.reverse
-  let (res, _) := deps.foldl (fun (sofar,i) x =>
-    let fixedType := subsAndBumpHard revRelPos x.depsPos x.depsBv init (off-i) x.type
-    (.lam `grow fixedType sofar .default, i+1)
-    ) (unwrappedMotive,1)
+    app_res ce -- since rewrite occured in application in a pattern, add pattern to motive
+  let revRelPos := relPos --.reverse -- actually no
+  let (res, _) := deps.foldl (fun (sofar,i,remaining_revRelPos) x =>
+    let fixedType := subsAndBumpHard remaining_revRelPos x.depsPos x.depsBv init (off-i) x.type
+    -- we bump loose bvars by the number of *remaining* λ to be added
+    -- the dependent bvars should be replaced by new ones refering to the
+    -- new λ of the motive ; since we expect λs to be in the order of revRelPos
+    -- we consider the position the initial bvar corresponded to, and replace it
+    -- by the index in the *remaining* dependencies
+    -- Probably have to debug the shit out of this
+    (.lam `grow fixedType sofar .default, i+1,remaining_revRelPos.tailD [],)
+    ) (unwrappedMotive,1,revRelPos)
   res
-  -- start at base, add arg if irrelevant, bvar if relevant ;
-  -- bvars will have to account for binders in appdirs ; but we assume none
-  -- intergrate in ce at appdirs ; wrap in lambda ; mk app with relevant args
-
 
 #check List.indexOf
+
+
+/-- Builds the motive evaluated in the dependent args. Should be the type of what we
+want to rewrite. Important: make sure to add the rw node to the `deps` befaore
+running this-/
+def makeMotiveRWInstance (deps : List DepDagNode) (Args : List CExpr) (base : CExpr)
+  (appdirs : List oDirs) (ce : CExpr) (init : Nat) : CExpr :=
+  let lamMot := makeMotiveRW deps Args base appdirs ce init
+  deps.foldl (fun sofar x =>
+    .app sofar (Args.getD (x.pos - init) .failed)
+    ) lamMot
+
+
+def buildInterPSigma
