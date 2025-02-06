@@ -102,7 +102,8 @@ def mctsTree.simulate (st : SearchState) : Nat :=
 
 
 /-- Affects the order by potentially prepending a leaf.
-Expects dirs in same order as outputted by selection -/
+Expects dirs in same order as outputted by selection
+-/
 def mctsTree.propagateWith (T : mctsTree) (addAT : ActType) (addST : SearchState) (addScore : Nat) (dirs : List Nat) : mctsTree :=
   let rec go : mctsTree → List Nat → mctsTree
     | .root s k, [] => .root s ((.leaf addAT addScore 1 addST) :: k)

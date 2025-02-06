@@ -168,3 +168,13 @@ def mkRWForwThing (fctx : FixCtx) (dirs : List oDirs) (foundPattern other within
   with two arguments : first, the gnode that the pattern was found in,
   second, the the gnode corresponding to the embedded thm
 -/
+
+
+/-
+Todo:
+- Local rws, ie. those from equalities that are hyps, or where introduced as previous
+  gnodes.
+- Long term idea: maintain CExprTrie of patterns, and have following trigger ;
+  at each newly introduced expression, check if it or one of its subterms is one of
+  the patterns, and carry out the rewrites
+-/
