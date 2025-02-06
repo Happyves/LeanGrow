@@ -152,7 +152,7 @@ def build_DepDag_ofType (type : CExpr) (init : Nat) : DepDagNode × List DepDagN
   let (rT,bvPreArgs) := skipToInit [] type init
   let rec main (dd : List DepDagNode) (bvc : List CExpr) (depBvs : List Nat) (depth : Nat) : CExpr → DepDagNode × List DepDagNode
     | .forallE _ t b _ =>
-        let bvs := (getRelBvInd t depBvs depth).eraseDups.insertionSort (· ≤ · )
+        let bvs := (getRelBvInd t depBvs depth).eraseDups.insertionSort (· ≥ · ) -- order important for future
         let off := init + depth
         let pos := bvs.map (off - · - 1) -- important to keep order
         let next_depBvs := if bvs.isEmpty then (depBvs.map Nat.succ) else 0 :: (depBvs.map Nat.succ)
@@ -163,7 +163,7 @@ def build_DepDag_ofType (type : CExpr) (init : Nat) : DepDagNode × List DepDagN
     which may incure further dependencies !!! (if the output is itself an input
     to some application) Hence the name dtt Hell
     -/
-        let bvs := (getRelBvInd h depBvs depth).eraseDups.insertionSort (· ≤ · )
+        let bvs := (getRelBvInd h depBvs depth).eraseDups.insertionSort (· ≥ · )
         let off := init + depth
         let pos := bvs.map (off - · - 1)
         (⟨off, h, bvc, bvs, pos⟩, dd)
@@ -293,6 +293,8 @@ def DepDagNode.factorType (fctx : FixCtx) (dn : DepDagNode) : CExpr :=
         let next := .lam `grow type (subsAndBump bv sofar) .default
         go next bvs
   go dn.type dn.depsBv
+    -- makes use of the order of bvars (greatest first, so that we
+    -- follow order of our tests)
 
 
 #check (default : FixCtx)
@@ -309,7 +311,7 @@ elab "test2" n:num t:term : command => Command.liftTermElabM do
 #check 1
 
 -- test2 1 (∀ (n : Nat) (x : Fin n) (y : Fin (n+2)), x.val + y.val = 42)
--- fails due to the absolte messs that is type inference
+-- fails due to the absolte mess that is type inference
 
 /-- Should produce the α, β a, γ a b of our tests
 Should be the type of dn.pos -/
@@ -321,9 +323,84 @@ def DepDagNode.factoredType (fctx : FixCtx) (dn : DepDagNode) (Args : List CExpr
     facto.mkApp relArgs
 
 
+
+private def BumpBy (bum : Nat) (e : CExpr) : CExpr :=
+  let rec go (d : Nat) : CExpr → CExpr
+    | .app f a => .app (go d f) (go d a)
+    | .lam n t b i => .lam n (go d t) (go (d+1) b) i
+    | .forallE n t b i => .forallE n (go d t) (go (d+1) b) i
+    | .letE n t b z i => .letE n (go d t) (go d b) (go (d+1) z) i
+    | .proj n i e => .proj n i (go d e)
+    | .bvar i =>
+        if i < d
+        then .bvar i
+        else .bvar (i+bum)
+    | x => x
+  go 0 e
+
+private def AddAt (ds : List oDirs) (p e : CExpr) : CExpr :=
+  let rec go : List oDirs → CExpr → CExpr
+    | .apf :: m, .app f a => .app (go m f) a
+    | .apa :: m, .app f a => .app f (go m a)
+    | .laf :: m, .lam n f a i => .lam n (go m f) a i
+    | .laa :: m, .lam n f a i => .lam n f (go m a) i
+    | .alf :: m, .forallE n f a i => .forallE n (go m f) a i
+    | .ala :: m, .forallE n f a i => .forallE n f (go m a) i
+    | .lef :: m, .letE n f a z i => .letE n (go m f) a z i
+    | .lea :: m, .letE n f a z i => .letE n f (go m a) z i
+    | .lez :: m, .letE n f a z i => .letE n f a (go m z) i
+    | .pro _ _ :: m, .proj n i e => .proj n i (go m e)
+    | [], _ => p
+    | _,_ => .failed
+  go ds e
+
+private def subsAndBumpHard (revRelPos depPos depBvs : List Nat) (init off : Nat) (e : CExpr) : CExpr :=
+  let rec go (d : Nat) : CExpr → CExpr
+    | .app f a => .app (go d f) (go d a)
+    | .lam n t b i => .lam n (go d t) (go (d+1) b) i
+    | .forallE n t b i => .forallE n (go d t) (go (d+1) b) i
+    | .letE n t b z i => .letE n (go d t) (go d b) (go (d+1) z) i
+    | .proj n i e => .proj n i (go d e)
+    | .bvar i =>
+        if depBvs.contains  i -- no shift by depth ?
+        then
+          let i1 := depBvs.indexOf i
+          let i2 := (depPos.getD i1 0) - init
+          let i3 := revRelPos.indexOf i2
+          .bvar i3
+        else
+          if i < d
+          then .bvar i
+          else .bvar (i+off)
+    | x => x
+  go 0 e
+
+
+/-- Builds (unapplied) the motive
+Important: make sure to add the rw node to the `deps` befaore running this-/
 def makeMotiveRW (deps : List DepDagNode) (Args : List CExpr) (base : CExpr)
   (appdirs : List oDirs) (ce : CExpr) (init : Nat) : CExpr :=
-  let relPos := deps.map (fun x => x.pos - init)
-  sorry
-  -- start at base, add arg if irrelevant, bvar if relevant ; bvars will have to account for binders in appdirs ; but we assume none
+  let relPos := deps.map (fun x => x.pos - init) -- shift by init was indeed pointless
+  let off := deps.length
+  let bbase := BumpBy off base
+  let (app_res, _) := Args.foldl (fun (sofar,i) x =>
+    if relPos.contains i
+    then
+      (.app sofar (.bvar (off - i)), i+1)
+    else
+      (.app sofar (BumpBy off (Args.getD i .failed)), i+1)
+    ) (bbase,0)
+  let unwrappedMotive := AddAt appdirs -- reverse ?
+    app_res ce
+  let revRelPos := relPos.reverse
+  let (res, _) := deps.foldl (fun (sofar,i) x =>
+    let fixedType := subsAndBumpHard revRelPos x.depsPos x.depsBv init (off-i) x.type
+    (.lam `grow fixedType sofar .default, i+1)
+    ) (unwrappedMotive,1)
+  res
+  -- start at base, add arg if irrelevant, bvar if relevant ;
+  -- bvars will have to account for binders in appdirs ; but we assume none
   -- intergrate in ce at appdirs ; wrap in lambda ; mk app with relevant args
+
+
+#check List.indexOf
