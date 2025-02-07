@@ -1,6 +1,6 @@
 
 
-import LeanGrow.F.Prototypes.MarkFour.trTypes
+import LeanGrow.F.Prototypes.MarkSeven.trTypes
 import LeanGrow.F.Utils.Array
 import LeanGrow.F.Data.CExpr.API
 
@@ -28,6 +28,7 @@ partial def unfoldAddedGnodes (ltx_assemmbly : List (Nat × BackType × Array CE
             match n with -- fix universe !!
             | .ofThm N => .const N []
             | .ofLocal i => .gnode i (.ofBvar 42)
+            | .ofRW pre => pre
             ) emb)
         | .none => e
     | x => x
@@ -133,6 +134,7 @@ private def candidMerge (knowClashes : List (Nat × Nat)) (unif_assign : List (N
       match n with -- fix universe !!
       | .ofThm N => .const N []
       | .ofLocal i => .gnode i (.ofBvar 42)
+      | .ofRW pre => pre
       )) as, cs)) ,nextKC)
 
 

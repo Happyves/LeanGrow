@@ -5,7 +5,7 @@ import LeanGrow.F.Utils.Expr.GetHyps
 import LeanGrow.F.Data.BuildDAG.ofTypeExpr
 import LeanGrow.F.Data.BuildDAG.SinksFirst
 --import LeanGrow.F.Data.Unification.EmbedRawWInferWUnis
-import LeanGrow.F.Prototypes.MarkFour.Search
+import LeanGrow.F.Prototypes.MarkSeven.Search
 
 open Lean Elab Meta Command Tactic
 
@@ -16,7 +16,7 @@ def init_FixCtx (env : Environment) (init_gnodeTypes : Array CExpr) : FixCtx :=
   let modules := env.header.moduleNames
   let T := env.constants.map₁.fold
     (fun sofar name info =>
-      if (Name.isPrefixOf `Init modules[env.const2ModIdx[name].get! (α := Nat)]!) || (Name.isPrefixOf `LeanGrow.F.Prototypes.MarkFour.TestTypes modules[env.const2ModIdx[name].get! (α := Nat)]!)
+      if (Name.isPrefixOf `Init modules[env.const2ModIdx[name].get! (α := Nat)]!) || (Name.isPrefixOf `LeanGrow.F.Prototypes.MarkSeven.TestTypes modules[env.const2ModIdx[name].get! (α := Nat)]!)
       then sofar.insert name.toString (ConstantInfo.toCstInfo env name info)
       else sofar
       )
@@ -171,7 +171,7 @@ def AllHyp_to_thmData (gid : Nat) (type : CExpr) : Option miniPermiseDict :=
 
 elab "grow" : tactic => do
   let ref ← getRef
-  let dEnv ← simpleImportModules #[`LeanGrow.F.Prototypes.MarkFour.TestTypes]
+  let dEnv ← simpleImportModules #[`LeanGrow.F.Prototypes.MarkSeven.TestTypes]
   Elab.Tactic.withMainContext do
     let Ltx ←  getLCtx
     --dbg_trace s!"testing : {(Ltx.decls.toList.reduceOption.map LocalDecl.type)}"
@@ -196,7 +196,7 @@ elab "grow" : tactic => do
 
 elab "growin" : tactic => do
   let ref ← getRef
-  let dEnv ← simpleImportModules #[`LeanGrow.F.Prototypes.MarkFour.TestTypes]
+  let dEnv ← simpleImportModules #[`LeanGrow.F.Prototypes.MarkSeven.TestTypes]
   Elab.Tactic.withMainContext do
     let Ltx ←  getLCtx
     --dbg_trace s!"testing : {(Ltx.decls.toList.reduceOption.map LocalDecl.type)}"

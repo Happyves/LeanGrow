@@ -5,7 +5,7 @@ import LeanGrow.F.Data.CExpr.Types
 open Lean
 
 inductive BackType
-| ofThm (_ : Name) | ofLocal (gnodeIdx : Nat)
+| ofThm (_ : Name) | ofLocal (gnodeIdx : Nat) | ofRW (preable : CExpr)
 deriving Inhabited, BEq, Repr
 
 

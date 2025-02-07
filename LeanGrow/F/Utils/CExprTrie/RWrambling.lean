@@ -792,20 +792,44 @@ example (l : List Nat) (h : l.sum (fun n => 2*n + 1) = 37) : l.sum (fun n => n+n
 
 #check funext
 
+
+#check propext
+
+
+theorem test20 {α : Sort _}  (β γ : α → Sort _) (P : (α → Sort _) → Prop) (h : ∀ a : α, β a = γ a)
+  --(f : ∀ a : α, β a) (g : ∀ a : α, γ a) (H : ∀ a : α, (f a) = cast (h a).symm (g a))
+  (hp : P β) : P γ := by
+  have : β = γ := by
+    apply funext ; exact h
+  rw [← this] ; exact hp
+
+theorem test21 {α : Sort _} {δ : α → Sort _}  (β γ : (a : α) → δ a) (P : ((a : α) → δ a) → Prop) (h : ∀ a : α, β a = γ a)
+  --(f : ∀ a : α, β a) (g : ∀ a : α, γ a) (H : ∀ a : α, (f a) = cast (h a).symm (g a))
+  (hp : P β) : P γ := by
+  have : β = γ := by
+    apply funext ; exact h
+  rw [← this] ; exact hp
+
+
+
+theorem test22 {α : Sort _} (β γ : α → Sort _) (h : ∀ a : α, β a = γ a) : (∀ a : α, β a) = (∀ a : α, γ a) :=
+  by
+  apply test20 β γ (fun δ => (∀ a : α, β a) = (∀ a : α, δ a)) h rfl
+
 def funT (α : Sort _) := α → α
 
 example (h : funT (∀ n : Nat, Fin (2*n)) = Nat) : funT (∀ n : Nat, Fin (n+n)) = Nat := by
-  sorry
+  have : (∀ n : Nat, Fin (2*n)) = (∀ n : Nat, Fin (n+n)) := by
+    apply test22
+    intro aha
+    rw [Nat.two_mul]
+  rw [← this] ; exact h -- yay
 
-theorem allext {α : Sort u} {β : α → Sort v} {f g : (x : α) → β x}
-    (h : ∀ x, f x = g x) : f = g := by
-  let eqv (f g : (x : α) → β x) := ∀ x, f x = g x
-  let extfunApp (f : Quot eqv) (x : α) : β x :=
-    Quot.liftOn f
-      (fun (f : ∀ (x : α), β x) => f x)
-      (fun _ _ h => h x)
-  show extfunApp (Quot.mk eqv f) = extfunApp (Quot.mk eqv g)
-  exact congrArg extfunApp (Quot.sound h)
+
+noncomputable
+def castTest {α : Sort _} (β γ : α → Sort _) (h : ∀ a : α, β a = γ a) (f : ∀ a : α, β a) : (∀ a : α, γ a) :=
+  fun a => cast (h a) (f a)
+
 
 
 /-

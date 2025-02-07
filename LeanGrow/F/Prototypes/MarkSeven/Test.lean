@@ -1,6 +1,6 @@
 
-import LeanGrow.F.Prototypes.MarkFour.Frontend
-import LeanGrow.F.Prototypes.MarkFour.TestTypes
+import LeanGrow.F.Prototypes.MarkSeven.Frontend
+import LeanGrow.F.Prototypes.MarkSeven.TestTypes
 
 #check 1
 

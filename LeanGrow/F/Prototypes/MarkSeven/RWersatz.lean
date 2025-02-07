@@ -1,7 +1,7 @@
 
 
 import LeanGrow.F.Data.Unification.EmbedGoalWInferWUnis
-import LeanGrow.F.Data.Unification.EmbedRawWInferWUnis
+--import LeanGrow.F.Data.Unification.EmbedRawWInferWUnis
 
 
 
@@ -96,7 +96,7 @@ def mkRWBackThing (fctx : FixCtx) (dirs : List oDirs) (foundPattern other within
   | .sort u =>
     let motive := factorOnDirs dirs within Ptype
     let motiveT := CExpr.whnf fctx (CExpr.inferType fctx motive)
-    match PtypeT with
+    match motiveT with
     | .forallE _ _ (.sort v) _ =>
       .lam `nextgoal (replaceAt dirs within other)
         (.lam `eqgoal (.app (.app (.app (.const `Eq [u]) Ptype) other) foundPattern)
@@ -110,6 +110,23 @@ def mkRWBackThing (fctx : FixCtx) (dirs : List oDirs) (foundPattern other within
 
 #check Eq.ndrec
 
+#check propext
+
+#check Iff
+
+def mkRWBackThingProp (fctx : FixCtx) (dirs : List oDirs) (foundPattern other within : CExpr) : CExpr :=
+    let motive := factorOnDirs dirs within (.sort 1)
+    let motiveT := CExpr.whnf fctx (CExpr.inferType fctx motive)
+    match motiveT with
+    | .forallE _ _ (.sort v) _ =>
+      .lam `nextgoal (replaceAt dirs within other)
+        (.lam `eqgoal (.app (.app (.const `Iff []) other) foundPattern)
+          ((CExpr.const `Eq.ndrec [v,1]).mkApp [(.sort 0),other,motiveT,.bvar 1,foundPattern,((CExpr.const `propext []).mkApp [other,foundPattern,(.bvar 0)])])
+         .default
+        )
+      .default
+    | _ => .failed
+
 /-
 We should add a new BackType and a new context where we record this ↑ construction.
 We then add it as a Backstep, with two arguements. The children should be the new
@@ -118,7 +135,7 @@ backstep, with its subgoals.
 At assembly, for the backstep with this Backtype, we use this `mkRWBackThing` as head.
 -/
 
-
+--#exit
 
 partial def findPattern (p ce : CExpr) : List (List oDirs) :=
   let rec go (done : List (List oDirs)) :
@@ -157,8 +174,7 @@ def mkRWForwThing (fctx : FixCtx) (dirs : List oDirs) (foundPattern other within
   | _ => .failed
 
 
-#check full_matcher_rawF
-#check EmbedStruct.embed
+#check_failure EmbedStruct.embed -- import pain
 
 /-
 - embed eq thm, add it to ltx and assembly

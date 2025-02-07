@@ -1,10 +1,10 @@
 
-import LeanGrow.F.Prototypes.MarkFour.trBack
-import LeanGrow.F.Prototypes.MarkFour.trSolve
+import LeanGrow.F.Prototypes.MarkSeven.trBack
+import LeanGrow.F.Prototypes.MarkSeven.trSolve
 import LeanGrow.F.Data.Unification.EmbedGoalWInferWUnis
-import LeanGrow.F.Prototypes.MarkFour.Forward
+import LeanGrow.F.Prototypes.MarkSeven.Forward
 import LeanGrow.F.Utils.Paging
-import LeanGrow.F.Prototypes.MarkFour.IntroTreeEmbed
+import LeanGrow.F.Prototypes.MarkSeven.IntroTreeEmbed
 
 #check 1
 
@@ -12,6 +12,8 @@ open Lean
 
 structure miniPermiseDict where
   name : BackType
+  asRW? : Option (CExpr × CExpr × CExpr)
+  wPropExt? : Bool
   data : Array EmbedData
   order : Array Nat
   goal : CExpr
@@ -38,11 +40,17 @@ instance : BEq SearchState where
 
 
 
+inductive Oersatz where
+| none
+| regular (_ : miniPermiseDict × Array (Option CExpr) × List (Name × Level))
+| rw (_ : miniPermiseDict × List (CExpr × Array (Option CExpr) × List (Name × Level) × List oDirs))
+deriving Inhabited, Repr, BEq
+
 def tryBackOn (fctx : FixCtx) (premises : List miniPermiseDict)
   (back_memo : List BackType) (forwID : Nat)
   (gnodeTypes : List (Array CExpr)) (gnodeTypesHandler : Nat → (Nat × Nat))
   (active_goal : CExpr) (active_goal_id : Nat) (state : BackState) : Option (Nat × List (Nat × CExpr) × BackState × FixCtx × BackType) :=
-  let rec findBack : List miniPermiseDict → Option (miniPermiseDict × Array (Option CExpr) × List (Name × Level))
+  let rec findBack : List miniPermiseDict → Oersatz
     | [] => .none
     | p :: ps =>
         --dbg_trace s!"(findBack) prem res {repr p}"
@@ -50,13 +58,20 @@ def tryBackOn (fctx : FixCtx) (premises : List miniPermiseDict)
         then findBack ps
         else
           --dbg_trace s!"Trying to match :\n{repr p.goal}\n{repr active_goal}\n\n"
-          let res? := match_goal {fctx with current := p.data} p.data p.data.size p.goal active_goal
-          match res? with
-          | .some (res,us) => .some (p,res,us)
-          | _ => findBack ps
+          if p.asRW?.isSome
+          then -- unpack left and right and check
+            let res? := match_pattern_in_goal {fctx with current := p.data} p.data p.data.size p.goal active_goal
+            match res? with
+            | [] => findBack ps
+            | L => .rw (p,L)
+          else
+            let res? := match_goal {fctx with current := p.data} p.data p.data.size p.goal active_goal
+            match res? with
+            | .some (res,us) => .regular (p,res,us)
+            | _ => findBack ps
   match findBack premises with
   | .none => .none
-  | .some (prem,res,us) =>
+  | .regular (prem,res,us) =>
       --dbg_trace s!"(tryBackOn) prem res {repr (prem,res)}"
       let (assi,newg) := propagate_lnode_and_tag prem.data state.id_gen_back res us
       --dbg_trace s!"(tryBackOn) assi newg {repr assi} {repr newg}"
@@ -66,7 +81,18 @@ def tryBackOn (fctx : FixCtx) (premises : List miniPermiseDict)
         (fun sofar (idx,exp) => PageingSet sofar gnodeTypesHandler 42 (CExpr.failed) idx exp)
         gnodeTypes
       .some (new_forwID, introGnodes, nbs, {fctx with gnodeTypes := newforw2, ltxTypes := (state.id_gen_back, prem.data) :: fctx.ltxTypes},prem.name)
+  | .rw (prem, L) =>
+      match prem.asRW? with
+      | .none => .none
+      | .some (type, left,right) =>
+        let (new_forwID, introGnodes, nbs, fctx) : Nat × List (Nat × CExpr) × BackState × FixCtx :=
+          L.foldl (fun (nfid, ign, nbs, fctx) (pat, emb, lvls, dirs) =>
+            sorry
+            ) (forwID, [], state, fctx)
+        sorry
 
+
+#exit
 
 def updateLtxIntros (forw : IntroTree)
   (forw2 : List (Array CExpr)) (ltx_handler : Nat → (Nat × Nat))
@@ -92,6 +118,7 @@ def tryBack (premises : List miniPermiseDict) (st : SearchState) : Option (Searc
               let newGs := (List.range (newb.id_gen_goal - st.back.id_gen_goal)).map (· + st.back.id_gen_goal)
               let (nf,nf2) := updateLtxIntros st.forw st.forw2 st.ltx_handler id newGs ngno -- already incremented in newb
               .some {st with forw := nf, forw2 := nf2, forwID := newfid, back := newb, fctx := newf, back_memo := st.back_memo.findModifyAdd (fun x => x.1 == id) (fun (n,l) => (n, ( add) :: l)) (id,[(add)])}
+              -- REMARK: even if we don't carry out all possible rewrites, this is harmless for back_memo : nested rewrites won't be prohibed, as they#re rewrites on *new* goals
             | _ => go more
         | _ =>
           match tryBackOn st.fctx premises [] st.forwID st.fctx.gnodeTypes st.fctx.gnodeTypesHandler g id st.back with
@@ -102,7 +129,7 @@ def tryBack (premises : List miniPermiseDict) (st : SearchState) : Option (Searc
           | _ => go more
   go st.back.active_goals
 
---#exit
+#exit
 
 def tryForWith (fctx : FixCtx) (prem : miniPermiseDict) (state : SearchState) : Option SearchState :=
   match full_matcher_rawF {fctx with current := .some prem.data} prem.data prem.order state.forw with
