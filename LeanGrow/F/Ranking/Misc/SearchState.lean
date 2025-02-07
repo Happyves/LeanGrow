@@ -44,7 +44,7 @@ partial def BackTree.width (bt : BackTree) : Nat :=
   go 1 [bt]
 
 
-def DepthWidthCoef (st : SearchState) : Float :=
+def DepthWidthCoefBack (st : SearchState) : Float :=
   let d := st.back.bt.depth
   let w := st.back.bt.width
   let prod := d * w
@@ -82,6 +82,35 @@ partial def ltx_depth (ltx_assemmbly : List (Nat × BackType × Array CExpr)) : 
   go 0 [] ltx_assemmbly
 
 
--- todo : width ; maitain lits of gidx and number of appearnces as args, then return max number of appearances
 
--- idea : keep exploring even after proof found ; count number of proofs ; better reward if multitude of proofs ? ; somehow make sure the proofs are somewhat distinct ?
+/-- largest number of times a gnode is an arguent to build another-/
+partial def ltx_width (ltx_assemmbly : List (Nat × BackType × Array CExpr)) : Nat :=
+  let rec go (known : List (Nat × Nat)) : List (Nat × BackType × Array CExpr) → List (Nat × Nat)
+    | [] => known
+    | (_,_,as) :: xs =>
+        let gidxs := as.foldl (fun L x =>
+            match x with
+            | .gnode idx _ => idx :: L
+            | _ => L
+            ) []
+        let rec new_known (done : List (Nat × Nat)) (gs : List Nat) : List (Nat × Nat) → List (Nat × Nat)
+          | [] => (gs.map (fun x => (x,1))) ++ done
+          | (i,deg) :: more =>
+            if gs.isEmpty
+            then done ++ more
+            else
+              if gs.contains i
+              then new_known ((i,deg + 1):: done) (gs.erase i) more
+              else new_known ((i,deg) :: done) gs more
+        let new := new_known [] gidxs known
+        go new xs
+  let degs := go [] ltx_assemmbly
+  degs.foldl (fun M (_,d) => if d > M then d else M) 0
+
+
+def DepthWidthCoefForw (st : SearchState) : Float :=
+  let d := ltx_depth st.ltx_assemmbly
+  let w := ltx_width st.ltx_assemmbly
+  let prod := d * w
+  let norm := d + w
+  prod.toFloat / norm.toFloat
