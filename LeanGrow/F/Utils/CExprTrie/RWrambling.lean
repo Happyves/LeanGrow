@@ -735,3 +735,80 @@ def test18 {α : Sort _} {β γ: α → Sort _} {δ : (a : α) → β a → γ a
     replace e3 := eq_of_heq e3
     rw [← e3]
     exact H
+
+#check cast_eq
+
+example (F : (n : Nat) → Fin n) (G : (x : Fin 42) → Nat) (h : G (F 42) = 37) : True := by
+  have eq : 42 = 2*21 := rfl
+  have e2 : Fin 42 = Fin (2*21) := by rw [eq]
+  have final : G (cast e2.symm (F (2*21))) = 37 := by
+    --have tmp : G (cast rfl (F 42)) = 37 := by rw [cast_eq] ; exact h
+    -- ↓ works directly, but can it be systeatized ?
+    apply @test7 Nat (fun n => Fin 42 = Fin n) 42 rfl
+      (fun x y => G (cast y.symm (F x)) = 37) h -- tmp unnecessary
+      (2*21) e2 eq (heq_of_eq (proof_irrel rfl e2))
+  apply True.intro
+
+noncomputable
+def test19  {γ α : Sort _} {β : α → Sort _} (x : γ)  {a : α} {c : β a}
+  {motive : (y : γ) → (b : α) → (d : β b) → Sort _}
+  (ha : motive x a c)
+  (y : γ) {b : α} {d : β b} (tx : x = y) (ta : a = b) (tc : HEq c d) : motive y b d :=
+    have wow : (⟨x,⟨a,c⟩⟩ : @PSigma γ (fun _ => PSigma β)) = ⟨y,⟨b,d⟩⟩ :=
+      @PSigma.ext γ (fun _ => PSigma β) ⟨x,⟨a,c⟩⟩ ⟨y,⟨b,d⟩⟩
+        tx (by apply heq_of_eq ; exact @PSigma.ext α β ⟨a,c⟩ ⟨b,d⟩ ta tc)
+    @Eq.ndrec (@PSigma γ (fun _ => PSigma β)) ⟨x,⟨a,c⟩⟩ (fun z => motive z.1 z.2.1 z.2.2) ha ⟨y,⟨b,d⟩⟩ wow
+
+--#exit
+
+example (F : (n : Nat) → Fin n) (h : (F 42) = 37) (test_eq : Nat = Int) : True := by
+  -- example of a rewrite in binder type that should propagate to other hyps
+  -- will never occur in practice ...
+  let F' : (n : Int) → Fin (cast test_eq.symm n) := fun n => F (cast test_eq.symm n)
+  have tmp1 (n : Nat) : cast test_eq.symm (cast test_eq n) = n := by
+      rw [cast_cast,cast_eq]
+  have tmp2 (n : Nat) : Fin (cast test_eq.symm (cast test_eq n)) = Fin n := by
+      rw [tmp1]
+  have : F' (cast test_eq 42) = (cast (tmp2 42).symm 37) := by
+    dsimp [F']
+    apply @test7 Nat (fun t => Fin 42 = Fin t) 42 rfl
+      (fun y d => F y = (cast d (37 : Fin 42))) (by exact h) --possibly with cast_eq
+      (cast test_eq.symm (cast test_eq 42)) (tmp2 _).symm
+      (tmp1 42).symm (proof_irrel_heq _ _)
+  apply True.intro
+
+
+def List.sum (L : List α) (f : α → Nat) : Nat :=
+  L.foldl (fun s x => s + f x) 0
+
+example (l : List Nat) (h : l.sum (fun n => 2*n + 1) = 37) : l.sum (fun n => n+n + 1) = 37:= by
+  --rw [Nat.two_mul] at h -- fails ; simp_rw should work → check how for sampling of states !!!
+  have : (fun n => 2*n + 1) = (fun n => n+n + 1) := by
+    apply funext
+    intro x
+    rw [Nat.two_mul]
+  rw [this] at h
+  exact h
+
+#check funext
+
+def funT (α : Sort _) := α → α
+
+example (h : funT (∀ n : Nat, Fin (2*n)) = Nat) : funT (∀ n : Nat, Fin (n+n)) = Nat := by
+  sorry
+
+theorem allext {α : Sort u} {β : α → Sort v} {f g : (x : α) → β x}
+    (h : ∀ x, f x = g x) : f = g := by
+  let eqv (f g : (x : α) → β x) := ∀ x, f x = g x
+  let extfunApp (f : Quot eqv) (x : α) : β x :=
+    Quot.liftOn f
+      (fun (f : ∀ (x : α), β x) => f x)
+      (fun _ _ h => h x)
+  show extfunApp (Quot.mk eqv f) = extfunApp (Quot.mk eqv g)
+  exact congrArg extfunApp (Quot.sound h)
+
+
+/-
+So if pattern is found under binders,
+
+-/
