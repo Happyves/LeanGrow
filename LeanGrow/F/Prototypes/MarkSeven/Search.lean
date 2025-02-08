@@ -43,7 +43,7 @@ instance : BEq SearchState where
 inductive Oersatz where
 | none
 | regular (_ : miniPermiseDict × Array (Option CExpr) × List (Name × Level))
-| rw (_ : miniPermiseDict × List (CExpr × Array (Option CExpr) × List (Name × Level) × List oDirs))
+| rw (_ : miniPermiseDict × Bool × List (CExpr × Array (Option CExpr) × List (Name × Level) × List oDirs))
 deriving Inhabited, Repr, BEq
 
 def tryBackOn (fctx : FixCtx) (premises : List miniPermiseDict)
@@ -58,13 +58,15 @@ def tryBackOn (fctx : FixCtx) (premises : List miniPermiseDict)
         then findBack ps
         else
           --dbg_trace s!"Trying to match :\n{repr p.goal}\n{repr active_goal}\n\n"
-          if p.asRW?.isSome
-          then -- unpack left and right and check
-            let res? := match_pattern_in_goal {fctx with current := p.data} p.data p.data.size p.goal active_goal
-            match res? with
-            | [] => findBack ps
-            | L => .rw (p,L)
-          else
+          match p.asRW? with
+          | .some (T,left, right) =>
+            let resL? := match_pattern_in_goal {fctx with current := p.data} p.data p.data.size left active_goal
+            let resR? := match_pattern_in_goal {fctx with current := p.data} p.data p.data.size right active_goal
+            match resL?, resR? with
+            | [], [] => findBack ps
+            | [], R => .rw (p,true, R)
+            | L, _ => .rw (p,false, L)
+          | _ =>
             let res? := match_goal {fctx with current := p.data} p.data p.data.size p.goal active_goal
             match res? with
             | .some (res,us) => .regular (p,res,us)
@@ -81,15 +83,31 @@ def tryBackOn (fctx : FixCtx) (premises : List miniPermiseDict)
         (fun sofar (idx,exp) => PageingSet sofar gnodeTypesHandler 42 (CExpr.failed) idx exp)
         gnodeTypes
       .some (new_forwID, introGnodes, nbs, {fctx with gnodeTypes := newforw2, ltxTypes := (state.id_gen_back, prem.data) :: fctx.ltxTypes},prem.name)
-  | .rw (prem, L) =>
+  | .rw (prem, sym?, L) =>
       match prem.asRW? with
       | .none => .none
       | .some (type, left,right) =>
-        let (new_forwID, introGnodes, nbs, fctx) : Nat × List (Nat × CExpr) × BackState × FixCtx :=
-          L.foldl (fun (nfid, ign, nbs, fctx) (pat, emb, lvls, dirs) =>
+        if sym?
+        then
+          if prem.wPropExt?
+          then
+            let (new_forwID, introGnodes, nbs, fctx) : Nat × List (Nat × CExpr) × BackState × FixCtx :=
+              L.foldl (fun (nfid, ign, nbs, fctx) (pat, emb, us, dirs) =>
+                let (assi,newg) := propagate_lnode_and_tag prem.data (state.id_gen_back + 1) emb us
+                let other := instantiateOther left emb
+                let toBT := mkRWBackThingProp fctx dirs pat other active_goal
+                let rwedGoal := replaceAt dirs active_goal other
+                let (new_forwID, introGnodes, nbs) := integrate_backstep_main_rw
+                  toBT rwedGoal left right type true true
+                  forwID prem.name prem.data.size active_goal_id assi newg state
+                -- todo : update back and goal ids, and return new onea ...
+                sorry
+                ) (forwID, [], state, fctx)
             sorry
-            ) (forwID, [], state, fctx)
-        sorry
+          else
+            sorry
+        else
+          sorry
 
 
 #exit

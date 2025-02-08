@@ -301,7 +301,78 @@ def integrate_backstep (f_id_gen : Nat)
     --dbg_trace s!"(integrate_backstep) fstout {repr (common.map Prod.snd)} \nfinalT : {repr finalT}\n\n"
     (nfid, ngns,⟨commonFix.map Prod.snd, finalT⟩)
 
---#exit
+
+def integrate_backstep_rw
+  (preamble rwedgoal left right Eqtype: CExpr) (sym? pext? : Bool)
+  (f_id_gen : Nat)
+  (thm_name : BackType) (thm_data_size : Nat) (target_goal_id : Nat)
+  (assigned newgoals : List (Nat × CExpr))
+  (id_gen_back : Nat) (id_gen_goal : Nat)
+  (backTree : BackTree) : Nat × List (Nat × CExpr) × IntegBack :=
+    --dbg_trace s!"(integrate_backstep) target_goal_id {target_goal_id}\n assigned {repr assigned}\n newgoals {repr newgoals} \nid_gen_back {id_gen_back} id_gen_goal {id_gen_goal}\nT {repr backTree}"
+    let common := (newgoals.foldl (fun (l,i) (pos,type) => (((pos,i,type) :: l),i+1)) ([], (id_gen_goal + 1))).1
+    --dbg_trace s!"(integrate_backstep) common {repr common}"
+    let new_dirs := (common.map (fun x => x.2.1))
+    --dbg_trace s!"(integrate_backstep) new_dirs {repr new_dirs}"
+    let dirs_new := common.foldl
+      (fun A (pos,gId,_) => A.set! pos [gId])
+      (Array.mkArray thm_data_size [])
+    --dbg_trace s!"(integrate_backstep) dirs_new {repr dirs_new}"
+    let new_leaves_1 := (Array.mkArray thm_data_size .fail)
+    let new_leaves_2 := assigned.foldl
+      (fun A (pos, val) => A.set! pos (.ofAssign val))
+      new_leaves_1
+    --dbg_trace s!"(integrate_backstep) new_leaves_2 {repr new_leaves_2}"
+    let (new_leaves_3,nfid,ngns,commonFix) := common.foldl
+      (fun (A,fid,ngns,cF) (pos, gId, type) =>
+          match intro? type fid with
+          | .none => (A.set! pos (.ofGoal gId type [] [] []),fid,ngns,(pos, gId, type):: cF)
+          | .some (nfig,ng,ngnodes) => (A.set! pos (.ofIntro gId ng ngnodes [] [] []),nfig,ngnodes ++ ngns, (pos, gId, ng):: cF)
+          )
+      (new_leaves_2,f_id_gen,[],[])
+    --dbg_trace s!"(integrate_backstep) new_leaves_3 {repr new_leaves_3}"
+    let wRw : BackTree := .ofBack id_gen_back (.ofRW preamble)
+      #[[], ((id_gen_back+1)) :: (if sym? then [(id_gen_back+2)] else [])]
+      #[[id_gen_goal], new_dirs]
+      #[(.ofGoal (id_gen_goal) rwedgoal [] [] []),
+        (if sym?
+         then
+          if pext?
+          then
+            (.ofBack (id_gen_back+1) (.ofThm `Iff.symm)
+                #[[],[],[id_gen_back+2]] #[[],[],new_dirs]
+                #[(.ofAssign left),(.ofAssign right),
+                  (.ofBack (id_gen_back+2) thm_name (Array.mkArray thm_data_size []) dirs_new new_leaves_3)
+                ]
+              )
+          else
+            (.ofBack (id_gen_back+1) (.ofThm `Eq.symm)
+                #[[],[],[],[id_gen_back+2]] #[[],[],[],new_dirs]
+                #[(.ofAssign Eqtype),(.ofAssign left),(.ofAssign right),
+                  (.ofBack (id_gen_back+2) thm_name (Array.mkArray thm_data_size []) dirs_new new_leaves_3)
+                ]
+              )
+         else
+           (.ofBack (id_gen_back+1) thm_name (Array.mkArray thm_data_size []) dirs_new new_leaves_3)
+        )]
+    let new_branches : BackTree → BackTree := fun X =>
+      match X with
+      | .ofGoal j t bdirs gdirs ts =>
+        .ofGoal j t (id_gen_back :: ((id_gen_back+1)) :: (if sym? then (id_gen_back+2) :: bdirs else bdirs)) (id_gen_goal :: (new_dirs ++ gdirs))
+          ((wRw) :: ts)
+      | .ofPropa i j t bdirs gdirs ts =>
+        .ofPropa i j t (id_gen_back :: ((id_gen_back+1)) :: (if sym? then (id_gen_back+2) :: bdirs else bdirs)) (id_gen_goal :: (new_dirs ++ gdirs))
+          ((wRw) :: ts)
+      | .ofIntro i t bvs bdirs gdirs ts =>
+        .ofIntro i t bvs (id_gen_back :: ((id_gen_back+1)) :: (if sym? then (id_gen_back+2) :: bdirs else bdirs)) (id_gen_goal :: (new_dirs ++ gdirs))
+          ((wRw) :: ts)
+
+      | _ => .fail
+    let finalT := BackTree.modifyAtGoalId_wUpdates target_goal_id new_dirs id_gen_back new_branches backTree
+    --dbg_trace s!"(integrate_backstep) fstout {repr (common.map Prod.snd)} \nfinalT : {repr finalT}\n\n"
+    (nfid, ngns,⟨commonFix.map Prod.snd, finalT⟩)
+
+
 
 /-
 Just realized:
@@ -338,6 +409,22 @@ def integrate_backstep_main (f_id_gen : Nat)
   (assigned newgoals : List (Nat × CExpr))
   (state : BackState) : Nat × List (Nat × CExpr) × BackState :=
   let (nfid,ngnds,⟨G,T⟩) := integrate_backstep f_id_gen thm_name thm_data_size target_goal_id assigned newgoals state.id_gen_back state.id_gen_goal state.bt
+  --dbg_trace s!"(integrate_backstep_main) \nG {repr G}\nT {repr T}"
+  let (ta,gs) := extractTarget target_goal_id .failed state.active_goals
+  --dbg_trace s!"(integrate_backstep_main) \nta {repr ta}\ngs {repr gs}"
+  let nG := gs ++ G ++ [(target_goal_id,ta)] -- new goals and initial one we be placed
+  -- at the back. Reason : durring search, we look for backsteps form goals from left to right
+  -- so placing the new goals at the top causes BFS, the initial at top DFS, so we do a mix
+  (nfid,ngnds,⟨state.id_gen_back + 1, state.id_gen_goal + G.length, state.id_gen_assign, nG,T⟩)
+
+
+def integrate_backstep_main_rw
+  (preamble rwedgoal left right Eqtype: CExpr) (sym? pext? : Bool)
+  (f_id_gen : Nat)
+  (thm_name : BackType) (thm_data_size : Nat) (target_goal_id : Nat)
+  (assigned newgoals : List (Nat × CExpr))
+  (state : BackState) : Nat × List (Nat × CExpr) × BackState :=
+  let (nfid,ngnds,⟨G,T⟩) := integrate_backstep_rw preamble rwedgoal left right Eqtype sym? pext? f_id_gen thm_name thm_data_size target_goal_id assigned newgoals state.id_gen_back state.id_gen_goal state.bt
   --dbg_trace s!"(integrate_backstep_main) \nG {repr G}\nT {repr T}"
   let (ta,gs) := extractTarget target_goal_id .failed state.active_goals
   --dbg_trace s!"(integrate_backstep_main) \nta {repr ta}\ngs {repr gs}"

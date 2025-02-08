@@ -114,3 +114,11 @@ def DepthWidthCoefForw (st : SearchState) : Float :=
   let prod := d * w
   let norm := d + w
   prod.toFloat / norm.toFloat
+
+
+/-
+
+- Preciseness score: how many different cached states are triggered ? we want few ?
+- Use ranking for parallelisation : give up on states that aren't well ranked ?
+
+-/

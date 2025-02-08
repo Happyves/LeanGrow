@@ -831,6 +831,28 @@ def castTest {α : Sort _} (β γ : α → Sort _) (h : ∀ a : α, β a = γ a)
   fun a => cast (h a) (f a)
 
 
+noncomputable
+def test23 {α : Sort _} {β γ: α → Sort _} {δ : (a : α) → β a → γ a → Sort _}
+  {a : α} {b : β a} {c : γ a} {d : δ a b c}
+  {motive : (w : α) → (x : β w) → (y : γ w) → (z : δ w x y) →  Sort _} (H : motive a b c d)
+  {e : α} {f : β e} {g : γ e} {h : δ e f g}
+  (ta : a = e) (tb : HEq b f) (tc : HEq c g) (td : HEq d h) : motive e f g h :=
+    by -- is how convert does it
+    revert f g h
+    rw [← ta]
+    intro f g h e1
+    replace e1 := eq_of_heq e1
+    revert g h
+    apply @Eq.rec (β a) b (fun f _ => {g : γ a} → {h : δ a f g} → HEq c g → HEq d h → motive a f g h) _ _ e1
+    intro g h e2
+    replace e2 := eq_of_heq e2
+    revert h
+    apply @Eq.rec (γ a) c (fun g _ => {h : δ a b g} → HEq d h → motive a b g h) _ _ e2
+    intro h e3
+    replace e3 := eq_of_heq e3
+    rw [← e3]
+    exact H
+
 
 /-
 So if pattern is found under binders,

@@ -113,6 +113,9 @@ def mkRWBackThing (fctx : FixCtx) (dirs : List oDirs) (foundPattern other within
 #check propext
 
 #check Iff
+#check Iff.symm
+
+#check Eq.symm
 
 def mkRWBackThingProp (fctx : FixCtx) (dirs : List oDirs) (foundPattern other within : CExpr) : CExpr :=
     let motive := factorOnDirs dirs within (.sort 1)
