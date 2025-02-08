@@ -92,25 +92,83 @@ def tryBackOn (fctx : FixCtx) (premises : List miniPermiseDict)
           if prem.wPropExt?
           then
             let (new_forwID, introGnodes, nbs, fctx) : Nat × List (Nat × CExpr) × BackState × FixCtx :=
-              L.foldl (fun (nfid, ign, nbs, fctx) (pat, emb, us, dirs) =>
+              let debt := [L.head!]
+              debt.foldl (fun (nfid, ign, nbs, fctx) (pat, emb, us, dirs) =>
                 let (assi,newg) := propagate_lnode_and_tag prem.data (state.id_gen_back + 1) emb us
                 let other := instantiateOther left emb
                 let toBT := mkRWBackThingProp fctx dirs pat other active_goal
                 let rwedGoal := replaceAt dirs active_goal other
                 let (new_forwID, introGnodes, nbs) := integrate_backstep_main_rw
                   toBT rwedGoal left right type true true
-                  forwID prem.name prem.data.size active_goal_id assi newg state
-                -- todo : update back and goal ids, and return new onea ...
-                sorry
+                  nfid prem.name prem.data.size active_goal_id assi newg nbs
+                -- todo : update back and goal ids, while folding over rewrites, and return new ones for updating ...
+                let newforw2 := introGnodes.foldl
+                  (fun sofar (idx,exp) => PageingSet sofar gnodeTypesHandler 42 (CExpr.failed) idx exp)
+                  gnodeTypes
+                (new_forwID, introGnodes ++ ign, nbs,{fctx with gnodeTypes := newforw2, ltxTypes := (state.id_gen_back, prem.data) :: fctx.ltxTypes})
                 ) (forwID, [], state, fctx)
-            sorry
+            .some (new_forwID, introGnodes, nbs, fctx, prem.name)
           else
-            sorry
+            let (new_forwID, introGnodes, nbs, fctx) : Nat × List (Nat × CExpr) × BackState × FixCtx :=
+              let debt := [L.head!]
+              debt.foldl (fun (nfid, ign, nbs, fctx) (pat, emb, us, dirs) =>
+                let (assi,newg) := propagate_lnode_and_tag prem.data (state.id_gen_back + 1) emb us
+                let other := instantiateOther left emb
+                let toBT := mkRWBackThing fctx dirs pat other active_goal
+                    -- ↑ is the difference
+                let rwedGoal := replaceAt dirs active_goal other
+                let (new_forwID, introGnodes, nbs) := integrate_backstep_main_rw
+                  toBT rwedGoal left right type true false -- and here
+                  nfid prem.name prem.data.size active_goal_id assi newg nbs
+                -- todo : update back and goal ids, while folding over rewrites, and return new ones for updating ...
+                let newforw2 := introGnodes.foldl
+                  (fun sofar (idx,exp) => PageingSet sofar gnodeTypesHandler 42 (CExpr.failed) idx exp)
+                  gnodeTypes
+                (new_forwID, introGnodes ++ ign, nbs,{fctx with gnodeTypes := newforw2, ltxTypes := (state.id_gen_back, prem.data) :: fctx.ltxTypes})
+                ) (forwID, [], state, fctx)
+            .some (new_forwID, introGnodes, nbs, fctx, prem.name)
         else
-          sorry
+          if prem.wPropExt?
+          then
+            let (new_forwID, introGnodes, nbs, fctx) : Nat × List (Nat × CExpr) × BackState × FixCtx :=
+              let debt := [L.head!]
+              debt.foldl (fun (nfid, ign, nbs, fctx) (pat, emb, us, dirs) =>
+                let (assi,newg) := propagate_lnode_and_tag prem.data (state.id_gen_back + 1) emb us
+                let other := instantiateOther left emb
+                let toBT := mkRWBackThingProp fctx dirs pat other active_goal
+                let rwedGoal := replaceAt dirs active_goal other
+                let (new_forwID, introGnodes, nbs) := integrate_backstep_main_rw
+                  toBT rwedGoal left right type false true
+                  nfid prem.name prem.data.size active_goal_id assi newg nbs
+                -- todo : update back and goal ids, while folding over rewrites, and return new ones for updating ...
+                let newforw2 := introGnodes.foldl
+                  (fun sofar (idx,exp) => PageingSet sofar gnodeTypesHandler 42 (CExpr.failed) idx exp)
+                  gnodeTypes
+                (new_forwID, introGnodes ++ ign, nbs,{fctx with gnodeTypes := newforw2, ltxTypes := (state.id_gen_back, prem.data) :: fctx.ltxTypes})
+                ) (forwID, [], state, fctx)
+            .some (new_forwID, introGnodes, nbs, fctx, prem.name)
+          else
+            let (new_forwID, introGnodes, nbs, fctx) : Nat × List (Nat × CExpr) × BackState × FixCtx :=
+              let debt := [L.head!]
+              debt.foldl (fun (nfid, ign, nbs, fctx) (pat, emb, us, dirs) =>
+                let (assi,newg) := propagate_lnode_and_tag prem.data (state.id_gen_back + 1) emb us
+                let other := instantiateOther left emb
+                let toBT := mkRWBackThing fctx dirs pat other active_goal
+                    -- ↑ is the difference
+                let rwedGoal := replaceAt dirs active_goal other
+                let (new_forwID, introGnodes, nbs) := integrate_backstep_main_rw
+                  toBT rwedGoal left right type false false -- and here
+                  nfid prem.name prem.data.size active_goal_id assi newg nbs
+                -- todo : update back and goal ids, while folding over rewrites, and return new ones for updating ...
+                let newforw2 := introGnodes.foldl
+                  (fun sofar (idx,exp) => PageingSet sofar gnodeTypesHandler 42 (CExpr.failed) idx exp)
+                  gnodeTypes
+                (new_forwID, introGnodes ++ ign, nbs,{fctx with gnodeTypes := newforw2, ltxTypes := (state.id_gen_back, prem.data) :: fctx.ltxTypes})
+                ) (forwID, [], state, fctx)
+            .some (new_forwID, introGnodes, nbs, fctx, prem.name)
 
 
-#exit
+--#exit
 
 def updateLtxIntros (forw : IntroTree)
   (forw2 : List (Array CExpr)) (ltx_handler : Nat → (Nat × Nat))
@@ -147,22 +205,22 @@ def tryBack (premises : List miniPermiseDict) (st : SearchState) : Option (Searc
           | _ => go more
   go st.back.active_goals
 
-#exit
 
-def tryForWith (fctx : FixCtx) (prem : miniPermiseDict) (state : SearchState) : Option SearchState :=
+
+def tryForWith (fctx : FixCtx) (prem : miniPermiseDict) (state : SearchState) : Option (Nat × CExpr × SearchState) :=
   match full_matcher_rawF {fctx with current := .some prem.data} prem.data prem.order state.forw with
   | [] => .none
   | opts =>
       let rez := (opts.map (fun x => ((integrate_forward_raw x prem.goal, x.topGoals), prem.name, x.embed.reduceOption))).filter (fun x => !(state.forw.has? x.1.1))
       let sz := rez.length
       let add_to_forw := List.zip ((List.range sz).map (· + state.forwID)) (rez.map Prod.fst)
-      let add_to_asm := (List.zip ((List.range sz).map (· + state.forwID)) (rez.map Prod.snd))--.foldl
-        --(fun L (a,b,c) => match b with | .ofThm N => (a,N,c) :: L | _ => L) []
+      let add_to_asm := (List.zip ((List.range sz).map (· + state.forwID)) (rez.map Prod.snd))
       let newforw := state.forw.addForws add_to_forw
       let newforw2 := add_to_forw.foldl
         (fun sofar (idx,exp,_) => PageingSet sofar state.ltx_handler 42 (.failed) idx exp)
         state.forw2
-      .some {state with forw := newforw, forw2 := newforw2, forwID := state.forwID + sz, ltx_assemmbly := add_to_asm ++ state.ltx_assemmbly}
+      let debt := rez.head!.1.1 -- we will carry out only one of possibly multiple rewites
+      .some (state.forwID, debt, {state with forw := newforw, forw2 := newforw2, forwID := state.forwID + sz, ltx_assemmbly := add_to_asm ++ state.ltx_assemmbly})
       -- potiential bug: newforw2 should also be added to FixCtx !!!
 
 
@@ -171,12 +229,26 @@ def tryFor (prems : List miniPermiseDict) (state : SearchState) : Option SearchS
     | [] => .none
     | x :: xs =>
         match tryForWith state.fctx x state with
-        | .some s => .some s
+        | .some (gidx,eq,s) =>
+            match x.asRW? with
+            | .none => .some s
+            | .some _ =>
+                if x.wPropExt?
+                then
+                  match eq with
+                  | .app (.app (.const `Iff _) left) right =>
+                    sorry
+                  | _ => .none
+                else
+                  match eq with
+                  | .app (.app (.app (.const `Eq us) type) left) right =>
+                    sorry
+                  | _ => .none
         | _ => go xs
   go prems
 
 
---#exit
+#exit
 
 partial def tryUniAll (st : SearchState) : SearchState :=
   let rec main (tars : List Nat) (ltx: List (Nat × CExpr))
