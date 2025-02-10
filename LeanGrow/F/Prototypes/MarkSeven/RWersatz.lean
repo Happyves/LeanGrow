@@ -167,8 +167,8 @@ def mkRWForwThing (fctx : FixCtx) (dirs : List oDirs) (foundPattern other within
     let motiveT := CExpr.whnf fctx (CExpr.inferType fctx motive)
     match PtypeT with
     | .forallE _ _ (.sort v) _ =>
-      .lam `nextgoal (replaceAt dirs within other)
-        (.lam `eqgoal (.app (.app (.app (.const `Eq [u]) Ptype) foundPattern) other)
+      .lam `old (replaceAt dirs within other)
+        (.lam `eq (.app (.app (.app (.const `Eq [u]) Ptype) foundPattern) other)
           ((CExpr.const `Eq.ndrec [v,u]).mkApp [Ptype,foundPattern,motiveT,.bvar 1,other,.bvar 0])
          .default
         )

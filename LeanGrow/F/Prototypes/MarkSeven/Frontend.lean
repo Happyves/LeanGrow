@@ -47,8 +47,15 @@ def Name_to_thmData (env : Environment) (n : Name) : Option miniPermiseDict :=
       let (Hs,G) := ThmType_ToDAG hs hs.length g
       let HS := SinksFirst Hs
       let (embD, orda) := mkEmbD (Array.mkArray HS.length default) #[] HS
-      .some ⟨.ofThm n,embD,orda,G.1⟩
+      match G.1 with
+      | .app (.app (.app (.const `Eq us) type) left) right =>
+        .some ⟨.ofThm n, .some (type, left,right),false,embD,orda,G.1⟩
+      | .app (.app (.const `Iff _) left) right =>
+        .some ⟨.ofThm n, (CExpr.failed, left,right),true,embD,orda,G.1⟩
+      | _ =>  .some ⟨.ofThm n, .none,false,embD,orda,G.1⟩
 
+
+--#exit
 
 def Names_to_thmData (env : Environment) (L : List Name) : List miniPermiseDict :=
   (L.map (Name_to_thmData env)).reduceOption
@@ -164,9 +171,15 @@ def AllHyp_to_thmData (gid : Nat) (type : CExpr) : Option miniPermiseDict :=
       let (Hs,G) := cThmType_ToDAG hs hs.length g
       let HS := SinksFirst Hs
       let (embD, orda) := mkEmbD (Array.mkArray HS.length default) #[] HS
-      .some ⟨.ofLocal gid ,embD,orda,G.1⟩
+      match G.1 with
+      | .app (.app (.app (.const `Eq us) type) left) right =>
+        .some ⟨.ofLocal gid, .some (type, left,right),false,embD,orda,G.1⟩
+      | .app (.app (.const `Iff _) left) right =>
+        .some ⟨.ofLocal gid, (CExpr.failed, left,right),true,embD,orda,G.1⟩
+      | _ =>  .some ⟨.ofLocal gid, .none,false,embD,orda,G.1⟩
   | _ => .none
 
+--#exit
 
 
 elab "grow" : tactic => do

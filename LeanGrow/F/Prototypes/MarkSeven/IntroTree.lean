@@ -82,3 +82,19 @@ partial def addForw (gnode_id : Nat) (ce : CExpr) (goalIds : List Nat) (T : Intr
 
 def addForws (On : List (Nat × CExpr × List Nat)) (T : IntroTree) : IntroTree :=
   On.foldl (fun sf (a,b,c) => sf.addForw a b c) T
+
+
+partial def foldForwRW (fid : Nat) (T : IntroTree) (mod : Nat → List (Nat × CExpr) → Nat × List (Nat × CExpr) × List (Nat × Nat × CExpr))
+  : Nat × IntroTree × List (Nat × CExpr) × List (Nat × Nat × CExpr) :=
+  let rec go (f : Nat) : IntroTree → Nat × IntroTree × List (Nat × CExpr) × List (Nat × Nat × CExpr)
+    | .leaf gids ltx =>
+        let (nf,ngn,nas) := mod f ltx
+        (nf, .leaf gids (ngn ++ ltx), ngn,nas)
+    | .node gids ltx kidsWdirs =>
+        let (lf,lgn,las) := mod f ltx
+        let (nf,ngn,nas,nk) := kidsWdirs.foldl (fun (inf,ign,ias,ik) (dirs,kid) =>
+          let (Inf,IT,Ign,Ias) := go inf kid
+          (Inf,Ign ++ ign, Ias ++ias, (dirs,IT) :: ik)
+          ) (lf,lgn,las, [])
+        (nf, .node gids (ngn ++ ltx) nk, ngn, nas)
+  go fid T

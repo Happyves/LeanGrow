@@ -232,12 +232,40 @@ def tryFor (prems : List miniPermiseDict) (state : SearchState) : Option SearchS
         | .some (gidx,eq,s) =>
             match x.asRW? with
             | .none => .some s
-            | .some _ =>
+            | .some _ => -- not usefull since not instantiated
                 if x.wPropExt?
                 then
                   match eq with
                   | .app (.app (.const `Iff _) left) right =>
-                    sorry
+                    let (ffid,IT,ngn,nas) := state.forw.foldForwRW state.forwID (fun fid ltx =>
+                      ltx.foldl (fun (c,ngn,nas) (i,ce) =>
+                        let resl := findPattern left ce
+                        let resr := findPattern right ce
+                        let (ifid,lNewT, lNewA) := resl.foldl (fun (j,L,LL) dirs =>
+                          let T := replaceAt dirs ce right
+                          let Pre := mkRWForwThing -- fix: for propext !
+                            state.fctx -- bugs since we don't add new gnodes ?? But the new ones shouldn't be needed in inference and reduction operations
+                            dirs left right ce
+                          (j+1,(j,T) :: L, (j,i,Pre) :: LL)
+                          ) (c,ngn,nas)
+                        let (Ifid,rNewT, rNewA) := resr.foldl (fun (j,L,LL) dirs =>
+                          let T := replaceAt dirs ce right
+                          let Pre := mkRWForwThing -- fix: for propext !
+                              -- FIX : sym !!!
+                              -- Integrate is to `mkRWForwThing`
+                            state.fctx -- bugs since we don't add new gnodes ??
+                            dirs left right ce
+                          (j+1,(j,T) :: L, (j,i,Pre) :: LL)
+                          ) (ifid,lNewT,lNewA)
+                        (Ifid, rNewT, rNewA)
+                        ) (fid,[],[])
+                      )
+                    let newforw2 := ngn.foldl
+                      (fun sofar (idx,exp) => PageingSet sofar state.ltx_handler 42 (.failed) idx exp)
+                      state.forw2
+                    let add_assmebly := nas.foldl (fun L (newT,oldT,pre) =>
+                      (newT, BackType.ofRW pre, #[.gnode oldT (.ofBvar 42), .gnode gidx (.ofBvar 42)]) :: L) []
+                    .some {state with forw := IT, forw2 := newforw2, forwID := ffid, ltx_assemmbly := add_assmebly ++ state.ltx_assemmbly}
                   | _ => .none
                 else
                   match eq with
@@ -248,7 +276,7 @@ def tryFor (prems : List miniPermiseDict) (state : SearchState) : Option SearchS
   go prems
 
 
-#exit
+--#exit
 
 partial def tryUniAll (st : SearchState) : SearchState :=
   let rec main (tars : List Nat) (ltx: List (Nat × CExpr))
