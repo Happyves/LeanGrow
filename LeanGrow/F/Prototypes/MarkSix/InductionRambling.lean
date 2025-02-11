@@ -233,6 +233,44 @@ Nachlass:
 #check Nat.le.rec
 #check List.Mem.rec
 
+#check WellFounded.fixF
+
+
+elab "getAckerman" : command => do
+  let a := `ackermann
+  let env ← getEnv
+  for c in env.constants do
+    if a.isPrefixOf c.1 then IO.println c.1
+
+
+--getAckerman
+/-
+ackermann._cstage2
+ackermann._unary.proof_2
+ackermann.match_1
+ackermann._cstage1
+ackermann
+ackermann._unary
+ackermann._unary.proof_1
+ackermann._unary.proof_3
+ackermann._unary.proof_4
+ackermann._unsafe_rec
+ackermann.match_1._cstage1
+
+-/
+
+#check ackermann._unary.proof_1
+
+#print ackermann
+
+#print ackermann._unary
+
+#check ackermann._unary.proof_1.fix -- not listed in ↑
+
+#print fac
+
 -- # Exfalso
+
+
 
 -- # Induct on fun matcher

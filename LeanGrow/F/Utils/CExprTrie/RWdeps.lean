@@ -420,4 +420,16 @@ def makeMotiveRWInstance (deps : List DepDagNode) (Args : List CExpr) (base : CE
     ) lamMot
 
 
-def buildInterPSigma
+--def buildInterPSigma
+
+
+/-
+Roadmap:
+
+- rw of arg in application with no prior binds : test18
+- auto casting and proof_irrel for forward and backwar in test16 and test17
+- nested applications : test27 and the one above test19
+- rewriting binding types : test28 (may censor case of dependent head, so that we only cast args)
+- rewriting under binders via test22_2 and test22, wraped arround others
+
+-/

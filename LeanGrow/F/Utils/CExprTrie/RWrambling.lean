@@ -647,7 +647,7 @@ example (F : (n : Nat) → Fin n → Nat) (A B : List Unit) (eq : A = B) (h : 2 
 #check test11
 
 
-example (F : (n : Nat) → Fin n → Nat) (A B : List Unit) (eq : A = B) (h : 2 < A.length)
+theorem test27 (F : (n : Nat) → Fin n → Nat) (A B : List Unit) (eq : A = B) (h : 2 < A.length)
   (todo : F A.length ⟨2,h⟩ = 37) : True := by
     have fst : A.length = B.length := by rw [eq]
     have snd := @test7 Nat (fun X => 2 < X) A.length h
@@ -761,7 +761,7 @@ def test19  {γ α : Sort _} {β : α → Sort _} (x : γ)  {a : α} {c : β a}
 
 --#exit
 
-example (F : (n : Nat) → Fin n) (h : (F 42) = 37) (test_eq : Nat = Int) : True := by
+theorem test28 (F : (n : Nat) → Fin n) (h : (F 42) = 37) (test_eq : Nat = Int) : True := by
   -- example of a rewrite in binder type that should propagate to other hyps
   -- will never occur in practice ...
   let F' : (n : Int) → Fin (cast test_eq.symm n) := fun n => F (cast test_eq.symm n)
@@ -815,6 +815,14 @@ theorem test21 {α : Sort _} {δ : α → Sort _}  (β γ : (a : α) → δ a) (
 theorem test22 {α : Sort _} (β γ : α → Sort _) (h : ∀ a : α, β a = γ a) : (∀ a : α, β a) = (∀ a : α, γ a) :=
   by
   apply test20 β γ (fun δ => (∀ a : α, β a) = (∀ a : α, δ a)) h rfl
+
+
+theorem test22_2 {α : Sort _} (β γ : α → Sort _) (h : ∀ a : α, β a = γ a) : (fun a : α => β a) = (fun  a : α => γ a) :=
+  by
+  apply funext ; intro x ; exact h x
+
+
+#exit
 
 def funT (α : Sort _) := α → α
 
@@ -874,32 +882,22 @@ theorem test24 {α : Sort v} {β: Sort v} [Inhabited α] [Inhabited β]
     by rw [hmm] -- works too : apply test22 ; intro a ; apply test22 ; intro b ; apply h
   have hmm4 : (∀ a a' : α, γ a = γ a') := by
     intro x y ; have fst := h x default ; have snd := h y default ; rw [fst,snd]
+  have hmm5 := test22 γ (fun _ => δ default) (fun x => h x default)
+  dsimp at hmm5
   sorry -- is it even true ?
 
 
 #check cast
 
-example : (Nat → Bool) ≠ (Unit → Bool) := by
-  intro con
-  let f := fun | 0 => true | _ => false
-  let g := cast con f
-  have test : g () = true := by
-    dsimp [g, f]
 
 
 theorem test25 {α : Sort _} (β γ : α → Sort _) (h : (∀ a : α, β a) = (∀ a : α, γ a)) : ∀ a : α, β a = γ a  :=
   by sorry
 
 
-theorem funextin {α : Sort u} {β : α → Sort v} {f g : (x : α) → β x}
-    (h : ∀ x, f x = g x) : f = g := by
-  let eqv (f g : (x : α) → β x) := ∀ x, f x = g x
-  let extfunApp (f : Quot eqv) (x : α) : β x :=
-    Quot.liftOn f
-      (fun (f : ∀ (x : α), β x) => f x)
-      (fun _ _ h => h x)
-  show extfunApp (Quot.mk eqv f) = extfunApp (Quot.mk eqv g)
-  exact congrArg extfunApp (Quot.sound h)
+theorem test26 {α : Sort _} (β γ : α → Sort _) (h : (∀ a : α, β a) = (∀ a : α, γ a)) : ∀ a : α, β a = γ a  :=
+  by sorry
+
 
 #exit
 
