@@ -858,3 +858,105 @@ def test23 {α : Sort _} {β γ: α → Sort _} {δ : (a : α) → β a → γ a
 So if pattern is found under binders,
 
 -/
+
+
+-- theorem test24 {α : Sort _} {β: Sort _} [Inhabited α] [Inhabited β]
+--   (γ : α → Sort _) (δ : β → Sort _) (P : (α : Sort _) → (α → Sort _) → Prop) -- universe issues
+theorem test24 {α : Sort v} {β: Sort v} [Inhabited α] [Inhabited β]
+  (γ : α → Sort u) (δ : β → Sort u) -- (P : (α : Sort _) → (α → Sort _) → Prop)
+  (h : ∀ a : α, ∀ b : β,  γ a = δ b) :
+  (∀ a : α, γ a) = (∀ b : β, δ b) := by
+  have hmm : (fun (a : α) (b : β) => γ a) = (fun (a : α) (b : β) => δ b) :=
+    by apply funext ; intro a ; apply funext ; intro b ; apply h
+  have hmm2 : (∀ (a : α) (b : β), γ a) = (∀ (a : α) (b : β), δ b) :=
+    by apply test22 ; intro a ; apply test22 ; intro b ; apply h
+  have hmm3 : (∀ (a : α) (b : β), (fun (a : α) (b : β) => γ a) a b) = (∀ (a : α) (b : β), (fun (a : α) (b : β) => δ b) a b) :=
+    by rw [hmm] -- works too : apply test22 ; intro a ; apply test22 ; intro b ; apply h
+  have hmm4 : (∀ a a' : α, γ a = γ a') := by
+    intro x y ; have fst := h x default ; have snd := h y default ; rw [fst,snd]
+  sorry -- is it even true ?
+
+
+#check cast
+
+example : (Nat → Bool) ≠ (Unit → Bool) := by
+  intro con
+  let f := fun | 0 => true | _ => false
+  let g := cast con f
+  have test : g () = true := by
+    dsimp [g, f]
+
+
+theorem test25 {α : Sort _} (β γ : α → Sort _) (h : (∀ a : α, β a) = (∀ a : α, γ a)) : ∀ a : α, β a = γ a  :=
+  by sorry
+
+
+theorem funextin {α : Sort u} {β : α → Sort v} {f g : (x : α) → β x}
+    (h : ∀ x, f x = g x) : f = g := by
+  let eqv (f g : (x : α) → β x) := ∀ x, f x = g x
+  let extfunApp (f : Quot eqv) (x : α) : β x :=
+    Quot.liftOn f
+      (fun (f : ∀ (x : α), β x) => f x)
+      (fun _ _ h => h x)
+  show extfunApp (Quot.mk eqv f) = extfunApp (Quot.mk eqv g)
+  exact congrArg extfunApp (Quot.sound h)
+
+#exit
+
+#check funext
+
+  -- have : HEq γ δ := by
+  --   apply hfunext ; exact h
+  -- rw [← this] ; exact hp
+
+example : Nat ≠ Unit := by
+  intro con
+  have allsame_alldiff : ∀ f g : (Unit → Bool), (∀ x, f x = g x) ∨ (∀ x, f x ≠ g x) := by
+    have tec : ∀ x : Unit , x = () := by intro x ; apply Unit.ext
+    intro f g
+    match h1 : f (), h2 : g () with
+    | true, true => left ; intro x ; rw [tec x,h1,h2]
+    | false, false => left ; intro x ; rw [tec x,h1,h2]
+    | true, false => right ; intro x ; rw [tec x,h1,h2] ; apply Bool.noConfusion
+    | false, true => right ; intro x ; rw [tec x,h1,h2] ; apply Bool.noConfusion
+  have ohoh : ∀ f g : (Nat → Bool), (∀ x, f x = g x) ∨ (∀ x, f x ≠ g x) :=
+    by rw [con] ; exact allsame_alldiff
+  have ohno := ohoh (fun | 0 => true | _ => false) (fun | 0 => false | _ => false)
+  match ohno with
+  | Or.inl q =>
+    specialize q 0
+    dsimp at q
+    contradiction
+  | Or.inr q =>
+    specialize q 1
+    dsimp at q
+    contradiction
+
+
+#check Unit.ext
+
+
+#exit
+
+#check hfunext
+
+theorem test25 {α : Sort _} {δ : α → Sort _}  (β γ : (a : α) → δ a) (P : ((a : α) → δ a) → Prop) (h : ∀ a : α, β a = γ a)
+  --(f : ∀ a : α, β a) (g : ∀ a : α, γ a) (H : ∀ a : α, (f a) = cast (h a).symm (g a))
+  (hp : P β) : P γ := by
+  have : HEq β γ := by
+    apply hfunext ; exact h
+  rw [← this] ; exact hp
+
+
+
+theorem test26 {α : Sort _} (β γ : α → Sort _) (h : ∀ a : α, β a = γ a) : (∀ a : α, β a) = (∀ a : α, γ a) :=
+  by
+  apply test20 β γ (fun δ => (∀ a : α, β a) = (∀ a : α, δ a)) h rfl
+
+
+example (h : funT (∀ n : Nat, Fin (2*n)) = Nat) : funT (∀ n : Nat, Fin (n+n)) = Nat := by
+  have : (∀ n : Nat, Fin (2*n)) = (∀ n : Nat, Fin (n+n)) := by
+    apply test22
+    intro aha
+    rw [Nat.two_mul]
+  rw [← this] ; exact h -- yay
