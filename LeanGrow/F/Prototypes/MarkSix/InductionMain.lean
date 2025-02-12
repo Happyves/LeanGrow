@@ -39,7 +39,11 @@ current goal, with gnode to bvar abstactions, and solve the initial goal as the 
 of G with the gnodes from ltx in the same order we abstracted them. We can handle this with
 the `ofRW` BackType of Mark 7, since the effect of assembly will be the same: the preamble
 should be `fun x => x gnode1 gnode2 ...`, and it should have 1 argument, which is the goal
-will the ∀ abstractions.
+will the ∀ abstractions. This should be done for lnodes too : a priori, we treat them the same
+as gnodes (ie. add them as args as above) ; they should be replace by their assigned value
+after assembly ; there is a twist though : we should prehaps only
+revert those who's type doesn't contain lnodes, since otherwise we won't want to intro them afterwards
+as this breaks the fact that we have no lnodes in ltx.
 
 So the ansatz for applying recusors as backsteps (and this generalises to other thms) is that we'll
 have an application of lnodes with lnode head as goal of thm. We should get the types of the lnodes
@@ -48,13 +52,13 @@ these subterms (also, emtpy factor `fun _ => motive` works, in particular for no
 for example `Nat.le.rec` with a motive that make no use of ≤), to get the motive, and embed as
 usual from there.
 Note that embedding factors may contain dependecies (ex: t in Nat.le.rec depends on n and a), and
-and that we should do some reverting for tehse terms.
+and that we should do some reverting for these terms.
 
 -/
 
 
 /-- Should also be needed if we have a smart way of deriving deps :
-of embedding value isn't gnode but expression with gnodes-/
+if embedding value isn't gnode but expression with gnodes-/
 partial def CExpr.getGNodesDepsF (E : CExpr) : List Nat :=
   let rec go (done : List Nat) : List CExpr → List Nat
   | [] => done
