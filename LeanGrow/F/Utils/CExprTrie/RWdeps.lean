@@ -440,6 +440,7 @@ Strategy for rw possibly under binders, in possibly nested applications
   application, where the rw is in a first arguement and a second once depends on it, and where
   the first could a λ, with body further nested application containing the rw pattern ; basicly,
   I'm saying it can be nested applications and λ ∀ !)
+- mini note test18 can also be used when the rw is the head of an application !
 
 For Backward
 - factor motive up to first ∀ λ, make Eq.ndrec Backstep and for equality arguement, proceed:
@@ -453,20 +454,43 @@ For Backward
 
 For forward:
 Same as backstep, but instead of backsteps, let "goal" be bvar, bind thm in a fun, and make it
-head of app who's arg will be term of proof of "goal". For ∀ subtaks in test22_2/test22, add fun
-and refer and use bvar...
+head of app who's arg will be term of proof of "goal". For ∀ subtasks in test22_2/test22, add fun
+and refer and use bvar, since index should be the same !(?!)
 Actually, we should be able to do backsteps this way ??
 
 For convert / congr:
 Whole other thing ?
-
-Case of RW in binding type
-- discard case of head being having dependent on this
-- should integrate well with the other case ?
-- as in convert : we could replace (h : a = b) (H : HEq c = d) by
+- decide whether to try match in the first place: ex, `2.succ` and `x y` will yield `HEq Nat,succ x`
+  and `HEq 2 y`, which may be totally meaningless
+- we can look through the terms, stopping if subterms ≠, and leaving this as goal. Though, if we want
+  to proceed as in test18, we have to figure out the dependencies... Also, we should stop at binders,
+  as this will otherwise cause type incorrect recursor applications.
+- perhaps "figuring out the dependencies" could work by considering the differences from left to right ;
+  the context will be to try to use the schema in test18 ; after we considered the left-most difference,
+  say `a` vs `b`, we look for the next ones, and check if their types have form `β a` and `β b` for a β
+  to be determined. If the next ones are independent of `a` and `b`, then this could be a second "thread".
+  Note that we can still find a β in this case, namely a constant function ! We then proceed like this...
+- A criterion on whether to persue the conversion could be the number of matching leaves of the CExpr
+  (const, etc) (preferably many), and how many "threads" (in the sense ↑) there are (preferably few).
+- A note on conversion à la test18, on reverting :
+  we could replace (h : a = b) (H : HEq c = d) by
   (h : a = b) (H : ∀ _ : a = b, Heq c = d) since we can recover
   H h : HEq c = d, and in the subgoal ∀ _ : a = b, Heq c = d we'll
   gain teh equality as hypothesis, without requiring it to have been
   built in forward-context ...
+  Actually, in the context where we have a trie of goals, this wouldn't be
+  too dramatic: if a back step equired a = b as subgoal, it would be assigned
+  to the goals first appearance. The above note allows for easier forward
+  steps, though.
+
+Case of RW in binding type
+- proceed as above using Eq.ndrec and test22_2/test22 until we arrive at binding type ...
+- we'll try to follow scheme test29 ; ie. show euqality of binding types, factor a γ and use test29
+  to conclude with the final equality ; as we note in test30, fruther binders with types dependent
+  on initial one don't seem to need to be cast ; this seems to be due to the fact that any function
+  in the body having them as arg must have also depended on the init binding, so that types make sense ???!?
+- don't know what to do with test31 and test32 ; can't be used to show eq, but heq ...
+- again that binder may hav been an argument in an application, and we should handle these as in test18
+
 
 -/

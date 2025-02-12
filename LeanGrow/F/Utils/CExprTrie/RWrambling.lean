@@ -743,7 +743,7 @@ example (F : (n : Nat) → Fin n) (G : (x : Fin 42) → Nat) (h : G (F 42) = 37)
   have e2 : Fin 42 = Fin (2*21) := by rw [eq]
   have final : G (cast e2.symm (F (2*21))) = 37 := by
     --have tmp : G (cast rfl (F 42)) = 37 := by rw [cast_eq] ; exact h
-    -- ↓ works directly, but can it be systeatized ?
+    -- ↓ works directly, but can it be systematized ?
     apply @test7 Nat (fun n => Fin 42 = Fin n) 42 rfl
       (fun x y => G (cast y.symm (F x)) = 37) h -- tmp unnecessary
       (2*21) e2 eq (heq_of_eq (proof_irrel rfl e2))
@@ -822,7 +822,11 @@ theorem test22_2 {α : Sort _} (β γ : α → Sort _) (h : ∀ a : α, β a = �
   apply funext ; intro x ; exact h x
 
 
-#exit
+theorem test22_3 {α : Sort _} {δ : α → Sort _} (β γ : (a : α) → δ a) (h : ∀ a : α, β a = γ a) : (fun a : α => β a) = (fun  a : α => γ a) :=
+  by
+  apply funext ; intro x ; exact h x
+
+--#exit
 
 def funT (α : Sort _) := α → α
 
@@ -890,13 +894,27 @@ theorem test24 {α : Sort v} {β: Sort v} [Inhabited α] [Inhabited β]
 #check cast
 
 
+theorem test29 {α β: Sort _} (γ : α → Sort _) (h : α = β) : (∀ a : α, γ a) = (∀ a : β, γ (cast h.symm a)) := by
+  apply @test7 (Sort u_1) (fun T => T = α) α rfl
+    (fun x y => (∀ a : α, γ a) = (∀ a : x, γ (cast y a)))
+    rfl β h.symm h (proof_irrel_heq _ _)
 
-theorem test25 {α : Sort _} (β γ : α → Sort _) (h : (∀ a : α, β a) = (∀ a : α, γ a)) : ∀ a : α, β a = γ a  :=
-  by sorry
+
+theorem test30 {α β: Sort _} (γ : α → Sort _) (δ : (a : α) → γ a → Sort _) (h : α = β) :
+  (∀ a : α, ∀ b : γ a, δ a b) = (∀ a : β, ∀ b : γ (cast h.symm a), δ (cast h.symm a) b ) := by
+    apply test29
+    exact h
+
+theorem test31 {α β: Sort _} (γ : α → Sort _) (h : α = β) : HEq (fun a : α => γ a) (fun a : β => γ (cast h.symm a)) := by
+  apply @test7 (Sort u_1) (fun T => T = α) α rfl
+    (fun x y => HEq (fun a : α => γ a) (fun a : x => γ (cast y a)))
+    HEq.rfl β h.symm h (proof_irrel_heq _ _)
 
 
-theorem test26 {α : Sort _} (β γ : α → Sort _) (h : (∀ a : α, β a) = (∀ a : α, γ a)) : ∀ a : α, β a = γ a  :=
-  by sorry
+theorem test32 {α β : Sort _} {δ : α → Sort _} (γ : (a : α) → δ a) (h : α = β) : HEq (fun a : α => γ a) (fun a : β => γ (cast h.symm a)) := by
+  apply @test7 (Sort u_1) (fun T => T = α) α rfl
+    (fun x y => HEq (fun a : α => γ a) (fun a : x => γ (cast y a)))
+    HEq.rfl β h.symm h (proof_irrel_heq _ _)
 
 
 #exit
