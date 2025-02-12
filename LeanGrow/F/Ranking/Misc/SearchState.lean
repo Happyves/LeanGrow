@@ -44,14 +44,15 @@ partial def BackTree.width (bt : BackTree) : Nat :=
   go 1 [bt]
 
 
-def DepthWidthCoefBack (st : SearchState) : Float :=
-  let d := st.back.bt.depth
-  let w := st.back.bt.width
-  let prod := d * w
-  let norm := d + w
-  prod.toFloat / norm.toFloat
+def DepthWidthCoefBack (widthFactor : Float) (st : SearchState) : Float :=
+  let d := st.back.bt.depth.toFloat
+  let w := st.back.bt.width.toFloat
+  let prod := d * (widthFactor * w)
+  let norm := d + (widthFactor * w)
+  prod / norm
   -- should be largest if d ≈ w
 
+--#exit
 
 partial def ltx_depth (ltx_assemmbly : List (Nat × BackType × Array CExpr)) : Nat :=
   let rec go (sofar : Nat) (known : List (Nat × Nat)) : List (Nat × BackType × Array CExpr) → Nat
@@ -108,12 +109,12 @@ partial def ltx_width (ltx_assemmbly : List (Nat × BackType × Array CExpr)) : 
   degs.foldl (fun M (_,d) => if d > M then d else M) 0
 
 
-def DepthWidthCoefForw (st : SearchState) : Float :=
-  let d := ltx_depth st.ltx_assemmbly
-  let w := ltx_width st.ltx_assemmbly
-  let prod := d * w
-  let norm := d + w
-  prod.toFloat / norm.toFloat
+def DepthWidthCoefForw (widthFactor : Float) (st : SearchState) : Float :=
+  let d := (ltx_depth st.ltx_assemmbly).toFloat
+  let w := (ltx_width st.ltx_assemmbly).toFloat
+  let prod := d * (widthFactor * w)
+  let norm := d + (widthFactor * w)
+  prod / norm
 
 
 /-
