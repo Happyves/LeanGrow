@@ -425,11 +425,43 @@ def makeMotiveRWInstance (deps : List DepDagNode) (Args : List CExpr) (base : CE
 
 /-
 Roadmap:
-
 - rw of arg in application with no prior binds : test18
 - auto casting and proof_irrel for forward and backwar in test16 and test17
 - nested applications : test27 and the one above test19
 - rewriting binding types : test28 (may censor case of dependent head, so that we only cast args)
 - rewriting under binders via test22_2 and test22, wraped arround others
+  rewriting under binders is a big deal, since if we embed the thm and we find a pattern with
+  bvars then we can't have that equality as a valid type, as we'd have loose bvars...
+
+Strategy for rw possibly under binders, in possibly nested applications
+- Top down ; assumes we know the type correct replacements (ie. with cast and proof_irrel
+  for forward and backward steps, and corresponding replacements at conversion/congruence)
+- We have to find out the top-most affcted application (recall that we could have a top most
+  application, where the rw is in a first arguement and a second once depends on it, and where
+  the first could a λ, with body further nested application containing the rw pattern ; basicly,
+  I'm saying it can be nested applications and λ ∀ !)
+
+For Backward
+- factor motive up to first ∀ λ, make Eq.ndrec Backstep and for equality arguement, proceed:
+- make Intro Backsteps after Backstep of test22_2/test22, repeated
+- do so until we reach top-most affected application
+- for affected application, proceed à la test18, where the eq is that of the argument to its
+  rewritten one, which will then be a new goal solved by further backsteps
+- at binders, test22_2/test22
+- at the very end, use thm backstep (mini note ; the unification from pattern search may contain
+  loose bvars), so instead reunify, where the gnodes should now be introed-gnodes
+
+For forward:
+Same as backstep, but instead of backsteps, let "goal" be bvar, bind thm in a fun, and make it
+head of app who's arg will be term of proof of "goal". For ∀ subtaks in test22_2/test22, add fun
+and refer and use bvar...
+Actually, we should be able to do backsteps this way ??
+
+For convert / congr:
+Whole other thing ?
+
+Case of RW in binding type
+- discard case of head being having dependent on this
+- should integrate well with the other case ?
 
 -/
