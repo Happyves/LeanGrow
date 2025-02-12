@@ -32,6 +32,8 @@ Example of `fun n : Nat => n` that won't be an isRec, but `(fun n : Nat => n) 42
 be, and we only find out after reduction. Actually, `Nat.add n m` won't be flaged as isRec,
 and doesn't reduce. We can add isRecHeaded as flag ?
 
+Don't induct on bvars, the recursor applicaiton won't be type correct.
+
 Reverting works as follows : we consider a gnode and all its dependecies (downward,
 ie. all other gnodes that depend on it ; might be synced with rankings ?) ; assume the goal depends on the gnode.
 We then add a new goal G that is a ∀ of the gnode and its dependencies, on top of the
