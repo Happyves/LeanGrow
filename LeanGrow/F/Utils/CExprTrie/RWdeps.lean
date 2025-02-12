@@ -463,5 +463,10 @@ Whole other thing ?
 Case of RW in binding type
 - discard case of head being having dependent on this
 - should integrate well with the other case ?
+- as in convert : we could replace (h : a = b) (H : HEq c = d) by
+  (h : a = b) (H : ∀ _ : a = b, Heq c = d) since we can recover
+  H h : HEq c = d, and in the subgoal ∀ _ : a = b, Heq c = d we'll
+  gain teh equality as hypothesis, without requiring it to have been
+  built in forward-context ...
 
 -/

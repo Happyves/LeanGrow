@@ -72,3 +72,67 @@ partial def CExpr.getGNodesDepsF (E : CExpr) : List Nat :=
         | .proj _ _ b => go done (b :: L)
         | _ => go done L
   go [] [E]
+
+
+inductive LoG where
+| ofG (_ : Nat) | ofL (tag : Nat) (pos : Nat)
+deriving Inhabited, Repr, BEq
+
+/-- Should also be needed if we have a smart way of deriving deps :
+if embedding value isn't l/gnode but expression with l/gnodes ;
+IMPORTANT: will only consider taged lnodes-/
+partial def CExpr.getLGNodesDepsF (E : CExpr) : List LoG :=
+  let rec go (done : List LoG) : List CExpr → List LoG
+  | [] => done
+  | nx :: L =>
+        match nx with
+        | .gnode i _ => go (.ofG i :: done) L
+        | .lnode p _ (.some t) => go (.ofL t p :: done) L
+        | .app f a => go done (f :: a :: L)
+        | .lam _ t b _ => go done (t :: b :: L)
+        | .forallE _ t b _ => go done (t :: b :: L)
+        | .letE _ t v b _ => go done (t :: v :: b :: L)
+        | .proj _ _ b => go done (b :: L)
+        | _ => go done L
+  go [] [E]
+
+
+partial def CExpr.getDepsLtx (ltx : List (Nat × CExpr)) : List (Nat × List Nat × List Nat) :=
+      let rec go (deps : List (Nat × List Nat × List Nat)) : List (Nat × CExpr) → List (Nat × List Nat × List Nat)
+            | [] => deps
+            | (idx,type) :: xs =>
+                  let d := type.getGNodesDepsF
+                  let (ndeps,rest) := deps.foldl (fun (sofar,rest) (i,kids,P) =>
+                        if rest.contains i then ((i,idx :: kids,P) :: sofar, rest.erase i) else ((i,kids,P) :: sofar, rest)
+                        ) ([], d)
+                  let restWParents := rest.foldl (fun sofar n =>
+                        match ltx.find? (fun y => y.1 == n) with
+                        | .some (_,T) => (n,T.getGNodesDepsF) :: sofar
+                        | _ => sofar -- shouldn't
+                        ) []
+                  go ((idx, [], d) :: ((restWParents.map (fun (x,t) => (x,[idx],t))) ++ ndeps)) xs
+      go [] ltx
+
+/-
+In  ↑↓, the dependent gnodes may be from children in other nodes of the IntroTree !
+Since we consider dependecies in the context of a specific goal, things are as follows:
+If we want to revert gnodes wrt. a goal, we cosider the nodes in the IntroTree
+*on the path from the root to associated to that goal*.
+So perhaps each node should have a `List (Nat × List Nat)` collecting info on dependecies,
+that consideres all gnodes among the ancestor nodes and itself, and considers at children
+only gnodes in that path as well.
+-/
+
+partial def CExpr.getDepsLtxOnline (deps : List (Nat × List Nat × List Nat))
+      (newIdx : Nat) (newType : CExpr) : List (Nat × List Nat × List Nat) :=
+      let d := newType.getGNodesDepsF
+      let update := deps.foldl (fun sofar (i,kids,parents) =>
+            if d.contains i then (i,newIdx :: kids,parents) :: sofar else (i,kids,parents) :: sofar
+            ) []
+      (newIdx, [], d) :: update
+
+
+
+def makeRevertOrderingForGnodes (deps : List (Nat × List Nat × List Nat)) (start : Nat) : List Nat :=
+      let rec go (seen : List Nat) (frontier : List Nat) (sofar : List Nat)
+-- case of digraph cube with orient as lex order (ie. dependencies among kids...)
