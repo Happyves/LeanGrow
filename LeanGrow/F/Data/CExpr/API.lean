@@ -100,7 +100,23 @@ partial def CExpr.hasGNodesF (E : CExpr) : Bool :=
 
 
 partial def CExpr.hasNodesF (E : CExpr) : Bool :=
-      E.hasLNodes || E.hasGNodesF
+      E.hasLNodes || E.hasGNodesF -- terrible
+
+
+partial def CExpr.hasFailed (E : CExpr) : Bool :=
+      let rec go : List CExpr → Bool
+      | [] => false
+      | nx :: L =>
+            match nx with
+            | .failed => true
+            | .app f a => go (f :: a :: L)
+            | .lam _ t b _ => go (t :: b :: L)
+            | .forallE _ t b _ => go (t :: b :: L)
+            | .letE _ t v b _ => go (t :: v :: b :: L)
+            | .proj _ _ b => go (b :: L)
+            | _ => go L
+      go [E]
+
 
 def CExpr.toExpr : CExpr → Option Expr
 | .lnode _ _ _ | .gnode _ _ => .none
