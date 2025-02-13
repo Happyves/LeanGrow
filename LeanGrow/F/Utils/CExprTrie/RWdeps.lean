@@ -233,6 +233,9 @@ def HEq.cast {p : (T : Sort _) → T → Sort _} {a : α} {b : β} (h₁ : HEq a
   HEq.ndrecOn h₁ h₂
 
 
+
+--#exit
+
 /-
 There are 3 "versions" of rewriting:
 - conversion : we want to unify two terms, that share a motive
@@ -460,6 +463,7 @@ Actually, we should be able to do backsteps this way ??
 
 For convert / congr:
 Whole other thing ?
+- conversion in the context of unification will do two things : conversion rewrites and lnode assignments
 - decide whether to try match in the first place: ex, `2.succ` and `x y` will yield `HEq Nat,succ x`
   and `HEq 2 y`, which may be totally meaningless
 - we can look through the terms, stopping if subterms ≠, and leaving this as goal. Though, if we want
@@ -493,8 +497,12 @@ Case of RW in binding type
 - again that binder may hav been an argument in an application, and we should handle these as in test18
 
 
-Notes:
-- `pi_congr` is our test will ∀ ext
+Study takeaways:
+- use `pi_congr`, though indirectly via copy, for better maintenance
+- 4 cases ; λ, ∀, let, appli
+- grow downwards
+- cast / proof_irrefl
+
 
 -/
 

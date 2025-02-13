@@ -916,15 +916,11 @@ theorem test32 {α β : Sort _} {δ : α → Sort _} (γ : (a : α) → δ a) (h
     (fun x y => HEq (fun a : α => γ a) (fun a : x => γ (cast y a)))
     HEq.rfl β h.symm h (proof_irrel_heq _ _)
 
+theorem test33 {α β: Sort _} (γ : α → Sort _) (h : α = β) : (fun a : α => γ a) = (cast (by rw [h]) (fun a : β => γ (cast h.symm a))) := by
+  apply @test7 (Sort u_1) (fun T => T = α) α rfl
+    (fun x y => (fun a : α => γ a) = cast (by rw [y]) (fun a : x => (γ (cast y a))))
+    (by dsimp) β h.symm h (proof_irrel_heq _ _)
 
-noncomputable
-def test33 {α : Sort _} {β γ: α → Sort _} {δ : (a : α) → β a → γ a → Sort _}
-  {a : α} {b : β a} {c : γ a} {d : δ a b c}
-  {motive : (w : α) → (x : β w) → (y : γ w) → (z : δ w x y) →  Sort _} (H : motive a b c d)
-  {e : α} {f : β e} {g : γ e} {h : δ e f g}
-  (ta : a = e) (tb : HEq b f) (tc : HEq c g) (td : HEq d h) : motive e f g h :=
-    by -- is how convert does it ?
-    have one : (∀ (x : β a) (y : γ a) (z : δ a x y), motive a x y z) = ∀ (x : β e) (y : γ e) (z : δ e x y), motive e x y z := by rw [ta]
 
 #exit
 
