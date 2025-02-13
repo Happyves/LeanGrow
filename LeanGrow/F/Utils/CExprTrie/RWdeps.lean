@@ -493,4 +493,10 @@ Case of RW in binding type
 - again that binder may hav been an argument in an application, and we should handle these as in test18
 
 
+Notes:
+- `pi_congr` is our test will ∀ ext
+
 -/
+
+
+#check pi_congr
