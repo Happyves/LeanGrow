@@ -103,3 +103,19 @@ def translateLocalContext_training (allowed extEnv : ConstMap) (ltx : LocalConte
 
 -- TODO: Finally, we should discard samples, even if hyps and goal have passed unfolding,
 -- if the theorem name of the sample is not among the allowed enviroenment!
+
+
+/-
+Actually, the above approach is kind of shit...
+- For types containing proofs, experiment with replacing them with an fvar/gnode and
+  adding a binding so that this new fvar/gnodes type is that of the proof (keep "unfold"
+  on that type though)
+- For inductive types and associated recursors, replace them with fvar/gnode who's type
+  is thier type (ex : `Sort 1`), and recursors - though they should almost never appear
+  in types - shouls also be abstracted this way
+- Durring sampling, "skip" thms not in the actual environements.. or abstract them ...
+
+
+Other aspects:
+- check if proofs contain sorry, and if they do discard them entirely ?
+-/
