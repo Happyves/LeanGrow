@@ -269,6 +269,29 @@ ackermann.match_1._cstage1
 
 #print fac
 
+#check Nat.rec
+
+
+def Nat.recEqPre (t : Nat) {motive : Nat → Sort u}
+  (zero : t = 0 → motive Nat.zero) (succ : (n : Nat) → (t = n → (motive n)) → (t = n.succ → motive n.succ)) :
+    motive t :=
+  (@Nat.rec (fun x => t = x → motive x) zero succ t) rfl
+  -- not a good alternative to reverting, as induction step makes no sense
+
+
+
+inductive Wector (T : Type) : Nat → Type where
+| nil : Wector T Nat.zero
+| cons (e : T) (n : Nat) (_ : Wector T n) : Wector T (Nat.succ n)
+
+#check Wector
+#check Wector.nil
+#check Wector.cons
+
+#check Wector.rec
+
+
+
 -- # Exfalso
 
 

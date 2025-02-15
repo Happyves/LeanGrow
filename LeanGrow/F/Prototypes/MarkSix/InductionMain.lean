@@ -31,6 +31,8 @@ types of term and subterms, and should be maintained durring operations.
 Example of `fun n : Nat => n` that won't be an isRec, but `(fun n : Nat => n) 42` should
 be, and we only find out after reduction. Actually, `Nat.add n m` won't be flaged as isRec,
 and doesn't reduce. We can add isRecHeaded as flag ?
+Or maybe we should move flags durring whnf/reduction ?
+
 
 Don't induct on bvars, the recursor applicaiton won't be type correct.
 
@@ -136,5 +138,17 @@ partial def CExpr.getDepsLtxOnline (deps : List (Nat × List Nat × List Nat))
 
 
 def makeRevertOrderingForGnodes (deps : List (Nat × List Nat × List Nat)) (start : Nat) : List Nat :=
-      let rec go (seen : List Nat) (frontier : List Nat) (sofar : List Nat)
+      -- let rec go (seen : List Nat) (frontier : List Nat) (sofar : List Nat)
 -- case of digraph cube with orient as lex order (ie. dependencies among kids...)
+-- invariant ? : gnode can't depend on gnode with higher index, and we can use this to break ties or do ordering ?
+      sorry
+
+
+/-
+More notes:
+
+- when checking if term is of an inductive type, we should get the head, check that it is a recursor,
+  and check that it is fully applied in indices and parameters.
+
+
+-/

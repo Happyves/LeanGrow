@@ -300,8 +300,6 @@ partial def goImp (i : Import) : IO Tree := do
     return .node i.module Ts
 
 
-
-
 elab "getImportTree" n:name : command => do
   let mFile ← findOLean n.getName
   let (data,_) ← readModuleData mFile
@@ -309,6 +307,7 @@ elab "getImportTree" n:name : command => do
   let Ts ← (is.mapM goImp : IO _)
   let res := Tree.node n.getName Ts
   IO.println (repr res)
-  
--- execution caused a complete freeze XD
 
+
+-- getImportTree `Mathlib.Data.Nat.Defs
+-- caused massive freeze ...

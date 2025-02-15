@@ -12,9 +12,6 @@ open Lean Meta Mathlib Elab Tactic
 
 #check TermCongr.mkCongrOf
 
-#check MVarId.revert
-
-#check MVarId.revertAll
 
 #check MVarId.congrN
 
