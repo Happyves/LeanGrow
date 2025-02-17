@@ -157,7 +157,7 @@ elab "readOlean?" : command => do
         | .ok E => E
         | _ => e
       | _ => e) env
-    setEnv env2
+    setEnv env2 -- conside note below
 
 
 #check_failure Environment.mk --is private :<
@@ -170,6 +170,12 @@ readOlean?
 --#eval myConst --fail
 #reduce myConst
 
+
+#eval (do let res := (← getEnv).header.imports.map Import.module ; IO.println res : CoreM Unit)
+-- Indeed, when we set the environement to the new one
+-- we didin't add imports !!!
+
+--#exit
 
 #check Environment.extensions
 #check EnvExtensionState
@@ -311,3 +317,37 @@ elab "getImportTree" n:name : command => do
 
 -- getImportTree `Mathlib.Data.Nat.Defs
 -- caused massive freeze ...
+
+-- adapted from importGraph
+
+def MyImportsOf (env : Environment) (n : Name) : Array Name :=
+  if n = env.header.mainModule then
+    env.header.imports.map Import.module
+  else match env.getModuleIdx? n with
+    | .some idx => env.header.moduleData[idx.toNat]!.imports.map Import.module |>.erase `Init
+    | .none => #[]
+
+partial def importGraph (env : Environment) : Tree :=
+  let main := env.header.mainModule
+  let imports := env.header.imports.map Import.module
+  let reses := imports.map (process env)
+  .node main reses
+  -- imports.foldl (fun m i => process env i m) (({} : NameMap _).insert main imports)
+  --   |>.erase Name.anonymous
+where
+  process (env) (i) : Tree :=
+    let imports := MyImportsOf env i
+    if imports.isEmpty
+    then
+      .leaf i
+    else
+      let reses := imports.map (process env)
+      .node i reses
+      --imports.foldr (fun i m => process env i m) (m.insert i imports)
+
+elab "getImportTree2" n:name : command => do
+  let mFile ← findOLean n.getName
+  let (data,_) ← readModuleData mFile
+  IO.println (repr res)
+
+-- getImportTree2 `Mathlib.Data.Nat.Defs
