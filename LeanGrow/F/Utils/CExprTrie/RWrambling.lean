@@ -865,6 +865,7 @@ def test23 {α : Sort _} {β γ: α → Sort _} {δ : (a : α) → β a → γ a
     rw [← e3]
     exact H
 
+#print test23
 
 /-
 So if pattern is found under binders,
