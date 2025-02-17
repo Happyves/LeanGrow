@@ -1,5 +1,9 @@
 
 import LeanGrow.F.Data.CExpr.API
+import LeanGrow.F.Utils.List
+import Mathlib.Data.List.Sort
+import LeanGrow.F.Prototypes.MarkSeven.trTypes
+
 
 open Lean
 
@@ -45,9 +49,13 @@ the `ofRW` BackType of Mark 7, since the effect of assembly will be the same: th
 should be `fun x => x gnode1 gnode2 ...`, and it should have 1 argument, which is the goal
 will the ∀ abstractions. This should be done for lnodes too : a priori, we treat them the same
 as gnodes (ie. add them as args as above) ; they should be replace by their assigned value
-after assembly ; there is a twist though : we should prehaps only
-revert those who's type doesn't contain lnodes, since otherwise we won't want to intro them afterwards
-as this breaks the fact that we have no lnodes in ltx.
+after assembly ; there is a twist though : we should prehaps only revert those whose type doesn't
+contain lnodes, since otherwise we won't want to intro them afterwards
+as this breaks the fact that we have no lnodes in ltx. Actually, only revert those which don't have
+dependence-descendents, as we would have to revert them ???
+This should be considered even if we induct on gnodes, but the motive would contains lnodes !
+Actually, we won't introduce lnodes to ltx if we revert all lnodes (and their dependencies)
+that are contained in the motive.
 
 So the ansatz for applying recusors as backsteps (and this generalises to other thms) is that we'll
 have an application of lnodes with lnode head as goal of thm. We should get the types of the lnodes
@@ -60,6 +68,7 @@ and that we should do some reverting for these terms.
 
 -/
 
+--#exit
 
 /-- Should also be needed if we have a smart way of deriving deps :
 if embedding value isn't gnode but expression with gnodes-/
@@ -135,13 +144,89 @@ partial def CExpr.getDepsLtxOnline (deps : List (Nat × List Nat × List Nat))
             ) []
       (newIdx, [], d) :: update
 
+/-
+For IntroTrees,nothing changes
+-/
+
+--#exit
+
+partial def makeRevertOrderingForGnodes (deps : List (Nat × List Nat × List Nat)) (start : Nat) : List Nat :=
+      let rec go (frontier : List Nat) (sofar : List Nat) : List Nat :=
+            match frontier with
+            | [] => sofar
+            | nx :: more =>
+                  match deps.find? (fun x => x.1 == nx) with
+                  | .none => []
+                  | .some (_,kids,_) =>
+                        let next := kids.foldl (fun l k => l.orderedInsertOrLeave (· ≤ ·) k) more
+                        go next (nx :: sofar)
+      go [start] []
+
+partial def makeRevertOrderingForGnodesMany (deps : List (Nat × List Nat × List Nat)) (start : List Nat) : List Nat :=
+      let rec go (frontier : List Nat) (sofar : List Nat) : List Nat :=
+            match frontier with
+            | [] => sofar
+            | nx :: more =>
+                  match deps.find? (fun x => x.1 == nx) with
+                  | .none => []
+                  | .some (_,kids,_) =>
+                        let next := kids.foldl (fun l k => l.orderedInsertOrLeave (· ≤ ·) k) more
+                        go next (nx :: sofar)
+      go (start.insertionSort (· ≤ ·)) []
+
+/-
+In both ↑, we rely on the fact that a gnode cannot depend on genodes with lower index.
+So for situation such as revreting x in `(x : Nat) (y z : Fin x) (h : @Fin.add x y z = 42)`,
+h will have higher gnode index, so that when y z and h are in the frontier, y and z will get
+added before h.
+-/
+
+#check Nat.rec
 
 
-def makeRevertOrderingForGnodes (deps : List (Nat × List Nat × List Nat)) (start : Nat) : List Nat :=
-      -- let rec go (seen : List Nat) (frontier : List Nat) (sofar : List Nat)
--- case of digraph cube with orient as lex order (ie. dependencies among kids...)
--- invariant ? : gnode can't depend on gnode with higher index, and we can use this to break ties or do ordering ?
-      sorry
+def getLnodeDecendents (lnodeToRev_WType : List (Nat × Nat × CExpr)) (target_goal_id : Nat) (bt : BackTree) : List (Nat × Nat × CExpr) :=
+      let rec skipModeKeep? (id : Nat) : List (Nat × Nat × CExpr) → Bool
+            | [] => true
+            | (x,_) :: xs => if id == x then false else skipModeKeep? id xs
+      let rec go (skipMode : Bool) (sofar : List (Nat × Nat × CExpr)) :  BackTree →  List (Nat × Nat × CExpr)
+            -- | [] => sofar
+            -- | nx :: more =>
+            --       match nx with
+                  | .fail => []
+                  | .ofAssign _ | .ofUni _ _ => []
+                  | .ofBack id _ bdirs gdirs args =>
+                        let skip? := if skipMode then skipModeKeep? id sofar else true
+                        let next? := gdirs.findIdx? (fun l => l.contains target_goal_id)
+                        match next? with
+                        | .none => []
+                        | .some I =>
+                              if skip?
+                              then
+                                    go true sofar (args.get! I)
+                              else
+                                    sorry -- go false here
+                              /-
+                              go over all args, noting position, expecting ofGoal/ofPropa/ofIntro/ofAssign/ofUni
+                              for each (at pos p), get the type (t) and check if it has lnodes among those of sofar,
+                              and if it does, add entry (id,p,t) to sofar ;
+                              Then, recurse on the argument I
+                              -/
+                  -- | .ofPropa _ _ T _ _ =>
+                  -- | ofGoal (id : Nat) (type : CExpr) (bdirs : (List Nat)) (gdirs : (List Nat)) (args : List BackTree)
+                  -- | ofIntro (gid : Nat) (type_head : CExpr) (gnIdxAndTy : List (Nat × CExpr)) (bdirs : (List Nat)) (gdirs : (List Nat)) (args : List BackTree)
+      sorry -- go with skip mode true
+
+#check Array.findIdx?
+
+
+/-
+Reverting lnodes:
+When reverting lnodes in a motive we want to induct on, we walk down the back tree to find dependecies.
+We only collect the following dependencies: lnodes that depend on prior ones (starting with those of the
+motive) corresponding to backsteps taken up until the current goal. We revert those, as for the goal we're
+solving to be a solution, all these lnodes would have to be solved anyway !
+
+-/
 
 
 /-
@@ -150,5 +235,7 @@ More notes:
 - when checking if term is of an inductive type, we should get the head, check that it is a recursor,
   and check that it is fully applied in indices and parameters.
 
+- **random but important** bdirs and gdirs are useless for ofPropa ofGoal and ofIntro ! Only makes
+  sense in ofBack as we know which branch to pick
 
 -/
