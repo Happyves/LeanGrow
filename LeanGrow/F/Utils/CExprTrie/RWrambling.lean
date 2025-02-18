@@ -945,7 +945,6 @@ theorem testS1 (x y : testStruc α β) (h : x = y) : x.snd = cast (show β y.fst
 #check_failure testStruc.ext
 -- and we can't make use of ext, unless we generate it for all structures that don't have it
 
-theorem testS2 (x y : testStruc Nat (fun n => n = 4)) (P : testStruc Nat (fun n => n = 4) → Prop) (hm : P ⟨2+2,rfl⟩) : x.snd = cast (show β y.fst = β x.fst by rw [h]) y.snd :=
 
 
 
