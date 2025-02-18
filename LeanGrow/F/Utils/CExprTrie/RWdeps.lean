@@ -548,6 +548,8 @@ def mkRerverted (fctx : FixCtx) (dns : List DepDagNode)
     (motive.mkApp ArgsForMotive) --??
     (HEqs ++ Types.reverse) -- no reverse HEqs cause they should as output ?
 
+
+
 /--
 goal is to preduce the expr of the motive of the Eq.rec
 fun e _ => {f : β e} → {g : γ e} → {h : δ e f g} → HEq b f → HEq c g → HEq d h → motive e f g h
@@ -590,3 +592,153 @@ def mkRervertedAsMotive (fctx : FixCtx) (dns : List DepDagNode)
   -- ↓ universes
   let EQ := .app (.app (.app (.const `Eq []) T) (Args.get! split)) (.bvar 0)
   .lam `grow (dns.get! split).type (.lam `grow EQ (inner) .default) .default
+
+
+
+/--
+goal is to preduce the expr of goals
+{f : β a} → {g : γ a} → {h : δ a f g} → HEq b f → HEq c g → HEq d h → motive a f g h
+{g : γ a} → {h : δ a b g} → HEq c g → HEq d h → motive a b g h
+from test23
+-/
+def mkRervertedRWed (fctx : FixCtx) (dns : List DepDagNode)
+  (motive : CExpr)
+  (Args rwedArgs : List CExpr)
+  (init : Nat) -- debt
+  (split : Nat) -- will be where we split from args to bvars !
+  : CExpr :=
+  let toRev := dns.drop split
+  let UseArgs := (Args.take (split - 1)) ++ [(rwedArgs.get! split)]  -- difference here
+  let bvarsForEntryTypes := (List.range (Args.length - split)).reverse
+  let ArgsForTypes := (UseArgs) ++ (bvarsForEntryTypes.map (CExpr.bvar))
+  let Types := toRev.map (fun dn => dn.factoredType fctx ArgsForTypes init)
+  let ArgsForHEqTypes := UseArgs ++ ((bvarsForEntryTypes.map (· + (Args.length - split))).map (CExpr.bvar))
+  let TypesForHEq := toRev.map (fun dn => dn.factoredType fctx ArgsForHEqTypes init)
+  let stdTypes := toRev.map (fun dn => dn.factoredType fctx Args init)
+  let rec mkHeqs (done : List CExpr) : List CExpr → List CExpr → List CExpr → List CExpr
+    | fromType :: fTs, fromArg :: fAs, toType :: Tts =>
+        -- fix universes in ↓
+        let next := .app (.app (.app (.app (.const `HEq []) fromType) fromArg) toType) (.bvar toRev.length) -- ± 1 ?
+        -- the bars refering to the argument will all be the same, as the distance in the lambdas
+        -- stays the same : we refer to the next arg, but we added an HEq to the binding
+        mkHeqs (next :: done) fTs fAs Tts
+    | [], [], [] => done
+    | _,_,_ => []
+  let HEqs := mkHeqs [] stdTypes ArgsForHEqTypes TypesForHEq
+  let ArgsForMotive := UseArgs ++ ((bvarsForEntryTypes.map (· + (Args.length - split) + HEqs.length)).map (CExpr.bvar))
+  let rec mkAll (head : CExpr) : List CExpr → CExpr
+    | [] => head
+    | t :: ts => mkAll (.forallE `grow t head .default) ts
+  mkAll
+    (motive.mkApp ArgsForMotive) --??
+    (HEqs ++ Types.reverse) -- no reverse HEqs cause they should as output ?
+
+--#exit
+
+/--
+goal is to preduce the expr of the motive of the Eq.rec
+@Eq.rec (β a) b (fun f _ => {g : γ a} → {h : δ a f g} → HEq c g → HEq d h → motive a f g h) _ _ e1
+@Eq.rec (γ a) c (fun g _ => {h : δ a b g} → HEq d h → motive a b g h) _ _ e2
+from test23
+-/
+def mkEqRecRerverted_asLam (fctx : FixCtx) (dns : List DepDagNode)
+  (motive : CExpr)
+  (Args rwedArgs : List CExpr) (eqthm : CExpr) -- for the first, hyp, for the others eq_of_heq
+  (init : Nat) -- debt
+  (split : Nat) :
+  CExpr :=
+  let dn := dns.get! split
+  .lam `nextgoal
+    (mkRervertedRWed fctx dns motive Args rwedArgs init split)
+    ((CExpr.const `Eq.rec []).mkApp -- universes !!
+      [dn.factoredType fctx Args init,
+       Args.get! split,
+       mkRervertedAsMotive fctx dns motive Args init split,
+       .bvar 0, -- next goal
+       rwedArgs.get! split,
+       eqthm
+      ])
+    .default
+
+
+#check eq_of_heq
+
+/--
+And it is here we realize we're doing nonsense, becasue this doesn't
+come close to the test23.proof_2 test23.proof_3 terms... Essenstially
+the input heq will be bound variable ?
+-/
+def mkEqOfHEqs (fctx : FixCtx) (dns : List DepDagNode)
+  (Args rwedArgs : List CExpr)
+  (init : Nat) -- debt
+  (split : Nat) :
+  CExpr :=
+  let dn := dns.get! split  -- should refactor functions so that we query on index split only once
+  (CExpr.const `eq_of_heq []).mkApp --universes !!
+    [dn.factoredType fctx Args init,
+     Args.get! split,
+     rwedArgs.get! split, -- should be bvar ?!
+     .bvar 0 -- figure out the proper index
+    ]
+
+
+/--
+goal is to preduce the expr of passing from goal
+{f : β a} → {g : γ a} → {h : δ a f g} → HEq b f → HEq c g → HEq d h → motive a f g h
+to HEq c g → HEq d h → motive a f g h
+{g : γ a} → {h : δ a b g} → HEq c g → HEq d h → motive a b g h
+to HEq d h → motive a b g h
+from test23
+-/
+def mkIntroOfRev (fctx : FixCtx) (dns : List DepDagNode)
+  (motive : CExpr)
+  (Args : List CExpr)
+  (init : Nat) -- debt
+  (split : Nat) :
+  CExpr :=
+  let toRev := dns.drop split
+  let UseArgs := Args.take split
+  let bvarsForEntryTypes := (List.range (Args.length - split)).reverse
+  let ArgsForTypes := (UseArgs) ++ (bvarsForEntryTypes.map (CExpr.bvar))
+  let Types := toRev.map (fun dn => dn.factoredType fctx ArgsForTypes init)
+  let ArgsForHEqTypes := UseArgs ++ ((bvarsForEntryTypes.map (· + (Args.length - split))).map (CExpr.bvar))
+  let TypesForHEq := toRev.map (fun dn => dn.factoredType fctx ArgsForHEqTypes init)
+  let stdTypes := toRev.map (fun dn => dn.factoredType fctx Args init)
+  let rec mkHeqs (done : List CExpr) : List CExpr → List CExpr → List CExpr → List CExpr
+    | fromType :: fTs, fromArg :: fAs, toType :: Tts =>
+        -- fix universes in ↓
+        let next := .app (.app (.app (.app (.const `HEq []) fromType) fromArg) toType) (.bvar toRev.length) -- ± 1 ?
+        -- the bars refering to the argument will all be the same, as the distance in the lambdas
+        -- stays the same : we refer to the next arg, but we added an HEq to the binding
+        mkHeqs (next :: done) fTs fAs Tts
+    | [], [], [] => done
+    | _,_,_ => []
+  let HEqs := mkHeqs [] stdTypes ArgsForHEqTypes TypesForHEq
+  let ArgsForMotive := UseArgs ++ ((bvarsForEntryTypes.map (· + (Args.length - split) + HEqs.length)).map (CExpr.bvar))
+  let rec mkFun (head : CExpr) : List CExpr → CExpr
+    | [] => head
+    | t :: ts => mkFun (.forallE `grow t head .default) ts
+  let forRW := HEqs.head!
+  let nextgoal := HEqs.tail
+  let rec mkAll (head : CExpr) : List CExpr → CExpr
+    | [] => head
+    | t :: ts => mkAll (.forallE `grow t head .default) ts
+  let inner := mkAll
+    (motive.mkApp ArgsForMotive) --??
+    nextgoal
+  mkFun inner (forRW :: Types.reverse)
+
+/-
+TODO : make sense of this mess
+Basicly we'll have to redo this entirely.
+Focus on testing and the printed output expr of tests from rambling
+-/
+
+
+-- TODO: for the week : binders ; find matching terms and motive for convert and congr
+
+/-
+**Big note**
+We should expand Expr.proj to the corresponding function application, so that rewriting under
+projections comes down to rewriting under applications ?
+-/

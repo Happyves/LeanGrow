@@ -867,6 +867,10 @@ def test23 {α : Sort _} {β γ: α → Sort _} {δ : (a : α) → β a → γ a
 
 #print test23
 
+#print test23.proof_1
+#print test23.proof_2
+#print test23.proof_3
+
 /-
 So if pattern is found under binders,
 
@@ -921,6 +925,28 @@ theorem test33 {α β: Sort _} (γ : α → Sort _) (h : α = β) : (fun a : α 
   apply @test7 (Sort u_1) (fun T => T = α) α rfl
     (fun x y => (fun a : α => γ a) = cast (by rw [y]) (fun a : x => (γ (cast y a))))
     (by dsimp) β h.symm h (proof_irrel_heq _ _)
+
+
+structure testStruc (α : Sort _) (β : α → Sort _) where
+  fst : α
+  snd : β fst
+
+#check testStruc.fst
+#check testStruc.snd
+
+#check_failure Lean.Expr.proj -- IMPORTS
+
+theorem testS1 (x y : testStruc α β) (h : x = y) : x.snd = cast (show β y.fst = β x.fst by rw [h]) y.snd :=
+  by -- cast required ...
+  apply @test7 (testStruc α β) (fun p : (testStruc α β) => β p.fst = β x.fst) x rfl
+    (fun y yp => x.snd = cast yp y.snd) rfl y (show β y.fst = β x.fst by rw [h]) h (proof_irrel_heq _ _)
+
+
+#check_failure testStruc.ext
+-- and we can't make use of ext, unless we generate it for all structures that don't have it
+
+theorem testS2 (x y : testStruc Nat (fun n => n = 4)) (P : testStruc Nat (fun n => n = 4) → Prop) (hm : P ⟨2+2,rfl⟩) : x.snd = cast (show β y.fst = β x.fst by rw [h]) y.snd :=
+
 
 
 #exit
