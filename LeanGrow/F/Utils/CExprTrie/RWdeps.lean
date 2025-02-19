@@ -735,10 +735,126 @@ Focus on testing and the printed output expr of tests from rambling
 -/
 
 
+
+
 -- TODO: for the week : binders ; find matching terms and motive for convert and congr
 
+#check pi_congr
+#check funext
+
+theorem test22_2 {α : Sort _} (β γ : α → Sort _) (h : ∀ a : α, β a = γ a) : (fun a : α => β a) = (fun  a : α => γ a) :=
+  by -- isn't exactly funext
+  apply funext ; intro x ; exact h x
+
+def mkFunExtish (fctx : FixCtx) (bindType bindBodyL bindBodyR proof_wLooseBvar : CExpr) : CExpr :=
+  let αT := CExpr.inferType fctx bindType -- with bvarcontext ! get universes for appli of test22_2 too
+  let β := .lam `grow bindType bindBodyL .default
+  let βT := CExpr.inferType fctx β
+  -- ↑↓ this makes sense because the bvar will indeed refer to a
+  let γ := .lam `grow bindType bindBodyR .default
+  let γT := CExpr.inferType fctx γ
+  (CExpr.const `test22_2 []).mkApp -- fix universes
+    [αT,βT,γT, .lam `grow bindType proof_wLooseBvar .default]
+    -- so for proof_wLooseBvar, we expect a loose bvar refering to `a` of test22_2
+    -- A cool fact is that it will be the same bvar as in bindBodyL bindBodyR !
+
+-- exactly the same
+def mkPiCongr (fctx : FixCtx) (bindType bindBodyL bindBodyR proof_wLooseBvar : CExpr) : CExpr :=
+  let αT := CExpr.inferType fctx bindType -- with bvarcontext ! get universes for appli of test22_2 too
+  let β := .lam `grow bindType bindBodyL .default
+  let βT := CExpr.inferType fctx β
+  -- ↑↓ this makes sense because the bvar will indeed refer to a
+  let γ := .lam `grow bindType bindBodyR .default
+  let γT := CExpr.inferType fctx γ
+  (CExpr.const `pi_congr []).mkApp -- fix universes
+    [αT,βT,γT, .lam `grow bindType proof_wLooseBvar .default]
+    -- so for proof_wLooseBvar, we expect a loose bvar refering to `a` of test22_2
+    -- A cool fact is that it will be the same bvar as in bindBodyL bindBodyR !
+
+noncomputable
+def test7  {α : Sort _} {β : α → Sort _}  {a : α} {c : β a}
+  {motive : (b : α) → (d : β b) → Sort _}
+  (ha : motive a c)
+  {b : α} {d : β b} (ta : a = b) (tc : HEq c d) : motive b d :=
+    have wow := @PSigma.ext α β ⟨a,c⟩ ⟨b,d⟩ ta tc
+    @Eq.ndrec (@PSigma α β) ⟨a,c⟩ (fun z => motive z.fst z.snd) ha ⟨b,d⟩ wow
+
+
+theorem test29 {α β: Sort _} (γ : α → Sort _) (h : α = β) : (∀ a : α, γ a) = (∀ a : β, γ (cast h.symm a)) := by
+  apply @test7 (Sort u_1) (fun T => T = α) α rfl
+    (fun x y => (∀ a : α, γ a) = (∀ a : x, γ (cast y a)))
+    rfl β h.symm h (proof_irrel_heq _ _)
+
+def mkRWBindAll (fctx : FixCtx) (bindTypeL bindTypeR bindBodyL proof_eq : CExpr) : CExpr :=
+  let αT := CExpr.inferType fctx bindTypeL -- with bvarcontext ! get universes for appli of test22_2 too
+  let βT := CExpr.inferType fctx bindTypeR
+  -- ↑↓ this makes sense because the bvar will indeed refer to a
+  let γ := .lam `grow bindTypeL bindBodyL .default
+  let γT := CExpr.inferType fctx γ
+  (CExpr.const `test29 []).mkApp -- fix universes
+    [αT,βT,γT,proof_eq]
 /-
-**Big note**
-We should expand Expr.proj to the corresponding function application, so that rewriting under
-projections comes down to rewriting under applications ?
+Example for ↑, test30 :
+the γ we compute will be (w. γ wrt. test30) `fun a : α => ∀ b : γ a, δ a b`
+so that the above will build a term of type `... = ∀ a, (fun a : α => ∀ b : γ a, δ a b) (cast h.symm a)`
+which reduces to `... = ∀ a, ∀ b : γ  (cast h.symm a), δ  (cast h.symm a) b`, without us having to think
+about bvars !
 -/
+
+theorem test33 {α β: Sort _} (γ : α → Sort _) (h : α = β) : (fun a : α => γ a) = (cast (by rw [h]) (fun a : β => γ (cast h.symm a))) := by
+  apply @test7 (Sort u_1) (fun T => T = α) α rfl
+    (fun x y => (fun a : α => γ a) = cast (by rw [y]) (fun a : x => (γ (cast y a))))
+    (by dsimp) β h.symm h (proof_irrel_heq _ _)
+
+-- again, no difference, just the thm changes
+def mkRWBindFor (fctx : FixCtx) (bindTypeL bindTypeR bindBodyL proof_eq : CExpr) : CExpr :=
+  let αT := CExpr.inferType fctx bindTypeL -- with bvarcontext ! get universes for appli of test22_2 too
+  let βT := CExpr.inferType fctx bindTypeR
+  -- ↑↓ this makes sense because the bvar will indeed refer to a
+  let γ := .lam `grow bindTypeL bindBodyL .default
+  let γT := CExpr.inferType fctx γ
+  (CExpr.const `test33 []).mkApp -- fix universes
+    [αT,βT,γT,proof_eq]
+
+
+#check let_congr
+#check let_val_congr
+#check let_body_congr
+
+theorem let_type_congr {α γ : Sort u} {β : α → Sort v} (h : α = γ) {b : (a : α) → β a}
+    (a : α) : (let x : α := a; b x) = (by have := (let x : γ := cast h a ; b (cast h.symm x)) ; rw [cast_cast, cast_eq] at this ; dsimp ; exact this) :=
+    by
+    dsimp -- don't know if ↓ overcomplicates it...
+    apply @test7 (Sort u) (fun γ => α = γ) α rfl
+      (fun γ h => b a = cast (congrArg (fun _a ↦ β _a) (cast_cast h (Eq.symm h) a)) (b (cast h.symm (cast h a))))
+      rfl γ h h (proof_irrel_heq _ _)
+
+#check let_type_congr
+
+/-
+**Big notes**
+
+- We should expand Expr.proj to the corresponding function application, so that rewriting under
+  projections comes down to rewriting under applications ?
+  This is a big note, since we should perhaps do this at preprocess time for caches and queries,
+  so that we don't have to do this at every rewrite.
+
+- We should change the ofRW backtype to `CExpr → CExpr`. The way we do it now, ie. filling
+  it with a `fun ...` and adding the theorem as an arg does not work if we rewrite under binders!
+  With the `CExpr → CExpr` approach, we will build the proof-argument...
+  Actually, if we rw un der binders, the subgoals would contain loose bvars. A way to handle this
+  could be to add them as gnodes in a new leaf of the IntroTree ; we then have to add a dictionary
+  to the ofRW BackType, that will tell us which bvars to replace these gnodes with ; the subgoals
+  of the rw should of course be registered as belonging to tha node in the IntroTree.
+
+-/
+
+
+def RWmain (dirs : List oDirs) (withinType : CExpr) : (CExpr → CExpr) :=
+  let rec go : CExpr → (CExpr → CExpr)
+    | ce@(.lam ..) => sorry
+    | ce@(.forallE ..) => sorry
+    | ce@(.letE ..) => sorry
+    | ce@(.app ..) => sorry
+    | x => sorry -- we're not expecting proj
+  sorry

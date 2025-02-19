@@ -945,8 +945,26 @@ theorem testS1 (x y : testStruc α β) (h : x = y) : x.snd = cast (show β y.fst
 #check_failure testStruc.ext
 -- and we can't make use of ext, unless we generate it for all structures that don't have it
 
+#check_failure PSigma.mk.inj
+#check_failure testStruc.snd.inj
+#check Nat.succ.inj
+#check List.cons.inj
+
+theorem testS2 (x y : testStruc α β) (h : x = y) : x.snd = cast (show β y.fst = β x.fst by rw [h]) y.snd :=
+  by
+  apply testStruc.noConfusion h
+  intro hmm aha
+  sorry
+
+#check cast_heq
+
+structure bigStructure (α β : Sort _) (γ : α → β → Sort _) where
+  fst : α
+  snd : β
+  thd : γ fst snd
 
 
+#check bigStructure.thd
 
 #exit
 
