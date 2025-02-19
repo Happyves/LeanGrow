@@ -3,7 +3,7 @@ import LeanGrow.F.Data.CExpr.API
 import LeanGrow.F.Utils.List
 import Mathlib.Data.List.Sort
 import LeanGrow.F.Prototypes.MarkSeven.trTypes
-import LeanGrow.F.Data.CExpr.ReduceInferMuggle.Control
+import LeanGrow.F.Data.Unification.EmbedGoalWInferWUnis
 
 
 
@@ -14,6 +14,7 @@ open Lean
 
 #check List.Mem.rec
 
+--#exit
 
 /-
 Random thoughts :
@@ -296,8 +297,10 @@ List (List Nat) so that entries correpond to gdirs of corresponding arg
 #check Nat.le.rec
 #check List.Mem.rec
 
+
 /-
 Draft for pipeline:
+
 - for recursor, find pattern via embeddings of the first rec-motive arg (ex: a as Nat in Nat.le.rec)
   in the goal trie. As information, we should retrieve which goals have the pattern, the oDirs to that
   pattern, and the matching pattern ; make a version that only matches for gnodes/lnodes, in case this
@@ -309,10 +312,99 @@ Draft for pipeline:
 -/
 
 
+
+/--
+Should be run on precessed recursor ; since goal (head) is motive x y z,
+we get the arguments it depends on, which are the patterns we'll search for
+among the goals ; this should be done in preprocess  at stored ?
+-/
+def MakePatternThmFromGoal (thm : Array EmbedData) (goal : CExpr) : List EmbedData := -- or just get the positions ?
+      let rec go (done : List EmbedData) : CExpr → List EmbedData
+            | .app f (.lnode p _ .none) => go ((thm.get! p) :: done) f
+            | _ => done
+      go [] goal
+
+/- The above will give the nodes that are args to the motive. For example, for `Nat.le.rec`,
+it will be `t : n.le a` & `a : Nat` (in that order). We should search these patterns among
+goals, with the whole recursor as `current` field in `FixCtx`, as we may get assignements
+outside of these args (ex: `n` in `t : n.le a`), we should then propagate them among patterns
+to embed (ex: if we embed `t : n.le a` , we should get a value for `a`, which we should then
+search the location*s* of among the goals that contained `t` ; it will be a bit of a messy if we
+get args that have been updated on some of their vals and not on others, ex embed `P x y` first
+then `Q x z`...).
+
+It's probably best to separate getting a coherent embedding, and finding all locations of the patterns.
+
+In the context on motives that are constant in some of their args, we should keep trying to embed even
+if sinks don't (ex: embed `a` even if `t` didn't)
+-/
+
+#check FixCtx
+
+/- Use ↓ on motive -/
+def findGnodeDepsExeptOfPattern (ce : CExpr) (patterns : List CExpr) : List (Nat × Nat) :=
+      let rec go (done : List (Nat × Nat)) : List CExpr → List (Nat × Nat)
+            | [] => done
+            | nx :: more =>
+                  if patterns.contains nx
+                  then []
+                  else match nx with
+                        | .lnode p _ (.some t) => (go ((t, p) :: done) more)
+                        | .app _ _ => sorry
+                        -- I wrote this a 100 times
+                        | _ => sorry
+      go [] [ce]
+
+-- use this on the patterns
+#check CExpr.getGNodesDepsF
+/-
+Actually, if patterns aren't gnodes, then we should revert all hyps that contain that pattern !
+One more reason to only induct on gnodes ?!?
+-/
+
+-- after ↓
+#check makeRevertOrderingForGnodesMany
+#check getLnodeDecendents
+#check orderLNodeDeps
+-- do ↓
+
+def mkMotive (gnodes : List Nat) (lnodes : List (Nat × Nat × CExpr)) (head : CExpr) : CExpr :=
+      sorry
+      /-
+      Todo:
+      from motive, to lnodes types, to gnode types, which we should query from ltx, fold:
+      abstract gnodes and lvars in the types, replacing occurences with bumped bvars, where
+      the unbumped index will correpsond to index of gidx of (tag,pos) in the above arguemnt
+      lists ; make λ bindings with these types.
+      -/
+
+
+theorem testInd (n : Nat) (P Q : Nat → Prop) (h : P n) : Q n :=
+      (@Nat.rec (fun n => ∀ _ : P n, Q n) (by dsimp ; sorry) (by dsimp ; sorry) n) h
+
+-- Todo next : add gnodes and lnodes back in application
+
+-- don't know where ↓ fits in
+
+/-- After having found and built a goal containing the pattern, we abstarct patterns
+by repeatedly running this, to get the motive. In the running example, the first
+`valT` will be `n.le a`, and the second will have `a` as val, so that `a` will get
+abstracted in the binder type `n.le a` as desired ; actually, its important that
+dependence sinks go first for this to work ; in the end, we'll get the motive -/
+def abstractAllIn (val valT within : CExpr) : CExpr :=
+      let rec go (d : Nat) (ce : CExpr) : CExpr :=
+            if ce == val
+            then .bvar d
+            else  match ce with
+                  | .app _ _ => sorry
+                  -- I wrote this a 100 times
+                  | _ => sorry
+                        -- don't forget to bump bvars
+      .lam `grow valT (go 0 within) .default
+
+
 /-
 More notes:
-
-
 
 - when checking if term is of an inductive type, we should get the head, check that it is a recursor,
   and check that it is fully applied in indices and parameters.
