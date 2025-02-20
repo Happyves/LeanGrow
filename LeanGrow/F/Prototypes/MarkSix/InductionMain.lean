@@ -409,5 +409,11 @@ More notes:
 - when checking if term is of an inductive type, we should get the head, check that it is a recursor,
   and check that it is fully applied in indices and parameters.
 
+- for functional induction, we should delta, since this seems to be done in Lean and hence in the
+  samples which would yield false positives ; I think Joachim Breitner has a test where we want to
+  apply the induction principle of List.zipWith to List.zip, which reduces to an application of the
+  former.
 
 -/
+
+#check List.zip

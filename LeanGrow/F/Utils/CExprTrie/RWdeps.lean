@@ -807,7 +807,7 @@ theorem test33 {α β: Sort _} (γ : α → Sort _) (h : α = β) : (fun a : α 
     (by dsimp) β h.symm h (proof_irrel_heq _ _)
 
 -- again, no difference, just the thm changes
-def mkRWBindFor (fctx : FixCtx) (bindTypeL bindTypeR bindBodyL proof_eq : CExpr) : CExpr :=
+def mkRWBindFun (fctx : FixCtx) (bindTypeL bindTypeR bindBodyL proof_eq : CExpr) : CExpr :=
   let αT := CExpr.inferType fctx bindTypeL -- with bvarcontext ! get universes for appli of test22_2 too
   let βT := CExpr.inferType fctx bindTypeR
   -- ↑↓ this makes sense because the bvar will indeed refer to a
@@ -819,6 +819,14 @@ def mkRWBindFor (fctx : FixCtx) (bindTypeL bindTypeR bindBodyL proof_eq : CExpr)
 
 #check let_congr
 #check let_val_congr
+
+theorem let_val_congr' {α : Sort u} {β : α → Sort v} {a a' : α} (b : (a : α) → β a) (h : a = a') :
+  (let x := a; b x) = cast (by rw [h]) (let x := a'; b x) := by
+  apply @test7 α (fun x => a = x) a rfl
+    (fun y z => (let x := a; b x) = cast (by rw [z]) (let x := y; b x))
+    rfl a' h h (proof_irrel_heq _ _)
+
+
 #check let_body_congr
 
 theorem let_type_congr {α γ : Sort u} {β : α → Sort v} (h : α = γ) {b : (a : α) → β a}
@@ -831,6 +839,24 @@ theorem let_type_congr {α γ : Sort u} {β : α → Sort v} (h : α = γ) {b : 
 
 #check let_type_congr
 
+def mkRWLetVal(fctx : FixCtx) (bindType bindBody proof_eq : CExpr) : CExpr :=
+  let αT := CExpr.inferType fctx bindType -- with bvarcontext ! get universes for appli of test22_2 too
+  -- ↓ this makes sense because the bvar will indeed refer to a
+  let b := .lam `grow bindType bindBody .default
+  let pre_bT := CExpr.inferType fctx b
+  match pre_bT with
+  | .forallE _ _ B _ =>
+    let bT := .lam `grow bindType B .default
+    match CExpr.inferType fctx proof_eq with
+    | .app (.app (.app (.const `Eq _) _) a) a' =>
+      (CExpr.const `let_val_congr' []).mkApp -- fix universes
+        [αT,bT,a,a',b,proof_eq]
+    | _ => .failed
+  | _ => .failed
+
+
+
+--#exit
 /-
 **Big notes**
 
@@ -845,16 +871,40 @@ theorem let_type_congr {α γ : Sort u} {β : α → Sort v} (h : α = γ) {b : 
   Actually, if we rw un der binders, the subgoals would contain loose bvars. A way to handle this
   could be to add them as gnodes in a new leaf of the IntroTree ; we then have to add a dictionary
   to the ofRW BackType, that will tell us which bvars to replace these gnodes with ; the subgoals
-  of the rw should of course be registered as belonging to tha node in the IntroTree.
+  of the rw should of course be registered as belonging to that node in the IntroTree.
 
 -/
 
 
-def RWmain (dirs : List oDirs) (withinType : CExpr) : (CExpr → CExpr) :=
-  let rec go : CExpr → (CExpr → CExpr)
-    | ce@(.lam ..) => sorry
-    | ce@(.forallE ..) => sorry
+def RWmain (fctx : FixCtx) (dirs : List oDirs) (withinType replacement: CExpr) : (CExpr → CExpr) :=
+  let rec go (dirs : List oDirs) : CExpr → ((CExpr → CExpr) × CExpr)
+    | ce@(.lam n bT v i) =>
+      match dirs with
+      | [] => (id,replacement)
+      | .laa :: ds =>
+        let (proof,rep) := go ds v -- probably should modify fctx in this call !
+        ((fun x => mkFunExtish fctx bT v rep (proof x)), .lam n bT rep i) --  and here
+      | .laf :: ds =>
+        let (proof,rep) := go ds v
+        ((fun x => mkRWBindFun fctx bT rep v (proof x)), sorry)
+        -- the rep output should be the right side of test33, so with the casts !
+      | _ => ((fun _ => .failed), .failed)
+    | ce@(.forallE n bT v i) =>
+      match dirs with
+      | [] => (id,replacement)
+      | .laa :: ds =>
+        let (proof,rep) := go ds v -- probably should modify fctx in this call !
+        ((fun x => mkPiCongr fctx bT v rep (proof x)), .lam n bT rep i) --  and here
+      | .laf :: ds =>
+        let (proof,rep) := go ds v
+        ((fun x => mkRWBindAll fctx bT rep v (proof x)), sorry)
+        -- the rep output should be the right side of test33, so with the casts !
+      | _ => ((fun _ => .failed), .failed)
     | ce@(.letE ..) => sorry
-    | ce@(.app ..) => sorry
-    | x => sorry -- we're not expecting proj
+    | ce@(.app ..) => sorry -- deeebt
+    | _ => -- we're not expecting proj !
+      match dirs with
+      | _ :: _ => ((fun _ => .failed), .failed)
+      | [] => (id,replacement)
+
   sorry
