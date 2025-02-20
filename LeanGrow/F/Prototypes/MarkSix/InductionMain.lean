@@ -177,6 +177,8 @@ partial def makeRevertOrderingForGnodesMany (deps : List (Nat × List Nat × Lis
                         go next (nx :: sofar)
       go (start.insertionSort (· ≤ ·)) []
 
+
+
 /-
 In both ↑, we rely on the fact that a gnode cannot depend on genodes with lower index.
 So for situation such as reverting x in `(x : Nat) (y z : Fin x) (h : @Fin.add x y z = 42)`,
@@ -228,6 +230,9 @@ partial def getLnodeDecendents (fctx : FixCtx) (lnodeToRev_WType : List (Nat × 
                                     | .ofPropa _ _ T _ _ _ | .ofGoal _ T _ _ _ | .ofIntro _  T _ _ _ _ =>
                                           let dep := T.getLNodesDep
                                           if inter? sofar dep
+                                          -- **big** we should actually only tak it for reverting if its
+                                          -- lnodes are contained in those so far, not simply intersect !
+                                          -- otherwise, we migh end up with lnodes in ltx after introduction
                                           then
                                                 (i+1,(id,i,T) :: deps)
                                           else
@@ -260,7 +265,7 @@ partial def getLnodeDecendents (fctx : FixCtx) (lnodeToRev_WType : List (Nat × 
 
 #check Array.findIdx?
 
-
+--#exit
 /--
 Here too, we make use of the fact that a gnode can't depend on one with a bigger tag-index.
 For the same tag index, we order according to the position in the theorem, which handles dependecies
@@ -368,21 +373,78 @@ One more reason to only induct on gnodes ?!?
 #check orderLNodeDeps
 -- do ↓
 
-def mkMotive (gnodes : List Nat) (lnodes : List (Nat × Nat × CExpr)) (head : CExpr) : CExpr :=
-      sorry
+
+def List.findIdxVal [Inhabited α] (p : α → Bool) (l : List α) : (Nat × α) :=
+      let rec go (c : Nat) : List α → (Nat × α)
+            | [] => (0,default)
+            | x :: xs => if p x then (c,x) else go c.succ xs
+      go 0 l
+
+
+
+def mkMotiveBody (fctx : FixCtx) (gnodes : List Nat) (lnodes : List (Nat × Nat × CExpr)) (head : CExpr) : CExpr :=
+      -- assumes in ↑ that dependece refers to further in list
+      -- gnodes shouldn't contain those that will be part of the λ of the motive
+      let ln_size := lnodes.length
+      let rec upL (ctx_size : Nat) (ctx : List (Nat × Nat × CExpr)) : CExpr → CExpr
+            | .lnode p _ (.some t) => .bvar (ctx.findIdxVal (fun x => x.1 == t && x.2.1 == p)).1
+                  -- didn't need val after all ; we expect entry to be found always, and we do
+                  -- this for all lnodes, since we expect to have reverted all dependencies
+            | g@(.gnode i _) =>
+                  match gnodes.indexOf? i with
+                  | .none => g
+                  | .some idx => .bvar (ctx_size + idx)
+            | .app f a => .app (upL ctx_size ctx f) (upL ctx_size ctx a)
+            | _ => sorry -- the usual
+      let rec go_l (size : Nat) (sofar : CExpr) : List (Nat × Nat × CExpr) → CExpr
+            | [] => sofar
+            | ((t,p,T) :: more) =>
+                  let Tbv := upL size more T
+                  let next := .forallE `grow Tbv sofar .default
+                  go_l (size - 1) next more
+      let Mbv := upL ln_size lnodes head
+      let wL := go_l (ln_size - 1) Mbv lnodes
+      let rec upG (ctx : List Nat) : CExpr → CExpr
+            | g@(.gnode i _) =>
+                  match gnodes.indexOf? i with
+                  | .none => g
+                  | .some idx => .bvar idx
+            | .app f a => .app (upG ctx f) (upG ctx a)
+            | _ => sorry -- the usual
+      let rec go_r (sofar : CExpr) : List Nat → CExpr
+            | [] => sofar
+            | (i :: more) =>
+                  let T : CExpr := (sorry : _ → CExpr) fctx.gnodeTypes -- pageing stuff, use `i`
+                  let Tbv := upG more T
+                  let next := .forallE `grow Tbv sofar .default
+                  go_r next more
+      go_r wL gnodes
       /-
-      Todo:
       from motive, to lnodes types, to gnode types, which we should query from ltx, fold:
       abstract gnodes and lvars in the types, replacing occurences with bumped bvars, where
       the unbumped index will correpsond to index of gidx of (tag,pos) in the above arguemnt
-      lists ; make λ bindings with these types.
+      lists ; make ∀ bindings with these types.
       -/
 
+#check List.indexOf?
+#eval List.enum ['a','b']
 
+
+-- sanity check
 theorem testInd (n : Nat) (P Q : Nat → Prop) (h : P n) : Q n :=
-      (@Nat.rec (fun n => ∀ _ : P n, Q n) (by dsimp ; sorry) (by dsimp ; sorry) n) h
+      (@Nat.rec (fun n => ∀ _ : P n, Q n) (by dsimp ; sorry) (by dsimp ; intro n ih h ; sorry) n) h
 
--- Todo next : add gnodes and lnodes back in application
+theorem testInd2 (n : Nat) (P Q : Nat → Prop) (h : P n) : Q n := by
+      induction' n with n ih
+      all_goals {sorry}
+
+
+
+#exit
+
+
+
+
 
 -- don't know where ↓ fits in
 
