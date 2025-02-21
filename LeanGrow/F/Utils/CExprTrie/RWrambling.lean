@@ -905,6 +905,17 @@ theorem test29 {α β: Sort _} (γ : α → Sort _) (h : α = β) : (∀ a : α,
     rfl β h.symm h (proof_irrel_heq _ _)
 
 
+
+theorem test29_2 {α β: Sort _} (γ : α → Sort _) (δ : β → Sort _) (h1 : α = β) (h2 : ∀ a, (γ a = δ (cast h1 a))) :
+  (∀ a : α, γ a) = (∀ b : β, δ b) := by
+  revert δ
+  apply @test7 (Sort u_1) (fun T => α = T) α rfl
+    (fun x y => ∀ (δ : x → Sort u_2), (∀ (a : α), γ a = δ (cast y a)) → ((a : α) → γ a) = ((b : x) → δ b))
+    (by intro δ h2 ; apply test22 ; apply h2) β h1 h1 (proof_irrel_heq _ _)
+
+
+
+
 theorem test30 {α β: Sort _} (γ : α → Sort _) (δ : (a : α) → γ a → Sort _) (h : α = β) :
   (∀ a : α, ∀ b : γ a, δ a b) = (∀ a : β, ∀ b : γ (cast h.symm a), δ (cast h.symm a) b ) := by
     apply test29
@@ -925,6 +936,30 @@ theorem test33 {α β: Sort _} (γ : α → Sort _) (h : α = β) : (fun a : α 
   apply @test7 (Sort u_1) (fun T => T = α) α rfl
     (fun x y => (fun a : α => γ a) = cast (by rw [y]) (fun a : x => (γ (cast y a))))
     (by dsimp) β h.symm h (proof_irrel_heq _ _)
+
+theorem test33' {α β: Sort u} (γ : α → Sort v) (h : α = β)
+  {help1 : (β → Sort v) = (α → Sort v)} {help2 : β = α}
+  : (fun a : α => γ a) = (cast (help1) (fun a : β => γ (cast help2 a))) := by
+  apply @test7 (Sort u) (fun T => T = α) α rfl
+    (fun x y => (fun a : α => γ a) = cast (by rw [y]) (fun a : x => (γ (cast y a))))
+    (by dsimp) β h.symm h (proof_irrel_heq _ _)
+
+--#exit
+
+theorem test33_2 {α β: Sort _} (γ : α → Sort _) (δ : β → Sort _) (h1 : α = β) (h2 : ∀ a, (δ a = γ (cast h1.symm a))) :
+  (fun a : α => γ a) = (cast (by apply test29 ; exact h1.symm) (fun a : β => δ a)) := by
+  revert δ
+  apply @test7 (Sort u_1) (fun T => α = T) α rfl
+    (fun x y => ∀ (δ : β → Sort u_2), (∀ (a : β), δ a = γ (cast h1.symm a)) → (fun a ↦ γ a) = cast (test29 (fun a ↦ Sort u_2) (Eq.symm h1)) fun a ↦ δ a)
+    (by intro δ h2
+        have : (fun a ↦ δ a) = fun a ↦ γ (cast h1.symm a) := by
+          apply funext ; exact h2
+        rw [this]
+        apply test33' _ h1
+    ) β h1 h1 (proof_irrel_heq _ _)
+
+
+--#exit
 
 
 structure testStruc (α : Sort _) (β : α → Sort _) where
@@ -965,6 +1000,10 @@ structure bigStructure (α β : Sort _) (γ : α → β → Sort _) where
 
 
 #check bigStructure.thd
+
+
+#check Fin.cast
+#check Fin.castLE
 
 #exit
 
