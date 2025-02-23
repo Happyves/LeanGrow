@@ -440,6 +440,13 @@ theorem testInd2 (n : Nat) (P Q : Nat → Prop) (h : P n) : Q n := by
 
 
 
+#check Meta.isMatcherAppCore?
+/-
+Might just be easier and effiecient to check, for const-headed app, if env (fctx) contains _.match_1 or
+for later version _.induc since we'd have to query those anyway ?
+-/
+
+
 #exit
 
 

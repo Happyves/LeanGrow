@@ -854,9 +854,28 @@ def mkRWLetVal(fctx : FixCtx) (bindType bindBody proof_eq : CExpr) : CExpr :=
     | _ => .failed
   | _ => .failed
 
+-- **random but important**
+
+-- due to Kyle Miller
+theorem testC1 (n m : Nat) (h : n = m) (a : Fin n) : a.1 = (cast (by rw [h]) a : Fin m).1 := by
+  --rfl -- fails
+  sorry
+theorem testC2 (n m : Nat) (h : n = m) (a : Fin n) : a.1 = (cast (by rw [h]) a : Fin m).1 := by
+  apply @test7 Nat (fun m => n = m) n rfl
+    (fun m eq => a.1 = (cast (by rw [eq]) a : Fin m).1)
+    rfl -- works
+    m h h (proof_irrel_heq _ _)
+
+/-
+Solution to ↑ would be to eta expand `a` before casting ...
+Or not ? In our context we expanden the Fin.mk which already required the `n`
+
+-/
 
 
---#exit
+#exit
+
+
 /-
 **Big notes**
 

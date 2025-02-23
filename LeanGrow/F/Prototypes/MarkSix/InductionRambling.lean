@@ -117,7 +117,7 @@ def fac : Nat → Nat
 #check fac.eq_def
 #check fac.match_1
 #print fac.match_1
-
+#print fac
 
 def fib : Nat → Nat
   | 0 => 1
@@ -126,6 +126,7 @@ def fib : Nat → Nat
 
 #check fib.match_1
 #print fib.match_1
+#print fib
 
 def ackermann : Nat → Nat → Nat
   | 0, m => m + 1
@@ -134,6 +135,11 @@ def ackermann : Nat → Nat → Nat
 
 #check ackermann.match_1
 #print ackermann.match_1
+#print ackermann
+#print ackermann._unary
+
+
+--#exit
 
 #check 1
 
@@ -271,6 +277,17 @@ ackermann.match_1._cstage1
 
 #check Nat.rec
 
+#check getMatcherInfo?
+#check MatcherInfo
+#check isMatcherApp
+
+#eval (do let info? ← getMatcherInfo? `ackermann.match_1 ; if info?.isSome then IO.println "yes"  : CoreM Unit)
+
+#eval (do let info? ← getMatcherInfo? `ackermann._unary ; if info?.isSome then IO.println "yes"  : CoreM Unit)
+
+
+
+#exit
 
 def Nat.recEqPre (t : Nat) {motive : Nat → Sort u}
   (zero : t = 0 → motive Nat.zero) (succ : (n : Nat) → (t = n → (motive n)) → (t = n.succ → motive n.succ)) :
