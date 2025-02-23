@@ -868,8 +868,12 @@ theorem testC2 (n m : Nat) (h : n = m) (a : Fin n) : a.1 = (cast (by rw [h]) a :
 
 /-
 Solution to ↑ would be to eta expand `a` before casting ...
-Or not ? In our context we expanden the Fin.mk which already required the `n`
+Or not ? In our context we expanden the Fin.mk / Fin.val which already required the `n`
 
+
+Mini note:
+When we cast a cast, use `cast_cast` to shrink terms and most imporantly in the hope that
+at the end we go full casting circle, and may apply (morally ; actuallly defeq) `cast_eq`.
 -/
 
 
