@@ -877,7 +877,7 @@ at the end we go full casting circle, and may apply (morally ; actuallly defeq) 
 -/
 
 
-#exit
+--#exit
 
 
 /-
@@ -895,6 +895,12 @@ at the end we go full casting circle, and may apply (morally ; actuallly defeq) 
   could be to add them as gnodes in a new leaf of the IntroTree ; we then have to add a dictionary
   to the ofRW BackType, that will tell us which bvars to replace these gnodes with ; the subgoals
   of the rw should of course be registered as belonging to that node in the IntroTree.
+
+- Just realized we're ignoring forward deps, yet they matter!
+  Say we have `P : (n : Nat) → Fin n → Prop` and `h : P n ⟨n-1, ⋯⟩` and we consider the occurence
+  of `n` on the right. Then rewriting `n = m` has a forward dependence, without which the rewrite
+  woul'd be type correct.
+  Is it bad to always rewrite all occurences ?
 
 -/
 

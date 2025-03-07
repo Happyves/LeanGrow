@@ -977,6 +977,7 @@ theorem testS1 (x y : testStruc α β) (h : x = y) : x.snd = cast (show β y.fst
     (fun y yp => x.snd = cast yp y.snd) rfl y (show β y.fst = β x.fst by rw [h]) h (proof_irrel_heq _ _)
 
 
+
 #check_failure testStruc.ext
 -- and we can't make use of ext, unless we generate it for all structures that don't have it
 
