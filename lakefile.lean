@@ -36,3 +36,7 @@ target libCffi pkg : FilePath := do
 lean_lib LeanGrow.FFI.Lffi where
   precompileModules := true
   moreLinkObjs := #[libCffi]
+
+lean_lib LeanGrow.FFI.EETrick where
+  precompileModules := true
+  moreLinkObjs := #[libCffi]

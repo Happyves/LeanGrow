@@ -1,7 +1,6 @@
 
 
-import LeanGrow.FFI.Lffi
-
+import LeanGrow.FFI.EETrick
 
 -- #eval funOne 42
 -- #eval eeTrick 3
