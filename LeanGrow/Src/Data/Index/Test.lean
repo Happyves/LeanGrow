@@ -17,6 +17,7 @@ def general (Impl : Type) (I : IndexColl Impl) (x : Impl) : Bool :=
 set_option trace.compiler.ir.result true in
 def specific (x : UInt32Array) : Bool := general UInt32Array idx_UInt32Array x
 
+#eval specific (UInt32Array.empty.push 37)
 
 @[inline, specialize I]
 def recursive (Impl : Type) (I : IndexColl Impl) (x : Impl) : Bool :=

@@ -6,6 +6,8 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Author: Yves Jäckle.
 -/
 
+-- # Prod
+
 structure Prod3 (α β γ : Type _) where
   fst : α
   snd : β
@@ -46,6 +48,42 @@ structure Prod7 (α β γ δ ι t1 t2 : Type _) where
   fth : ι
   six : t1
   svn : t2
+deriving BEq, Inhabited, Repr
+
+structure Prod8 (α β γ δ ι t1 t2 t3 : Type _) where
+  fst : α
+  snd : β
+  thd : γ
+  frd : δ
+  fth : ι
+  six : t1
+  svn : t2
+  eig : t3
+deriving BEq, Inhabited, Repr
+
+structure Prod9 (α β γ δ ι t1 t2 t3 t4 : Type _) where
+  fst : α
+  snd : β
+  thd : γ
+  frd : δ
+  fth : ι
+  six : t1
+  svn : t2
+  eig : t3
+  nin : t4
+deriving BEq, Inhabited, Repr
+
+structure Prod10 (α β γ δ ι t1 t2 t3 t4 t5 : Type _) where
+  fst : α
+  snd : β
+  thd : γ
+  frd : δ
+  fth : ι
+  six : t1
+  svn : t2
+  eig : t3
+  nin : t4
+  ten : t5
 deriving BEq, Inhabited, Repr
 
 

@@ -2,7 +2,7 @@
 
 # Plan for Jan-Feb
 
-#W1 (31-4) FFI & Utils
+# W1 (31-4) FFI & Utils
 
 - FFI (UInt32Array, ArrayProd, etc)
 - IndexColType as structure
@@ -19,11 +19,12 @@
 - Lake scripts ?
 
 
-#W2 (5-11) Data ; Sample ; Delab Standard & Rewrite & \t & Subst
+# W2 (5-11) Data ; Sample ; Delab Standard & Rewrite & \t & Subst
 
 LG:
 - Do *not* attempty concurrency
-- Keep TR versions from Beta, but use rec versions from Alpha, since they should be faster ??
+- Keep TR versions from Beta, but use rec versions from Alpha, since they should be faster ?? 
+- Rudimentary wall-clock profiling to compare TR and non-TR ops in test
 - Settries: 
   - Biggest rewrite of the 3 Datas, start with it
   - Use one PaIn for siblings, real settrie with lists of Nats, so that we only query one settrie per generation
@@ -46,7 +47,7 @@ Djv Parse:
 
 
 
-#W3 (12-18) Cashing ; Sample ; Delab Induction & Match
+# W3 (12-18) Cashing ; Sample ; Delab Induction & Match
 
 LG:
 - Support simplifier status
@@ -65,7 +66,7 @@ Djv Parse:
 - Induction & Match
 
 
-#W4 (19-25) Core ; DéjàVue Codes ; Delab Simp
+# W4 (19-25) Core ; DéjàVue Codes ; Delab Simp
 
 LG:
 - Embedding:
@@ -90,7 +91,7 @@ Djv Parse:
 - Delab Simp
 
 
-#W5 (26-1) Search & Frontend ; Generalize & Denoise ; Delab Calc
+# W5 (26-1) Search & Frontend ; Generalize & Denoise ; Delab Calc
 
 LG:
 - Consider LLM stuff here too, for its influence on IntroTrees and Backtrees and so on
@@ -166,7 +167,7 @@ Djv Parse:
 - Delab Calc
 
 
-#W6 (2-8) Search & CallLLM ; Conveyorbelt & Query ; Delab Congr
+# W6 (2-8) Search & CallLLM ; Conveyorbelt & Query ; Delab Congr
 
 LG:
 - Add support and special score for declarations from the same file as the query
@@ -180,7 +181,7 @@ Djv Core:
 Djv Parse:
 - Delab Congr
 
-#W7 (9-15) Search & Heuristic ; Conveyorbelt & Query ; Delab Misc
+# W7 (9-15) Search & Heuristic ; Conveyorbelt & Query ; Delab Misc
 
 LG:
 - Hang in there!
@@ -191,7 +192,7 @@ Djv Core:
 Djv Parse:
 - Prohibiters for linarith, ring, grind, etc.
 
-#W8 (16-22) Debug
+# W8 (16-22) Debug
 
 Hang in there!
 
