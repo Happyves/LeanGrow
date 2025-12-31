@@ -2,4 +2,4 @@
 
 -- Add imports for building here ; make sure mathlib not included ?!?
 
-import LeanGrow.DummyLib.SomeFileFFI
+import LeanGrow.Src.TestFFI

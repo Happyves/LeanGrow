@@ -12,7 +12,7 @@
   - Use current system, but make local trace flag in `mtrace` too, so that env extention queried at most once ?
 - Learn the new module system
 - Utils
-  - Expr : use up-down approach from Data for `onAllSubterms` ; use `Expr.hasFVars`, `Expr.lt`, `Expr.hash`, pointer eq & co ?
+  - Expr : use up-down approach from Data for `onAllSubterms` ; keep TR, but don't use it, as it's slower ... ; use `Expr.hasFVars`, `Expr.lt`, `Expr.hash`, pointer eq & co ?
     Also, try to avoid needless `Expr.data` computation.
   - Revert : try to speed up ; version that turns proof-valued-lets to foralls, wrt. reverts of forward steps in search
   - Generalize: same issues as revert ?
@@ -23,6 +23,7 @@
 
 LG:
 - Do *not* attempty concurrency
+- Keep TR versions from Beta, but use rec versions from Alpha, since they should be faster ??
 - Settries: 
   - Biggest rewrite of the 3 Datas, start with it
   - Use one PaIn for siblings, real settrie with lists of Nats, so that we only query one settrie per generation
@@ -173,6 +174,7 @@ LG:
 Djv Core:
 - Forward, Backward, Subexpressions
 - Expr as keys & Thms as keys
+- Idea for Or.rec &co
 
 
 Djv Parse:
