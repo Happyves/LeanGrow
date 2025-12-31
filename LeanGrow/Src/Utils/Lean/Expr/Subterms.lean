@@ -5,11 +5,11 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Author: Yves Jäckle.
 -/
 
-import LeanGrowBeta.Utils.Tracing
-import LeanGrowBeta.Utils.Lean.LocalContext
-import LeanGrowBeta.Utils.Lean.Expr.Fail
-import LeanGrowBeta.Utils.LeanGrow.Nodes
-import LeanGrowBeta.Data.CTrie.Basic
+import LeanGrow.Src.Utils.Tracing
+import LeanGrow.Src.Utils.Lean.LocalContext
+import LeanGrow.Src.Utils.Lean.Expr.Fail
+import LeanGrow.Src.Utils.LeanGrow.Nodes
+import LeanGrow.Src.Data.CTrie.Basic
 
 open Lean Meta
 

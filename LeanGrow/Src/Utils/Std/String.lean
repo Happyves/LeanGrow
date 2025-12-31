@@ -7,22 +7,22 @@ Author: Yves Jäckle.
 
 partial def String.joinA (a : Array String) : String :=
   let rec go (i : Nat) (sofar : String) : String :=
-    if i == 0 then (a[0]'(sorry) ++ sofar) else go (i-1) (a[i]'(sorry) ++ sofar)
+    if i == 0 then (a[0]! ++ sofar) else go (i-1) (a[i]! ++ sofar)
   go (a.size - 1) ""
 
 
 partial def String.intercalateA (s : String) (a : Array String) : String :=
   let rec go (i : Nat) (sofar : String) : String :=
-    if i == 0 then (a[0]'(sorry) ++ s ++ sofar) else go (i-1) (a[i]'(sorry) ++ s ++ sofar)
+    if i == 0 then (a[0]! ++ s ++ sofar) else go (i-1) (a[i]! ++ s ++ sofar)
   go (a.size - 1) ""
 
 
 partial def String.isSuffixOf (suf main : String) : Bool :=
   let rec go (i j : Nat) : Bool :=
     if i == 0
-    then (suf.get 0 == main.get ⟨j⟩)
+    then (Pos.Raw.get suf 0 == Pos.Raw.get main ⟨j⟩)
     else
-      if (suf.get ⟨i⟩ == main.get ⟨j⟩)
+      if (Pos.Raw.get suf ⟨i⟩ == Pos.Raw.get main ⟨j⟩)
       then go (i-1) (j-1)
       else false
   go (suf.endPos.byteIdx) (main.endPos.byteIdx)

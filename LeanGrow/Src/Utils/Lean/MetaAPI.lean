@@ -1,7 +1,14 @@
 
 
-import LeanGrowBeta.Utils.Lean.LocalContext
-import LeanGrowBeta.Utils.Lean.MetavarContext
+/-
+Copyright (c) 2025 Yves Jäckle. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Author: Yves Jäckle.
+-/
+
+
+import LeanGrow.Src.Utils.Lean.LocalContext
+import LeanGrow.Src.Utils.Lean.MetavarContext
 
 open Lean Meta
 
@@ -84,7 +91,7 @@ def defEqWiMv (a b : Expr) (l1 : LocalContext) (l2 : LocalInstances)
     let mva ← a.getMVarsRec []
     let mvb ← b.getMVarsRec mva
     for mv in mva do
-      mv.setLocalData l1 l2
+      mv.modifyDecl (fun d => {d with lctx := l1, localInstances l2})
     for mv in mvb do
       mv.setLocalData l1 l2
     try

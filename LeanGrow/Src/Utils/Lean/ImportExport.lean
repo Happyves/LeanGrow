@@ -8,7 +8,7 @@ Author: Yves Jäckle.
 import Batteries.Util.Pickle
 import Lean.Attributes
 import Lean.Elab.App
-import LeanGrowBeta.Data.Amalgames
+import LeanGrow.Src.Data.Amalgames
 
 import Lean
 
@@ -207,11 +207,11 @@ end ImportExport
 -- # With environement to work on
 
 
-#eval do return FilePath.join (← getCurrentDir) (FilePath.toString "LeanGrowBeta/Caches")
+#eval do return FilePath.join (← getCurrentDir) (FilePath.toString "LeanGrow/Src/Caches")
 
 def findLeanGrowCacheDir : IO FilePath := do
   let here ← getCurrentDir
-  let res := FilePath.join here (FilePath.toString "LeanGrowBeta/Caches")
+  let res := FilePath.join here (FilePath.toString "LeanGrow/Src/Caches")
   if ← res.pathExists
   then return res
   else throw (IO.userError "[findLeanGrowCacheDir] The location of caches seems to have failed")

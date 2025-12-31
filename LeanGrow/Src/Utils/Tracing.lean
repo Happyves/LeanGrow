@@ -73,10 +73,10 @@ open IO Process FS System
 
 @[inline] def findLeanGrowTraceFile : IO Handle := do
   let here ← getCurrentDir
-  let res := FilePath.join here (FilePath.toString "LeanGrowBeta/Caches")
+  let res := FilePath.join here (FilePath.toString "LeanGrow/Src/Caches")
   if ← res.pathExists
   then
-    let res := FilePath.join here (FilePath.toString "LeanGrowBeta/Caches/OverflowTraces.txt")
+    let res := FilePath.join here (FilePath.toString "LeanGrow/Src/Caches/OverflowTraces.txt")
     if ← res.pathExists
     then
       Handle.mk res Mode.append

@@ -5,8 +5,6 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Author: Yves Jäckle.
 -/
 
-set_option autoImplicit true
-
 
 def Array.assignOrFail (eq : α → α → Bool) (i : Nat) (v : α) (A : Array (Option α)) : Option (Array (Option α)) :=
   match A[i]! with

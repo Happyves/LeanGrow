@@ -7,10 +7,9 @@ Author: Yves Jäckle.
 
 import Lean.Meta.Basic
 import Batteries.Tactic.OpenPrivate
-import LeanGrowBeta.Data.Amalgames
-import LeanGrowBeta.Utils.LeanGrow.Nodes
+import LeanGrow.Src.Data.Amalgames
+import LeanGrow.Src.Utils.LeanGrow.Nodes
 
-set_option autoImplicit true
 
 open Lean Meta
 
@@ -166,7 +165,21 @@ def withFreeingLet (n : Name) (type value body: Expr) (initD : LocalContext) (in
   let body := Expr.instantiate1 body (.fvar fv)
   return ⟨fv,body,initD,initL⟩
 
+/-
+TODO:
+- finish Array.squash FFI
+- After using ↓ with workers, and returning to a state where workers have no meaning anymore,
+  but are still in LocalInstances, squash LocalInstances from its size before the telescope,
+  by the number of workers
+- in onAllsubterms, this should be done after returning from the transformed term ...
+- in MetavarContext, never add mvars with local ltxs, for linear use
+- in MetaAPI, all actions should be wrapped in loading mvars with ltxs, and these
+  ltxs in declarations should be cleared after the action, so that there remains linear use ???
+-/
 
+#exit
+
+-- # Telescopes
 
 /-- Based on `lambdaTelescopeImp -/
 @[inline]
@@ -306,7 +319,7 @@ where
 
 
 
-/-- Based on `lambdaTelescopeImp -/
+/-- With workers Based on lambdaTelescopeImp -/
 @[inline]
 def LambdaLetTelescopeWW (e : Expr) (initDepth : Nat) (initD : LocalContext) (initI : LocalInstances)
     : MetaM (Prod4 Expr (Array Expr) LocalContext LocalInstances) := do
@@ -321,11 +334,11 @@ where
           let d := d.cleanupAnnotations
           match bi with
           | .instImplicit =>
-              let ⟨fvarId, initD,initI⟩ ← WithLocalDeclU n d initD initI
+              let ⟨fvarId, initD,initI⟩ ← WithLocalDecl n d initD initI
               let fvar := mkFVar fvarId
               process (D+1) initD initI (fvars.push fvar) b
           | _ =>
-              let (fvarId, initD) ← withNonInstLocalDeclU n d initD
+              let (fvarId, initD) := withNonInstLocalDecl n d initD
               let fvar := mkFVar fvarId
               process (D+1) initD initI (fvars.push fvar) b
       | .letE _ t v b _ =>
@@ -333,7 +346,7 @@ where
           let t := t.instantiateRevRange 0 fvars.size fvars
           let t := t.cleanupAnnotations
           let v := v.instantiateRevRange 0 fvars.size fvars
-          let ⟨fvarId, initD,initI⟩ ← WithLetDeclU n t v initD initI
+          let ⟨fvarId, initD,initI⟩ ← WithLetDecl n t v initD initI
           let fvar := mkFVar fvarId
           process (D+1) initD initI (fvars.push fvar) b
       | _ =>
@@ -357,11 +370,11 @@ where
           let d := d.cleanupAnnotations
           match bi with
           | .instImplicit =>
-              let ⟨fvarId, initD,initI⟩ ← WithLocalDeclU n d initD initI
+              let ⟨fvarId, initD,initI⟩ ← WithLocalDecl n d initD initI
               let fvar := mkFVar fvarId
               process (D+1) initD initI (fvars.push fvar) b
           | _ =>
-              let (fvarId, initD) ← withNonInstLocalDeclU n d initD
+              let (fvarId, initD) := withNonInstLocalDecl n d initD
               let fvar := mkFVar fvarId
               process (D+1) initD initI (fvars.push fvar) b
       | .letE _ t v b _ =>
@@ -369,7 +382,7 @@ where
           let t := t.instantiateRevRange 0 fvars.size fvars
           let t := t.cleanupAnnotations
           let v := v.instantiateRevRange 0 fvars.size fvars
-          let ⟨fvarId, initD,initI⟩ ← WithLetDeclU n t v initD initI
+          let ⟨fvarId, initD,initI⟩ ← WithLetDecl n t v initD initI
           let fvar := mkFVar fvarId
           process (D+1) initD initI (fvars.push fvar) b
       | _ =>
@@ -394,11 +407,11 @@ where
           let d := d.cleanupAnnotations
           match bi with
           | .instImplicit =>
-              let ⟨fvarId, initD,initI⟩ ← WithLocalDeclU n d initD initI
+              let ⟨fvarId, initD,initI⟩ ← WithLocalDecl n d initD initI
               let fvar := mkFVar fvarId
               process (D+1) initD initI (fvars.push fvar) b
           | _ =>
-              let (fvarId, initD) ← withNonInstLocalDeclU n d initD
+              let (fvarId, initD) := withNonInstLocalDecl n d initD
               let fvar := mkFVar fvarId
               process (D+1) initD initI (fvars.push fvar) b
       | .letE _ t v b _ =>
@@ -406,7 +419,7 @@ where
           let t := t.instantiateRevRange 0 fvars.size fvars
           let t := t.cleanupAnnotations
           let v := v.instantiateRevRange 0 fvars.size fvars
-          let ⟨fvarId, initD,initI⟩ ← WithLetDeclU n t v initD initI
+          let ⟨fvarId, initD,initI⟩ ← WithLetDecl n t v initD initI
           let fvar := mkFVar fvarId
           process (D+1) initD initI (fvars.push fvar) b
       | _ =>
@@ -429,11 +442,11 @@ where
           let d := d.cleanupAnnotations
           match bi with
           | .instImplicit =>
-              let ⟨fvarId, initD,initI⟩ ← WithLocalDeclU n d initD initI
+              let ⟨fvarId, initD,initI⟩ ← WithLocalDecl n d initD initI
               let fvar := mkFVar fvarId
               process (D+1) initD initI (fvars.push fvar) b
           | _ =>
-              let (fvarId, initD) ← withNonInstLocalDeclU n d initD
+              let (fvarId, initD) := withNonInstLocalDecl n d initD
               let fvar := mkFVar fvarId
               process (D+1) initD initI (fvars.push fvar) b
       | .letE _ t v b _ =>
@@ -441,7 +454,7 @@ where
           let t := t.instantiateRevRange 0 fvars.size fvars
           let t := t.cleanupAnnotations
           let v := v.instantiateRevRange 0 fvars.size fvars
-          let ⟨fvarId, initD,initI⟩ ← WithLetDeclU n t v initD initI
+          let ⟨fvarId, initD,initI⟩ ← WithLetDecl n t v initD initI
           let fvar := mkFVar fvarId
           process (D+1) initD initI (fvars.push fvar) b
       | _ =>

@@ -7,7 +7,6 @@ Author: Yves Jäckle.
 
 import Lean.Meta.Basic
 import Batteries.Tactic.OpenPrivate
-import LeanGrowBeta.Utils.Std.PersistentHashMap
 
 
 
@@ -201,10 +200,7 @@ def loadLMVarsNoCoA (data : Array (LMVarId)) : MetaM Unit := do
   pure ()
 
 
-/-- Didn't know about `MVarId.modifyLCtx`, but this should also be faster ? -/
-@[inline]
-def Lean.MVarId.setLocalData (mvarId : MVarId) (l1 : LocalContext) (l2 : LocalInstances) : MetaM Unit :=
-  modifyMCtx (fun mctx => {mctx with decls := mctx.decls.update mvarId (fun d => {d with lctx := l1, localInstances := l2})})
+#check MVarId.modifyLCtx
 
 
 -- # Printing
