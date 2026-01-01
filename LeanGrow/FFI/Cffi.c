@@ -1,6 +1,6 @@
 
-// #include <lean/lean.h>
-#include "lean.h" // dev
+#include <lean/lean.h>
+// #include "lean.h" // dev
 
 #include <string.h>
 // // required by memcpy
@@ -639,19 +639,3 @@ size_t u32_array_ptr_set_next (size_t ptr, uint32_t val) {
 }
 
 
-
-/* Array */
-
-lean_obj_res array_squash (lean_obj_arg type, lean_obj_arg a, b_lean_obj_arg from, b_lean_obj_arg num) {
-    if (!lean_is_scalar(from) || !lean_is_scalar(num)) {lean_panic("[array_squash] indices not scalar", true);};
-    //if (from > to) {lean_panic("[array_squash] index from > to", true);} //could also check that they're in bounds
-    lean_object** A = lean_array_cptr(a);
-    lean_object* a = lean_ensure_exclusive_array(a);
-    {   size_t from = lean_unbox(from);
-        size_t num = lean_unbox(num);
-        lean_object** dest = A + (from*(sizeof(lean_object*))) ;
-        lean_object** src = A + ((from + num)*(sizeof(lean_object*))) ;
-        size_t tomove = sizeof(void*)*(lean_array_size(a) - (from + num)); // mimick lean_array_data_byte_size
-        memmove(dest,src,tomove);}
-
-}

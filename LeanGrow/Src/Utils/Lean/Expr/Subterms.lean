@@ -9,7 +9,6 @@ import LeanGrow.Src.Utils.Tracing
 import LeanGrow.Src.Utils.Lean.LocalContext
 import LeanGrow.Src.Utils.Lean.Expr.Fail
 import LeanGrow.Src.Utils.LeanGrow.Nodes
-import LeanGrow.Src.Data.CTrie.Basic
 
 open Lean Meta
 
@@ -25,94 +24,154 @@ private inductive AssembleTask where
 | mdata (_ : MData) (_ : AssembleTask)
 deriving Inhabited, Repr, BEq
 
-@[specialize f, inline]
-partial def Lean.Expr.onAllSubtermsTR (e : Expr) (f : Expr → Expr) : Expr :=
-  trace set TracingFlags.none in
-  let rec @[specialize f] go (ta : List Expr) (aT : AssembleTask) (up? : Bool) : List Expr → Expr
-    | last@([]) =>
-      trace on .zero with s!"[onAllSubterms] empty todos ; \n  ta : {repr ta}\n  aT : {repr aT}" in
-      match aT with
-      | .proj n i ats =>
-        match ta with
-        | x :: L => go ((.proj n i x) :: L) ats up? last
-        | _ => failExpr "onAllSubterms"
-      | .mdata d ats =>
-        match ta with
-        | x :: L => go ((.mdata d x) :: L) ats up? last
-        | _ => failExpr "onAllSubterms"
-      | .app ats false =>
-        match ta with
-        | x :: y :: L => go ((.app y x) :: L) ats up? last
-        | _ => failExpr "onAllSubterms"
-      | .lam n i ats false =>
-        match ta with
-        | x :: y :: L => go ((.lam n y x i) :: L) ats up? last
-        | _ => failExpr "onAllSubterms"
-      | .all n i ats false =>
-        match ta with
-        | x :: y :: L => go ((.forallE n y x i) :: L) ats up? last
-        | _ => failExpr "onAllSubterms"
-      | .letE n i ats _ =>
-        match ta with
-        | x :: y :: z :: L => go ((.letE n z y x i) :: L) ats up? last
-        | _ => failExpr "onAllSubterms"
-      | .nil =>
-        match ta with
-        | res :: _ => res
-        | _ => failExpr "onAllSubterms"
+
+mutual
+@[specialize f]
+private partial def goUp_1 (f : Expr → Expr) (ta : List Expr) (aT : AssembleTask) : List Expr → Expr
+  | last@([]) =>
+    trace set TracingFlags.none in
+    trace on .zero with s!"[onAllSubterms] empty todos ; \n  ta : {repr ta}\n  aT : {repr aT}" in
+    match aT with
+    | .proj n i ats =>
+      match ta with
+      | x :: L => goUp_1 f ((.proj n i x) :: L) ats last
       | _ => failExpr "onAllSubterms"
-    | todo@(nx :: more) =>
-      trace on .zero with s!"[onAllSubterms] cons todos ; mode up? is {up?}" in
-      if up?
+    | .mdata d ats =>
+      match ta with
+      | x :: L => goUp_1 f ((.mdata d x) :: L) ats last
+      | _ => failExpr "onAllSubterms"
+    | .app ats false =>
+      match ta with
+      | x :: y :: L => goUp_1 f ((.app y x) :: L) ats last
+      | _ => failExpr "onAllSubterms"
+    | .lam n i ats false =>
+      match ta with
+      | x :: y :: L => goUp_1 f ((.lam n y x i) :: L) ats last
+      | _ => failExpr "onAllSubterms"
+    | .all n i ats false =>
+      match ta with
+      | x :: y :: L => goUp_1 f ((.forallE n y x i) :: L) ats last
+      | _ => failExpr "onAllSubterms"
+    | .letE n i ats _ =>
+      match ta with
+      | x :: y :: z :: L => goUp_1 f ((.letE n z y x i) :: L) ats last
+      | _ => failExpr "onAllSubterms"
+    | .nil =>
+      match ta with
+      | res :: _ => res
+      | _ => failExpr "onAllSubterms"
+    | _ => failExpr "onAllSubterms"
+  | todo@(_ :: _) =>
+    trace set TracingFlags.none in
+    trace on .zero with s!"[onAllSubterms]\n  ta : {repr ta}\n  aT : {repr aT}\n  todo : {repr todo}" in
+    match aT with
+    | .proj n i ats =>
+      match ta with
+      | x :: L => goUp_1 f ((.proj n i x) :: L) ats todo
+      | _ => failExpr "onAllSubterms"
+    | .mdata d ats =>
+      match ta with
+      | x :: L => goUp_1 f ((.mdata d x) :: L) ats todo
+      | _ => failExpr "onAllSubterms"
+    | .app ats true => goDown_1 f ta (.app ats false) todo
+    | .app ats false =>
+      match ta with
+      | x :: y :: L => goUp_1 f  ((.app y x) :: L) ats todo
+      | _ => failExpr "onAllSubterms"
+    | .lam n i ats true => goDown_1 f ta (.lam n i ats false) todo
+    | .lam n i ats false =>
+      match ta with
+      | x :: y :: L => goUp_1 f  ((.lam n y x i) :: L) ats todo
+      | _ => failExpr "onAllSubterms"
+    | .all n i ats true => goDown_1 f ta (.all n i ats false) todo
+    | .all n i ats false =>
+      match ta with
+      | x :: y :: L => goUp_1 f  ((.forallE n y x i) :: L) ats todo
+      | _ => failExpr "onAllSubterms"
+    | .letE n i ats pn =>
+      if pn == 0
       then
-        trace on .zero with s!"[onAllSubterms]\n  ta : {repr ta}\n  aT : {repr aT}\n  todo : {repr todo}" in
-        match aT with
-        | .proj n i ats =>
-          match ta with
-          | x :: L => go ((.proj n i x) :: L) ats up? todo
-          | _ => failExpr "onAllSubterms"
-        | .mdata d ats =>
-          match ta with
-          | x :: L => go ((.mdata d x) :: L) ats up? todo
-          | _ => failExpr "onAllSubterms"
-        | .app ats true => go ta (.app ats false) false todo
-        | .app ats false =>
-          match ta with
-          | x :: y :: L => go ((.app y x) :: L) ats up? todo
-          | _ => failExpr "onAllSubterms"
-        | .lam n i ats true => go ta (.lam n i ats false) false todo
-        | .lam n i ats false =>
-          match ta with
-          | x :: y :: L => go ((.lam n y x i) :: L) ats up? todo
-          | _ => failExpr "onAllSubterms"
-        | .all n i ats true => go ta (.all n i ats false) false todo
-        | .all n i ats false =>
-          match ta with
-          | x :: y :: L => go ((.forallE n y x i) :: L) ats up? todo
-          | _ => failExpr "onAllSubterms"
-        | .letE n i ats pn =>
-          if pn == 0
-          then
-            match ta with
-            | x :: y :: z :: L => go ((.letE n z y x i) :: L) ats up? todo
-            | _ => failExpr "onAllSubterms"
-          else
-            go ta (.letE n i ats (pn-1)) false todo
+        match ta with
+        | x :: y :: z :: L => goUp_1 f  ((.letE n z y x i) :: L) ats todo
         | _ => failExpr "onAllSubterms"
       else
-        let here := f nx
-        trace on .zero with s!"[onAllSubterms]\n  here : {repr here}\n  ta : {repr ta}\n  aT : {repr aT}\n  todo : {repr todo}" in
-        match here with
-        | .const _ _ | .lit _ | .mvar _ | .fvar _ | .bvar _  | .sort _ =>
-            go (here :: ta) aT true more
-        | .app l r => go ta (.app aT true) false (l :: r :: more)
-        | .lam n l r i => go ta (.lam n i aT true) false (l :: r :: more)
-        | .forallE n l r i => go ta (.all n i aT true) false (l :: r :: more)
-        | .letE n l r z i => go ta (.letE n i aT 2) false (l :: r :: z :: more)
-        | .proj n i l => go ta (.proj n i aT) false (l :: more)
-        | .mdata d l => go ta (.mdata d aT) false (l :: more)
-  go [] .nil false [e]
+        goDown_1 f ta (.letE n i ats (pn-1)) todo
+    | _ => failExpr "onAllSubterms"
 
+@[specialize f]
+private partial def goDown_1 (f : Expr → Expr) (ta : List Expr) (aT : AssembleTask) (todo : List Expr) : Expr :=
+  trace set TracingFlags.none in
+  match todo with
+  | (nx :: more) =>
+    let here := f nx
+    trace on .zero with s!"[onAllSubterms]\n  here : {repr here}\n  ta : {repr ta}\n  aT : {repr aT}\n  todo : {repr todo}" in
+    match here with
+    | .const _ _ | .lit _ | .mvar _ | .fvar _ | .bvar _  | .sort _ =>
+        goUp_1 f (here :: ta) aT more
+    | .app l r => goDown_1 f ta (.app aT true) (l :: r :: more)
+    | .lam n l r i => goDown_1 f ta (.lam n i aT true) (l :: r :: more)
+    | .forallE n l r i => goDown_1 f ta (.all n i aT true) (l :: r :: more)
+    | .letE n l r z i => goDown_1 f ta (.letE n i aT 2) (l :: r :: z :: more)
+    | .proj n i l => goDown_1 f ta (.proj n i aT) (l :: more)
+    | .mdata d l => goDown_1 f ta (.mdata d aT) (l :: more)
+  | _ => failExpr "onAllSubterms"
+end
+
+@[specialize f, inline]
+def Lean.Expr.onAllSubtermsTR (e : Expr) (f : Expr → Expr) : Expr :=
+  goDown_1 f [] .nil [e]
+
+
+#check Expr.replace
+#check Std.HashMap.contains
+
+@[specialize f, inline]
+partial def Lean.Expr.onAllSubterms (e : Expr) (f : Expr → Expr) : Expr :=
+  let rec @[specialize f] go (e : Expr) (C : ExprMap Expr ) : Expr × ExprMap Expr :=
+    match C[e]? with
+    | .some res => (res,C)
+    | _ =>
+      match f e with
+      | .app l r =>
+        let (l,C) := go l C
+        let (r,C) := go r C
+        let R := .app l r
+        let C := C.insert e R
+        (R, C)
+      | .lam n l r bi =>
+        let (l,C) := go l C
+        let (r,C) := go r C
+        let R := .lam n l r bi
+        let C := C.insert e R
+        (R, C)
+      | .forallE n l r bi =>
+        let (l,C) := go l C
+        let (r,C) := go r C
+        let R := .forallE n l r bi
+        let C := C.insert e R
+        (R, C)
+      | .letE n l r z bi =>
+        let (l,C) := go l C
+        let (r,C) := go r C
+        let (z,C) := go z C
+        let R := .letE n l r z bi
+        let C := C.insert e R
+        (R, C)
+      | .proj n i l =>
+        let (l,C) := go l C
+        let R := .proj n i l
+        let C := C.insert e R
+        (R, C)
+      | .mdata d l =>
+        let (l,C) := go l C
+        let R := .mdata d l
+        let C := C.insert e R
+        (R, C)
+      | t => (t,C.insert e t)
+  (go e {}).1
+
+
+#exit
 
 @[specialize f, inline]
 partial def Lean.Expr.onAllSubtermsWiDepth (e : Expr) (f : Expr → Nat → Expr) : Expr :=

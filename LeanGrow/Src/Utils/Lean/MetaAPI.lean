@@ -36,6 +36,7 @@ def defEqNoMv (a b : Expr) : MetaM (Option (PersistentHashMap LMVarId Level × P
       let rl := mc.lAssignment
       let re := mc.eAssignment
       clearMvarAssignments
+      resetDefEqPermCaches
       return .some (rl,re)
     else
       return .none
@@ -49,33 +50,68 @@ def defEqNoMvNoClear (a b : Expr) : MetaM (Option (PersistentHashMap LMVarId Lev
       let mc ← getMCtx
       let rl := mc.lAssignment
       let re := mc.eAssignment
+      resetDefEqPermCaches
       return .some (rl,re)
     else
       return .none
   catch _ => return .none
 
 
+namespace CollectMVarsRec
+
+structure State where
+  visitedExpr  : ExprSet      := {}
+  result       : Array MVarId := .emptyWithCapacity 8
+
+instance : Inhabited State := ⟨{}⟩
+
+mutual
+  partial def visit (e : Expr) (s : State) : MetaM State := do
+    if !e.hasExprMVar || s.visitedExpr.contains e then return s
+    else main e { s with visitedExpr := s.visitedExpr.insert e }
+
+  partial def main (e : Expr) (s : State) : MetaM State := do
+    match e with
+    | Expr.proj _ _ e      =>
+      visit e s
+    | Expr.forallE _ d b _ =>
+      let s ← visit b s
+      visit d s
+    | Expr.lam _ d b _     =>
+      let s ← visit b s
+      visit d s
+    | Expr.letE _ t v b _  =>
+      let s ← visit t s
+      let s ← visit v s
+      visit b s
+    | Expr.app f a         =>
+      let s ← visit a s
+      visit f s
+    | Expr.mdata _ b       =>
+      visit b s
+    | Expr.mvar mvarId     =>
+      if s.visitedExpr.contains e
+      then return s
+      else
+        let T ← mvarId.getType
+        let s ← visit T s
+        return { s with result := s.result.push mvarId, visitedExpr := s.visitedExpr.insert e}
+    | _                    =>
+      return s
+end
+
+end CollectMVarsRec
+
+/-- based on `collectMVars` -/
 @[inline]
-partial def Lean.Expr.getMVarsRec (init : List MVarId) (e : Expr) : MetaM (List MVarId) :=
-  let rec go (col : List MVarId) : List Expr → MetaM (List MVarId)
-    | [] => return col
-    | e :: more =>
-        match e with
-        | .mvar mid => do
-            let T ← mid.getType
-            if T.data.hasExprMVar
-            then go (col.insert mid) (T :: more)
-            else go (col.insert mid) more
-        | .app l r => go (col) (l :: r :: more)
-        | .lam _ l r _ => go (col) (l :: r :: more)
-        | .forallE _ l r _ => go ( col)  (l :: r :: more)
-        | .letE _ l r z _ => go ( col)  (l :: r :: z :: more)
-        | .proj _ _ e => go ( col)  (e :: more)
-        | .mdata _ e => go ( col) (e :: more)
-        | _ => go ( col) more
-  if e.data.hasExprMVar
-  then go init [e]
-  else return init
+def Lean.Expr.getMVarsRec  (e : Expr) : MetaM (Array MVarId) := do
+  let res ← CollectMVarsRec.visit e {}
+  return res.result
+
+@[inline]
+def Lean.Expr.getMVarsRec' (ini : Array MVarId) (e : Expr) : MetaM (Array MVarId) := do
+  let res ← CollectMVarsRec.visit e ⟨{},ini⟩
+  return res.result
 
 
 /--
@@ -88,12 +124,12 @@ Doesn't reset the local context of mvars contain in `a` and `b`.
 def defEqWiMv (a b : Expr) (l1 : LocalContext) (l2 : LocalInstances)
   : MetaM (Option (PersistentHashMap LMVarId Level × PersistentHashMap MVarId Expr)) := do
   withReader (fun ctx => {ctx with lctx := l1, localInstances := l2}) do
-    let mva ← a.getMVarsRec []
-    let mvb ← b.getMVarsRec mva
+    let mva ← a.getMVarsRec
+    let mvb ← b.getMVarsRec' mva
     for mv in mva do
-      mv.modifyDecl (fun d => {d with lctx := l1, localInstances l2})
+      mv.modifyDecl (fun d => {d with lctx := l1, localInstances := l2})
     for mv in mvb do
-      mv.setLocalData l1 l2
+      mv.modifyDecl (fun d => {d with lctx := l1, localInstances := l2})
     try
       if ← isExprDefEq a b
       then
@@ -101,31 +137,61 @@ def defEqWiMv (a b : Expr) (l1 : LocalContext) (l2 : LocalInstances)
         let rl := mc.lAssignment
         let re := mc.eAssignment
         clearMvarAssignments
+        for mv in mva do
+          mv.modifyDecl (fun d => {d with lctx := {}, localInstances := {}})
+        for mv in mvb do
+          mv.modifyDecl (fun d => {d with lctx := {}, localInstances := {}})
+        resetDefEqPermCaches
         return .some (rl,re)
       else
+        for mv in mva do
+          mv.modifyDecl (fun d => {d with lctx := {}, localInstances := {}})
+        for mv in mvb do
+          mv.modifyDecl (fun d => {d with lctx := {}, localInstances := {}})
+        resetDefEqPermCaches
         return .none
-    catch _ => return .none
+    catch _ =>
+      for mv in mva do
+        mv.modifyDecl (fun d => {d with lctx := {}, localInstances := {}})
+      for mv in mvb do
+        mv.modifyDecl (fun d => {d with lctx := {}, localInstances := {}})
+      return .none
 
 @[inline]
 def defEqWiMvNoClear (a b : Expr) (l1 : LocalContext) (l2 : LocalInstances)
   : MetaM (Option (PersistentHashMap LMVarId Level × PersistentHashMap MVarId Expr)) := do
   withReader (fun ctx => {ctx with lctx := l1, localInstances := l2}) do
-    let mva ← getMVars a
-    let mvb ← getMVars b
+    let mva ← a.getMVarsRec
+    let mvb ← b.getMVarsRec' mva
     for mv in mva do
-      mv.setLocalData l1 l2
+      mv.modifyDecl (fun d => {d with lctx := l1, localInstances := l2})
     for mv in mvb do
-      mv.setLocalData l1 l2
+      mv.modifyDecl (fun d => {d with lctx := l1, localInstances := l2})
     try
       if ← isExprDefEq a b
       then
         let mc ← getMCtx
         let rl := mc.lAssignment
         let re := mc.eAssignment
+        for mv in mva do
+          mv.modifyDecl (fun d => {d with lctx := {}, localInstances := {}})
+        for mv in mvb do
+          mv.modifyDecl (fun d => {d with lctx := {}, localInstances := {}})
+        resetDefEqPermCaches
         return .some (rl,re)
       else
+        for mv in mva do
+          mv.modifyDecl (fun d => {d with lctx := {}, localInstances := {}})
+        for mv in mvb do
+          mv.modifyDecl (fun d => {d with lctx := {}, localInstances := {}})
+        resetDefEqPermCaches
         return .none
-    catch _ => return .none
+    catch _ =>
+      for mv in mva do
+        mv.modifyDecl (fun d => {d with lctx := {}, localInstances := {}})
+      for mv in mvb do
+        mv.modifyDecl (fun d => {d with lctx := {}, localInstances := {}})
+      return .none
 
 
 
@@ -146,6 +212,7 @@ def Lean.FVarId.GetType (term : FVarId) (initD : LocalContext) (initI : LocalIns
 def InferType (term : Expr) (initD : LocalContext) (initI : LocalInstances) : MetaM Expr := do
   withReader (fun ctx => {ctx with lctx := initD, localInstances := initI}) do
     inferType term
+
 
 @[inline]
 def InstantiateMVars (term : Expr) (initD : LocalContext) (initI : LocalInstances) : MetaM Expr := do
@@ -177,15 +244,16 @@ def WhnfR (term : Expr) (initD : LocalContext) (initI : LocalInstances) : MetaM 
   withReader (fun ctx => {ctx with lctx := initD, localInstances := initI}) do
     whnfR term
 
-/-- Note : Affects `Cache` in `Meta.State`, which will not be reset ...-/
+/-- Doesn't load mvars with context, or clears assignments ... -/
 @[inline]
 def SynthInstance (type : Expr) (initD : LocalContext) (initI : LocalInstances) : MetaM (Option Expr) := do
-  let initI := initI.filter (fun x => !x.fvar.fvarId!.isWorker)
-  -- ↑ is a patch, avoid it in rewrite
   withReader (fun ctx => {ctx with lctx := initD, localInstances := initI}) do
-    try synthInstance type
-    catch _ => return .none
-
+    try
+      let res ← synthInstance type
+      resetSynthInstanceCache
+      return .some res
+    catch _ =>
+      return .none
 
 @[inline]
 def IsTypeCorrect (type : Expr) (initD : LocalContext) (initI : LocalInstances) : MetaM Bool := do
@@ -234,5 +302,3 @@ def GetTypeBody (type : Expr) (x : Expr) (initD : LocalContext) (initI : LocalIn
 def Lean.FVarId.GetValue? (fv : FVarId) (initD : LocalContext) (initI : LocalInstances) : MetaM (Option Expr) := do
   withReader (fun ctx => {ctx with lctx := initD, localInstances := initI}) do
     getValue? fv
-
---

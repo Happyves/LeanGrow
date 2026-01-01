@@ -165,163 +165,31 @@ def withFreeingLet (n : Name) (type value body: Expr) (initD : LocalContext) (in
   let body := Expr.instantiate1 body (.fvar fv)
   return ⟨fv,body,initD,initL⟩
 
-/-
-TODO:
-- finish Array.squash FFI
-- After using ↓ with workers, and returning to a state where workers have no meaning anymore,
-  but are still in LocalInstances, squash LocalInstances from its size before the telescope,
-  by the number of workers
-- in onAllsubterms, this should be done after returning from the transformed term ...
-- in MetavarContext, never add mvars with local ltxs, for linear use
-- in MetaAPI, all actions should be wrapped in loading mvars with ltxs, and these
-  ltxs in declarations should be cleared after the action, so that there remains linear use ???
--/
 
-#exit
+class LtxPatcher where
+  cons : True
+
+@[inline]
+def initLtxPatcher (initD : LocalContext) (initI : LocalInstances) : MetaM (LocalContext × LocalInstances) := do
+  let T := Expr.const ``LtxPatcher []
+  let ⟨_, initD,initI⟩ ← WithLocalDecl `dummyLtxPatcher T initD initI
+  return (initD,initI)
+
+/-- `start` should be the size of the LocalInstances -/
+@[inline]
+def LocalInstances.patch (l : LocalInstances) (start num : Nat) : LocalInstances :=
+  let rec go (idx : Nat) (l : LocalInstances) : Nat → LocalInstances
+    | 0 => l
+    | n+1 => go (idx+1) (l.set! idx ⟨``LtxPatcher, .fvar ⟨`dummyLtxPatcher⟩⟩) n
+  go start l num
+
 
 -- # Telescopes
 
-/-- Based on `lambdaTelescopeImp -/
+
+/-- Remember to call `LocalInstances.patch` -/
 @[inline]
-def LambdaLetTelescope (e : Expr) (initD : LocalContext) (initI : LocalInstances)
-    : MetaM (Prod4 Expr (Array Expr) LocalContext LocalInstances) := do
-  process initD initI #[] e
-where
-  process (initD : LocalContext) (initI : LocalInstances) (fvars : Array Expr) (e : Expr)
-    : MetaM (Prod4 Expr (Array Expr) LocalContext LocalInstances) := do
-      match e with
-      | .lam n d b bi =>
-          let d := d.instantiateRevRange 0 fvars.size fvars
-          let d := d.cleanupAnnotations
-          match bi with
-          | .instImplicit =>
-              let ⟨fvarId, initD,initI⟩ ← WithLocalDeclU n d initD initI
-              let fvar := mkFVar fvarId
-              process initD initI (fvars.push fvar) b
-          | _ =>
-              let (fvarId, initD) ← withNonInstLocalDeclU n d initD
-              let fvar := mkFVar fvarId
-              process initD initI (fvars.push fvar) b
-      | .letE n t v b _ =>
-          let t := t.instantiateRevRange 0 fvars.size fvars
-          let t := t.cleanupAnnotations
-          let v := v.instantiateRevRange 0 fvars.size fvars
-          let ⟨fvarId, initD,initI⟩ ← WithLetDeclU n t v initD initI
-          let fvar := mkFVar fvarId
-          process initD initI (fvars.push fvar) b
-      | _ =>
-          let e := e.instantiateRevRange 0 fvars.size fvars
-          return ⟨e, fvars, initD, initI⟩
-
-@[inline]
-def LambdaLetBoundedTelescope (e : Expr) (initD : LocalContext) (initI : LocalInstances) (maxFVars : Nat)
-    : MetaM (Prod4 Expr (Array Expr) LocalContext LocalInstances) := do
-  process initD initI #[] e
-where
-  process (initD : LocalContext) (initI : LocalInstances) (fvars : Array Expr) (e : Expr)
-    : MetaM (Prod4 Expr (Array Expr) LocalContext LocalInstances) := do
-    if (Nat.blt fvars.size maxFVars)
-    then
-      match e with
-      | .lam n d b bi =>
-          let d := d.instantiateRevRange 0 fvars.size fvars
-          let d := d.cleanupAnnotations
-          match bi with
-          | .instImplicit =>
-              let ⟨fvarId, initD,initI⟩ ← WithLocalDeclU n d initD initI
-              let fvar := mkFVar fvarId
-              process initD initI (fvars.push fvar) b
-          | _ =>
-              let (fvarId, initD) ← withNonInstLocalDeclU n d initD
-              let fvar := mkFVar fvarId
-              process initD initI (fvars.push fvar) b
-      | .letE n t v b _ =>
-          let t := t.instantiateRevRange 0 fvars.size fvars
-          let t := t.cleanupAnnotations
-          let v := v.instantiateRevRange 0 fvars.size fvars
-          let ⟨fvarId, initD,initI⟩ ← WithLetDeclU n t v initD initI
-          let fvar := mkFVar fvarId
-          process initD initI (fvars.push fvar) b
-      | _ =>
-          let e := e.instantiateRevRange 0 fvars.size fvars
-          return ⟨e, fvars, initD, initI⟩
-    else
-      let e := e.instantiateRevRange 0 fvars.size fvars
-      return ⟨e, fvars, initD, initI⟩
-
-
-@[inline]
-def ForallLetTelescope (e : Expr) (initD : LocalContext) (initI : LocalInstances)
-    : MetaM (Prod4 Expr (Array Expr) LocalContext LocalInstances) := do
-  process initD initI #[] e
-where
-  process (initD : LocalContext) (initI : LocalInstances) (fvars : Array Expr) (e : Expr)
-    : MetaM (Prod4 Expr (Array Expr) LocalContext LocalInstances) := do
-      match e with
-      | .forallE n d b bi =>
-          let d := d.instantiateRevRange 0 fvars.size fvars
-          let d := d.cleanupAnnotations
-          match bi with
-          | .instImplicit =>
-              let ⟨fvarId, initD,initI⟩ ← WithLocalDeclU n d initD initI
-              let fvar := mkFVar fvarId
-              process initD initI (fvars.push fvar) b
-          | _ =>
-              let (fvarId, initD) ← withNonInstLocalDeclU n d initD
-              let fvar := mkFVar fvarId
-              process initD initI (fvars.push fvar) b
-      | .letE n t v b _ =>
-          let t := t.instantiateRevRange 0 fvars.size fvars
-          let t := t.cleanupAnnotations
-          let v := v.instantiateRevRange 0 fvars.size fvars
-          let ⟨fvarId, initD,initI⟩ ← WithLetDeclU n t v initD initI
-          let fvar := mkFVar fvarId
-          process initD initI (fvars.push fvar) b
-      | _ =>
-          let e := e.instantiateRevRange 0 fvars.size fvars
-          return ⟨e, fvars, initD, initI⟩
-
-@[inline]
-def ForallLetBoundedTelescope (e : Expr) (initD : LocalContext) (initI : LocalInstances) (maxFVars : Nat)
-    : MetaM (Prod4 Expr (Array Expr) LocalContext LocalInstances) := do
-  process initD initI #[] e
-where
-  process (initD : LocalContext) (initI : LocalInstances) (fvars : Array Expr) (e : Expr)
-    : MetaM (Prod4 Expr (Array Expr) LocalContext LocalInstances) := do
-    if (Nat.blt fvars.size maxFVars)
-    then
-      match e with
-      | .forallE n d b bi =>
-          let d := d.instantiateRevRange 0 fvars.size fvars
-          let d := d.cleanupAnnotations
-          match bi with
-          | .instImplicit =>
-              let ⟨fvarId, initD,initI⟩ ← WithLocalDeclU n d initD initI
-              let fvar := mkFVar fvarId
-              process initD initI (fvars.push fvar) b
-          | _ =>
-              let (fvarId, initD) ← withNonInstLocalDeclU n d initD
-              let fvar := mkFVar fvarId
-              process initD initI (fvars.push fvar) b
-      | .letE n t v b _ =>
-          let t := t.instantiateRevRange 0 fvars.size fvars
-          let t := t.cleanupAnnotations
-          let v := v.instantiateRevRange 0 fvars.size fvars
-          let ⟨fvarId, initD,initI⟩ ← WithLetDeclU n t v initD initI
-          let fvar := mkFVar fvarId
-          process initD initI (fvars.push fvar) b
-      | _ =>
-          let e := e.instantiateRevRange 0 fvars.size fvars
-          return ⟨e, fvars, initD, initI⟩
-    else
-      let e := e.instantiateRevRange 0 fvars.size fvars
-      return ⟨e, fvars, initD, initI⟩
-
-
-
-/-- With workers Based on lambdaTelescopeImp -/
-@[inline]
-def LambdaLetTelescopeWW (e : Expr) (initDepth : Nat) (initD : LocalContext) (initI : LocalInstances)
+def LambdaLetTelescope (e : Expr) (initDepth : Nat) (initD : LocalContext) (initI : LocalInstances)
     : MetaM (Prod4 Expr (Array Expr) LocalContext LocalInstances) := do
   process initDepth initD initI #[] e
 where
@@ -353,9 +221,9 @@ where
           let e := e.instantiateRevRange 0 fvars.size fvars
           return ⟨e, fvars, initD, initI⟩
 
-
+/-- Remember to call `LocalInstances.patch` -/
 @[inline]
-def LambdaLetBoundedTelescopeWW (e : Expr) (initDepth : Nat) (initD : LocalContext) (initI : LocalInstances) (maxFVars : Nat)
+def LambdaLetBoundedTelescope (e : Expr) (initDepth : Nat) (initD : LocalContext) (initI : LocalInstances) (maxFVars : Nat)
     : MetaM (Prod4 Expr (Array Expr) LocalContext LocalInstances) := do
   process initDepth initD initI #[] e
 where
@@ -392,9 +260,9 @@ where
       let e := e.instantiateRevRange 0 fvars.size fvars
       return ⟨e, fvars, initD, initI⟩
 
-
+/-- Remember to call `LocalInstances.patch` -/
 @[inline]
-def ForallLetTelescopeWW (e : Expr) (initDepth : Nat) (initD : LocalContext) (initI : LocalInstances)
+def ForallLetTelescope (e : Expr) (initDepth : Nat) (initD : LocalContext) (initI : LocalInstances)
     : MetaM (Prod4 Expr (Array Expr) LocalContext LocalInstances) := do
   process initDepth initD initI #[] e
 where
@@ -426,8 +294,9 @@ where
           let e := e.instantiateRevRange 0 fvars.size fvars
           return ⟨e, fvars, initD, initI⟩
 
+/-- Remember to call `LocalInstances.patch` -/
 @[inline]
-def ForallLetBoundedTelescopeWW (e : Expr) (initDepth : Nat) (initD : LocalContext) (initI : LocalInstances) (maxFVars : Nat)
+def ForallLetBoundedTelescope (e : Expr) (initDepth : Nat) (initD : LocalContext) (initI : LocalInstances) (maxFVars : Nat)
     : MetaM (Prod4 Expr (Array Expr) LocalContext LocalInstances) := do
   process initDepth initD initI #[] e
 where

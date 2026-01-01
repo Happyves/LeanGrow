@@ -7,7 +7,7 @@ Author: Yves Jäckle.
 
 import Lean.Meta.Basic
 import Batteries.Tactic.OpenPrivate
-
+import LeanGrow.Src.Data.Amalgames
 
 
 open Lean Meta
@@ -55,16 +55,6 @@ def mkMvarStdNoCoI (n : Name) (type : Expr) : MetaM MVarId := do
   return mv
 
 @[inline]
-def mkMvarStdWiCoE (n : Name) (type : Expr) (lctx : LocalContext) (lins : LocalInstances) : MetaM Expr := do
-  Lean.Meta.mkFreshExprMVarAtCore ⟨n⟩ lctx lins type .natural n 0
-
-@[inline]
-def mkMvarStdWiCoI (n : Name) (type : Expr) (lctx : LocalContext) (lins : LocalInstances) : MetaM MVarId := do
-  let mv : MVarId := ⟨n⟩
-  let _ ← Lean.Meta.mkFreshExprMVarAtCore mv lctx lins type .natural n 0
-  return mv
-
-@[inline]
 def mkMvarStdIndexNoCoE (n : Name) (type : Expr) (index : Nat) : MetaM Expr :=
   Lean.Meta.mkFreshExprMVarAtCoreI ⟨n⟩ {} {} type .natural n 0 index
 
@@ -74,17 +64,6 @@ def mkMvarStdIndexNoCoI (n : Name) (type : Expr) (index : Nat) : MetaM MVarId :=
   let _ ← Lean.Meta.mkFreshExprMVarAtCoreI mv {} {} type .natural n 0 index
   return mv
 
-@[inline]
-def mkMvarStdIndexWiCoE (n : Name) (type : Expr) (index : Nat)
-  (lctx : LocalContext) (lins : LocalInstances) : MetaM Expr := do
-  Lean.Meta.mkFreshExprMVarAtCoreI ⟨n⟩ lctx lins type .natural n 0 index
-
-@[inline]
-def mkMvarStdIndexWiCoI (n : Name) (type : Expr) (index : Nat)
-  (lctx : LocalContext) (lins : LocalInstances) : MetaM MVarId := do
-  let mv : MVarId := ⟨n⟩
-  let _ ← Lean.Meta.mkFreshExprMVarAtCoreI mv lctx lins type .natural n 0 index
-  return mv
 
 @[inline]
 def loadMVarsNoCoA (data : Array (Name × Expr)) : MetaM Unit := do
@@ -111,10 +90,9 @@ def loadMVarsWiCoL (data : List (Name × Expr)) (lctx : LocalContext) (lins : Lo
   pure ()
 
 
-
 @[inline]
-def loadMVarsIndexedNoCoA (data : Array (Name × Expr × Nat)) : MetaM Unit := do
-  for (n,t,i) in data do
+def loadMVarsIndexedNoCoA (data : Array (Prod3 Name Expr Nat)) : MetaM Unit := do
+  for ⟨n,t,i⟩ in data do
     let _ ← Lean.Meta.mkFreshExprMVarAtCoreI ⟨n⟩ {} {} t .natural n 0 i
   pure ()
 
