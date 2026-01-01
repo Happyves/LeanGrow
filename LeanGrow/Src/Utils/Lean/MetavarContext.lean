@@ -9,7 +9,6 @@ import Lean.Meta.Basic
 import Batteries.Tactic.OpenPrivate
 import LeanGrow.Src.Data.Amalgames
 
-
 open Lean Meta
 
 open private Lean.Meta.mkFreshExprMVarAtCore from Lean.Meta.Basic

@@ -6,12 +6,12 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Author: Yves Jäckle.
 -/
 
-import LeanGrowBeta.Utils.Lean.Expr.Subterms
-import LeanGrowBeta.Utils.Lean.Expr.Collect
-import LeanGrowBeta.Utils.Lean.MetaAPI
-import LeanGrowBeta.Utils.Std.List
-import LeanGrowBeta.Utils.Lean.Expr.Level
-
+import LeanGrow.Src.Utils.Lean.Expr.Subterms
+import LeanGrow.Src.Utils.Lean.Expr.Collect
+import LeanGrow.Src.Utils.Lean.MetaAPI
+import LeanGrow.Src.Utils.Std.List
+import LeanGrow.Src.Utils.Lean.Expr.Level
+import LeanGrow.FFI.Lffi
 
 open Lean Meta
 
@@ -67,8 +67,8 @@ def Lean.Expr.surgeryLambdaWD (trafo : Expr → Nat →  MetaM Expr) (d : Nat) :
 /-- Also handles let-/
 @[specialize]
 def Lean.Expr.lambdifyWD (trafo : Expr → Nat →  MetaM Expr) (d : Nat) : Expr → MetaM Expr
-  | .forallE n t b bi => return .lam n t (← b.surgeryLambdaWD trafo (d+1)) bi -- shouldnt it be  lambdifyWD ??
-  | .letE n t v b i => return .letE n t v (← b.surgeryLambdaWD trafo (d+1)) i
+  | .forallE n t b bi => return .lam n t (← b.lambdifyWD trafo (d+1)) bi
+  | .letE n t v b i => return .letE n t v (← b.lambdifyWD trafo (d+1)) i
   | x  => trafo x d
 
 
@@ -95,62 +95,6 @@ def Lean.Expr.lambdifyBoundedWD (trafo : Expr → Nat →  MetaM Expr) (d bound 
     | x  => trafo x d
 
 
-
-private partial def forallMetaTagTelescopeReducingAux
-  (tag : String) (lctx : LocalContext) (lins : LocalInstances)
-  (e : Expr) (reducing : Bool) (maxMVars? : Option Nat) (kind : MetavarKind) : MetaM (Array Expr × Array BinderInfo × Expr) :=
-  process #[] #[] 0 e
-where
-  process (mvars : Array Expr) (bis : Array BinderInfo) (j : Nat) (type : Expr) : MetaM (Array Expr × Array BinderInfo × Expr) := do
-    if maxMVars?.isEqSome mvars.size then
-      let type := type.instantiateRevRange j mvars.size mvars;
-      return (mvars, bis, type)
-    else
-      match type with
-      | .forallE n d b bi =>
-        let d  := d.instantiateRevRange j mvars.size mvars
-        let k  := if bi.isInstImplicit then  MetavarKind.synthetic else kind
-        let mvar ← mkFreshExprMVarTag tag d lctx lins k n
-        let mvars := mvars.push mvar
-        let bis   := bis.push bi
-        process mvars bis j b
-      | _ =>
-        let type := type.instantiateRevRange j mvars.size mvars;
-        if reducing then do
-          let newType ← Whnf type lctx lins
-          if newType.isForall then
-            process mvars bis mvars.size newType
-          else
-            return (mvars, bis, type)
-        else
-          return (mvars, bis, type)
-
-/-- Given `e` of the form `forall ..xs, A`, this combinator will create a new
-  metavariable for each `x` in `xs` and instantiate `A` with these.
-  Returns a product containing
-  - the new metavariables
-  - the binder info for the `xs`
-  - the instantiated `A`
--/
-@[inline]
-def forallMetaTagTelescope (lctx : LocalContext) (lins : LocalInstances) (tag : String) (e : Expr) (kind := MetavarKind.natural) : MetaM (Array Expr × Array BinderInfo × Expr) :=
-  forallMetaTagTelescopeReducingAux tag lctx lins e (reducing := false) (maxMVars? := none) kind
-
-
-
-partial def forallLetTelescope (l1 : LocalContext) (l2 : LocalInstances)
-  (type : Expr) (sofarFvs : Array Expr)
-  : MetaM (Prod4 Expr (Array Expr) LocalContext LocalInstances) := do
-  match type with
-  | .forallE n t b _ =>
-      let ⟨nfv,b,l1,l2⟩ ← withFreeing n t b l1 l2
-      forallLetTelescope l1 l2 b (sofarFvs.push (.fvar nfv))
-  | .letE n t v b _ =>
-      let ⟨nfv,b,l1,l2⟩ ← withFreeingLet n t v b l1 l2
-      forallLetTelescope l1 l2 b (sofarFvs.push (.fvar nfv))
-  | _ => return ⟨type,sofarFvs,l1,l2⟩
-
-
 partial def Lean.Expr.zeta : Expr → Expr
   | .letE _ _ V B _ => (Expr.instantiate1 B V).zeta
   | x => x
@@ -158,13 +102,13 @@ partial def Lean.Expr.zeta : Expr → Expr
 @[inline]
 def Lean.Expr.zetaFvs (within : Expr)
   (initD : LocalContext) (initI : LocalInstances) : MetaM Expr := do
-  return (← within.onAllSubtermsMTR initD initI (fun
-      | x@(.fvar fv), l1, l2 => do
+  return (← within.onAllSubtermsM initD initI (fun
+      | x@(.fvar fv), _, l1, l2 => do
           let dec ← fv.GetDecl l1 l2
           match dec with
           | .cdecl .. => return ⟨x,l1,l2⟩
           | .ldecl _ _ _ _ v .. => return ⟨v,l1,l2⟩
-      | x,y,z => return ⟨x,y,z⟩)).1
+      | x,_,y,z => return ⟨x,y,z⟩)).1
 
 
 -- # Abstract pattern
@@ -190,84 +134,124 @@ def Lean.Expr.abstractPatBind (pat patType within : Expr) : Expr :=
 
 /--
 - Expect fvars to be in context
-- λ is in same order as `fvs`-/
+- λ & let are in same order as `fvs`, without checking for consistency of abstraction !
+-/
 @[specialize]
 partial def Lean.Expr.abstractLetFvarWrt
   (initD : LocalContext) (initI : LocalInstances)
   (fvs : Array FVarId) (e : Expr)
   : MetaM (Prod3 Expr LocalContext LocalInstances) :=
-    let rec bind (term : Expr) (i : Nat) : MetaM Expr := do
-      -- **Bug potential** appearances in type `T` won't get abstracted
+    let rec bind (term : Expr) (i : Nat) (initD : LocalContext) (initI : LocalInstances) : MetaM (Prod3 Expr LocalContext LocalInstances) := do
       match ← (fvs[i]!).GetDecl initD initI with
       | .cdecl _ _ _ T .. =>
+          let ⟨T,initD,initI⟩ ← T.onAllSubtermsM initD initI (fun x d initD initI =>
+            match x with
+            | .fvar id =>
+              match fvs.findIdx? (fun y => y == id) with
+              | .none => return ⟨x,initD,initI⟩
+              | .some j => return ⟨(.bvar (d + i - 1 - j)),initD,initI⟩
+            | _ => return ⟨x,initD,initI⟩ )
           if i == 0
           then
-            return .lam `abstractFvarWrt T term .default
+            return ⟨.lam `abstractFvarWrt T term .default,initD,initI⟩
           else
-            bind (.lam `abstractFvarWrt T term .default) (i-1)
+            bind (.lam `abstractFvarWrt T term .default) (i-1) initD initI
       | .ldecl _ _ _ T V nonDep .. =>
+          let ⟨T,initD,initI⟩ ← T.onAllSubtermsM initD initI (fun x d initD initI =>
+            match x with
+            | .fvar id =>
+              match fvs.findIdx? (fun y => y == id) with
+              | .none => return ⟨x,initD,initI⟩
+              | .some j => return ⟨(.bvar (d + i - 1 - j)),initD,initI⟩
+            | _ => return ⟨x,initD,initI⟩ )
           if i == 0
           then
-            return .letE `abstractFvarWrt T V term nonDep
+            return ⟨.letE `abstractFvarWrt T V term nonDep,initD,initI⟩
           else
-            bind (.letE `abstractFvarWrt T V term nonDep) (i-1)
+            bind (.letE `abstractFvarWrt T V term nonDep) (i-1) initD initI
     do
     let fvS := fvs.size
     if fvS == 0
     then return ⟨e,initD,initI⟩
     else
-      let ⟨absd,initD,initI⟩ ← e.onAllSubtermsWiWorker initD initI (fun x d initD initI =>
+      let ⟨absd,initD,initI⟩ ← e.onAllSubtermsM initD initI (fun x d initD initI =>
         match x with
         | .fvar id =>
           match fvs.findIdx? (fun y => y == id) with
           | .none => return ⟨x,initD,initI⟩
           | .some i => return ⟨(.bvar (d + fvS - 1 - i)),initD,initI⟩
         | _ => return ⟨x,initD,initI⟩ )
-      let res ← bind absd (fvs.size - 1)
-      return ⟨res,initD,initI⟩
+      bind absd (fvs.size - 1) initD initI
+
 
 
 /--
 - Expect fvars to be in context
-- ∀ is in same order as `fvs`-/
+- ∀ & let are in same order as `fvs`,  without checking for consistency of abstraction !
+-/
 @[specialize]
 partial def Lean.Expr.abstractLetFvarAsAllWrt
   (initD : LocalContext) (initI : LocalInstances)
   (fvs : Array FVarId) (e : Expr)
   : MetaM (Prod3 Expr LocalContext LocalInstances) :=
-    let rec bind (term : Expr) (i : Nat) : MetaM Expr := do
+    let rec bind (term : Expr) (i : Nat) (initD : LocalContext) (initI : LocalInstances) : MetaM (Prod3 Expr LocalContext LocalInstances) := do
       match ← (fvs[i]!).GetDecl initD initI with
       | .cdecl _ _ _ T .. =>
+          let ⟨T,initD,initI⟩ ← T.onAllSubtermsM initD initI (fun x d initD initI =>
+            match x with
+            | .fvar id =>
+              match fvs.findIdx? (fun y => y == id) with
+              | .none => return ⟨x,initD,initI⟩
+              | .some j => return ⟨(.bvar (d + i - 1 - j)),initD,initI⟩
+            | _ => return ⟨x,initD,initI⟩ )
           if i == 0
           then
-            let term := Expr.abstractPat (.fvar fvs[i]!) term
-            return .forallE `abstractFvarWrt T term .default
+            return ⟨.forallE `abstractFvarWrt T term .default,initD,initI⟩
           else
-            let term := Expr.abstractPat (.fvar fvs[i]!) term
-            bind (.forallE `abstractFvarWrt T term .default) (i-1)
+            bind (.forallE `abstractFvarWrt T term .default) (i-1) initD initI
       | .ldecl _ _ _ T V nonDep .. =>
+          let ⟨T,initD,initI⟩ ← T.onAllSubtermsM initD initI (fun x d initD initI =>
+            match x with
+            | .fvar id =>
+              match fvs.findIdx? (fun y => y == id) with
+              | .none => return ⟨x,initD,initI⟩
+              | .some j => return ⟨(.bvar (d + i - 1 - j)),initD,initI⟩
+            | _ => return ⟨x,initD,initI⟩ )
           if i == 0
           then
-            let term := Expr.abstractPat (.fvar fvs[i]!) term
-            return .letE `abstractFvarWrt T V term nonDep
+            return ⟨.letE `abstractFvarWrt T V term nonDep,initD,initI⟩
           else
-            let term := Expr.abstractPat (.fvar fvs[i]!) term
-            bind (.letE `abstractFvarWrt T V term nonDep) (i-1)
+            bind (.letE `abstractFvarWrt T V term nonDep) (i-1) initD initI
     do
     let fvS := fvs.size
     if fvS == 0
     then return ⟨e,initD,initI⟩
     else
-      let res ← bind e (fvs.size - 1)
-      return ⟨res,initD,initI⟩
+      let ⟨absd,initD,initI⟩ ← e.onAllSubtermsM initD initI (fun x d initD initI =>
+        match x with
+        | .fvar id =>
+          match fvs.findIdx? (fun y => y == id) with
+          | .none => return ⟨x,initD,initI⟩
+          | .some i => return ⟨(.bvar (d + fvS - 1 - i)),initD,initI⟩
+        | _ => return ⟨x,initD,initI⟩ )
+      bind absd (fvs.size - 1) initD initI
 
-#check Expr.abstract
-#check Expr.abstractPat
 
+@[inline]
+partial def Lean.Expr.instantiateLooseBvarsL (fvs : List FVarId) (e : Expr) : Expr :=
+    e.onAllSubtermsWiDepth (fun x d =>
+        match x with
+        | .bvar i =>
+            if  i ≥ d
+            then
+              let fid := fvs[i - d]!
+              (.fvar fid)
+            else
+              x
+        | _ => x )
 
-
-@[inline, specialize]
-partial def Lean.Expr.instantiateLooseBvar (fvs : List FVarId) (e : Expr) : Expr :=
+@[inline]
+partial def Lean.Expr.instantiateLooseBvarsA (fvs : Array FVarId) (e : Expr) : Expr :=
     e.onAllSubtermsWiDepth (fun x d =>
         match x with
         | .bvar i =>
@@ -280,7 +264,17 @@ partial def Lean.Expr.instantiateLooseBvar (fvs : List FVarId) (e : Expr) : Expr
         | _ => x )
 
 
+
 -- # Check pattern
+
+@[inline]
+def Lean.Expr.hasPattern (pat within : Expr) : Bool :=
+  within.onAllSubtermsCheckExists (fun x => x == pat)
+
+@[inline]
+def Lean.Expr.hasWorker (within : Expr) : Bool :=
+  within.onAllSubtermsCheckExists (fun | .fvar x => x.isWorker | _ => false)
+
 
 @[inline]
 def Lean.Expr.hasPatternTR (pat within : Expr) : Bool :=
@@ -292,20 +286,37 @@ def Lean.Expr.hasWorkerTR (within : Expr) : Bool :=
 
 @[inline]
 def Lean.Expr.hasWorkerExcpet (exe : List FVarId) (within : Expr) : Bool :=
+  within.onAllSubtermsCheckExists (fun | .fvar x => if x.isWorker then !(exe.contains x) else false | _ => false)
+
+
+@[inline]
+def Lean.Expr.hasWorkerExcpetTR (exe : List FVarId) (within : Expr) : Bool :=
   within.onAllSubtermsCheckExistsTR (fun | .fvar x => if x.isWorker then !(exe.contains x) else false | _ => false)
 
 
 @[inline]
 def Lean.Expr.hasTnodes (within : Expr) : Bool :=
+  within.onAllSubtermsCheckExists (fun
+    | .fvar ⟨(.num (.num ..) ..)⟩ => true
+    | .sort u => u.hasTnodes
+    | .const _ lvls => lvls.any Level.hasTnodes
+    | _ => false)
+
+@[inline]
+def Lean.Expr.hasTnodesTR (within : Expr) : Bool :=
   within.onAllSubtermsCheckExistsTR (fun
     | .fvar ⟨(.num (.num ..) ..)⟩ => true
     | .sort u => u.hasTnodes
     | .const _ lvls => lvls.any Level.hasTnodes
     | _ => false)
 
-
 @[inline]
 def Lean.Expr.hasLnodes (within : Expr) : Bool :=
+  within.onAllSubtermsCheckExists (fun | .mvar ⟨(.num (.num ..) ..)⟩ => true | _ => false)
+
+
+@[inline]
+def Lean.Expr.hasLnodesTR (within : Expr) : Bool :=
   within.onAllSubtermsCheckExistsTR (fun | .mvar ⟨(.num (.num ..) ..)⟩ => true | _ => false)
 
 
@@ -314,61 +325,68 @@ def Lean.Expr.hasLnodes (within : Expr) : Bool :=
 
 @[inline]
 def Lean.Expr.getFVars (e : Expr) : List Expr :=
-  e.onAllSubtermsFold []
+  e.onAllSubtermsFoldSkip []
     (fun x sofar =>
       match x with
-      | .fvar .. => sofar.insert x
-      | _ => sofar
+      | .fvar .. => (sofar.insert x, true)
+      | _ => (sofar, !x.hasFVar)
       )
 
 @[inline]
 def Lean.Expr.getFVarIds (e : Expr) : List FVarId :=
-  e.onAllSubtermsFold []
+  e.onAllSubtermsFoldSkip []
     (fun x sofar =>
       match x with
-      | .fvar id => sofar.insert id
-      | _ => sofar
+      | .fvar id => (sofar.insert id, true)
+      | _ => (sofar, !x.hasFVar)
       )
 
 @[inline]
 def Lean.Expr.getDeepestWorker (proof : Expr) : Option Nat :=
-  proof.onAllSubtermsFold .none (fun e st =>
+  proof.onAllSubtermsFoldSkip .none (fun e st =>
     match e with
     | .fvar ⟨.num (.str _ k) d⟩ =>
         if k == "w"
         then
           match st with
-          | .none => .some d
+          | .none => (.some d, true)
           | .some x =>
               if d > x
-              then .some d
-              else st
-        else st
-    | _ => st
+              then (.some d,true)
+              else (st,true)
+        else (st,true)
+    | _ => (st, !e.hasFVar)
     )
 
 
 @[inline]
-def Lean.Expr.getWorkerInds (proof : Expr) : List Nat :=
-  proof.onAllSubtermsFold [] (fun e st =>
+def Lean.Expr.getWorkerInds (proof : Expr) : Array Nat :=
+  let res := proof.onAllSubtermsFoldSkip (UInt32Array.emptyWithCapacity 4) (fun e st =>
     match e with
     | .fvar ⟨.num (.str _ k) d⟩ =>
         if k == "w"
-        then st.orderedInsertOrLeave d
-        else st
-    | _ => st
+        then (st.oInsert d.toUInt32,true)
+        else (st,true)
+    | _ => (st,!e.hasFVar)
     )
+  Id.run <| do
+    let mut A := Array.emptyWithCapacity res.size
+    for i in res do
+      A := A.push i.toNat
+    return A
+
+
 
 @[inline]
-def Lean.Expr.getWorkerIndsTrans (l1 : LocalContext) (l2 : LocalInstances) (proof : Expr) : MetaM (List Nat) := do
-  let ⟨res,_,_⟩ ← proof.onAllSubtermsFoldEnqueueM l1 l2 [] (fun e D ws l1 l2 st =>
+def Lean.Expr.getWorkerIndsTrans (l1 : LocalContext) (l2 : LocalInstances) (proof : Expr) : MetaM (Array Nat) := do
+  let ⟨res,_,_⟩ ← proof.onAllSubtermsFoldEnqueueM l1 l2 (UInt32Array.emptyWithCapacity 4) (fun e D ws l1 l2 st =>
     match e with
-    | .fvar fv@⟨W@(.num (.str _ k) d)⟩ => do
+    | .fvar fv@⟨(.num (.str _ k) d)⟩ => do
         if k == "w"
         then
-          if (ws.find? W.toString.toUTF8).isNone
+          if ws.contains e
           then
-            let st := st.orderedInsertOrLeave d
+            let st := st.oInsert d.toUInt32
             let T ← fv.GetType l1 l2
             if T.hasFVar
             then
@@ -380,18 +398,29 @@ def Lean.Expr.getWorkerIndsTrans (l1 : LocalContext) (l2 : LocalInstances) (proo
         else return ⟨.std st,l1,l2⟩
     | _ => return ⟨.std st,l1,l2⟩
     )
-  return res
+  let mut A := Array.emptyWithCapacity res.size
+  for i in res do
+    A := A.push i.toNat
+  return A
 
-#print FoldEnqueueT
 
 @[inline]
 def Lean.Expr.getGUFVarsIds (e : Expr) : List FVarId :=
-  e.onAllSubtermsFold []
+  e.onAllSubtermsFoldSkip []
     (fun x sofar =>
       match x with
       | .fvar y@⟨.num k _⟩ =>
         if k == `u || k == `g
-        then sofar.insert y
-        else sofar
-      | _ => sofar
+        then (sofar.insert y,true)
+        else (sofar,true)
+      | _ => (sofar, !x.hasFVar)
       )
+
+
+/-
+Todo:
+
+make skippable versions of `onAllSubtermsCheckExists` and `onAllSubtermsFoldEnqueueM`
+and replace in above to check for fvars
+.. actually, apply to `onAllSubtermsM` of this section too ...
+-/

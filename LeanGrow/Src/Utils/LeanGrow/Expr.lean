@@ -5,8 +5,8 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Author: Yves Jäckle.
 -/
 
-import LeanGrowBeta.Utils.Lean.Expr.Basic
-import LeanGrowBeta.Utils.Lean.Expr.Level
+import LeanGrow.Src.Utils.Lean.Expr.Basic
+import LeanGrow.Src.Utils.Lean.Expr.Level
 
 open Lean Meta
 

@@ -177,7 +177,7 @@ def initLtxPatcher (initD : LocalContext) (initI : LocalInstances) : MetaM (Loca
 
 /-- `start` should be the size of the LocalInstances -/
 @[inline]
-def LocalInstances.patch (l : LocalInstances) (start num : Nat) : LocalInstances :=
+def Lean.LocalInstances.patch (l : LocalInstances) (start num : Nat) : LocalInstances :=
   let rec go (idx : Nat) (l : LocalInstances) : Nat → LocalInstances
     | 0 => l
     | n+1 => go (idx+1) (l.set! idx ⟨``LtxPatcher, .fvar ⟨`dummyLtxPatcher⟩⟩) n

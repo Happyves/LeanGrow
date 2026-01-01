@@ -302,3 +302,46 @@ def GetTypeBody (type : Expr) (x : Expr) (initD : LocalContext) (initI : LocalIn
 def Lean.FVarId.GetValue? (fv : FVarId) (initD : LocalContext) (initI : LocalInstances) : MetaM (Option Expr) := do
   withReader (fun ctx => {ctx with lctx := initD, localInstances := initI}) do
     getValue? fv
+
+
+-- # Telescope
+
+private partial def forallMetaTagTelescopeReducingAux
+  (tag : String) (lctx : LocalContext) (lins : LocalInstances)
+  (e : Expr) (reducing : Bool) (maxMVars? : Option Nat) (kind : MetavarKind) : MetaM (Array Expr × Array BinderInfo × Expr) :=
+  process #[] #[] 0 e
+where
+  process (mvars : Array Expr) (bis : Array BinderInfo) (j : Nat) (type : Expr) : MetaM (Array Expr × Array BinderInfo × Expr) := do
+    if maxMVars?.isEqSome mvars.size then
+      let type := type.instantiateRevRange j mvars.size mvars;
+      return (mvars, bis, type)
+    else
+      match type with
+      | .forallE n d b bi =>
+        let d  := d.instantiateRevRange j mvars.size mvars
+        let k  := if bi.isInstImplicit then  MetavarKind.synthetic else kind
+        let mvar ← mkFreshExprMVarTag tag d lctx lins k n
+        let mvars := mvars.push mvar
+        let bis   := bis.push bi
+        process mvars bis j b
+      | _ =>
+        let type := type.instantiateRevRange j mvars.size mvars;
+        if reducing then do
+          let newType ← Whnf type lctx lins
+          if newType.isForall then
+            process mvars bis mvars.size newType
+          else
+            return (mvars, bis, type)
+        else
+          return (mvars, bis, type)
+
+/-- Given `e` of the form `forall ..xs, A`, this combinator will create a new
+  metavariable for each `x` in `xs` and instantiate `A` with these.
+  Returns a product containing
+  - the new metavariables
+  - the binder info for the `xs`
+  - the instantiated `A`
+-/
+@[inline]
+def ForallMetaTagTelescope (lctx : LocalContext) (lins : LocalInstances) (tag : String) (e : Expr) (kind := MetavarKind.natural) : MetaM (Array Expr × Array BinderInfo × Expr) :=
+  forallMetaTagTelescopeReducingAux tag lctx lins e (reducing := false) (maxMVars? := none) kind
