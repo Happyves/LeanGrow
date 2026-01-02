@@ -87,8 +87,8 @@ partial def Lean.MVarId.revert_NoTn_cutOff_wDepsCache (introAdmissible? : Nat â†
   sorry
 /-
   - filter backdeps on whether they depend on final, in close
-  - to depermine this, make a version of `getWorkerIndsTransR` but Ã  la check exists, but where we use depsCache, and where we seek a transitive dep in final
-  - in close, use an UInt32Array to keep track of independent one, so that we may skip them when occuing multiple times
+  - to depermine this, add transitive forward deps to caches, and check if they are among those of initially reverted fvars
+  - Use an UInt32Array instead of FVarId and use `unode?` if necessary
 
 -/
 

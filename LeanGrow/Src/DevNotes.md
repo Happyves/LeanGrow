@@ -8,3 +8,11 @@
 - check we use rec versions of mvarifying and worker collecting etc.
 
 - `mvarifyTnodesRecWiContextIn` to `mvarifyTnodesRec`, and does not add Ltx to mvars
+
+
+# Long term
+
+- matches with hyp-patterns for scoring for induction should point to which fvars
+  should be reverted to make the induction motive
+
+- at reverts for motives/rewrites, we could also forward deps
