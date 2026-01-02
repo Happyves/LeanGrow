@@ -291,12 +291,12 @@ def Lean.Expr.hasTnodesTR (within : Expr) : Bool :=
 
 @[inline]
 def Lean.Expr.hasLnodes (within : Expr) : Bool :=
-  within.onAllSubtermsCheckExistsSkip (fun | .mvar ⟨(.num (.num ..) ..)⟩ => (true,true) | x => (false, !x.hasMVar))
+  within.onAllSubtermsCheckExistsSkip (fun | .mvar ⟨(.num (.num ..) ..)⟩ => (true,true) | x => (false, !x.hasMVar && !x.hasLevelMVar))
 
 
 @[inline]
 def Lean.Expr.hasLnodesTR (within : Expr) : Bool :=
-  within.onAllSubtermsCheckExistsSkipTR (fun | .mvar ⟨(.num (.num ..) ..)⟩ => (true,true) | x => (false, !x.hasMVar))
+  within.onAllSubtermsCheckExistsSkipTR (fun | .mvar ⟨(.num (.num ..) ..)⟩ => (true,true) | x => (false, !x.hasMVar && !x.hasLevelMVar))
 
 
 

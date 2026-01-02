@@ -6,54 +6,72 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Author: Yves Jäckle.
 -/
 
-import LeanGrowBeta.Utils.Lean.TestTools
-import LeanGrowBeta.Utils.Lean.Expr.Basic
+import LeanGrow.Src.Utils.LeanGrow.Expr
 
-set_option autoImplicit true
 
 open Lean Meta Elab Term Command
 
-
-def elabAndLoadGTNode (pre : Name) (count : Nat) (trans : NameMap Name) (is : Array Name) (ts : Array Syntax)
-  {α : Sort _} (k : Array Expr → Nat → NameMap Name → TermElabM α) : TermElabM α :=
-  let rec go (i c : Nat) (done : Array Expr) (trans : NameMap Name) : TermElabM α := do
-    if i < ts.size
+@[inline, specialize]
+def elabAndLoad_G (i gu_idx : Nat) (is : Name) (ts : Syntax)
+  (trans : NameMap Name) (deps : Array (List LocalDecl))
+  {α : Sort _} (k : Expr → Expr → NameMap Name → Array (List LocalDecl) → TermElabM α) : TermElabM α := do
+  let todo := ts
+  let term ← elabTermAndSynthesize todo .none
+  let name := is
+  let tterm := term.onAllSubtermsTR (fun
+        | d@(.fvar fid) =>
+            match trans.find? fid.name with
+            | .none => d
+            | .some new =>
+                match new with
+                | .num (.num N _) _ =>
+                    if N == `t then .fvar ⟨new⟩ else .mvar ⟨new⟩
+                | _ => .fvar ⟨new⟩
+        | x => x
+        )
+  let rep := (.num `g gu_idx)
+  let trans := trans.insert name rep
+  let ltx ← getLCtx
+  let linst ← getLocalInstances
+  let ltx := ltx.addDecl (.cdecl i ⟨name⟩ name term .default .default)
+  let rdec := (.cdecl i ⟨rep⟩ rep tterm .default .default)
+  let ltx := ltx.addDecl rdec
+  let fv := (.fvar ⟨name⟩)
+  let linst ← (do
+    if let some c ← isClass? term
     then
-      let todo := ts[i]!
-      let ltx ← getLCtx
-      let term ← elabTermAndSynthesize todo .none
-      let tterm := term.onAllSubtermsTR (fun
-        | d@(.fvar fid) =>
-            match trans.find? fid.name with
-            | .none => d
-            | .some new =>
-                match new with
-                | .num (.num N _) _ =>
-                    if N == `t then .fvar ⟨new⟩ else .mvar ⟨new⟩
-                | _ => .fvar ⟨new⟩
-        | x => x
-        )
-      let name := is[i]!
-      let rep := (.num pre c)
-      let trans := trans.insert name rep
-      let ltx := ltx.addDecl (.cdecl i ⟨name⟩ name term .default .default)
-      let ltx := ltx.addDecl (.cdecl i ⟨rep⟩ rep tterm .default .default)
-      withLCtx ltx (← getLocalInstances) do
-        go (i+1) (c+1) (done.set! i (.fvar ⟨rep⟩)) trans
+      return linst.push { className := c, fvar := fv }
     else
-      k done c trans
-  go 0 count (Array.replicate ts.size (.bvar 42)) trans
-
-
-def elabAndLoadLNode (pre : Name) (count : Nat) (trans : NameMap Name) (is : Array Name) (ts : Array Syntax)
-  {α : Sort _} (k : Array Expr → Nat → NameMap Name → TermElabM α) : TermElabM α :=
-  let rec go (i c : Nat) (done : Array Expr) (trans : NameMap Name) : TermElabM α := do
-    if i < ts.size
+      return linst)
+  let fv := (.fvar ⟨rep⟩)
+  let linst ← (do
+    if let some c ← isClass? tterm
     then
-      let todo := ts[i]!
-      let ltx ← getLCtx
-      let term ← elabTermAndSynthesize todo .none
-      let tterm := term.onAllSubtermsTR (fun
+      return linst.push { className := c, fvar := fv }
+    else
+      return linst)
+  let depFvs := tterm.getGUFVarsIds
+  let deps := depFvs.foldl (fun D ⟨fv⟩ =>
+    match fv with
+    | .num _ idx => D.modify idx (fun l => rdec :: l)
+    | _ => D
+    ) deps
+  withLCtx ltx linst do
+    k tterm fv trans (deps.push [])
+
+#check 1
+
+
+@[inline, specialize]
+def elabAndLoad_U (i gu_idx : Nat) (is : Name) (ts vs : Syntax)
+  (trans : NameMap Name) (deps : Array (List LocalDecl))
+  {α : Sort _} (k : Expr → Expr → NameMap Name → Array (List LocalDecl) → TermElabM α) : TermElabM α := do
+  let todoT := ts
+  let todoV := vs
+  let termT ← elabTermAndSynthesize todoT .none
+  let termV ← elabTermAndSynthesize todoV .none
+  let name := is
+  let ttermT := termT.onAllSubtermsTR (fun
         | d@(.fvar fid) =>
             match trans.find? fid.name with
             | .none => d
@@ -64,212 +82,166 @@ def elabAndLoadLNode (pre : Name) (count : Nat) (trans : NameMap Name) (is : Arr
                 | _ => .fvar ⟨new⟩
         | x => x
         )
-      let name := is[i]!
-      let rep := (.num pre c)
-      let trans := trans.insert name rep
-      let ltx := ltx.addDecl (.cdecl i ⟨name⟩ name term .default .default)
-      let mv ← mkMvarStdIndexWiCoE rep tterm 0 (← getLCtx) (← getLocalInstances)
-      withLCtx ltx (← getLocalInstances) do
-        go (i+1) (c+1) (done.set! i mv) trans
-    else
-      k done c trans
-  go 0 count (Array.replicate ts.size (.bvar 42)) trans
-
-
-
-def elabAndLoadUNode (count : Nat) (trans : NameMap Name) (is : Array Name) (ts vs: Array Syntax)
-  {α : Sort _} (k : Array Expr → Nat → NameMap Name → TermElabM α) : TermElabM α :=
-  let rec go (i c : Nat) (done : Array Expr) (trans : NameMap Name) : TermElabM α := do
-    if i < ts.size
+  let ttermV := termV.onAllSubtermsTR (fun
+        | d@(.fvar fid) =>
+            match trans.find? fid.name with
+            | .none => d
+            | .some new =>
+                match new with
+                | .num (.num N _) _ =>
+                    if N == `t then .fvar ⟨new⟩ else .mvar ⟨new⟩
+                | _ => .fvar ⟨new⟩
+        | x => x
+        )
+  let rep := (.num `u gu_idx)
+  let trans := trans.insert name rep
+  let ltx ← getLCtx
+  let linst ← getLocalInstances
+  let ltx := ltx.addDecl (.ldecl i ⟨name⟩ name termT termV false .default)
+  let rdec := (.ldecl i ⟨rep⟩ rep ttermT ttermV false .default)
+  let ltx := ltx.addDecl rdec
+  let fv := (.fvar ⟨name⟩)
+  let linst ← (do
+    if let some c ← isClass? termT
     then
-      let todoT := ts[i]!
-      let todoV := vs[i]!
-      let ltx ← getLCtx
-      let termT ← elabTermAndSynthesize todoT .none
-      let ttermT := termT.onAllSubtermsTR (fun
-        | d@(.fvar fid) =>
-            match trans.find? fid.name with
-            | .none => d
-            | .some new =>
-                match new with
-                | .num (.num N _) _ =>
-                    if N == `t then .fvar ⟨new⟩ else .mvar ⟨new⟩
-                | _ => .fvar ⟨new⟩
-        | x => x
-        )
-      let termV ← elabTermAndSynthesize todoV .none
-      let ttermV := termV.onAllSubtermsTR (fun
-        | d@(.fvar fid) =>
-            match trans.find? fid.name with
-            | .none => d
-            | .some new =>
-                match new with
-                | .num (.num N _) _ =>
-                    if N == `t then .fvar ⟨new⟩ else .mvar ⟨new⟩
-                | _ => .fvar ⟨new⟩
-        | x => x
-        )
-      let name := is[i]!
-      let rep := (.num `u c)
-      let trans := trans.insert name rep
-      let ltx := ltx.addDecl (.ldecl i ⟨name⟩ name termT termV false .default)
-      let ltx := ltx.addDecl (.ldecl i ⟨rep⟩ rep ttermT ttermV false .default)
-      withLCtx ltx (← getLocalInstances) do
-        go (i+1) (c+1) (done.set! i (.fvar ⟨rep⟩)) trans
+      return linst.push { className := c, fvar := fv }
     else
-      k done c trans
-  go 0 count (Array.replicate ts.size (.bvar 42)) trans
+      return linst)
+  let fv := (.fvar ⟨rep⟩)
+  let linst ← (do
+    if let some c ← isClass? ttermT
+    then
+      return linst.push { className := c, fvar := fv }
+    else
+      return linst)
+  let depFvs := ttermT.getGUFVarsIds
+  let deps := depFvs.foldl (fun D ⟨fv⟩ =>
+    match fv with
+    | .num _ idx => D.modify idx (fun l => rdec :: l)
+    | _ => D
+    ) deps
+  withLCtx ltx linst do
+    k ttermT fv trans (deps.push [])
+
+#check 1
+
+
+@[inline, specialize]
+def elabAndLoad_T (i t_idx pos : Nat) (is : Name) (ts : Syntax) (trans : NameMap Name) {α : Sort _} (k : Expr → Expr → NameMap Name → TermElabM α) : TermElabM α := do
+  let todo := ts
+  let term ← elabTermAndSynthesize todo .none
+  let name := is
+  let tterm := term.onAllSubtermsTR (fun
+        | d@(.fvar fid) =>
+            match trans.find? fid.name with
+            | .none => d
+            | .some new =>
+                match new with
+                | .num (.num N _) _ =>
+                    if N == `t then .fvar ⟨new⟩ else .mvar ⟨new⟩
+                | _ => .fvar ⟨new⟩
+        | x => x
+        )
+  let rep := tnode t_idx pos
+  let trans := trans.insert name rep
+  let ltx ← getLCtx
+  let linst ← getLocalInstances
+  let ltx := ltx.addDecl (.cdecl i ⟨name⟩ name term .default .default)
+  let ltx := ltx.addDecl (.cdecl i ⟨rep⟩ rep tterm .default .default)
+  let fv := (.fvar ⟨name⟩)
+  let linst ← (do
+    if let some c ← isClass? term
+    then
+      return linst.push { className := c, fvar := fv }
+    else
+      return linst)
+  let fv := (.fvar ⟨rep⟩)
+  let linst ← (do
+    if let some c ← isClass? tterm
+    then
+      return linst.push { className := c, fvar := fv }
+    else
+      return linst)
+  withLCtx ltx linst do
+    k tterm fv trans
+
+
+#check 1
+
+@[inline, specialize]
+def elabAndLoad_L (i l_idx pos : Nat) (module is : Name) (ts : Syntax) (trans : NameMap Name) {α : Sort _} (k : Expr → Expr → NameMap Name → TermElabM α) : TermElabM α := do
+  let todo := ts
+  let term ← elabTermAndSynthesize todo .none
+  let name := is
+  let tterm := term.onAllSubtermsTR (fun
+        | d@(.fvar fid) =>
+            match trans.find? fid.name with
+            | .none => d
+            | .some new =>
+                match new with
+                | .num (.num N _) _ =>
+                    if N == `t then .fvar ⟨new⟩ else .mvar ⟨new⟩
+                | _ => .fvar ⟨new⟩
+        | d@(.mvar fid) =>
+            match trans.find? fid.name with
+            | .none => d
+            | .some new => .mvar ⟨new⟩
+        | x => x
+        )
+  let rep := lnode module l_idx pos
+  let trans := trans.insert name rep
+  let _ ← mkMvarStdIndexNoCoE name term i
+  let mv ← mkMvarStdIndexNoCoE rep tterm i
+  k tterm mv trans
+
+#check 1
 
 
 
+declare_syntax_cat lg_test
 
-/-
-**Deficiencies of ↓**
-- gnodes can't depend on unodes ...
+syntax "g("ident ":" term")" : lg_test
 
--/
+syntax "u("ident ":" term ":" term")" : lg_test
+
+syntax "t("num ":" num ":" ident ":" term")" : lg_test
+
+syntax "l("ident ":" num ":" num ":" ident ":" term")" : lg_test
 
 
-elab  "With" "gnodes" gs:("("ident ":" term")")*
-      "and" "unodes" us:("("ident ":" term ":" term")")*
-      "and" "tnodes" ts:("("ident ":" term")")*
-      "and" "objects" os:term,*
-      "run" metam:ident : command => unsafe do
-  let mut gts : Array Syntax := #[]
-  let mut gis : Array Name := #[]
-  for c in gs do
-    match c.raw with
-    | .node _ _ A =>
-        gis := gis.push (Syntax.getId A[1]!)
-        gts := gts.push A[3]!
-    | _ => throwError s!"Unexpected syntax at context {c}, expecting (x : T)"
-  let mut uts : Array Syntax := #[]
-  let mut uvs : Array Syntax := #[]
-  let mut uis : Array Name := #[]
-  for c in us do
-    match c.raw with
-    | .node _ _ A =>
-        uis := uis.push (Syntax.getId A[1]!)
-        uts := uts.push A[3]!
-        uvs := uvs.push A[5]!
-    | _ => throwError s!"Unexpected syntax at context {c}, expecting (x : T : V)"
-  let mut tts : Array Syntax := #[]
-  let mut tis : Array Name := #[]
-  for c in ts do
-    match c.raw with
-    | .node _ _ A =>
-        tis := tis.push (Syntax.getId A[1]!)
-        tts := tts.push A[3]!
-    | _ => throwError s!"Unexpected syntax at context {c}, expecting (x : T)"
-  let os := os.getElems.raw
+def elabForTest (i gu_idx : Nat) (cs : TSyntaxArray `lg_test)
+  (guT gu tT t lT l : Array Expr)
+  (trans : NameMap Name) (deps : Array (List LocalDecl))
+  {α : Sort _} (k : Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array (List LocalDecl) → TermElabM α) : TermElabM α := do
+    if i < cs.size
+    then
+      let c := cs[i]!
+      match c with
+      | `(lg_test| g($id : $ter)) =>
+          elabAndLoad_G i gu_idx id.getId ter trans deps <| fun T fv trans deps =>
+            elabForTest (i+1) (gu_idx+1) cs (guT.push T) (gu.push fv) tT t lT l trans deps k
+      | `(lg_test| u($id : $ter : $val)) =>
+          elabAndLoad_U i gu_idx id.getId ter val trans deps <| fun T fv trans deps =>
+            elabForTest (i+1) (gu_idx+1) cs (guT.push T) (gu.push fv) tT t lT l trans deps k
+      | `(lg_test| t($ix : $po : $id : $ter)) =>
+          elabAndLoad_T i ix.getNat po.getNat id.getId ter trans <| fun T fv trans =>
+            elabForTest (i+1) gu_idx cs guT gu (tT.push T) (t.push fv) lT l trans deps k
+      | `(lg_test| l($mod : $ix : $po : $id : $ter)) =>
+          elabAndLoad_L i ix.getNat po.getNat mod.getId id.getId ter trans <| fun T fv trans =>
+            elabForTest (i+1) (gu_idx+1) cs guT gu tT t (lT.push T) (l.push fv) trans deps k
+      | _ => throwError "Unexpected syntax ..."
+    else
+      k guT gu tT t lT l deps
+
+#check 1
+
+elab "With" "context" cs:lg_test* "and" "objects" ts:term,* "run" metam:ident : command => unsafe do
+  let ts := ts.getElems.raw
   liftTermElabM do
-    elabAndLoadGTNode `g 0 {} gis gts <| fun gnodes c trans => do
-      elabAndLoadUNode c trans uis uts uvs <| fun unodes _ trans => do
-        elabAndLoadGTNode (.num `t 0) 0 trans tis tts <| fun tnodes _ trans => do
-          let mut Os : Array Expr := #[]
-          for o in os do
-            let term ← elabTermAndSynthesize o .none
-            let tterm := term.onAllSubtermsTR (fun
-                | d@(.fvar fid) =>
-                    match trans.find? fid.name with
-                    | .none => d
-                    | .some new => .fvar ⟨new⟩
-                | x => x
-                )
-            Os := Os.push tterm
-          IO.println "[Test] made it past loading of context and objects"
-          let action ← evalConst (Array Expr → Array Expr → Array Expr → Array Expr → MetaM Unit) (metam.getId)
-          action gnodes unodes tnodes Os
-
-
-/-- 4.18, parser seems to have issue with ↓ gnodes and unodes in non-capital ...-/
-def mkFakeDepCache (Gnodes Unodes : Array Expr) : MetaM (Array (List LocalDecl)) := do
-  let total := Gnodes.size + Unodes.size
-  let mut deps : Array (List LocalDecl) := Array.replicate total []
-  for g in Gnodes ++ Unodes do
-    let gd ← g.fvarId!.getDecl
-    match gd with
-    | .cdecl .. =>
-        let T := gd.type
-        let ds := T.getFVarIds
-        for d in ds do
-          match d.name with
-          | .num _ j =>
-              deps := deps.modify j (fun l => @List.insert _ ⟨fun x y => x.fvarId == y.fvarId⟩ gd l)
-              -- Note that last additions are on top of the list, an assumptio we need for reverting with cutoffs
-          | _ => continue
-    | .ldecl _ _ _ T V .. =>
-        let ds := T.getFVarIds ++ V.getFVarIds
-        for d in ds do
-          match d.name with
-          | .num _ j =>
-              deps := deps.modify j (fun l => @List.insert _ ⟨fun x y => x.fvarId == y.fvarId⟩  gd l)
-              -- Note that last additions are on top of the list, an assumptio we need for reverting with cutoffs
-          | _ => continue
-  return deps
-
-
-elab  "With" "gnodes" gs:("("ident ":" term")")*
-      "and" "unodes" us:("("ident ":" term ":" term")")*
-      "and" "tnodes" ts:("("ident ":" term")")*
-      "and" "lnodes" ls:("("ident ":" term")")*
-      "and" "objects" os:term,*
-      "run" metam:ident : command => unsafe do
-  let mut gts : Array Syntax := #[]
-  let mut gis : Array Name := #[]
-  for c in gs do
-    match c.raw with
-    | .node _ _ A =>
-        gis := gis.push (Syntax.getId A[1]!)
-        gts := gts.push A[3]!
-    | _ => throwError s!"Unexpected syntax at context {c}, expecting (x : T)"
-  let mut uts : Array Syntax := #[]
-  let mut uvs : Array Syntax := #[]
-  let mut uis : Array Name := #[]
-  for c in us do
-    match c.raw with
-    | .node _ _ A =>
-        uis := uis.push (Syntax.getId A[1]!)
-        uts := uts.push A[3]!
-        uvs := uvs.push A[5]!
-    | _ => throwError s!"Unexpected syntax at context {c}, expecting (x : T : V)"
-  let mut tts : Array Syntax := #[]
-  let mut tis : Array Name := #[]
-  for c in ts do
-    match c.raw with
-    | .node _ _ A =>
-        tis := tis.push (Syntax.getId A[1]!)
-        tts := tts.push A[3]!
-    | _ => throwError s!"Unexpected syntax at context {c}, expecting (x : T)"
-  let mut lts : Array Syntax := #[]
-  let mut lis : Array Name := #[]
-  for c in ls do
-    match c.raw with
-    | .node _ _ A =>
-        lis := lis.push (Syntax.getId A[1]!)
-        lts := lts.push A[3]!
-    | _ => throwError s!"Unexpected syntax at context {c}, expecting (x : T)"
-  let os := os.getElems.raw
-  liftTermElabM do
-    elabAndLoadGTNode `g 0 {} gis gts <| fun Gnodes c trans => do
-      elabAndLoadUNode c trans uis uts uvs <| fun Unodes _ trans => do
-        elabAndLoadGTNode (.num `t 0) 0 trans tis tts <| fun Tnodes _ trans => do
-          elabAndLoadLNode (.num `dummyModule 0) 0 trans lis lts <| fun Lnodes _ trans => do
-            let mut Os : Array Expr := #[]
-            for o in os do
-              let term ← elabTermAndSynthesize o .none
-              let tterm := term.onAllSubtermsTR (fun
-                  | d@(.fvar fid) =>
-                      match trans.find? fid.name with
-                      | .none => d
-                      | .some new =>
-                          match new with
-                          | .num (.num N _) _ =>
-                              if N == `t then .fvar ⟨new⟩ else .mvar ⟨new⟩
-                          | _ => .fvar ⟨new⟩
-                  | x => x
-                  )
-              Os := Os.push tterm
-            IO.println "[Test] made it past loading of context and objects"
-            let action ← evalConst (Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → MetaM Unit) (metam.getId)
-            action Gnodes Unodes Tnodes Lnodes Os
+    elabForTest 0 0 cs #[] #[] #[] #[] #[] #[] {} #[] <| fun guT gu tT t lT l deps => do
+      let mut Ts : Array Expr := #[]
+      for t in ts do
+        let term ← elabTermAndSynthesize t .none
+        Ts := Ts.push term
+      let action ← evalConst ( Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array (List LocalDecl) → MetaM Unit) (metam.getId)
+      action guT gu tT t lT l deps

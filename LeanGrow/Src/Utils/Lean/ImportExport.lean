@@ -217,35 +217,35 @@ def findLeanGrowCacheDir : IO FilePath := do
   else throw (IO.userError "[findLeanGrowCacheDir] The location of caches seems to have failed")
 
 /-- With exts loaded-/
-unsafe def WithImportModules {α : Type} (imports : Array Import) (opts : Options)
-    (act : Environment → IO α) (trustLevel : UInt32 := 0) : IO α := do
+unsafe def WithImportModules (imports : Array Import) (opts : Options)
+    (act : Environment → IO Unit) (trustLevel : UInt32 := 0) : IO Unit := do
+  -- initSearchPath (← findSysroot)
+  -- enableInitializersExecution
   let env ← importModules (loadExts := true) imports opts trustLevel
-  try act env finally env.freeRegions
+  try {act env ; return()} finally pure ()-- env.freeRegions --
 
 
 
-@[specialize, inline]
 unsafe def withImportModulesTracing
   (imports : Array Name) (opts : Options)
   (act : Environment → IO String) : IO Unit := do
   let cachePath ← findLeanGrowCacheDir
   let finalPath := FilePath.join cachePath (FilePath.toString "withImportModulesTracing.txt")
-  let imports := imports.map (fun n => Coe.coe n)
-  let _ ← WithImportModules imports opts <| fun env => do
+  let imports := imports.map (fun n => Import.mk n true true false)
+  WithImportModules imports opts <| fun env => do
     let traces ← act env
     writeFile finalPath traces
   let res ← readFile finalPath
   IO.println res
 
-@[specialize, inline]
 unsafe def withImportModulesTracingPass
   {m} [Monad m] [MonadLiftT IO m]
   (imports : Array Name) (opts : Options)
   (act : Environment → IO String) : m String := do
   let cachePath ← findLeanGrowCacheDir
   let finalPath := FilePath.join cachePath (FilePath.toString "withImportModulesTracing.txt")
-  let imports := imports.map (fun n => Coe.coe n)
-  let _ ← WithImportModules imports opts <| fun env => do
+  let imports := imports.map (fun n => Import.mk n true true false)
+  WithImportModules imports opts <| fun env => do
     let traces ← act env
     writeFile finalPath traces
   readFile finalPath

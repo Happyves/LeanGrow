@@ -7,7 +7,7 @@ Author: Yves Jäckle.
 
 import Batteries.Tactic.OpenPrivate
 import Lean.Meta.Tactic.Grind.RevertAll
-import LeanGrowBeta.Utils.Lean.Expr.Basic
+import LeanGrow.Src.Utils.Lean.Expr.Basic
 
 open Lean Meta
 

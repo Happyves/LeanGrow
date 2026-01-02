@@ -5,13 +5,14 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Author: Yves Jäckle.
 -/
 
-import LeanGrowBeta.Utils.Tracing
+import LeanGrow.Src.Utils.Tracing
 
 open Lean Meta
 
 
 
 def test_1 : MetaM Unit := do
+  mtracing
   mtrace on .zero when true with "first"
   match (← getEnv).find? `propext with
   | .none => pure ()
@@ -38,6 +39,7 @@ tracing_flags [(`test_1,[.zero, .one])]
 
 
 partial def test_2 (n : Nat) : MetaM Unit := do
+  mtracing
   mtrace on .zero when true with s!"{n}"
   test_2 (n+1)
 

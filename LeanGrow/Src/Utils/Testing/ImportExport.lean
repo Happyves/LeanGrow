@@ -5,7 +5,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Author: Yves Jäckle.
 -/
 
-import LeanGrowBeta.Utils.Lean.ImportExport
+import LeanGrow.Src.Utils.Lean.ImportExport
 
 
 open Lean System IO FS Process Elab Parser Meta
@@ -13,14 +13,13 @@ open Lean System IO FS Process Elab Parser Meta
 
 #check_failure Finset.exists_lt_sum_fiber_of_maps_to_of_nsmul_lt_sum
 
-
 unsafe def test2 : IO Unit := do
   withImportModulesTracing #[`Mathlib.Combinatorics.Pigeonhole] {} <| fun env => do
     let .some info := env.find? `Finset.exists_lt_sum_fiber_of_maps_to_of_nsmul_lt_sum | return "Expr.bvar 42"
     return s!"{info.type}"
 
 -- Workaround, but slows down thing
-#eval test2
+-- #eval test2
 
 
 
