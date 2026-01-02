@@ -49,6 +49,50 @@ partial def Lean.Expr.onAllSubtermsCheckExists (e : Expr) (f : Expr → Bool) : 
   go e
 
 @[specialize f, inline]
+partial def Lean.Expr.onAllSubtermsCheckExistsSkipTR (e : Expr) (f : Expr → (Bool × Bool)) : Bool :=
+  let rec @[specialize f] go : List Expr → Bool
+    | [] => false
+    | e :: more =>
+      let (pat,skip) := f e
+      if pat
+      then true
+      else
+        if skip
+        then go more
+        else
+          match e with
+          | .app l r => go (l :: r :: more)
+          | .lam _ l r _ => go (l :: r :: more)
+          | .forallE _ l r _ => go (l :: r :: more)
+          | .letE _ l r z _ => go (l :: r :: z :: more)
+          | .proj _ _ e => go (e :: more)
+          | .mdata _ e => go (e :: more)
+          | _ => go more
+  go [e]
+
+
+@[specialize f, inline]
+partial def Lean.Expr.onAllSubtermsCheckExistsSkip (e : Expr) (f : Expr → (Bool × Bool)) : Bool :=
+  let rec @[specialize f] go : Expr → Bool
+    | e  =>
+      let (pat,skip) := f e
+      if pat
+      then true
+      else
+        if skip
+        then false
+        else
+          match e with
+          | .app l r => if go l then true else go r
+          | .lam _ l r _ => if go l then true else go r
+          | .forallE _ l r _ => if go l then true else go r
+          | .letE _ l r z _ => if go l then true else (if go r then true else go z)
+          | .proj _ _ e | .mdata _ e => go e
+          | _ => false
+  go e
+
+
+@[specialize f, inline]
 partial def Lean.Expr.onAllSubtermsgetFirstTR (e : Expr) {α : Sort _} (f : Expr → Option α) : Option α :=
   let rec @[specialize f] go : List Expr → Option α
     | [] => .none
@@ -346,6 +390,81 @@ partial def Lean.Expr.onAllSubtermsFoldM (e : Expr) (l1 : LocalContext) (l2 : Lo
       | _ => return ⟨col,initD,initI⟩
   go 0 #[] l1 l2 initA e
 
+
+@[specialize, inline]
+partial def Lean.Expr.onAllSubtermsFoldSkipMTR (e : Expr) (initD : LocalContext) (initI : LocalInstances)
+  {α : Sort _} (initA : α)
+  (f : Expr → Nat → Array Expr → LocalContext → LocalInstances → α → MetaM (Prod4 α Bool LocalContext LocalInstances))
+  : MetaM (Prod3 α LocalContext LocalInstances) :=
+  let rec @[specialize] go (workas : Array Expr) (initD : LocalContext) (initI : LocalInstances) (col : α)
+    : ListProdSpe1 Nat Expr → MetaM (Prod3 α LocalContext LocalInstances)
+    | .nil => return ⟨col,initD,initI⟩
+    | .sig binfo more =>
+      go workas initD (initI.patch binfo 1) col more
+    | .cons d e more => do
+      let ⟨col,skip,initD,initI⟩ ← f e d workas initD initI col
+      if skip
+      then go workas initD initI col more
+      else
+        match e with
+        | .app l r => go workas initD initI col (.cons d l <| .cons d r more)
+        | .lam _ l r _ =>
+            let S := initI.size
+            let fv ← worker d
+            let ⟨fv,r,initD,initI⟩ ← withFreeing fv l r initD initI
+            go (workas.push (.fvar fv)) initD initI col (.cons d l <| .cons (d+1) r <| .sig S more)
+        | .forallE _ l r _ =>
+            let S := initI.size
+            let fv ← worker d
+            let ⟨fv,r,initD,initI⟩ ← withFreeing fv l r initD initI
+            go (workas.push (.fvar fv)) initD initI col (.cons d l <| .cons (d+1) r <| .sig S more)
+        | .letE _ l r z _ =>
+            let S := initI.size
+            let fv ← worker d
+            let ⟨fv,z,initD,initI⟩ ← withFreeingLet fv l r z initD initI
+            go (workas.push (.fvar fv)) initD initI col (.cons d l <| .cons d r <| .cons (d+1) z <| .sig S more)
+        | .proj _ _ e => go workas initD initI col (.cons d e more)
+        | .mdata _ e => go workas initD initI col (.cons d e more)
+        | _ => go workas initD initI col more
+  go {} initD initI initA <| .cons 0 e .nil
+
+
+@[specialize, inline]
+partial def Lean.Expr.onAllSubtermsFoldSkipM (e : Expr) (l1 : LocalContext) (l2 : LocalInstances)
+  {α : Sort _} (initA : α)
+  (f : Expr → Nat → Array Expr → LocalContext → LocalInstances → α → MetaM (Prod4 α Bool LocalContext LocalInstances))
+  : MetaM (Prod3 α LocalContext LocalInstances) :=
+  let rec @[specialize] go (d : Nat) (workas : Array Expr) (l1 : LocalContext) (l2 : LocalInstances) (col : α)
+    (e : Expr) : MetaM (Prod3 α LocalContext LocalInstances) := do
+      let ⟨col,skip,initD,initI⟩ ← f e d workas l1 l2 col
+      if skip
+      then return ⟨col,initD,initI⟩
+      else
+        match e with
+        | .app l r =>
+            let ⟨col,initD,initI⟩ ← go d workas initD initI col l
+            go d workas initD initI col r
+        | .lam _ l r _ | .forallE _ l r _ =>
+            let ⟨col,initD,initI⟩ ← go d workas initD initI col l
+            let S := initI.size
+            let fv ← worker d
+            let ⟨fv,r,initD,initI⟩ ← withFreeing fv l r initD initI
+            let ⟨col,initD,initI⟩ ← go (d+1) (workas.push (.fvar fv)) initD initI col r
+            let initI := initI.patch S 1
+            return ⟨col,initD,initI⟩
+        | .letE _ l r z _ =>
+            let ⟨col,initD,initI⟩ ← go d workas initD initI col l
+            let ⟨col,initD,initI⟩ ← go d workas initD initI col r
+            let S := initI.size
+            let fv ← worker d
+            let ⟨fv,z,initD,initI⟩ ← withFreeingLet fv l r z initD initI
+            let ⟨col,initD,initI⟩ ← go (d+1) (workas.push (.fvar fv)) initD initI col z
+            let initI := initI.patch S 1
+            return ⟨col,initD,initI⟩
+        | .proj _ _ e => go d workas initD initI col e
+        | .mdata _ e => go d workas initD initI col e
+        | _ => return ⟨col,initD,initI⟩
+  go 0 #[] l1 l2 initA e
 
 
 

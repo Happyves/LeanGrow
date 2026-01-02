@@ -8,59 +8,81 @@ Author: Yves Jäckle.
 import Lean.Elab
 
 
-set_option autoImplicit true
-
 open Lean Meta Elab Term Command
 
-
-def elabAndLoad (is : Array Name) (ts : Array Syntax) {α : Sort _} (k : Array Expr → TermElabM α) : TermElabM α :=
-  let rec go (i : Nat) (done : Array Expr) : TermElabM α := do
-    if i < ts.size
+@[inline, specialize]
+def elabAndLoad (i : Nat) (is : Name) (ts : Syntax) {α : Sort _} (k : Expr → Expr → TermElabM α) : TermElabM α := do
+  let todo := ts
+  let term ← elabTermAndSynthesize todo .none
+  let name := is
+  let fv := (.fvar ⟨name⟩)
+  let ltx ← getLCtx
+  let linst ← getLocalInstances
+  let ltx := ltx.addDecl (.cdecl i ⟨name⟩ name term .default .default)
+  let linst ← (do
+    if let some c ← isClass? term
     then
-      let todo := ts[i]!
-      let ltx ← getLCtx
-      let term ← elabTermAndSynthesize todo .none
-      let name := is[i]!
-      let ltx := ltx.addDecl (.cdecl i ⟨name⟩ name term .default .default)
-      withLCtx ltx (← getLocalInstances) do
-        go (i+1) (done.set! i term)
+      return linst.push { className := c, fvar := fv }
     else
-      k done
-  go 0 (Array.replicate ts.size (.bvar 42))
+      return linst)
+  withLCtx ltx linst do
+    k term fv
 
-elab "With" "context" cs:("("ident ":" term")")* "and" "objects" ts:term,* "run" metam:ident : command => unsafe do
-  let mut cts : Array Syntax := #[]
-  let mut cis : Array Name := #[]
-  for c in cs do
-    match c.raw with
-    | .node _ _ A =>
-        cis := cis.push (Syntax.getId A[1]!)
-        cts := cts.push A[3]!
-    | _ => throwError s!"Unexpected syntax at context {c}, expecting (x : T)"
+#check 1
+
+def elabAndLoadLet (i : Nat) (is : Name) (ts : Syntax) (vs : Syntax) {α : Sort _} (k : Expr → Expr → TermElabM α) : TermElabM α := do
+  let todoT := ts
+  let todoV := vs
+  let termT ← elabTermAndSynthesize todoT .none
+  let termV ← elabTermAndSynthesize todoV .none
+  let name := is
+  let fv := (.fvar ⟨name⟩)
+  let ltx ← getLCtx
+  let linst ← getLocalInstances
+  let ltx := ltx.addDecl (.ldecl i ⟨name⟩ name termT termV false .default)
+  let linst ← (do
+    if let some c ← isClass? termT
+    then
+      return linst.push { className := c, fvar := fv }
+    else
+      return linst)
+  withLCtx ltx linst do
+    k termT fv
+
+
+#check 1
+
+
+
+declare_syntax_cat lg_lam_let
+
+syntax "("ident ":" term")" : lg_lam_let
+
+syntax "("ident ":" term ":" term")" : lg_lam_let
+
+
+def elabForTest (i : Nat) (cs : TSyntaxArray `lg_lam_let) (doneT doneFv : Array Expr)
+  {α : Sort _} (k : Array Expr → Array Expr → TermElabM α) : TermElabM α := do
+    if i < cs.size
+    then
+      let c := cs[i]!
+      match c with
+      | `(lg_lam_let| ($id : $ter)) => elabAndLoad i id.getId ter <| fun T fv => elabForTest (i+1) cs (doneT.push T) (doneFv.push fv) k
+      | `(lg_lam_let| ($id : $ter : $val)) => elabAndLoadLet i id.getId ter val <| fun T fv => elabForTest (i+1) cs (doneT.push T) (doneFv.push fv) k
+      | _ => throwError "Unexpected syntax ..."
+    else
+      k doneT doneFv
+
+#check 1
+
+
+elab "With" "context" cs:lg_lam_let* "and" "objects" ts:term,* "run" metam:ident : command => unsafe do
   let ts := ts.getElems.raw
   liftTermElabM do
-    elabAndLoad cis cts <| fun elabedContext => do
+    elabForTest 0 cs #[] #[] <| fun fvT _ => do
       let mut Ts : Array Expr := #[]
       for t in ts do
         let term ← elabTermAndSynthesize t .none
         Ts := Ts.push term
       let action ← evalConst (Array Expr → Array Expr → MetaM Unit) (metam.getId)
-      action elabedContext Ts
-
-
-def elabAndLoadLet (is : Array Name) (ts : Array Syntax) (vs : Array Syntax) {α : Sort _} (k : Array Expr → Array Expr → TermElabM α) : TermElabM α :=
-  let rec go (i : Nat) (doneT doneV : Array Expr) : TermElabM α := do
-    if i < ts.size
-    then
-      let todoT := ts[i]!
-      let todoV := vs[i]!
-      let ltx ← getLCtx
-      let termT ← elabTermAndSynthesize todoT .none
-      let termV ← elabTermAndSynthesize todoV .none
-      let name := is[i]!
-      let ltx := ltx.addDecl (.ldecl i ⟨name⟩ name termT termV false .default)
-      withLCtx ltx (← getLocalInstances) do
-        go (i+1) (doneT.set! i termT) (doneV.set! i termV)
-    else
-      k doneT doneV
-  go 0 (Array.replicate ts.size (.bvar 42)) (Array.replicate ts.size (.bvar 42))
+      action fvT Ts

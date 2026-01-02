@@ -137,7 +137,7 @@ def Lean.Expr.abstractPatBind (pat patType within : Expr) : Expr :=
 - λ & let are in same order as `fvs`, without checking for consistency of abstraction !
 -/
 @[specialize]
-partial def Lean.Expr.abstractLetFvarWrt
+partial def Lean.Expr.abstractLetFvarLam
   (initD : LocalContext) (initI : LocalInstances)
   (fvs : Array FVarId) (e : Expr)
   : MetaM (Prod3 Expr LocalContext LocalInstances) :=
@@ -190,7 +190,7 @@ partial def Lean.Expr.abstractLetFvarWrt
 - ∀ & let are in same order as `fvs`,  without checking for consistency of abstraction !
 -/
 @[specialize]
-partial def Lean.Expr.abstractLetFvarAsAllWrt
+partial def Lean.Expr.abstractLetFvarAll
   (initD : LocalContext) (initI : LocalInstances)
   (fvs : Array FVarId) (e : Expr)
   : MetaM (Prod3 Expr LocalContext LocalInstances) :=
@@ -237,31 +237,7 @@ partial def Lean.Expr.abstractLetFvarAsAllWrt
       bind absd (fvs.size - 1) initD initI
 
 
-@[inline]
-partial def Lean.Expr.instantiateLooseBvarsL (fvs : List FVarId) (e : Expr) : Expr :=
-    e.onAllSubtermsWiDepth (fun x d =>
-        match x with
-        | .bvar i =>
-            if  i ≥ d
-            then
-              let fid := fvs[i - d]!
-              (.fvar fid)
-            else
-              x
-        | _ => x )
-
-@[inline]
-partial def Lean.Expr.instantiateLooseBvarsA (fvs : Array FVarId) (e : Expr) : Expr :=
-    e.onAllSubtermsWiDepth (fun x d =>
-        match x with
-        | .bvar i =>
-            if  i ≥ d
-            then
-              let fid := fvs[i - d]!
-              (.fvar fid)
-            else
-              x
-        | _ => x )
+#check Expr.instantiateRev
 
 
 
@@ -273,7 +249,7 @@ def Lean.Expr.hasPattern (pat within : Expr) : Bool :=
 
 @[inline]
 def Lean.Expr.hasWorker (within : Expr) : Bool :=
-  within.onAllSubtermsCheckExists (fun | .fvar x => x.isWorker | _ => false)
+  within.onAllSubtermsCheckExistsSkip (fun | .fvar x => (x.isWorker,true) | x => (false, !x.hasFVar))
 
 
 @[inline]
@@ -282,42 +258,45 @@ def Lean.Expr.hasPatternTR (pat within : Expr) : Bool :=
 
 @[inline]
 def Lean.Expr.hasWorkerTR (within : Expr) : Bool :=
-  within.onAllSubtermsCheckExistsTR (fun | .fvar x => x.isWorker | _ => false)
+  within.onAllSubtermsCheckExistsSkipTR (fun | .fvar x => (x.isWorker,true) | x => (false, !x.hasFVar))
 
 @[inline]
 def Lean.Expr.hasWorkerExcpet (exe : List FVarId) (within : Expr) : Bool :=
-  within.onAllSubtermsCheckExists (fun | .fvar x => if x.isWorker then !(exe.contains x) else false | _ => false)
+  within.onAllSubtermsCheckExistsSkip (fun | .fvar x => if x.isWorker then (!(exe.contains x), true) else (false,true) | x => (false, !x.hasFVar))
 
 
 @[inline]
 def Lean.Expr.hasWorkerExcpetTR (exe : List FVarId) (within : Expr) : Bool :=
-  within.onAllSubtermsCheckExistsTR (fun | .fvar x => if x.isWorker then !(exe.contains x) else false | _ => false)
+  within.onAllSubtermsCheckExistsSkipTR (fun | .fvar x => if x.isWorker then (!(exe.contains x), true) else (false,true) | x => (false, !x.hasFVar))
 
 
 @[inline]
 def Lean.Expr.hasTnodes (within : Expr) : Bool :=
-  within.onAllSubtermsCheckExists (fun
-    | .fvar ⟨(.num (.num ..) ..)⟩ => true
-    | .sort u => u.hasTnodes
-    | .const _ lvls => lvls.any Level.hasTnodes
-    | _ => false)
+  let sk (x : Expr) := !x.hasFVar && !x.hasLevelParam
+  within.onAllSubtermsCheckExistsSkip (fun
+    | .fvar ⟨(.num (.num ..) ..)⟩ => (true,true)
+    | .sort u => (u.hasTnodes,true)
+    | .const _ lvls => (lvls.any Level.hasTnodes,true)
+    | x => (false, sk x))
+
 
 @[inline]
 def Lean.Expr.hasTnodesTR (within : Expr) : Bool :=
-  within.onAllSubtermsCheckExistsTR (fun
-    | .fvar ⟨(.num (.num ..) ..)⟩ => true
-    | .sort u => u.hasTnodes
-    | .const _ lvls => lvls.any Level.hasTnodes
-    | _ => false)
+  let sk (x : Expr) := !x.hasFVar && !x.hasLevelParam
+  within.onAllSubtermsCheckExistsSkipTR (fun
+    | .fvar ⟨(.num (.num ..) ..)⟩ => (true,true)
+    | .sort u => (u.hasTnodes,true)
+    | .const _ lvls => (lvls.any Level.hasTnodes,true)
+    | x => (false, sk x))
 
 @[inline]
 def Lean.Expr.hasLnodes (within : Expr) : Bool :=
-  within.onAllSubtermsCheckExists (fun | .mvar ⟨(.num (.num ..) ..)⟩ => true | _ => false)
+  within.onAllSubtermsCheckExistsSkip (fun | .mvar ⟨(.num (.num ..) ..)⟩ => (true,true) | x => (false, !x.hasMVar))
 
 
 @[inline]
 def Lean.Expr.hasLnodesTR (within : Expr) : Bool :=
-  within.onAllSubtermsCheckExistsTR (fun | .mvar ⟨(.num (.num ..) ..)⟩ => true | _ => false)
+  within.onAllSubtermsCheckExistsSkipTR (fun | .mvar ⟨(.num (.num ..) ..)⟩ => (true,true) | x => (false, !x.hasMVar))
 
 
 
@@ -340,87 +319,3 @@ def Lean.Expr.getFVarIds (e : Expr) : List FVarId :=
       | .fvar id => (sofar.insert id, true)
       | _ => (sofar, !x.hasFVar)
       )
-
-@[inline]
-def Lean.Expr.getDeepestWorker (proof : Expr) : Option Nat :=
-  proof.onAllSubtermsFoldSkip .none (fun e st =>
-    match e with
-    | .fvar ⟨.num (.str _ k) d⟩ =>
-        if k == "w"
-        then
-          match st with
-          | .none => (.some d, true)
-          | .some x =>
-              if d > x
-              then (.some d,true)
-              else (st,true)
-        else (st,true)
-    | _ => (st, !e.hasFVar)
-    )
-
-
-@[inline]
-def Lean.Expr.getWorkerInds (proof : Expr) : Array Nat :=
-  let res := proof.onAllSubtermsFoldSkip (UInt32Array.emptyWithCapacity 4) (fun e st =>
-    match e with
-    | .fvar ⟨.num (.str _ k) d⟩ =>
-        if k == "w"
-        then (st.oInsert d.toUInt32,true)
-        else (st,true)
-    | _ => (st,!e.hasFVar)
-    )
-  Id.run <| do
-    let mut A := Array.emptyWithCapacity res.size
-    for i in res do
-      A := A.push i.toNat
-    return A
-
-
-
-@[inline]
-def Lean.Expr.getWorkerIndsTrans (l1 : LocalContext) (l2 : LocalInstances) (proof : Expr) : MetaM (Array Nat) := do
-  let ⟨res,_,_⟩ ← proof.onAllSubtermsFoldEnqueueM l1 l2 (UInt32Array.emptyWithCapacity 4) (fun e D ws l1 l2 st =>
-    match e with
-    | .fvar fv@⟨(.num (.str _ k) d)⟩ => do
-        if k == "w"
-        then
-          if ws.contains e
-          then
-            let st := st.oInsert d.toUInt32
-            let T ← fv.GetType l1 l2
-            if T.hasFVar
-            then
-              return ⟨.enq st D T,l1,l2⟩
-            else
-              return ⟨.std st,l1,l2⟩
-          else
-            return ⟨.std st,l1,l2⟩
-        else return ⟨.std st,l1,l2⟩
-    | _ => return ⟨.std st,l1,l2⟩
-    )
-  let mut A := Array.emptyWithCapacity res.size
-  for i in res do
-    A := A.push i.toNat
-  return A
-
-
-@[inline]
-def Lean.Expr.getGUFVarsIds (e : Expr) : List FVarId :=
-  e.onAllSubtermsFoldSkip []
-    (fun x sofar =>
-      match x with
-      | .fvar y@⟨.num k _⟩ =>
-        if k == `u || k == `g
-        then (sofar.insert y,true)
-        else (sofar,true)
-      | _ => (sofar, !x.hasFVar)
-      )
-
-
-/-
-Todo:
-
-make skippable versions of `onAllSubtermsCheckExists` and `onAllSubtermsFoldEnqueueM`
-and replace in above to check for fvars
-.. actually, apply to `onAllSubtermsM` of this section too ...
--/

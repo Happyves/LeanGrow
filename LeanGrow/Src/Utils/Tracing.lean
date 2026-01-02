@@ -65,7 +65,7 @@ def traceActive? {m} [Monad m] [MonadEnv m] (dec : Name) : m (TracingMode × Lis
 macro "mtracing" : doElem =>
   let ltf := mkIdent `local_mtracing_active
   let ltm := mkIdent `local_mtracing_mode
-  `(doElem|let ($ltf,$ltm) := traceActive? decl_name%)
+  `(doElem|let ($ltm,$ltf) ← traceActive? decl_name%)
 
 
 
@@ -112,7 +112,7 @@ macro "mtrace" "on" f:term "when" c:term "with" m:term : doElem => do
 macro "mtrace" "on" f:term "with" m:term : doElem => do
   let ltf := mkIdent `local_mtracing_active
   let ltm := mkIdent `local_mtracing_mode
-  `(doElem| match ← traceCondImpl $ltm $ltf l $f true with
+  `(doElem| match ← traceCondImpl $ltm $ltf $f true with
             | .off => pure ()
             | .std => let N := decl_name% ; dbg_trace (s!"[{N}] " ++ $m)
             | .hard => traceHardMain $m)
