@@ -78,7 +78,7 @@ def Lean.Expr.getWorkerIndsTransTR (l1 : LocalContext) (l2 : LocalInstances) (pr
 
 
 @[inline]
-partial def Lean.Expr.getWorkerIndsTransR (ini : UInt32Array) (l1 : LocalContext) (l2 : LocalInstances) (proof : Expr) : MetaM (Prod3 UInt32Array LocalContext LocalInstances) := do
+private partial def Lean.Expr.getWorkerIndsTransR (ini : UInt32Array) (l1 : LocalContext) (l2 : LocalInstances) (proof : Expr) : MetaM (Prod3 UInt32Array LocalContext LocalInstances) := do
   proof.onAllSubtermsFoldSkipM l1 l2 ini (fun e _ ws l1 l2 st =>
     match e with
     | .fvar fv@⟨.num (.str _ k) d⟩ => do
@@ -124,6 +124,17 @@ def Lean.Expr.getGUFVarsIds (e : Expr) : List FVarId :=
       | _ => (sofar, !x.hasFVar)
       )
 
+@[inline]
+def Lean.Expr.getGUFVarsIds' (ini : List FVarId) (e : Expr) : List FVarId :=
+  e.onAllSubtermsFoldSkip ini
+    (fun x sofar =>
+      match x with
+      | .fvar y@⟨.num k _⟩ =>
+        if k == `u || k == `g
+        then (sofar.insert y,true)
+        else (sofar,true)
+      | _ => (sofar, !x.hasFVar)
+      )
 
 @[inline]
 def Lean.Expr.getWorkerFVarIds (e : Expr) : List FVarId :=
@@ -353,24 +364,6 @@ def getFirstLnodeDataFrom (e : Expr) : Option (Name × Nat) :=
     | _ => .none
     )
 
-@[inline]
-def Lean.Expr.abstractWorkers (e : Expr) (initD : LocalContext) (initI : LocalInstances)
-  : MetaM (Expr × Array Expr) := do
-    let ws := (← e.getWorkerFVarIdsTrans initD initI).1.qsort (fun x y =>
-      match x.name, y.name with
-      | .num _ i, .num _ j => i > j -- sort deepest first ; qsort expects strict order
-      | _, _ => panic s!"[Expr.abstractWorkers] unexpected worker formats {x.name} {y.name}")
-    let e ← ws.foldlM (fun e fv => do
-      match ← fv.GetDecl initD initI with
-      | .cdecl _ _ _ T .. =>
-           return (.lam `abstractFvarWrt T (Expr.abstractPat (Expr.fvar fv) e) .default)
-      | .ldecl _ _ _ T V nonDep .. =>
-          return (.letE `abstractFvarWrt T V (Expr.abstractPat (.fvar fv) e) nonDep)
-      ) e
-    let ws := (ws.foldl (fun A fvid => (Expr.fvar fvid) :: A) []).toArray
-    return ⟨e,ws⟩
-
-
 
 /--
 - Ouput is *not* sorted wrt deps
@@ -436,8 +429,30 @@ def augmentWorkersByDepsA (init : Array FVarId) (extWorkas : List FVarId) : Meta
 
     ) init
 
+/-- Array has deepest vars first -/
+@[inline]
+def Lean.Expr.abstractWorkers (e : Expr) (initD : LocalContext) (initI : LocalInstances)
+  : MetaM (Expr × Array Expr) := do
+    let ws := (← e.getWorkerFVarIdsTrans initD initI).1.qsort (fun x y =>
+      match x.name, y.name with
+      | .num _ i, .num _ j => i > j -- sort deepest first ; qsort expects strict order
+      | _, _ => panic s!"[Expr.abstractWorkers] unexpected worker formats {x.name} {y.name}")
+    let e ← ws.foldlM (fun e fv => do
+      match ← fv.GetDecl initD initI with
+      | .cdecl _ _ _ T .. =>
+           return (.lam `abstractFvarWrt T (Expr.abstractPat (Expr.fvar fv) e) .default)
+      | .ldecl _ _ _ T V nonDep .. =>
+          return (.letE `abstractFvarWrt T V (Expr.abstractPat (.fvar fv) e) nonDep)
+      ) e
+    let ws := (ws.foldl (fun A fvid => (Expr.fvar fvid) :: A) []).toArray
+    return ⟨e,ws⟩
 
-/--  uses ∀ bindings-/
+
+
+/--
+- uses ∀ bindings
+- Array has deepest vars first
+-/
 @[inline]
 partial def Lean.Expr.abstractWorkersSpe' (e : Expr) (extWorkas : List FVarId) (initD : LocalContext) (initI : LocalInstances)
   : MetaM (Expr × Array Expr) := do
