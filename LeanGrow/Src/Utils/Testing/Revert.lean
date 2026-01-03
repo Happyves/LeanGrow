@@ -130,3 +130,10 @@ With context g(n : Nat) u(hn1 : n = 42 : (sorry : n = 42)) g(hn2 : n = 37) u(x :
 
 def test29 := test #[(Name.num `u 3)] 1
 With context g(n : Nat) u(hn1 : n = 42 : (sorry : n = 42)) g(hn2 : n = 37) u(x : Fin n : (⟨0,(sorry : 0 < n)⟩ : Fin n) ) g(hx : x.val = 666) and objects (dummy n x) run test29
+
+
+def test30 := test #[(Name.num `g 0)] 10
+With context g(n : Nat) g(x : Fin n) g(P : Fin n → Prop) g(p : P x) and objects (dummy n x) run test30
+
+def test31 := test #[(Name.num `g 0)] 1
+With context g(n : Nat) g(x : Fin n) g(P : Fin n → Prop) g(p : P x) and objects (dummy n x) run test31

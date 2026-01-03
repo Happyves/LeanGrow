@@ -1,5 +1,7 @@
 
 
+# Notes
+
 - use the upper case versions like `ForallLetTelescopeWW` from Utils/Lean/LocalContext
   WARNING: there are specific versions that use workers
 
@@ -11,6 +13,12 @@
 
 - refer to revert tests : we should add deps for reverts at rw/induction
 
+- check if class and add inst binder, as other ops depend on it
+
+
+# Todo 
+
+- add workers to testing
 
 # Long term
 

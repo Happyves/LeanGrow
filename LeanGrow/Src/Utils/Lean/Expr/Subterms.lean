@@ -473,7 +473,7 @@ partial def Lean.Expr.onAllSubtermsM (e : Expr) (l1 : LocalContext) (l2 : LocalI
         let fv ←  worker d
         let ⟨_,r,l1,l2⟩ ← withFreeing fv l r l1 l2
         let ⟨r,C,l1,l2⟩ ← go r (d+1) l1 l2 C
-        let l2 := l2.patch S 1
+        let l2 := match bi with | .instImplicit => l2.patch S 1 | _ => l2
         let R := .lam n l r bi
         let C := C.insert e R
         return ⟨R,C,l1,l2⟩
@@ -483,7 +483,7 @@ partial def Lean.Expr.onAllSubtermsM (e : Expr) (l1 : LocalContext) (l2 : LocalI
         let fv ←  worker d
         let ⟨_,r,l1,l2⟩ ← withFreeing fv l r l1 l2
         let ⟨r,C,l1,l2⟩ ← go r (d+1) l1 l2 C
-        let l2 := l2.patch S 1
+        let l2 := match bi with | .instImplicit => l2.patch S 1 | _ => l2
         let R := .forallE n l r bi
         let C := C.insert e R
         return ⟨R,C,l1,l2⟩
@@ -494,7 +494,7 @@ partial def Lean.Expr.onAllSubtermsM (e : Expr) (l1 : LocalContext) (l2 : LocalI
         let fv ←  worker d
         let ⟨_,z,l1,l2⟩ ← withFreeingLet fv l r z l1 l2
         let ⟨z,C,l1,l2⟩ ← go z (d+1) l1 l2 C
-        let l2 := l2.patch S 1
+        let l2 := if (← withLCtx l1 l2 (isClass? l)).isSome then l2.patch S 1 else l2
         let R := .letE n l r z bi
         let C := C.insert e R
         return ⟨R,C,l1,l2⟩
@@ -512,8 +512,6 @@ partial def Lean.Expr.onAllSubtermsM (e : Expr) (l1 : LocalContext) (l2 : LocalI
   do
   let ⟨r,_,l1,l2⟩ ← go e 0 l1 l2 {}
   return ⟨r,l1,l2⟩
-
-
 
 
 
@@ -669,7 +667,7 @@ partial def Lean.Expr.onAllSubtermsWiWorkerTrackedM (e : Expr) (l1 : LocalContex
         let fv ←  worker d
         let ⟨fv,r,l1,l2⟩ ← withFreeing fv l r l1 l2
         let ⟨r,C,workas,l1,l2⟩ ← go (workas.push (.fvar fv)) r (d+1) l1 l2 C
-        let l2 := l2.patch S 1
+        let l2 := match bi with | .instImplicit => l2.patch S 1 | _ => l2
         let R := .lam n l r bi
         let C := C.insert e R
         return ⟨R,C,workas,l1,l2⟩
@@ -679,7 +677,7 @@ partial def Lean.Expr.onAllSubtermsWiWorkerTrackedM (e : Expr) (l1 : LocalContex
         let fv ←  worker d
         let ⟨fv,r,l1,l2⟩ ← withFreeing fv l r l1 l2
         let ⟨r,C,workas,l1,l2⟩ ← go (workas.push (.fvar fv)) r (d+1) l1 l2 C
-        let l2 := l2.patch S 1
+        let l2 := match bi with | .instImplicit => l2.patch S 1 | _ => l2
         let R := .forallE n l r bi
         let C := C.insert e R
         return ⟨R,C,workas,l1,l2⟩
@@ -690,7 +688,7 @@ partial def Lean.Expr.onAllSubtermsWiWorkerTrackedM (e : Expr) (l1 : LocalContex
         let fv ←  worker d
         let ⟨fv,z,l1,l2⟩ ← withFreeingLet fv l r z l1 l2
         let ⟨z,C,workas,l1,l2⟩ ← go (workas.push (.fvar fv)) z (d+1) l1 l2 C
-        let l2 := l2.patch S 1
+        let l2 := if (← withLCtx l1 l2 (isClass? l)).isSome then l2.patch S 1 else l2
         let R := .letE n l r z bi
         let C := C.insert e R
         return ⟨R,C,workas,l1,l2⟩
@@ -868,7 +866,7 @@ partial def Lean.Expr.onAllSubtermsWiWorkerCpsSkipTravState (e : Expr) (l1 : Loc
             let fv ←  worker d
             let ⟨_,r,l1,l2⟩ ← withFreeing fv l r l1 l2
             let ⟨r,C,state,l1,l2⟩ ← go state r (d+1) l1 l2 C
-            let l2 := l2.patch S 1
+            let l2 := match bi with | .instImplicit => l2.patch S 1 | _ => l2
             let R := .lam n l r bi
             let C := C.insert e R
             return ⟨R,C,state,l1,l2⟩
@@ -878,7 +876,7 @@ partial def Lean.Expr.onAllSubtermsWiWorkerCpsSkipTravState (e : Expr) (l1 : Loc
             let fv ←  worker d
             let ⟨_,r,l1,l2⟩ ← withFreeing fv l r l1 l2
             let ⟨r,C,state,l1,l2⟩ ← go state r (d+1) l1 l2 C
-            let l2 := l2.patch S 1
+            let l2 := match bi with | .instImplicit => l2.patch S 1 | _ => l2
             let R := .forallE n l r bi
             let C := C.insert e R
             return ⟨R,C,state,l1,l2⟩
@@ -889,7 +887,7 @@ partial def Lean.Expr.onAllSubtermsWiWorkerCpsSkipTravState (e : Expr) (l1 : Loc
             let fv ←  worker d
             let ⟨_,z,l1,l2⟩ ← withFreeingLet fv l r z l1 l2
             let ⟨z,C,state,l1,l2⟩ ← go state z (d+1) l1 l2 C
-            let l2 := l2.patch S 1
+            let l2 := if (← withLCtx l1 l2 (isClass? l)).isSome then l2.patch S 1 else l2
             let R := .letE n l r z bi
             let C := C.insert e R
             return ⟨R,C,state,l1,l2⟩
@@ -1072,7 +1070,7 @@ partial def Lean.Expr.onAllSubtermsWiWorkerTrackedCpsSkipTravState (e : Expr) (l
             let fv ←  worker d
             let ⟨fv,r,l1,l2⟩ ← withFreeing fv l r l1 l2
             let ⟨r,C,workas,state,l1,l2⟩ ← go state (workas.push (.fvar fv)) r (d+1) l1 l2 C
-            let l2 := l2.patch S 1
+            let l2 := match bi with | .instImplicit => l2.patch S 1 | _ => l2
             let R := .lam n l r bi
             let C := C.insert e R
             return ⟨R,C,workas,state,l1,l2⟩
@@ -1082,7 +1080,7 @@ partial def Lean.Expr.onAllSubtermsWiWorkerTrackedCpsSkipTravState (e : Expr) (l
             let fv ←  worker d
             let ⟨fv,r,l1,l2⟩ ← withFreeing fv l r l1 l2
             let ⟨r,C,workas,state,l1,l2⟩ ← go state (workas.push (.fvar fv)) r (d+1) l1 l2 C
-            let l2 := l2.patch S 1
+            let l2 := match bi with | .instImplicit => l2.patch S 1 | _ => l2
             let R := .forallE n l r bi
             let C := C.insert e R
             return ⟨R,C,workas,state,l1,l2⟩
@@ -1093,7 +1091,7 @@ partial def Lean.Expr.onAllSubtermsWiWorkerTrackedCpsSkipTravState (e : Expr) (l
             let fv ←  worker d
             let ⟨fv,z,l1,l2⟩ ← withFreeingLet fv l r z l1 l2
             let ⟨z,C,workas,state,l1,l2⟩ ← go state (workas.push (.fvar fv)) z (d+1) l1 l2 C
-            let l2 := l2.patch S 1
+            let l2 := if (← withLCtx l1 l2 (isClass? l)).isSome then l2.patch S 1 else l2
             let R := .letE n l r z bi
             let C := C.insert e R
             return ⟨R,C,workas,state,l1,l2⟩

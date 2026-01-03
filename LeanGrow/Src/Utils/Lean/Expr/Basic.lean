@@ -126,9 +126,9 @@ def Lean.Expr.abstractPat (pat within : Expr) : Expr :=
 
 
 @[inline]
-def Lean.Expr.abstractPatBind (pat patType within : Expr) : Expr :=
+def Lean.Expr.abstractPatBind (pat patType within : Expr) (binder : BinderInfo) : Expr :=
   let absd := Expr.abstractPat pat within
-  .lam `abstractPat.dummy patType absd .default
+  .lam `abstractPat.dummy patType absd binder
 
 
 
@@ -153,9 +153,13 @@ partial def Lean.Expr.abstractLetFvarLam
             | _ => return ⟨x,initD,initI⟩ )
           if i == 0
           then
-            return ⟨.lam `abstractFvarWrt T term .default,initD,initI⟩
+            match ← IsClass? T initD initI with
+            | .none => return ⟨.lam `abstractFvarWrt T term .default,initD,initI⟩
+            | _ => return ⟨.lam `abstractFvarWrt T term .instImplicit,initD,initI⟩
           else
-            bind (.lam `abstractFvarWrt T term .default) (i-1) initD initI
+            match ← IsClass? T initD initI with
+            | .none => bind (.lam `abstractFvarWrt T term .default) (i-1) initD initI
+            | _ => bind (.lam `abstractFvarWrt T term .instImplicit) (i-1) initD initI
       | .ldecl _ _ _ T V nonDep .. =>
           let ⟨T,initD,initI⟩ ← T.onAllSubtermsM initD initI (fun x d initD initI =>
             match x with
@@ -206,9 +210,13 @@ partial def Lean.Expr.abstractLetFvarAll
             | _ => return ⟨x,initD,initI⟩ )
           if i == 0
           then
-            return ⟨.forallE `abstractFvarWrt T term .default,initD,initI⟩
+            match ← IsClass? T initD initI with
+            | .none => return ⟨.forallE `abstractFvarWrt T term .default,initD,initI⟩
+            | _ => return ⟨.forallE `abstractFvarWrt T term .instImplicit,initD,initI⟩
           else
-            bind (.forallE `abstractFvarWrt T term .default) (i-1) initD initI
+            match ← IsClass? T initD initI with
+            | .none => bind (.forallE `abstractFvarWrt T term .default) (i-1) initD initI
+            | _ => bind (.forallE `abstractFvarWrt T term .instImplicit) (i-1) initD initI
       | .ldecl _ _ _ T V nonDep .. =>
           let ⟨T,initD,initI⟩ ← T.onAllSubtermsM initD initI (fun x d initD initI =>
             match x with

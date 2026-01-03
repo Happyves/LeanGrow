@@ -146,26 +146,25 @@ partial def Lean.Expr.onAllSubtermsCheckExistsMTR (e : Expr) (initD : LocalConte
       else
         match e with
         | .app l r => go initD initI (.cons d l <| .cons d r more)
-        | .lam _ l r _ =>
+        | .lam _ l r bi =>
             let S := initI.size
             let fv ← worker d
             let ⟨_,r,initD,initI⟩ ← withFreeing fv l r initD initI
-            go initD initI (.cons d l <| .cons (d+1) r <| .sig S more)
-        | .forallE _ l r _ =>
+            go initD initI (.cons d l <| .cons (d+1) r <| (match bi with | .instImplicit => .sig S more | _ => more))
+        | .forallE _ l r bi =>
             let S := initI.size
             let fv ← worker d
             let ⟨_,r,initD,initI⟩ ← withFreeing fv l r initD initI
-            go initD initI (.cons d l <| .cons (d+1) r <| .sig S more)
+            go initD initI (.cons d l <| .cons (d+1) r <| (match bi with | .instImplicit => .sig S more | _ => more))
         | .letE _ l r z _ =>
             let S := initI.size
             let fv ← worker d
             let ⟨_,z,initD,initI⟩ ← withFreeingLet fv l r z initD initI
-            go initD initI (.cons d l <| .cons d r <| .cons (d+1) z <| .sig S more)
+            go initD initI (.cons d l <| .cons d r <| .cons (d+1) z <| (if (← withLCtx  initD initI (isClass? l)).isSome then .sig S more else more))
         | .proj _ _ e => go initD initI (.cons d e more)
         | .mdata _ e => go initD initI (.cons d e more)
         | _ => go initD initI more
   go initD initI <| .cons 0 e .nil
-
 
 
 
@@ -183,7 +182,7 @@ partial def Lean.Expr.onAllSubtermsCheckExistsM (e : Expr) (l1 : LocalContext) (
         | .app l r =>
             let R@⟨here,l1,l2⟩ ← go d l1 l2 l
             if here then return R else go d l1 l2 r
-        | .lam _ l r _ =>
+        | .lam _ l r bi =>
             let R@⟨here,l1,l2⟩ ← go d l1 l2 l
             if here
             then return R
@@ -192,9 +191,9 @@ partial def Lean.Expr.onAllSubtermsCheckExistsM (e : Expr) (l1 : LocalContext) (
               let fv ← worker d
               let ⟨_,r,l1,l2⟩ ← withFreeing fv l r l1 l2
               let ⟨here,l1,l2⟩ ← go d l1 l2 r
-              let l2 := l2.patch S 1
+              let l2 := match bi with | .instImplicit => l2.patch S 1 | _ => l2
               return ⟨here,l1,l2⟩
-        | .forallE _ l r _ =>
+        | .forallE _ l r bi =>
             let R@⟨here,l1,l2⟩ ← go d l1 l2 l
             if here
             then return R
@@ -203,7 +202,7 @@ partial def Lean.Expr.onAllSubtermsCheckExistsM (e : Expr) (l1 : LocalContext) (
               let fv ← worker d
               let ⟨_,r,l1,l2⟩ ← withFreeing fv l r l1 l2
               let ⟨here,l1,l2⟩ ← go d l1 l2 r
-              let l2 := l2.patch S 1
+              let l2 := match bi with | .instImplicit => l2.patch S 1 | _ => l2
               return ⟨here,l1,l2⟩
         | .letE _ l r z _ =>
             let R@⟨here,l1,l2⟩ ← go d l1 l2 l
@@ -218,7 +217,7 @@ partial def Lean.Expr.onAllSubtermsCheckExistsM (e : Expr) (l1 : LocalContext) (
                 let fv ← worker d
                 let ⟨_,z,l1,l2⟩ ← withFreeingLet fv l r z l1 l2
                 let ⟨here,l1,l2⟩ ← go d l1 l2 z
-                let l2 := l2.patch S 1
+                let l2 := if (← withLCtx l1 l2 (isClass? l)).isSome then l2.patch S 1 else l2
                 return ⟨here,l1,l2⟩
         | .proj _ _ e | .mdata _ e => go d l1 l2 e
         | _ => return ⟨false,l1,l2⟩
@@ -239,21 +238,21 @@ partial def Lean.Expr.onAllSubtermsCheckExistsTrackedMTR (e : Expr) (initD : Loc
       else
         match e with
         | .app l r => go workas initD initI (.cons d l <| .cons d r more)
-        | .lam _ l r _ =>
+        | .lam _ l r bi =>
             let S := initI.size
             let fv ← worker d
             let ⟨fv,r,initD,initI⟩ ← withFreeing fv l r initD initI
-            go (workas.push (.fvar fv)) initD initI (.cons d l <| .cons (d+1) r <| .sig S more)
-        | .forallE _ l r _ =>
+            go (workas.push (.fvar fv)) initD initI (.cons d l <| .cons (d+1) r <| (match bi with | .instImplicit => .sig S more | _ => more))
+        | .forallE _ l r bi =>
             let S := initI.size
             let fv ← worker d
             let ⟨fv,r,initD,initI⟩ ← withFreeing fv l r initD initI
-            go (workas.push (.fvar fv)) initD initI (.cons d l <| .cons (d+1) r <| .sig S more)
+            go (workas.push (.fvar fv)) initD initI (.cons d l <| .cons (d+1) r <| (match bi with | .instImplicit => .sig S more | _ => more))
         | .letE _ l r z _ =>
             let S := initI.size
             let fv ← worker d
             let ⟨fv,z,initD,initI⟩ ← withFreeingLet fv l r z initD initI
-            go (workas.push (.fvar fv)) initD initI (.cons d l <| .cons d r <| .cons (d+1) z <| .sig S more)
+            go (workas.push (.fvar fv)) initD initI (.cons d l <| .cons d r <| .cons (d+1) z <| (if (← withLCtx  initD initI (isClass? l)).isSome then .sig S more else more))
         | .proj _ _ e => go workas initD initI (.cons d e more)
         | .mdata _ e => go workas initD initI (.cons d e more)
         | _ => go workas initD initI more
@@ -276,7 +275,7 @@ partial def Lean.Expr.onAllSubtermsCheckExistsTrackedM (e : Expr) (l1 : LocalCon
         | .app l r =>
             let R@⟨here,l1,l2⟩ ← go workas d l1 l2 l
             if here then return R else go workas d l1 l2 r
-        | .lam _ l r _ =>
+        | .lam _ l r bi =>
             let R@⟨here,l1,l2⟩ ← go workas d l1 l2 l
             if here
             then return R
@@ -285,9 +284,9 @@ partial def Lean.Expr.onAllSubtermsCheckExistsTrackedM (e : Expr) (l1 : LocalCon
               let fv ← worker d
               let ⟨fv,r,l1,l2⟩ ← withFreeing fv l r l1 l2
               let ⟨here,l1,l2⟩ ← go (workas.push (.fvar fv)) d l1 l2 r
-              let l2 := l2.patch S 1
+              let l2 := match bi with | .instImplicit => l2.patch S 1 | _ => l2
               return ⟨here,l1,l2⟩
-        | .forallE _ l r _ =>
+        | .forallE _ l r bi =>
             let R@⟨here,l1,l2⟩ ← go workas d l1 l2 l
             if here
             then return R
@@ -296,7 +295,7 @@ partial def Lean.Expr.onAllSubtermsCheckExistsTrackedM (e : Expr) (l1 : LocalCon
               let fv ← worker d
               let ⟨fv,r,l1,l2⟩ ← withFreeing fv l r l1 l2
               let ⟨here,l1,l2⟩ ← go (workas.push (.fvar fv)) d l1 l2 r
-              let l2 := l2.patch S 1
+              let l2 := match bi with | .instImplicit => l2.patch S 1 | _ => l2
               return ⟨here,l1,l2⟩
         | .letE _ l r z _ =>
             let R@⟨here,l1,l2⟩ ← go workas d l1 l2 l
@@ -311,7 +310,7 @@ partial def Lean.Expr.onAllSubtermsCheckExistsTrackedM (e : Expr) (l1 : LocalCon
                 let fv ← worker d
                 let ⟨fv,z,l1,l2⟩ ← withFreeingLet fv l r z l1 l2
                 let ⟨here,l1,l2⟩ ← go (workas.push (.fvar fv)) d l1 l2 z
-                let l2 := l2.patch S 1
+                let l2 := if (← withLCtx l1 l2 (isClass? l)).isSome then l2.patch S 1 else l2
                 return ⟨here,l1,l2⟩
         | .proj _ _ e | .mdata _ e => go workas d l1 l2 e
         | _ => return ⟨false,l1,l2⟩
@@ -335,21 +334,21 @@ partial def Lean.Expr.onAllSubtermsFoldMTR (e : Expr) (initD : LocalContext) (in
       let ⟨col,initD,initI⟩ ← f e d workas initD initI col
       match e with
       | .app l r => go workas initD initI col (.cons d l <| .cons d r more)
-      | .lam _ l r _ =>
+      | .lam _ l r bi =>
           let S := initI.size
           let fv ← worker d
           let ⟨fv,r,initD,initI⟩ ← withFreeing fv l r initD initI
-          go (workas.push (.fvar fv)) initD initI col (.cons d l <| .cons (d+1) r <| .sig S more)
-      | .forallE _ l r _ =>
+          go (workas.push (.fvar fv)) initD initI col (.cons d l <| .cons (d+1) r <| (match bi with | .instImplicit => .sig S more | _ => more))
+      | .forallE _ l r bi =>
           let S := initI.size
           let fv ← worker d
           let ⟨fv,r,initD,initI⟩ ← withFreeing fv l r initD initI
-          go (workas.push (.fvar fv)) initD initI col (.cons d l <| .cons (d+1) r <| .sig S more)
+          go (workas.push (.fvar fv)) initD initI col (.cons d l <| .cons (d+1) r <| (match bi with | .instImplicit => .sig S more | _ => more))
       | .letE _ l r z _ =>
           let S := initI.size
           let fv ← worker d
           let ⟨fv,z,initD,initI⟩ ← withFreeingLet fv l r z initD initI
-          go (workas.push (.fvar fv)) initD initI col (.cons d l <| .cons d r <| .cons (d+1) z <| .sig S more)
+          go (workas.push (.fvar fv)) initD initI col (.cons d l <| .cons d r <| .cons (d+1) z <| (if (← withLCtx  initD initI (isClass? l)).isSome then .sig S more else more))
       | .proj _ _ e => go workas initD initI col (.cons d e more)
       | .mdata _ e => go workas initD initI col (.cons d e more)
       | _ => go workas initD initI col more
@@ -368,13 +367,13 @@ partial def Lean.Expr.onAllSubtermsFoldM (e : Expr) (l1 : LocalContext) (l2 : Lo
       | .app l r =>
           let ⟨col,initD,initI⟩ ← go d workas initD initI col l
           go d workas initD initI col r
-      | .lam _ l r _ | .forallE _ l r _ =>
+      | .lam _ l r bi | .forallE _ l r bi =>
           let ⟨col,initD,initI⟩ ← go d workas initD initI col l
           let S := initI.size
           let fv ← worker d
           let ⟨fv,r,initD,initI⟩ ← withFreeing fv l r initD initI
           let ⟨col,initD,initI⟩ ← go (d+1) (workas.push (.fvar fv)) initD initI col r
-          let initI := initI.patch S 1
+          let initI := match bi with | .instImplicit =>  initI.patch S 1 | _ => initI
           return ⟨col,initD,initI⟩
       | .letE _ l r z _ =>
           let ⟨col,initD,initI⟩ ← go d workas initD initI col l
@@ -383,7 +382,7 @@ partial def Lean.Expr.onAllSubtermsFoldM (e : Expr) (l1 : LocalContext) (l2 : Lo
           let fv ← worker d
           let ⟨fv,z,initD,initI⟩ ← withFreeingLet fv l r z initD initI
           let ⟨col,initD,initI⟩ ← go (d+1) (workas.push (.fvar fv)) initD initI col z
-          let initI := initI.patch S 1
+          let initI := if (← withLCtx  initD initI (isClass? l)).isSome then initI.patch S 1 else initI
           return ⟨col,initD,initI⟩
       | .proj _ _ e => go d workas initD initI col e
       | .mdata _ e => go d workas initD initI col e
@@ -408,21 +407,21 @@ partial def Lean.Expr.onAllSubtermsFoldSkipMTR (e : Expr) (initD : LocalContext)
       else
         match e with
         | .app l r => go workas initD initI col (.cons d l <| .cons d r more)
-        | .lam _ l r _ =>
+        | .lam _ l r bi =>
             let S := initI.size
             let fv ← worker d
             let ⟨fv,r,initD,initI⟩ ← withFreeing fv l r initD initI
-            go (workas.push (.fvar fv)) initD initI col (.cons d l <| .cons (d+1) r <| .sig S more)
-        | .forallE _ l r _ =>
+            go (workas.push (.fvar fv)) initD initI col (.cons d l <| .cons (d+1) r <| (match bi with | .instImplicit => .sig S more | _ => more))
+        | .forallE _ l r bi =>
             let S := initI.size
             let fv ← worker d
             let ⟨fv,r,initD,initI⟩ ← withFreeing fv l r initD initI
-            go (workas.push (.fvar fv)) initD initI col (.cons d l <| .cons (d+1) r <| .sig S more)
+            go (workas.push (.fvar fv)) initD initI col (.cons d l <| .cons (d+1) r <| (match bi with | .instImplicit => .sig S more | _ => more))
         | .letE _ l r z _ =>
             let S := initI.size
             let fv ← worker d
             let ⟨fv,z,initD,initI⟩ ← withFreeingLet fv l r z initD initI
-            go (workas.push (.fvar fv)) initD initI col (.cons d l <| .cons d r <| .cons (d+1) z <| .sig S more)
+            go (workas.push (.fvar fv)) initD initI col (.cons d l <| .cons d r <| .cons (d+1) z <| (if (← withLCtx  initD initI (isClass? l)).isSome then .sig S more else more))
         | .proj _ _ e => go workas initD initI col (.cons d e more)
         | .mdata _ e => go workas initD initI col (.cons d e more)
         | _ => go workas initD initI col more
@@ -444,13 +443,13 @@ partial def Lean.Expr.onAllSubtermsFoldSkipM (e : Expr) (l1 : LocalContext) (l2 
         | .app l r =>
             let ⟨col,initD,initI⟩ ← go d workas initD initI col l
             go d workas initD initI col r
-        | .lam _ l r _ | .forallE _ l r _ =>
+        | .lam _ l r bi | .forallE _ l r bi =>
             let ⟨col,initD,initI⟩ ← go d workas initD initI col l
             let S := initI.size
             let fv ← worker d
             let ⟨fv,r,initD,initI⟩ ← withFreeing fv l r initD initI
             let ⟨col,initD,initI⟩ ← go (d+1) (workas.push (.fvar fv)) initD initI col r
-            let initI := initI.patch S 1
+            let initI := match bi with | .instImplicit =>  initI.patch S 1 | _ => initI
             return ⟨col,initD,initI⟩
         | .letE _ l r z _ =>
             let ⟨col,initD,initI⟩ ← go d workas initD initI col l
@@ -459,7 +458,7 @@ partial def Lean.Expr.onAllSubtermsFoldSkipM (e : Expr) (l1 : LocalContext) (l2 
             let fv ← worker d
             let ⟨fv,z,initD,initI⟩ ← withFreeingLet fv l r z initD initI
             let ⟨col,initD,initI⟩ ← go (d+1) (workas.push (.fvar fv)) initD initI col z
-            let initI := initI.patch S 1
+            let initI := if (← withLCtx  initD initI (isClass? l)).isSome then initI.patch S 1 else initI
             return ⟨col,initD,initI⟩
         | .proj _ _ e => go d workas initD initI col e
         | .mdata _ e => go d workas initD initI col e
@@ -561,42 +560,42 @@ partial def Lean.Expr.onAllSubtermsFoldEnqueueM (e : Expr) (initD : LocalContext
       | .std col =>
           match e with
           | .app l r => go workas initD initI col (.cons d l <| .cons d r more)
-          | .lam _ l r _ =>
+          | .lam _ l r bi =>
               let S := initI.size
               let fv ← worker d
               let ⟨fv,r,initD,initI⟩ ← withFreeing fv l r initD initI
-              go (workas.push (.fvar fv)) initD initI col (.cons d l <| .cons (d+1) r <| .sig S more)
-          | .forallE _ l r _ =>
+              go (workas.push (.fvar fv)) initD initI col (.cons d l <| .cons (d+1) r <| (match bi with | .instImplicit => .sig S more | _ => more))
+          | .forallE _ l r bi =>
               let S := initI.size
               let fv ← worker d
               let ⟨fv,r,initD,initI⟩ ← withFreeing fv l r initD initI
-              go (workas.push (.fvar fv)) initD initI col (.cons d l <| .cons (d+1) r <| .sig S more)
+              go (workas.push (.fvar fv)) initD initI col (.cons d l <| .cons (d+1) r <| (match bi with | .instImplicit => .sig S more | _ => more))
           | .letE _ l r z _ =>
               let S := initI.size
               let fv ← worker d
               let ⟨fv,z,initD,initI⟩ ← withFreeingLet fv l r z initD initI
-              go (workas.push (.fvar fv)) initD initI col (.cons d l <| .cons d r <| .cons (d+1) z <| .sig S more)
+              go (workas.push (.fvar fv)) initD initI col (.cons d l <| .cons d r <| .cons (d+1) z <| (if (← withLCtx  initD initI (isClass? l)).isSome then .sig S more else more))
           | .proj _ _ e => go workas initD initI col (.cons d e more)
           | .mdata _ e => go workas initD initI col (.cons d e more)
           | _ => go workas initD initI col more
       | .enq col enqD enq =>
           match e with
           | .app l r => go workas initD initI col (.cons enqD enq <| .cons d l <| .cons d r more)
-          | .lam _ l r _ =>
+          | .lam _ l r bi =>
               let S := initI.size
               let fv ← worker d
               let ⟨fv,r,initD,initI⟩ ← withFreeing fv l r initD initI
-              go (workas.push (.fvar fv)) initD initI col (.cons enqD enq <| .cons d l <| .cons (d+1) r <| .sig S more)
-          | .forallE _ l r _ =>
+              go (workas.push (.fvar fv)) initD initI col (.cons enqD enq <| .cons d l <| .cons (d+1) r <| (match bi with | .instImplicit => .sig S more | _ => more))
+          | .forallE _ l r bi =>
               let S := initI.size
               let fv ← worker d
               let ⟨fv,r,initD,initI⟩ ← withFreeing fv l r initD initI
-              go (workas.push (.fvar fv)) initD initI col (.cons enqD enq <| .cons d l <| .cons (d+1) r <| .sig S more)
+              go (workas.push (.fvar fv)) initD initI col (.cons enqD enq <| .cons d l <| .cons (d+1) r <| (match bi with | .instImplicit => .sig S more | _ => more))
           | .letE _ l r z _ =>
               let S := initI.size
               let fv ← worker d
               let ⟨fv,z,initD,initI⟩ ← withFreeingLet fv l r z initD initI
-              go (workas.push (.fvar fv)) initD initI col (.cons enqD enq <| .cons d l <| .cons d r <| .cons (d+1) z <| .sig S more)
+              go (workas.push (.fvar fv)) initD initI col (.cons enqD enq <| .cons d l <| .cons d r <| .cons (d+1) z <| (if (← withLCtx  initD initI (isClass? l)).isSome then .sig S more else more))
           | .proj _ _ e => go workas initD initI col (.cons enqD enq <| .cons d e more)
           | .mdata _ e => go workas initD initI col (.cons enqD enq <| .cons d e more)
           | _ => go workas initD initI col (.cons enqD enq more)
@@ -619,21 +618,21 @@ partial def Lean.Expr.onAllSubtermsFoldNoPartialM (e : Expr) (initD : LocalConte
         match e with
         | .app .. =>
             go workas initD initI (here) (getApp d more e)
-        | .lam _ l r _ =>
+        | .lam _ l r bi =>
             let S := initI.size
             let fv ← worker d
             let ⟨fv,r,initD,initI⟩ ← withFreeing fv l r initD initI
-            go (workas.push (.fvar fv)) initD initI (here) (.cons d l <| .cons (d+1) r <| .sig S more)
-        | .forallE _ l r _ =>
+            go (workas.push (.fvar fv)) initD initI (here) (.cons d l <| .cons (d+1) r <| (match bi with | .instImplicit => .sig S more | _ => more))
+        | .forallE _ l r bi =>
             let S := initI.size
             let fv ← worker d
             let ⟨fv,r,initD,initI⟩ ← withFreeing fv l r initD initI
-            go (workas.push (.fvar fv)) initD initI (here) (.cons d l <| .cons (d+1) r <| .sig S more)
+            go (workas.push (.fvar fv)) initD initI (here) (.cons d l <| .cons (d+1) r <| (match bi with | .instImplicit => .sig S more | _ => more))
         | .letE _ l r z _ =>
             let S := initI.size
             let fv ← worker d
             let ⟨fv,z,initD,initI⟩ ← withFreeingLet fv l r z initD initI
-            go (workas.push (.fvar fv)) initD initI (here) (.cons d l <| .cons d r <| .cons (d+1) z <| .sig S more)
+            go (workas.push (.fvar fv)) initD initI (here) (.cons d l <| .cons d r <| .cons (d+1) z <| (if (← withLCtx  initD initI (isClass? l)).isSome then .sig S more else more))
         | .proj _ _ e => go workas initD initI (here) (.cons d e more)
         | .mdata _ e => go workas initD initI (here) (.cons d e more)
         | _ => go workas initD initI (here) more

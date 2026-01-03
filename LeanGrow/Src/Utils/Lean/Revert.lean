@@ -48,14 +48,16 @@ partial def DepCache.addGU (D : Array DepCache) (gu_fv : FVarId) (l1 : LocalCont
         | nx :: more =>
             match nx.name with
             | .num _ idx =>
-                let D := D.modify idx (fun l => {l with fTrans := l.fTrans.push I})
+                let D := D.modify idx (fun l => {l with fTrans := if l.fTrans.isEmpty then l.fTrans.push I else (if l.fTrans[l.fTrans.size - 1]! == I then l.fTrans else l.fTrans.push I)})
                 -- to make sure that fTrans stays sorted, assuming gu_fv index is increasing and largest, push is enough
+                -- Because of dependecy diamonds, we must make sure to add it only once though
                 let next := (D[idx]!.back) :: todoStock
                 trD D more next
             | _ => panic s!"[DepCache.addGU] unexpected formats {nx.name}"
       let D := trD D bd []
       return D.push ⟨p?,[],bd,.empty⟩ -- assumes gu-idx is size
   | _ => throwError s!"[DepCache.addGU] unexpected formats {gu_fv.name}"
+
 
 
 @[specialize]
@@ -107,9 +109,13 @@ partial def Lean.Expr.abstractLetFvarAll_proofLet
             | _ => return ⟨x,initD,initI⟩ )
           if i == 0
           then
-            return ⟨.forallE `abstractFvarWrt T term .default,initD,initI⟩
+            match ← IsClass? T initD initI with
+            | .none =>  return ⟨.forallE `abstractFvarWrt T term .default,initD,initI⟩
+            | _ =>  return ⟨.forallE `abstractFvarWrt T term .instImplicit,initD,initI⟩
           else
-            bind (.forallE `abstractFvarWrt T term .default) (i-1) initD initI
+            match ← IsClass? T initD initI with
+            | .none => bind (.forallE `abstractFvarWrt T term .default) (i-1) initD initI
+            | _ => bind (.forallE `abstractFvarWrt T term .instImplicit) (i-1) initD initI
       | .ldecl _ _ _ T V nonDep .. =>
           let ⟨T,initD,initI⟩ ← T.onAllSubtermsM initD initI (fun x d initD initI =>
             match x with
@@ -120,16 +126,23 @@ partial def Lean.Expr.abstractLetFvarAll_proofLet
             | _ => return ⟨x,initD,initI⟩ )
           let p? : Bool ← (do
             match fvd.name with
-            | .num k i => if (k == `g || k == `u) then return depsCache[i]!.proof else isProof T -- case of workers
+            | .num k i =>
+              if (k == `g || k == `u) then return depsCache[i]!.proof else IsProof T initD initI -- case of workers
             | n => panic! s!"[abstractLetFvarAll_proofLet] unexpected {n}")
           if i == 0
           then
             if p?
-            then return ⟨.forallE `abstractFvarWrt T term .default,initD,initI⟩
+            then
+              match ← IsClass? T initD initI with
+              | .none => return ⟨.forallE `abstractFvarWrt T term .default,initD,initI⟩
+              | _ => return ⟨.forallE `abstractFvarWrt T term .instImplicit,initD,initI⟩
             else return ⟨.letE `abstractFvarWrt T V term nonDep,initD,initI⟩
           else
             if p?
-            then bind (.forallE `abstractFvarWrt T term .default) (i-1) initD initI
+            then
+              match ← IsClass? T initD initI with
+              | .none => bind (.forallE `abstractFvarWrt T term .default) (i-1) initD initI
+              | _ => bind (.forallE `abstractFvarWrt T term .instImplicit) (i-1) initD initI
             else bind (.letE `abstractFvarWrt T V term nonDep) (i-1) initD initI
     do
     let fvS := fvs.size
@@ -160,7 +173,7 @@ partial def revert_NoTn_cutOff_wDepsCache (introAdmissible? : Nat → Bool)
   : MetaM (Prod5 MVarId Expr (Array FVarId) LocalContext LocalInstances) :=
   let spread := RevCutOff / guFvs.size
   let rec @[specialize] augment (track : UInt32Array) (final : Array FVarId) (pass : List FVarId) (next : List (List FVarId)) : UInt32Array × Array FVarId :=
-    --dbg_trace (s!"[augment]\n track {repr track}\n final {repr final} \n pass {repr pass}\n next {repr next}")
+    -- dbg_trace (s!"[augment]\n track {repr track}\n final {repr final} \n pass {repr pass}\n next {repr next}")
     if final.size < RevCutOff
     then
       match pass with
@@ -185,10 +198,9 @@ partial def revert_NoTn_cutOff_wDepsCache (introAdmissible? : Nat → Bool)
                 | .num _ i => introAdmissible? i
                 | _ => panic s!"[revert_NoTn_cutOff_wDepsCache][augment] unexpected formats {x.name}"
                 ) 0 spread []
-              --dbg_trace s!"before {repr track}"
+              -- dbg_trace s!"before {repr track}"
               let track := track.oInsert I
-              let track := dbgTraceIfShared "hhmmmm" track
-              --dbg_trace s!"after {repr track}"
+              -- dbg_trace s!"after {repr track}"
               augment track (final.push nx) more (next ++ [lD]) -- add to back
         | _ =>
              panic s!"[revert_NoTn_cutOff_wDepsCache][augment] unexpected formats {nx.name}"
@@ -206,14 +218,14 @@ partial def revert_NoTn_cutOff_wDepsCache (introAdmissible? : Nat → Bool)
     | _ =>
         panic s!"[allFwdDeps] unexpected formats {fv.name}"
     ) .empty
-  --dbg_trace (s!"[allFwdDeps]\n allFwdDeps {repr allFwdDeps}")
+  -- dbg_trace (s!"[allFwdDeps]\n allFwdDeps {repr allFwdDeps}")
   let rec filterBD (bd done : List FVarId) : List FVarId :=
     match bd with
     | fv@⟨.num _ i⟩ :: more  => if allFwdDeps.oContains i.toUInt32 then filterBD more (fv :: done) else filterBD more done
     | [] => done
     | _ => panic s!"[filterBD] unexpected format"
   let rec close (track : UInt32Array) (final : Array FVarId) (idx : Nat) (pass : List FVarId) : Array FVarId :=
-    --dbg_trace (s!"[close]\n track {repr track}\n final {repr final} \n pass {repr pass}\n idx {repr idx}")
+    -- dbg_trace (s!"[close]\n track {repr track}\n final {repr final} \n pass {repr pass}\n idx {repr idx}")
     match pass with
     | [] =>
       let idx := idx+1
@@ -278,6 +290,8 @@ partial def revert_NoTn_cutOff_wDepsCache (introAdmissible? : Nat → Bool)
             close track res 0 pass
         | _ =>
             panic s!"[revert_NoTn_cutOff_wDepsCache][mkRevs] unexpected formats {ini.name}"
+  let mkRevs := mkRevs
+  -- dbg_trace s!"[mkRevs] {repr mkRevs}"
   let rec @[specialize] finalRevs : Array FVarId :=
     (workerDepsCache.foldl ( fun (final, aw) (wfid,wd) =>
       if wd.any (fun w =>
@@ -291,7 +305,7 @@ partial def revert_NoTn_cutOff_wDepsCache (introAdmissible? : Nat → Bool)
   do
   mtracing
   let ⟨revGoalT,finalRevsPass,l1,l2⟩ ← goal.abstractLetFvarAll_proofLet l1 l2 depsCache finalRevs
-  mtrace on .zero with s!"\n revGoalT {← ppExpr revGoalT}\n finalRevsPass {repr finalRevsPass}"
+  mtrace on .zero with s!"\n revGoalT {← PpExpr revGoalT l1 l2}\n finalRevsPass {repr finalRevsPass}"
   let mv ← mkFreshExprMVarAt l1 l2 revGoalT
   let apFv ← withLCtx l1 l2 <| do finalRevsPass.filterM (fun fvd => do
     match ← fvd.getDecl with

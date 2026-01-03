@@ -440,7 +440,9 @@ def Lean.Expr.abstractWorkers (e : Expr) (initD : LocalContext) (initI : LocalIn
     let e ← ws.foldlM (fun e fv => do
       match ← fv.GetDecl initD initI with
       | .cdecl _ _ _ T .. =>
-           return (.lam `abstractFvarWrt T (Expr.abstractPat (Expr.fvar fv) e) .default)
+          match ← IsClass? T initD initI with
+          | .none => return (.lam `abstractFvarWrt T (Expr.abstractPat (Expr.fvar fv) e) .default)
+          | _ => return (.lam `abstractFvarWrt T (Expr.abstractPat (Expr.fvar fv) e) .instImplicit)
       | .ldecl _ _ _ T V nonDep .. =>
           return (.letE `abstractFvarWrt T V (Expr.abstractPat (.fvar fv) e) nonDep)
       ) e
@@ -463,7 +465,9 @@ partial def Lean.Expr.abstractWorkersSpe' (e : Expr) (extWorkas : List FVarId) (
     let e ← ws.foldlM (fun e fv => do
       match ← fv.GetDecl initD initI with
       | .cdecl _ _ _ T .. =>
-           return (.lam `abstractFvarWrt T (Expr.abstractPat (Expr.fvar fv) e) .default)
+          match ← IsClass? T initD initI with
+          | .none => return (.lam `abstractFvarWrt T (Expr.abstractPat (Expr.fvar fv) e) .default)
+          | _ => return (.lam `abstractFvarWrt T (Expr.abstractPat (Expr.fvar fv) e) .instImplicit)
       | .ldecl _ _ _ T V nonDep .. =>
           return (.letE `abstractFvarWrt T V (Expr.abstractPat (.fvar fv) e) nonDep)
       ) e

@@ -12,12 +12,12 @@ import LeanGrow.Src.Utils.LeanGrow.Expr
 open Lean Meta
 
 
--- #exit
 @[specialize]
 partial def generalizeProofsIgnoringMain
   (initD : LocalContext) (initI : LocalInstances)
   (type: Expr) (ignore prohibProof : Expr → LocalContext → LocalInstances → MetaM Bool)
   : MetaM (Expr × (Array Expr × Array Expr)) := do
+  mtracing
   let ⟨e,s,_,_⟩ ← Lean.Expr.onAllSubtermsWiWorkerCpsSkipTravState type initD initI ((#[], #[] ): Array Expr × Array Expr)
     (fun e depth F@(factors, factypes) initD initI => do
       mtrace on .zero with s!"[generalizeProofsIgnoringMain] looking at {← ppExpr e}"
@@ -74,6 +74,7 @@ def generalizeProofsIgnoring
   (initD : LocalContext) (initI : LocalInstances)
   (type : Expr) (ignore prohibProof : Expr → LocalContext → LocalInstances → MetaM Bool)
   : MetaM (Expr × Array Expr) := do
+  mtracing
   let (res, (factors, factypes)) ← generalizeProofsIgnoringMain initD initI type ignore prohibProof
   mtrace on .one with s!"[generalizeProofsIgnoring] main returned :\n{res}\n{← factors.mapM ppExpr}\n{← factypes.mapM ppExpr}"
   let mut res := res
@@ -103,6 +104,7 @@ partial def generalizeTnodesSafeIgnoringMain
   (initD : LocalContext) (initI : LocalInstances)
   (fst? : Bool) (type : Expr) (ignore prohibTnodeFst prohibTnodeHard : Expr → LocalContext → LocalInstances → MetaM Bool)
   : MetaM (Expr × (Array Expr × Array Expr)) := do
+  mtracing
   let ⟨e,s,_,_⟩ ← Lean.Expr.onAllSubtermsWiWorkerCpsSkipTravState type initD initI ((#[], #[] ): Array Expr × Array Expr)
     (fun e depth F@(factors, factypes) initD initI  => do
       match e with
@@ -149,6 +151,7 @@ def generalizeTnodesSafeIgnoring
   (initD : LocalContext) (initI : LocalInstances)
   (type : Expr) (ignore prohibTnodeFst prohibTnodeHard : Expr → LocalContext → LocalInstances → MetaM Bool)
   : MetaM (OptionProd Expr (Array Expr)) := do
+  mtracing
   try
     let (res, (factors, factypes)) ← generalizeTnodesSafeIgnoringMain initD initI true type ignore prohibTnodeFst prohibTnodeHard
     mtrace on .zero with s!"[generalizeTnodesSafeIgnoring] main returned: {← ppExpr res}"
