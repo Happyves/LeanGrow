@@ -6,15 +6,15 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Author: Yves Jäckle.
 -/
 
-import LeanGrow.Src.Utils.LeanGrow.Expr
+import LeanGrow.Src.Utils.Lean.Revert
 
 
 open Lean Meta Elab Term Command
 
 @[inline, specialize]
 def elabAndLoad_G (i gu_idx : Nat) (is : Name) (ts : Syntax)
-  (trans : NameMap Name) (deps : Array (Prod3 Bool (List FVarId) (List FVarId)))
-  {α : Sort _} (k : Expr → Expr → NameMap Name → Array (Prod3 Bool (List FVarId) (List FVarId)) → TermElabM α) : TermElabM α := do
+  (trans : NameMap Name) (deps : Array DepCache)
+  {α : Sort _} (k : Expr → Expr → NameMap Name → Array DepCache → TermElabM α) : TermElabM α := do
   let todo := ts
   let term ← elabTermAndSynthesize todo .none
   let name := is
@@ -50,23 +50,17 @@ def elabAndLoad_G (i gu_idx : Nat) (is : Name) (ts : Syntax)
       return linst.push { className := c, fvar := fv }
     else
       return linst)
-  let p? ← isProp tterm
-  let depFvs := tterm.getGUFVarsIds
-  let deps := depFvs.foldl (fun D ⟨fv⟩ =>
-    match fv with
-    | .num _ idx => D.modify idx (fun l => {l with snd := ⟨rep⟩ :: l.snd})
-    | _ => D
-    ) deps
+  let deps ← DepCache.addGU deps ⟨rep⟩ ltx linst
   withLCtx ltx linst do
-    k tterm fv trans (deps.push ⟨p?,[],depFvs⟩)
+    k tterm fv trans deps
 
 #check 1
 
 
 @[inline, specialize]
 def elabAndLoad_U (i gu_idx : Nat) (is : Name) (ts vs : Syntax)
-  (trans : NameMap Name) (deps : Array (Prod3 Bool (List FVarId) (List FVarId)))
-  {α : Sort _} (k : Expr → Expr → NameMap Name → Array (Prod3 Bool (List FVarId) (List FVarId)) → TermElabM α) : TermElabM α := do
+  (trans : NameMap Name) (deps : Array DepCache)
+  {α : Sort _} (k : Expr → Expr → NameMap Name → Array DepCache → TermElabM α) : TermElabM α := do
   let todoT := ts
   let todoV := vs
   let termT ← elabTermAndSynthesize todoT .none
@@ -115,16 +109,9 @@ def elabAndLoad_U (i gu_idx : Nat) (is : Name) (ts vs : Syntax)
       return linst.push { className := c, fvar := fv }
     else
       return linst)
-  let p? ← isProp ttermT
-  let depFvsLeigt := ttermT.getGUFVarsIds
-  let depFvs := if p? then depFvsLeigt else ttermV.getGUFVarsIds' depFvsLeigt
-  let deps := depFvs.foldl (fun D ⟨fv⟩ =>
-    match fv with
-    | .num _ idx => D.modify idx (fun l => {l with snd := ⟨rep⟩ :: l.snd})
-    | _ => D
-    ) deps
+  let deps ← DepCache.addGU deps ⟨rep⟩ ltx linst
   withLCtx ltx linst do
-    k ttermT fv trans (deps.push ⟨p?,[],depFvs⟩)
+    k ttermT fv trans deps
 
 #check 1
 
@@ -214,8 +201,8 @@ syntax "l("ident ":" num ":" num ":" ident ":" term")" : lg_test
 
 def elabForTest (i gu_idx : Nat) (cs : TSyntaxArray `lg_test)
   (guT gu tT t lT l : Array Expr)
-  (trans : NameMap Name) (deps : Array (Prod3 Bool (List FVarId) (List FVarId)))
-  {α : Sort _} (k : Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array (Prod3 Bool (List FVarId) (List FVarId)) → TermElabM α) : TermElabM α := do
+  (trans : NameMap Name) (deps : Array DepCache)
+  {α : Sort _} (k : Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array DepCache → TermElabM α) : TermElabM α := do
     if i < cs.size
     then
       let c := cs[i]!
@@ -246,5 +233,5 @@ elab "With" "context" cs:lg_test* "and" "objects" ts:term,* "run" metam:ident : 
       for t in ts do
         let term ← elabTermAndSynthesize t .none
         Ts := Ts.push term
-      let action ← evalConst ( Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array (Prod3 Bool (List FVarId) (List FVarId)) → MetaM Unit) (metam.getId)
+      let action ← evalConst ( Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array DepCache → MetaM Unit) (metam.getId)
       action guT gu tT t lT l deps

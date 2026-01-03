@@ -5,15 +5,57 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Author: Yves Jäckle.
 -/
 
-import Batteries.Tactic.OpenPrivate
 import Lean.Meta.Tactic.Grind.RevertAll
-import LeanGrow.Src.Utils.Lean.Expr.Basic
+import LeanGrow.Src.Utils.LeanGrow.Expr
 
 open Lean Meta
 
--- **Note** the code is based on:
-#check MVarId.revert
 
+structure DepCache where
+  proof : Bool
+  forw : List FVarId
+  back : List FVarId
+  fTrans : UInt32Array
+deriving Repr, Inhabited
+
+
+@[inline]
+partial def DepCache.addGU (D : Array DepCache) (gu_fv : FVarId) (l1 : LocalContext) (l2 : LocalInstances) : MetaM (Array DepCache) := do
+  let (p?,bd) ← withLCtx l1 l2 <| do
+    let d ← gu_fv.getDecl
+    match d with
+    | .cdecl _ _ _ T .. =>
+      let p? ← isProp T
+      return (p?,T.getGUFVarsIds)
+    | .ldecl _ _ _ T V .. =>
+      let p? ← isProp T
+      if p?
+      then return (p?,T.getGUFVarsIds)
+      else
+        let bd := T.getGUFVarsIds' <| V.getGUFVarsIds
+        return (p?,bd)
+  match gu_fv.name with
+  | .num _ i =>
+      let I := i.toUInt32
+      let D := bd.foldl (fun d ⟨fv⟩ =>
+        match fv with
+        | .num _ idx => d.modify idx (fun l => {l with forw := gu_fv :: l.forw})
+        | _ => d
+        ) D
+      let rec trD (D : Array DepCache) (todoPass : List FVarId) (todoStock : List (List FVarId)) : Array DepCache :=
+        match todoPass with
+        | [] => match todoStock with | nx :: more => trD D nx more | [] => D
+        | nx :: more =>
+            match nx.name with
+            | .num _ idx =>
+                let D := D.modify idx (fun l => {l with fTrans := l.fTrans.push I})
+                -- to make sure that fTrans stays sorted, assuming gu_fv index is increasing and largest, push is enough
+                let next := (D[idx]!.back) :: todoStock
+                trD D more next
+            | _ => panic s!"[DepCache.addGU] unexpected formats {nx.name}"
+      let D := trD D bd []
+      return D.push ⟨p?,[],bd,.empty⟩ -- assumes gu-idx is size
+  | _ => throwError s!"[DepCache.addGU] unexpected formats {gu_fv.name}"
 
 
 @[specialize]
@@ -41,11 +83,80 @@ def List.takeWhileCountingM (p : α → MetaM Bool) (c max : Nat) (done : List �
       return done
 
 
+/--
+- Expect fvars to be in context
+- ∀ & let are in same order as `fvs`,  without checking for consistency of abstraction !
+- proof valued lets become ∀s
+-/
+@[inline]
+partial def Lean.Expr.abstractLetFvarAll_proofLet
+  (initD : LocalContext) (initI : LocalInstances)
+  (depsCache : Array DepCache)
+  (fvs : Array FVarId) (e : Expr)
+  : MetaM (Prod4 Expr (Array FVarId) LocalContext LocalInstances) :=
+    let rec bind (term : Expr) (i : Nat) (initD : LocalContext) (initI : LocalInstances) : MetaM (Prod3 Expr LocalContext LocalInstances) := do
+      let fvd := (fvs[i]!)
+      match ← fvd.GetDecl initD initI with
+      | .cdecl _ _ _ T .. =>
+          let ⟨T,initD,initI⟩ ← T.onAllSubtermsM initD initI (fun x d initD initI =>
+            match x with
+            | .fvar id =>
+              match fvs.findIdx? (fun y => y == id) with
+              | .none => return ⟨x,initD,initI⟩
+              | .some j => return ⟨(.bvar (d + i - 1 - j)),initD,initI⟩
+            | _ => return ⟨x,initD,initI⟩ )
+          if i == 0
+          then
+            return ⟨.forallE `abstractFvarWrt T term .default,initD,initI⟩
+          else
+            bind (.forallE `abstractFvarWrt T term .default) (i-1) initD initI
+      | .ldecl _ _ _ T V nonDep .. =>
+          let ⟨T,initD,initI⟩ ← T.onAllSubtermsM initD initI (fun x d initD initI =>
+            match x with
+            | .fvar id =>
+              match fvs.findIdx? (fun y => y == id) with
+              | .none => return ⟨x,initD,initI⟩
+              | .some j => return ⟨(.bvar (d + i - 1 - j)),initD,initI⟩
+            | _ => return ⟨x,initD,initI⟩ )
+          let p? : Bool ← (do
+            match fvd.name with
+            | .num k i => if (k == `g || k == `u) then return depsCache[i]!.proof else isProof T -- case of workers
+            | n => panic! s!"[abstractLetFvarAll_proofLet] unexpected {n}")
+          if i == 0
+          then
+            if p?
+            then return ⟨.forallE `abstractFvarWrt T term .default,initD,initI⟩
+            else return ⟨.letE `abstractFvarWrt T V term nonDep,initD,initI⟩
+          else
+            if p?
+            then bind (.forallE `abstractFvarWrt T term .default) (i-1) initD initI
+            else bind (.letE `abstractFvarWrt T V term nonDep) (i-1) initD initI
+    do
+    let fvS := fvs.size
+    if fvS == 0
+    then return ⟨e,fvs,initD,initI⟩
+    else
+      let ⟨absd,initD,initI⟩ ← e.onAllSubtermsM initD initI (fun x d initD initI =>
+        match x with
+        | .fvar id =>
+          match fvs.findIdx? (fun y => y == id) with
+          | .none => return ⟨x,initD,initI⟩
+          | .some i => return ⟨(.bvar (d + fvS - 1 - i)),initD,initI⟩
+        | _ => return ⟨x,initD,initI⟩ )
+      let ⟨r,l1,l2⟩ ← bind absd (fvs.size - 1) initD initI
+      return ⟨r,fvs,l1,l2⟩
+
+
+
+/--
+- workerDepsCache should have deepest worker first and have no duplicates !
+- the returned fvars contain all reverts, not those in the term, where Type.typed lets are missing
+-/
 @[specialize]
 partial def Lean.MVarId.revert_NoTn_cutOff_wDepsCache (introAdmissible? : Nat → Bool)
   (l1 : LocalContext) (l2 : LocalInstances)
   (goal : Expr) (guFvs : Array FVarId)
-  (depsCache : Array (Prod3 Bool (List FVarId) (List FVarId)))
+  (depsCache : Array DepCache)
   (workerDepsCache : Array (FVarId × (List FVarId))) (RevCutOff : Nat)
   : MetaM (Prod3 MVarId Expr (Array FVarId)) :=
   let spread := RevCutOff / guFvs.size
@@ -69,7 +180,7 @@ partial def Lean.MVarId.revert_NoTn_cutOff_wDepsCache (introAdmissible? : Nat �
             if track.oContains I
             then augment track final more next
             else
-              let lD := depsCache[i]!.snd.takeWhileCounting (fun x =>
+              let lD := depsCache[i]!.forw.takeWhileCounting (fun x =>
                 match x.name with
                 | .num _ i => introAdmissible? i
                 | _ => panic s!"[revert_NoTn_cutOff_wDepsCache][augment] unexpected formats {x.name}"
@@ -83,16 +194,19 @@ partial def Lean.MVarId.revert_NoTn_cutOff_wDepsCache (introAdmissible? : Nat �
         | .num _ i, .num _ j => i < j -- increase in dependence ; qsort expects strict order
         | _, _ => panic s!"[revert_NoTn_cutOff_wDepsCache][augment] unexpected formats {x.name} {y.name}")
       (track, res)
-
-  sorry
-/-
-  - filter backdeps on whether they depend on final, in close
-  - to depermine this, add transitive forward deps to caches, and check if they are among those of initially reverted fvars
-  - Use an UInt32Array instead of FVarId and use `unode?` if necessary
-
--/
-
-#exit
+  let allFwdDeps : UInt32Array := guFvs.foldl (fun D fv =>
+    match fv.name with
+    | .num _ i =>
+        let d := depsCache[i]!
+        D.union d.fTrans
+    | _ =>
+        panic s!"[allFwdDeps] unexpected formats {fv.name}"
+    ) .empty
+  let rec filterBD (bd done : List FVarId) : List FVarId :=
+    match bd with
+    | fv@⟨.num _ i⟩ :: more  => if allFwdDeps.oContains i.toUInt32 then filterBD more (fv :: done) else filterBD more done
+    | [] => done
+    | _ => panic s!"[filterBD] unexpected format"
   let rec close (track : UInt32Array) (final : Array FVarId) (idx : Nat) (pass : List FVarId) : Array FVarId :=
     match pass with
     | [] =>
@@ -103,8 +217,7 @@ partial def Lean.MVarId.revert_NoTn_cutOff_wDepsCache (introAdmissible? : Nat �
         let nx := final[idx]!
         match nx.name with
         | .num _ i =>
-            let D := depsCache[i]!.thd
-            -- HERE
+            let D := filterBD depsCache[i]!.back []
             close track final idx D
         | _ =>
             panic s!"[revert_NoTn_cutOff_wDepsCache][close] unexpected formats {nx.name}"
@@ -119,7 +232,7 @@ partial def Lean.MVarId.revert_NoTn_cutOff_wDepsCache (introAdmissible? : Nat �
       else
         match nx.name with
         | .num _ i =>
-            let D := depsCache[i]!.thd
+            let D := filterBD depsCache[i]!.back []
             let final := final.binInsert (fun x y =>
               match x.name, y.name with
               | .num _ i, .num _ j => i < j -- expects strict order
@@ -146,7 +259,7 @@ partial def Lean.MVarId.revert_NoTn_cutOff_wDepsCache (introAdmissible? : Nat �
       let ini := res[0]!
       match ini.name with
       | .num _ i =>
-          let pass := depsCache[i]!.thd
+          let pass := filterBD depsCache[i]!.back []
           close track res 0 pass
       | _ =>
           panic s!"[revert_NoTn_cutOff_wDepsCache][mkRevs] unexpected formats {ini.name}"
@@ -155,9 +268,29 @@ partial def Lean.MVarId.revert_NoTn_cutOff_wDepsCache (introAdmissible? : Nat �
       let ini := res[0]!
       match ini.name with
         | .num _ i =>
-            let pass := depsCache[i]!.thd
+            let pass := filterBD depsCache[i]!.back []
             close track res 0 pass
         | _ =>
             panic s!"[revert_NoTn_cutOff_wDepsCache][mkRevs] unexpected formats {ini.name}"
-  -- todo : workerDepsCache ; new goal, rervert-term ; proof-valed-lets to ∀s
-  sorry
+  let rec @[specialize] finalRevs : Array FVarId :=
+    (workerDepsCache.foldl ( fun (final, aw) (wfid,wd) =>
+      if wd.any (fun w =>
+        (aw.contains w) ||
+        (match w.name with
+         | .num k i => if (k == `g || k == `u) then (allFwdDeps.oContains i.toUInt32) else false
+         | _ => false ))
+      then (final.push wfid, aw.push wfid)
+      else (final, aw)
+    ) (mkRevs,#[])).1
+  do
+  let ⟨revGoalT,finalRevsPass,l1,l2⟩ ← goal.abstractLetFvarAll_proofLet l1 l2 depsCache finalRevs
+  let mv ← mkFreshExprMVarAt l1 l2 revGoalT
+  let apFv ← withLCtx l1 l2 <| do finalRevsPass.filterM (fun fvd => do
+    match ← fvd.getDecl with
+    | .cdecl .. => return true
+    | .ldecl _ _ _ T .. =>
+        match fvd.name with
+        | .num k i => if (k == `g || k == `u) then return depsCache[i]!.proof else isProof T -- case of workers
+        | n => panic! s!"[revert_NoTn_cutOff_wDepsCache] unexpected {n}")
+  let term := mkAppN mv (apFv.map Expr.fvar)
+  return ⟨mv.mvarId!,term,finalRevsPass⟩

@@ -136,7 +136,7 @@ def Lean.Expr.abstractPatBind (pat patType within : Expr) : Expr :=
 - Expect fvars to be in context
 - λ & let are in same order as `fvs`, without checking for consistency of abstraction !
 -/
-@[specialize]
+@[inline]
 partial def Lean.Expr.abstractLetFvarLam
   (initD : LocalContext) (initI : LocalInstances)
   (fvs : Array FVarId) (e : Expr)
@@ -189,7 +189,7 @@ partial def Lean.Expr.abstractLetFvarLam
 - Expect fvars to be in context
 - ∀ & let are in same order as `fvs`,  without checking for consistency of abstraction !
 -/
-@[specialize]
+@[inline]
 partial def Lean.Expr.abstractLetFvarAll
   (initD : LocalContext) (initI : LocalInstances)
   (fvs : Array FVarId) (e : Expr)
