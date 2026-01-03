@@ -70,6 +70,11 @@ def testUA2 : UInt32Array :=
 
 -- #eval UInt32Array.empty.oInsert 1
 
+-- #eval (UInt32Array.emptyWithCapacity 42).oInsert 1
+
+-- #eval (dbgTraceIfShared "hmm" ((UInt32Array.emptyWithCapacity 10).oInsert 42).oInsert 0) |>.size
+
+
 def testMultiRefInsert_1 (a : UInt32Array) : Nat :=
   let fst := (a.oInsert 1).size
   let snd := a.size
@@ -77,6 +82,14 @@ def testMultiRefInsert_1 (a : UInt32Array) : Nat :=
 
 -- #eval testMultiRefInsert_1 testUA
 -- #eval testMultiRefInsert_1 .empty
+
+def testMultiRefInsert_2 (a : UInt32Array) : Nat :=
+  let fst := (a.oInsert 4)
+  let snd := a.oInsert 0
+  (fst[0]! + snd[0]!).toNat
+
+-- #eval testMultiRefInsert_2 testUA
+-- #eval testMultiRefInsert_2 .empty
 
 
 -- #eval testUA.binInsert 1

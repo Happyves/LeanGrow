@@ -5,6 +5,7 @@ Author: Yves Jäckle.
 -/
 
 import LeanGrow.Src.Utils.Cfold
+import LeanGrow.Src.Utils.IO
 import Lean.Meta.Eval
 import Lean.Elab
 
@@ -123,6 +124,26 @@ macro "trace" "set" f:term "in" b:term : term =>
   `((let $ltf := $f ; $b))
 
 
+elab "traceHard" "on" f:term "with" m:term "in" b:term : term => do
+  let ltf := mkIdent `local_tracing_flags
+  let t ← `(term| (List.contains $ltf $f))
+  let e ← Term.elabTermAndSynthesize t  .none
+  let e ← Meta.reduce e
+  match e with
+  | .const n .. =>
+      if n == `Bool.true
+      then
+        let final ← `(let _ := veryUnsafeIO (traceHardMain $m) ; $b)
+        Term.elabTermAndSynthesize final .none
+      else
+        if n == `Bool.false
+        then
+          let final ← `($b)
+          Term.elabTermAndSynthesize final .none
+        else
+          throwError "[LeanGrow] error at elaboration for tracing"
+  | _ => throwError "[LeanGrow] error at elaboration for tracing"
+
 elab "trace" "on" f:term "with" m:term "in" b:term : term => do
   let ltf := mkIdent `local_tracing_flags
   let t ← `(term| (List.contains $ltf $f))
@@ -142,6 +163,7 @@ elab "trace" "on" f:term "with" m:term "in" b:term : term => do
         else
           throwError "[LeanGrow] error at elaboration for tracing"
   | _ => throwError "[LeanGrow] error at elaboration for tracing"
+
 
 
 macro "trace" "on" f:term "when" c:term "with" m:term "in" b:term : term => do

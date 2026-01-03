@@ -79,9 +79,12 @@ LG:
   - Keep track of queried Expr sub-expr pointers ; record if no matches, and skip
     subexpressions if encountered again ; maybe even maintain a cache accross queries !
   - Make version that doesn't make rewrites of binding types.
+  - refer to revert tests : we should add deps for reverts at rw/induction
 - Induction:
   - Try to speed up ?
   - Elab-elim inductions should detect constroturs of recursed type (ex: Fin.mk) ?
+  - refer to revert tests : we should add deps for reverts at rw/induction
+
 
 
 Djv Core:

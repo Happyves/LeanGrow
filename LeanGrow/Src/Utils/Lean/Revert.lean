@@ -147,20 +147,20 @@ partial def Lean.Expr.abstractLetFvarAll_proofLet
       return ⟨r,fvs,l1,l2⟩
 
 
-
 /--
 - workerDepsCache should have deepest worker first and have no duplicates !
 - the returned fvars contain all reverts, not those in the term, where Type.typed lets are missing
 -/
 @[specialize]
-partial def Lean.MVarId.revert_NoTn_cutOff_wDepsCache (introAdmissible? : Nat → Bool)
+partial def revert_NoTn_cutOff_wDepsCache (introAdmissible? : Nat → Bool)
   (l1 : LocalContext) (l2 : LocalInstances)
   (goal : Expr) (guFvs : Array FVarId)
   (depsCache : Array DepCache)
   (workerDepsCache : Array (FVarId × (List FVarId))) (RevCutOff : Nat)
-  : MetaM (Prod3 MVarId Expr (Array FVarId)) :=
+  : MetaM (Prod5 MVarId Expr (Array FVarId) LocalContext LocalInstances) :=
   let spread := RevCutOff / guFvs.size
   let rec @[specialize] augment (track : UInt32Array) (final : Array FVarId) (pass : List FVarId) (next : List (List FVarId)) : UInt32Array × Array FVarId :=
+    --dbg_trace (s!"[augment]\n track {repr track}\n final {repr final} \n pass {repr pass}\n next {repr next}")
     if final.size < RevCutOff
     then
       match pass with
@@ -185,7 +185,11 @@ partial def Lean.MVarId.revert_NoTn_cutOff_wDepsCache (introAdmissible? : Nat �
                 | .num _ i => introAdmissible? i
                 | _ => panic s!"[revert_NoTn_cutOff_wDepsCache][augment] unexpected formats {x.name}"
                 ) 0 spread []
-              augment (track.oInsert I) (final.push nx) more (next ++ [lD]) -- add to back
+              --dbg_trace s!"before {repr track}"
+              let track := track.oInsert I
+              let track := dbgTraceIfShared "hhmmmm" track
+              --dbg_trace s!"after {repr track}"
+              augment track (final.push nx) more (next ++ [lD]) -- add to back
         | _ =>
              panic s!"[revert_NoTn_cutOff_wDepsCache][augment] unexpected formats {nx.name}"
     else
@@ -202,12 +206,14 @@ partial def Lean.MVarId.revert_NoTn_cutOff_wDepsCache (introAdmissible? : Nat �
     | _ =>
         panic s!"[allFwdDeps] unexpected formats {fv.name}"
     ) .empty
+  --dbg_trace (s!"[allFwdDeps]\n allFwdDeps {repr allFwdDeps}")
   let rec filterBD (bd done : List FVarId) : List FVarId :=
     match bd with
     | fv@⟨.num _ i⟩ :: more  => if allFwdDeps.oContains i.toUInt32 then filterBD more (fv :: done) else filterBD more done
     | [] => done
     | _ => panic s!"[filterBD] unexpected format"
   let rec close (track : UInt32Array) (final : Array FVarId) (idx : Nat) (pass : List FVarId) : Array FVarId :=
+    --dbg_trace (s!"[close]\n track {repr track}\n final {repr final} \n pass {repr pass}\n idx {repr idx}")
     match pass with
     | [] =>
       let idx := idx+1
@@ -234,9 +240,9 @@ partial def Lean.MVarId.revert_NoTn_cutOff_wDepsCache (introAdmissible? : Nat �
         | .num _ i =>
             let D := filterBD depsCache[i]!.back []
             let final := final.binInsert (fun x y =>
-              match x.name, y.name with
-              | .num _ i, .num _ j => i < j -- expects strict order
-              | _, _ => panic s!"[revert_NoTn_cutOff_wDepsCache][close] unexpected formats {x.name} {y.name}"
+                match x.name, y.name with
+                | .num _ i, .num _ j => i < j -- expects strict order
+                | _, _ => panic s!"[revert_NoTn_cutOff_wDepsCache][close] unexpected formats {x.name} {y.name}"
               ) nx
             close track final (idx+1) (D ++ more)
         | _ =>
@@ -264,7 +270,7 @@ partial def Lean.MVarId.revert_NoTn_cutOff_wDepsCache (introAdmissible? : Nat �
       | _ =>
           panic s!"[revert_NoTn_cutOff_wDepsCache][mkRevs] unexpected formats {ini.name}"
     else
-      let (track,res) := augment (.emptyWithCapacity RevCutOff) (.emptyWithCapacity RevCutOff) guFvs.toList []
+      let (track,res) := augment (UInt32Array.emptyWithCapacity RevCutOff) (.emptyWithCapacity RevCutOff) guFvs.toList []
       let ini := res[0]!
       match ini.name with
         | .num _ i =>
@@ -283,7 +289,9 @@ partial def Lean.MVarId.revert_NoTn_cutOff_wDepsCache (introAdmissible? : Nat �
       else (final, aw)
     ) (mkRevs,#[])).1
   do
+  mtracing
   let ⟨revGoalT,finalRevsPass,l1,l2⟩ ← goal.abstractLetFvarAll_proofLet l1 l2 depsCache finalRevs
+  mtrace on .zero with s!"\n revGoalT {← ppExpr revGoalT}\n finalRevsPass {repr finalRevsPass}"
   let mv ← mkFreshExprMVarAt l1 l2 revGoalT
   let apFv ← withLCtx l1 l2 <| do finalRevsPass.filterM (fun fvd => do
     match ← fvd.getDecl with
@@ -293,4 +301,4 @@ partial def Lean.MVarId.revert_NoTn_cutOff_wDepsCache (introAdmissible? : Nat �
         | .num k i => if (k == `g || k == `u) then return depsCache[i]!.proof else isProof T -- case of workers
         | n => panic! s!"[revert_NoTn_cutOff_wDepsCache] unexpected {n}")
   let term := mkAppN mv (apFv.map Expr.fvar)
-  return ⟨mv.mvarId!,term,finalRevsPass⟩
+  return ⟨mv.mvarId!,term,finalRevsPass,l1,l2⟩

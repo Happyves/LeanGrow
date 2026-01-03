@@ -202,7 +202,7 @@ syntax "l("ident ":" num ":" num ":" ident ":" term")" : lg_test
 def elabForTest (i gu_idx : Nat) (cs : TSyntaxArray `lg_test)
   (guT gu tT t lT l : Array Expr)
   (trans : NameMap Name) (deps : Array DepCache)
-  {α : Sort _} (k : Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array DepCache → TermElabM α) : TermElabM α := do
+  {α : Sort _} (k : Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array DepCache → NameMap Name → TermElabM α) : TermElabM α := do
     if i < cs.size
     then
       let c := cs[i]!
@@ -221,17 +221,32 @@ def elabForTest (i gu_idx : Nat) (cs : TSyntaxArray `lg_test)
             elabForTest (i+1) (gu_idx+1) cs guT gu tT t (lT.push T) (l.push fv) trans deps k
       | _ => throwError "Unexpected syntax ..."
     else
-      k guT gu tT t lT l deps
+      k guT gu tT t lT l deps trans
 
 #check 1
 
 elab "With" "context" cs:lg_test* "and" "objects" ts:term,* "run" metam:ident : command => unsafe do
   let ts := ts.getElems.raw
   liftTermElabM do
-    elabForTest 0 0 cs #[] #[] #[] #[] #[] #[] {} #[] <| fun guT gu tT t lT l deps => do
+    elabForTest 0 0 cs #[] #[] #[] #[] #[] #[] {} #[] <| fun guT gu tT t lT l deps trans => do
       let mut Ts : Array Expr := #[]
       for t in ts do
         let term ← elabTermAndSynthesize t .none
-        Ts := Ts.push term
-      let action ← evalConst ( Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array DepCache → MetaM Unit) (metam.getId)
-      action guT gu tT t lT l deps
+        let tterm := term.onAllSubtermsTR (fun
+          | d@(.fvar fid) =>
+              match trans.find? fid.name with
+              | .none => d
+              | .some new =>
+                  match new with
+                  | .num (.num N _) _ =>
+                      if N == `t then .fvar ⟨new⟩ else .mvar ⟨new⟩
+                  | _ => .fvar ⟨new⟩
+          | d@(.mvar fid) =>
+              match trans.find? fid.name with
+              | .none => d
+              | .some new => .mvar ⟨new⟩
+          | x => x
+          )
+        Ts := Ts.push tterm
+      let action ← evalConst ( Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array DepCache → MetaM Unit) (metam.getId)
+      action guT gu tT t lT l Ts deps

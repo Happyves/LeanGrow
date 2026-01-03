@@ -205,6 +205,7 @@ lean_obj_res ord_u32_array_insert (lean_obj_arg a, uint32_t v) {
                     if (lean_is_exclusive(a)) {
                         memmove((A + 1), A, esz*(as - count)); // man pages memcpy requires disjoint memory
                         *A = v;
+                        lean_sarray_set_size(a,as+1);
                         return a;
                     } else {
                         lean_object * r = lean_alloc_sarray(esz, as+1, ac);
@@ -233,6 +234,7 @@ lean_obj_res ord_u32_array_insert (lean_obj_arg a, uint32_t v) {
     if (as < ac) {
         if (lean_is_exclusive(a)) {
             *A = v;
+            lean_sarray_set_size(a,as+1);
             return a;
         } else {
             lean_object * r = lean_alloc_sarray(esz, as+1, ac);
@@ -277,6 +279,7 @@ lean_obj_res ord_u32_array_binInsert (lean_obj_arg a, uint32_t v) {
                             A = A + start;
                             memmove((A + 1), A, esz*(as - start)); // man pages memcpy requires disjoint memory
                             *A = v;
+                            lean_sarray_set_size(a,as+1);
                             return a;
                         } else {
                             lean_object * r = lean_alloc_sarray(esz, as+1, ac);
@@ -305,6 +308,7 @@ lean_obj_res ord_u32_array_binInsert (lean_obj_arg a, uint32_t v) {
                             A = A + start;
                             memmove((A + 1), A, esz*(as - start)); // man pages memcpy requires disjoint memory
                             *A = v;
+                            lean_sarray_set_size(a,as+1);
                             return a;
                         } else {
                             lean_object * r = lean_alloc_sarray(esz, as+1, ac);
@@ -340,6 +344,7 @@ lean_obj_res ord_u32_array_binInsert (lean_obj_arg a, uint32_t v) {
     if (as < ac) {
         if (lean_is_exclusive(a)) {
             *A = v;
+            lean_sarray_set_size(a,as+1);
             return a;
         } else {
             lean_object * r = lean_alloc_sarray(esz, as+1, ac);

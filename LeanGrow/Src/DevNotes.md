@@ -9,6 +9,8 @@
 
 - `mvarifyTnodesRecWiContextIn` to `mvarifyTnodesRec`, and does not add Ltx to mvars
 
+- refer to revert tests : we should add deps for reverts at rw/induction
+
 
 # Long term
 

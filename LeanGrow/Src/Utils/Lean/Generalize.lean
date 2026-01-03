@@ -6,7 +6,7 @@ Author: Yves Jäckle.
 -/
 
 import Lean.Meta.Tactic.Util
-import LeanGrowBeta.Utils.LeanGrow.Expr
+import LeanGrow.Src.Utils.LeanGrow.Expr
 
 
 open Lean Meta
