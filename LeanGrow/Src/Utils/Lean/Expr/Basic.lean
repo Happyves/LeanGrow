@@ -327,3 +327,12 @@ def Lean.Expr.getFVarIds (e : Expr) : List FVarId :=
       | .fvar id => (sofar.insert id, true)
       | _ => (sofar, !x.hasFVar)
       )
+
+@[inline]
+def Lean.Expr.getFVarIds' (e : Expr) (ini : List FVarId) : List FVarId :=
+  e.onAllSubtermsFoldSkip ini
+    (fun x sofar =>
+      match x with
+      | .fvar id => (sofar.insert id, true)
+      | _ => (sofar, !x.hasFVar)
+      )

@@ -184,6 +184,10 @@ def Lean.LocalInstances.patch (l : LocalInstances) (start num : Nat) : LocalInst
   go start l num
 
 
+@[inline]
+def Lean.LocalInstances.cleanPatches (l : LocalInstances) : LocalInstances :=
+  l.filter (fun x => x.className != ``LtxPatcher)
+
 -- # Telescopes
 
 

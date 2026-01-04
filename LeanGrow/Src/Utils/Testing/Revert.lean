@@ -13,10 +13,10 @@ open Lean Meta
 
 
 
-def test (n : Array Name) (cutoff : Nat) (_ _ _ _ _ _ objs : Array Expr) (deps : Array DepCache) : MetaM Unit := do
+def test (n : Array Name) (cutoff : Nat) (_ _ _ _ _ _ _ _ _ _ objs : Array Expr) (deps : Array DepCache) (wdeps : Array (FVarId × List FVarId)) : MetaM Unit := do
   let ficticousGoal := objs[0]!
   let ficticousRevert := n.map FVarId.mk
-  let ⟨mv,res,_,l1,l2⟩ ← revert_NoTn_cutOff_wDepsCache (fun _ => true) (← getLCtx) (← getLocalInstances) ficticousGoal ficticousRevert deps #[] cutoff
+  let ⟨mv,res,_,l1,l2⟩ ← revert_NoTn_cutOff_wDepsCache (fun _ => true) (← getLCtx) (← getLocalInstances) ficticousGoal ficticousRevert deps wdeps cutoff
   let new ← mv.getType
   IO.println s!"Reverted to {← ppExpr new}\nWith term {← ppExpr res}\nOf type {← ppExpr (← InferType res l1 l2)}"
 
@@ -137,3 +137,18 @@ With context g(n : Nat) g(x : Fin n) g(P : Fin n → Prop) g(p : P x) and object
 
 def test31 := test #[(Name.num `g 0)] 1
 With context g(n : Nat) g(x : Fin n) g(P : Fin n → Prop) g(p : P x) and objects (dummy n x) run test31
+
+
+
+
+def test32 := test #[(Name.num `g 0)] 10
+With context g(n : Nat) g(hn1 : n = 42) g(hn2 : n = 37) wg(false : 0 : x : Fin n) wg(false : 1 : hx : x.val = 666) and objects (dummy n x) run test32
+
+def test33 := test #[(Name.num `g 0)] 2
+With context g(n : Nat) g(hn1 : n = 42) g(hn2 : n = 37) wg(false : 0 : x : Fin n) wg(false : 1 : hx : x.val = 666) and objects (dummy n x) run test33
+
+def test34 := test #[(Name.num `g 0)] 1
+With context g(n : Nat) g(hn1 : n = 42) g(hn2 : n = 37) wg(false : 0 : x : Fin n) wg(false : 1 : hx : x.val = 666) and objects (dummy n x) run test34
+
+def test35 := test #[(Name.num `g 0)] 0
+With context g(n : Nat) g(hn1 : n = 42) g(hn2 : n = 37) wg(false : 0 : x : Fin n) wg(false : 1 : hx : x.val = 666) and objects (dummy n x) run test35

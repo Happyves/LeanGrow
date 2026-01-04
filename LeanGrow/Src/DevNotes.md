@@ -15,6 +15,7 @@
 
 - check if class and add inst binder, as other ops depend on it
 
+- use `Lean.LocalInstances.cleanPatches` between grow iterations?
 
 # Todo 
 
@@ -24,5 +25,3 @@
 
 - matches with hyp-patterns for scoring for induction should point to which fvars
   should be reverted to make the induction motive
-
-- at reverts for motives/rewrites, we could also forward deps

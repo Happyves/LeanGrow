@@ -161,7 +161,7 @@ partial def Lean.Expr.abstractLetFvarAll_proofLet
 
 
 /--
-- workerDepsCache should have deepest worker first and have no duplicates !
+- workerDepsCache should increase in depth and have no duplicates !
 - the returned fvars contain all reverts, not those in the term, where Type.typed lets are missing
 -/
 @[specialize]
@@ -297,7 +297,7 @@ partial def revert_NoTn_cutOff_wDepsCache (introAdmissible? : Nat → Bool)
       if wd.any (fun w =>
         (aw.contains w) ||
         (match w.name with
-         | .num k i => if (k == `g || k == `u) then (allFwdDeps.oContains i.toUInt32) else false
+         | .num k i => if (k == `g || k == `u) then (if (allFwdDeps.oContains i.toUInt32) then true else guFvs.contains w) else false
          | _ => false ))
       then (final.push wfid, aw.push wfid)
       else (final, aw)

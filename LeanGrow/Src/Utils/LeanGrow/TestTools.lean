@@ -186,6 +186,119 @@ def elabAndLoad_L (i l_idx pos : Nat) (module is : Name) (ts : Syntax) (trans : 
 
 #check 1
 
+@[inline, specialize]
+def elabAndLoad_WG (i depth : Nat) (is : Name) (ts : Syntax)
+  (trans : NameMap Name) (deps : Array (FVarId × (List FVarId)))
+  {α : Sort _} (k : Expr → Expr → NameMap Name → Array (FVarId × (List FVarId)) → TermElabM α) : TermElabM α := do
+  let todo := ts
+  let term ← elabTermAndSynthesize todo .none
+  let name := is
+  let tterm := term.onAllSubtermsTR (fun
+        | d@(.fvar fid) =>
+            match trans.find? fid.name with
+            | .none => d
+            | .some new =>
+                match new with
+                | .num (.num N _) _ =>
+                    if N == `t then .fvar ⟨new⟩ else .mvar ⟨new⟩
+                | _ => .fvar ⟨new⟩
+        | x => x
+        )
+  let rep ← worker depth
+  let trans := trans.insert name rep
+  let ltx ← getLCtx
+  let linst ← getLocalInstances
+  let ltx := ltx.addDecl (.cdecl i ⟨name⟩ name term .default .default)
+  let rdec := (.cdecl i ⟨rep⟩ rep tterm .default .default)
+  let ltx := ltx.addDecl rdec
+  let fv := (.fvar ⟨name⟩)
+  let linst ← (do
+    if let some c ← isClass? term
+    then
+      return linst.push { className := c, fvar := fv }
+    else
+      return linst)
+  let fv := (.fvar ⟨rep⟩)
+  let linst ← (do
+    if let some c ← isClass? tterm
+    then
+      return linst.push { className := c, fvar := fv }
+    else
+      return linst)
+  let bd := tterm.getFVarIds
+  let deps := deps.binInsert (fun x y =>
+    match x.1.name, y.1.name with
+    | .num _ i, .num _ j => i < j -- deepest LAST ; qsort expects strict order
+    | _, _ => panic s!"[elabAndLoad_WG] unexpected formats {x.1.name} {y.1.name}"
+    ) (⟨rep⟩,bd)
+  withLCtx ltx linst do
+    k tterm fv trans deps
+
+#check 1
+
+
+@[inline, specialize]
+def elabAndLoad_WU (i depth : Nat) (is : Name) (ts vs : Syntax)
+  (trans : NameMap Name) (deps : Array (FVarId × (List FVarId)))
+  {α : Sort _} (k : Expr → Expr → NameMap Name → Array (FVarId × (List FVarId)) → TermElabM α) : TermElabM α := do
+  let todoT := ts
+  let todoV := vs
+  let termT ← elabTermAndSynthesize todoT .none
+  let termV ← elabTermAndSynthesize todoV .none
+  let name := is
+  let ttermT := termT.onAllSubtermsTR (fun
+        | d@(.fvar fid) =>
+            match trans.find? fid.name with
+            | .none => d
+            | .some new =>
+                match new with
+                | .num (.num N _) _ =>
+                    if N == `t then .fvar ⟨new⟩ else .mvar ⟨new⟩
+                | _ => .fvar ⟨new⟩
+        | x => x
+        )
+  let ttermV := termV.onAllSubtermsTR (fun
+        | d@(.fvar fid) =>
+            match trans.find? fid.name with
+            | .none => d
+            | .some new =>
+                match new with
+                | .num (.num N _) _ =>
+                    if N == `t then .fvar ⟨new⟩ else .mvar ⟨new⟩
+                | _ => .fvar ⟨new⟩
+        | x => x
+        )
+  let rep ← worker depth
+  let trans := trans.insert name rep
+  let ltx ← getLCtx
+  let linst ← getLocalInstances
+  let ltx := ltx.addDecl (.ldecl i ⟨name⟩ name termT termV false .default)
+  let rdec := (.ldecl i ⟨rep⟩ rep ttermT ttermV false .default)
+  let ltx := ltx.addDecl rdec
+  let fv := (.fvar ⟨name⟩)
+  let linst ← (do
+    if let some c ← isClass? termT
+    then
+      return linst.push { className := c, fvar := fv }
+    else
+      return linst)
+  let fv := (.fvar ⟨rep⟩)
+  let linst ← (do
+    if let some c ← isClass? ttermT
+    then
+      return linst.push { className := c, fvar := fv }
+    else
+      return linst)
+  let bd := ttermT.getFVarIds' <| (if (← isProp ttermT) then [] else ttermV.getFVarIds)
+  let deps := deps.binInsert (fun x y =>
+    match x.1.name, y.1.name with
+    | .num _ i, .num _ j => i < j -- deepest last ; qsort expects strict order
+    | _, _ => panic s!"[elabAndLoad_WG] unexpected formats {x.1.name} {y.1.name}"
+    ) (⟨rep⟩,bd)
+  withLCtx ltx linst do
+    k ttermT fv trans deps
+
+#check 1
 
 
 declare_syntax_cat lg_test
@@ -198,37 +311,58 @@ syntax "t("num ":" num ":" ident ":" term")" : lg_test
 
 syntax "l("ident ":" num ":" num ":" ident ":" term")" : lg_test
 
+syntax "wg(" term ":" num ":" ident ":" term")" : lg_test
+
+syntax "wu(" term ":" num ":" ident ":" term ":" term")" : lg_test
+
+
 
 def elabForTest (i gu_idx : Nat) (cs : TSyntaxArray `lg_test)
-  (guT gu tT t lT l : Array Expr)
-  (trans : NameMap Name) (deps : Array DepCache)
-  {α : Sort _} (k : Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array DepCache → NameMap Name → TermElabM α) : TermElabM α := do
+  (guT gu tT t lT l wsT ws ewsT ews : Array Expr)
+  (trans : NameMap Name) (deps : Array DepCache) (wdeps : Array (FVarId × (List FVarId)))
+  {α : Sort _} (k : Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array DepCache → Array (FVarId × (List FVarId)) → NameMap Name → TermElabM α) : TermElabM α := do
     if i < cs.size
     then
       let c := cs[i]!
       match c with
       | `(lg_test| g($id : $ter)) =>
           elabAndLoad_G i gu_idx id.getId ter trans deps <| fun T fv trans deps =>
-            elabForTest (i+1) (gu_idx+1) cs (guT.push T) (gu.push fv) tT t lT l trans deps k
+            elabForTest (i+1) (gu_idx+1) cs (guT.push T) (gu.push fv) tT t lT l wsT ws ewsT ews trans deps wdeps k
       | `(lg_test| u($id : $ter : $val)) =>
           elabAndLoad_U i gu_idx id.getId ter val trans deps <| fun T fv trans deps =>
-            elabForTest (i+1) (gu_idx+1) cs (guT.push T) (gu.push fv) tT t lT l trans deps k
+            elabForTest (i+1) (gu_idx+1) cs (guT.push T) (gu.push fv) tT t lT l wsT ws ewsT ews trans deps wdeps k
       | `(lg_test| t($ix : $po : $id : $ter)) =>
           elabAndLoad_T i ix.getNat po.getNat id.getId ter trans <| fun T fv trans =>
-            elabForTest (i+1) gu_idx cs guT gu (tT.push T) (t.push fv) lT l trans deps k
+            elabForTest (i+1) gu_idx cs guT gu (tT.push T) (t.push fv) lT l wsT ws ewsT ews trans deps wdeps k
       | `(lg_test| l($mod : $ix : $po : $id : $ter)) =>
           elabAndLoad_L i ix.getNat po.getNat mod.getId id.getId ter trans <| fun T fv trans =>
-            elabForTest (i+1) (gu_idx+1) cs guT gu tT t (lT.push T) (l.push fv) trans deps k
+            elabForTest (i+1) gu_idx cs guT gu tT t (lT.push T) (l.push fv) wsT ws ewsT ews trans deps wdeps k
+      | `(lg_test| wg($ext : $d : $id : $ter)) =>
+          elabAndLoad_WG i d.getNat id.getId ter trans wdeps <| fun T fv trans wdeps => do
+            match ← elabTermAndSynthesize ext .none with
+            | .const `Bool.true _ =>
+                elabForTest (i+1) gu_idx cs guT gu tT t lT l wsT ws (ewsT.push T) (ews.push fv) trans deps wdeps k
+            | .const `Bool.false _ =>
+                elabForTest (i+1) gu_idx cs guT gu tT t lT l (wsT.push T) (ws.push fv) ewsT ews trans deps wdeps k
+            | _ => throwError "expected boolean litteral"
+      | `(lg_test| wu($ext : $d : $id : $ter : $val)) =>
+          elabAndLoad_WU i d.getNat id.getId ter val trans wdeps <| fun T fv trans wdeps => do
+            match ← elabTermAndSynthesize ext .none with
+            | .const `Bool.true _ =>
+                elabForTest (i+1) gu_idx cs guT gu tT t lT l wsT ws (ewsT.push T) (ews.push fv) trans deps wdeps k
+            | .const `Bool.false _ =>
+                elabForTest (i+1) gu_idx cs guT gu tT t lT l (wsT.push T) (ws.push fv) ewsT ews trans deps wdeps k
+            | _ => throwError "expected boolean litteral"
       | _ => throwError "Unexpected syntax ..."
     else
-      k guT gu tT t lT l deps trans
+      k guT gu tT t lT l wsT ws ewsT ews deps wdeps trans
 
 #check 1
 
 elab "With" "context" cs:lg_test* "and" "objects" ts:term,* "run" metam:ident : command => unsafe do
   let ts := ts.getElems.raw
   liftTermElabM do
-    elabForTest 0 0 cs #[] #[] #[] #[] #[] #[] {} #[] <| fun guT gu tT t lT l deps trans => do
+    elabForTest 0 0 cs #[] #[] #[] #[] #[] #[] #[] #[] #[] #[] {} #[] #[] <| fun guT gu tT t lT l wsT ws ewsT ews deps wdeps trans => do
       let mut Ts : Array Expr := #[]
       for t in ts do
         let term ← elabTermAndSynthesize t .none
@@ -248,5 +382,5 @@ elab "With" "context" cs:lg_test* "and" "objects" ts:term,* "run" metam:ident : 
           | x => x
           )
         Ts := Ts.push tterm
-      let action ← evalConst ( Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array DepCache → MetaM Unit) (metam.getId)
-      action guT gu tT t lT l Ts deps
+      let action ← evalConst ( Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array DepCache → Array (FVarId × List FVarId) → MetaM Unit) (metam.getId)
+      action guT gu tT t lT l wsT ws ewsT ews Ts deps wdeps
