@@ -79,10 +79,10 @@ def elabForTest (i : Nat) (cs : TSyntaxArray `lg_lam_let) (doneT doneFv : Array 
 elab "With" "context" cs:lg_lam_let* "and" "objects" ts:term,* "run" metam:ident : command => unsafe do
   let ts := ts.getElems.raw
   liftTermElabM do
-    elabForTest 0 cs #[] #[] <| fun fvT _ => do
+    elabForTest 0 cs #[] #[] <| fun _ fv => do
       let mut Ts : Array Expr := #[]
       for t in ts do
         let term ← elabTermAndSynthesize t .none
         Ts := Ts.push term
       let action ← evalConst (Array Expr → Array Expr → MetaM Unit) (metam.getId)
-      action fvT Ts
+      action fv Ts

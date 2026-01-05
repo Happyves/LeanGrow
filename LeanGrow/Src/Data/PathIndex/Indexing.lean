@@ -6,7 +6,7 @@ Author: Yves Jäckle.
 
 
 import LeanGrow.Src.Data.PathIndex.API
-import LeanGrow.Src.Utils.Lean.Expr
+import LeanGrow.Src.Utils.Lean.Expr.Basic
 
 open Lean Meta
 
@@ -40,8 +40,8 @@ def getIndices
 
 
 def getIndicesS
-  (T : PaIn (List Nat)) : (List Nat) :=
-  getIndices [] List.orderedUnion T
+  (T : PaIn UInt32Array) : UInt32Array :=
+  getIndices .empty UInt32Array.union T
 
 
 /-- In MetaM due to debt ; doesn't actually require any context-/
