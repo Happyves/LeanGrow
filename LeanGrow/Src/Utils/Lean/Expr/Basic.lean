@@ -245,8 +245,19 @@ partial def Lean.Expr.abstractLetFvarAll
       bind absd (fvs.size - 1) initD initI
 
 
-#check Expr.instantiateRev
 
+@[inline, specialize]
+partial def Lean.Expr.instantiateLooseBvar (fvs : List FVarId) (e : Expr) : Expr :=
+    e.onAllSubtermsWiDepth (fun x d =>
+        match x with
+        | .bvar i =>
+            if  i ≥ d
+            then
+              let fid := fvs[i - d]!
+              (.fvar fid)
+            else
+              x
+        | _ => x )
 
 
 -- # Check pattern

@@ -19,9 +19,13 @@
 
 # Todo 
 
-- add workers to testing
+- 
 
 # Long term
+
+- Return to non-TR version from Alpha for PathIndices
+
+- Use Index structure
 
 - matches with hyp-patterns for scoring for induction should point to which fvars
   should be reverted to make the induction motive

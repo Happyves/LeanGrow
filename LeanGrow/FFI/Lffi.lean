@@ -34,6 +34,10 @@ namespace UInt32Array
 instance : Repr UInt32Array where
   reprPrec := fun x y => reprPrec x.data y
 
+instance : ToString UInt32Array where
+  toString := fun x => s!"{reprPrec x.data 0}"
+
+
 instance : BEq UInt32Array where
   beq := fun x y => x.data == y.data
 
