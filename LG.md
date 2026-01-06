@@ -28,7 +28,7 @@ LG:
 - Settries: 
   - Biggest rewrite of the 3 Datas, start with it
   - Use one PaIn for siblings, real settrie with lists of Nats, so that we only query one settrie per generation
-  - Fix aweful build process
+  - Fix aweful build process for path indices
 - Path indexes:
   - perf: use a map of PaIns, with keys beeing the spines. For example, an app of 3 args and constant head c, a forall, etc.
     This should improve efficiency of queries. Note that "naive mode" will then not be required anymore in this case: also,
@@ -39,6 +39,7 @@ LG:
 Djv Core:
 - Delta defs and theorems, unless their value is too large ?
 - Otherwise, simply discard samples that would require non-lib objects
+- better management of haves (if appear once, inline ; or do both inline and no inline ...)
 
 
 Djv Parse:

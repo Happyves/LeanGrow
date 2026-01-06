@@ -320,7 +320,9 @@ def insert
   (e : Expr) (idx : Nat) (T : PaIn IdxCollType)
   (emptyCol : IdxCollType) (singleton : Nat → IdxCollType) (insert : Nat → IdxCollType → IdxCollType)
   : MetaM (Prod3 (PaIn IdxCollType) LocalContext LocalInstances) := do
-    insertCoreUp singleton insert emptyCol l1 l2 idx .dead (← insertCoreDown l1 l2 false 0 e T .nil) --false 0 e idx T emptyCol intersect empty? k
+    let .mk res l1 l2 ← insertCoreUp singleton insert emptyCol l1 l2 idx .dead (← insertCoreDown l1 l2 false 0 e T .nil) --false 0 e idx T emptyCol intersect empty? k
+    let l2 := l2.cleanPatchesAndWokers
+    return .mk res l1 l2
 
 @[specialize,inline]
 def ofList
@@ -353,7 +355,9 @@ def insertZetaFvs
   (e : Expr) (idx : Nat) (T : PaIn IdxCollType)
   (emptyCol : IdxCollType) (singleton : Nat → IdxCollType) (insert : Nat → IdxCollType → IdxCollType)
   : MetaM (Prod3 (PaIn IdxCollType) LocalContext LocalInstances) := do
-    insertCoreUp singleton insert emptyCol l1 l2 idx .dead (← insertCoreDown l1 l2 false 0 (← e.zetaFvs l1 l2) T .nil)
+    let .mk res l1 l2 ← insertCoreUp singleton insert emptyCol l1 l2 idx .dead (← insertCoreDown l1 l2 false 0 (← e.zetaFvs l1 l2) T .nil)
+    let l2 := l2.cleanPatchesAndWokers
+    return .mk res l1 l2
 
 
 
@@ -603,4 +607,6 @@ def insertMulti
   (e : Expr) (idx : IdxCollType) (T : PaIn IdxCollType)
   (emptyCol : IdxCollType) (insert : IdxCollType → IdxCollType → IdxCollType)
   : MetaM (Prod3 (PaIn IdxCollType) LocalContext LocalInstances) := do
-    insertMultiCoreUp insert emptyCol l1 l2 idx .dead (← insertCoreDown l1 l2 false 0 e T .nil) --false 0 e idx T emptyCol intersect empty? k
+    let .mk res l1 l2 ← insertMultiCoreUp insert emptyCol l1 l2 idx .dead (← insertCoreDown l1 l2 false 0 e T .nil) --false 0 e idx T emptyCol intersect empty? k
+    let l2 := l2.cleanPatchesAndWokers
+    return .mk res l1 l2

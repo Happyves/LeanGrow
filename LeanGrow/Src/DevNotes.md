@@ -17,6 +17,8 @@
 
 - use `Lean.LocalInstances.cleanPatches` between grow iterations?
 
+- be careful when using PaIn ops : shouldn't be done under external worker local instances, as we delete them after ops
+
 # Todo 
 
 - 

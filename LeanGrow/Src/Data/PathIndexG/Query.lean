@@ -320,8 +320,10 @@ partial def queryCore [Repr IdxCollType]
                         | _ => throwError s!"[queryCore] unsupported mvar id {repr fid}"
                     | .mdata _ e =>
                         go l1 l2 constr state naive? throw? revert? skipP revCount ankers (.cons e T workas moreT)
-    go l1 l2 constr state naive? throw? revert? skipP revCount ankers todo
-
+    do
+    let .mk r1 r2 r3 l1 l2 ← go l1 l2 constr state naive? throw? revert? skipP revCount ankers todo
+    let l2 := l2.cleanPatchesAndWokers
+    return .mk r1 r2 r3 l1 l2
 
 #check 1
 
@@ -726,4 +728,7 @@ partial def queryLCore [Repr IdxCollType]
                         | _ => throwError s!"[queryCore] unsupported mvar id {repr fid}"
                     | .mdata _ e =>
                         go l1 l2 constr state naive? throw? revert? skipP revCount ankers (.cons e T workas moreT)
-    go l1 l2 constr state naive? throw? revert? skipP revCount ankers todo
+    do
+    let .mk r1 r2 r3 l1 l2 ← go l1 l2 constr state naive? throw? revert? skipP revCount ankers todo
+    let l2 := l2.cleanPatchesAndWokers
+    return .mk r1 r2 r3 l1 l2

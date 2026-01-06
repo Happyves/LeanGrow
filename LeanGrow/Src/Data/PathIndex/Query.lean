@@ -294,7 +294,10 @@ partial def queryCore [Repr IdxCollType]
                           go l1 l2 constr state false true revert? skipP revCount ankers moreT
                     | .mdata _ e =>
                         go l1 l2 constr state naive? throw? revert? skipP revCount ankers (.cons e T workas moreT)
-    go l1 l2 constr state naive? throw? revert? skipP revCount ankers todo
+    do
+    let .mk r1 r2 r3 l1 l2 ← go l1 l2 constr state naive? throw? revert? skipP revCount ankers todo
+    let l2 := l2.cleanPatchesAndWokers
+    return .mk r1 r2 r3 l1 l2
 
 
 #check 1
@@ -660,4 +663,7 @@ partial def queryLCore [Repr IdxCollType]
                             go l1 l2 constr state false true revert? skipP revCount ankers (if save? then .sigL saveI saveS moreT else moreT)
                     | .mdata _ e =>
                         go l1 l2 constr state naive? throw? revert? skipP revCount ankers (.cons e T workas moreT)
-    go l1 l2 constr state naive? throw? revert? skipP revCount ankers todo
+    do
+    let .mk r1 r2 r3 l1 l2 ← go l1 l2 constr state naive? throw? revert? skipP revCount ankers todo
+    let l2 := l2.cleanPatchesAndWokers
+    return .mk r1 r2 r3 l1 l2

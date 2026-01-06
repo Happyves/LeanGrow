@@ -47,3 +47,8 @@ def ifGNode (e : Expr) {α : Sort _} (pos : Nat → α) (neg : α) : α :=
       then pos i
       else neg
   | _ => neg
+
+/-- Should not be used when working under external workers-/
+@[inline]
+def Lean.LocalInstances.cleanPatchesAndWokers (l : LocalInstances) : LocalInstances :=
+  l.filter (fun x => x.className != `LtxPatcher && !(x.fvar.fvarId!.isWorker))

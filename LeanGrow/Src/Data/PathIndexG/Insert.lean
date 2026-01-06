@@ -334,14 +334,18 @@ partial def insertCoreUp
         | _ => throwError s!"[insertCore] unexpected atom {← PpExpr e l1 l2}"
 
 
+/-- Deletes external worker local instances-/
 @[specialize,inline]
 def insert
   (l1 : LocalContext) (l2 : LocalInstances)
   (e : Expr) (idx : Nat) (T : PaInG IdxCollType)
   (emptyCol : IdxCollType) (singleton : Nat → IdxCollType) (insert : Nat → IdxCollType → IdxCollType)
   : MetaM (Prod3 (PaInG IdxCollType) LocalContext LocalInstances) := do
-    insertCoreUp singleton insert emptyCol l1 l2 idx .dead (← insertCoreDown l1 l2 false 0 e T .nil) --false 0 e idx T emptyCol intersect empty? k
+    let .mk res l1 l2 ← insertCoreUp singleton insert emptyCol l1 l2 idx .dead (← insertCoreDown l1 l2 false 0 e T .nil) --false 0 e idx T emptyCol intersect empty? k
+    let l2 := l2.cleanPatchesAndWokers
+    return .mk res l1 l2
 
+/-- Deletes external worker local instances-/
 @[specialize,inline]
 def ofList
   (l1 : LocalContext) (l2 : LocalInstances)
@@ -354,6 +358,7 @@ def ofList
   go l1 l2 T l
 
 
+/-- Deletes external worker local instances-/
 @[specialize,inline]
 def ofListProd
   (l1 : LocalContext) (l2 : LocalInstances)
@@ -367,13 +372,17 @@ def ofListProd
 
 
 
+/-- Deletes external worker local instances-/
 @[specialize,inline]
 def insertZetaFvs
   (l1 : LocalContext) (l2 : LocalInstances)
   (e : Expr) (idx : Nat) (T : PaInG IdxCollType)
   (emptyCol : IdxCollType) (singleton : Nat → IdxCollType) (insert : Nat → IdxCollType → IdxCollType)
   : MetaM (Prod3 (PaInG IdxCollType) LocalContext LocalInstances) := do
-    insertCoreUp singleton insert emptyCol l1 l2 idx .dead (← insertCoreDown l1 l2 false 0 (← e.zetaFvs l1 l2) T .nil)
+    let .mk res l1 l2 ← insertCoreUp singleton insert emptyCol l1 l2 idx .dead (← insertCoreDown l1 l2 false 0 (← e.zetaFvs l1 l2) T .nil)
+    let l2 := l2.cleanPatchesAndWokers
+    return .mk res l1 l2
+
 
 
 
@@ -637,10 +646,13 @@ partial def insertMultiCoreUp
         | _ => throwError s!"[insertCore] unexpected atom {← PpExpr e l1 l2}"
 
 
+/-- Deletes external worker local instances-/
 @[specialize,inline]
 def insertMulti
   (l1 : LocalContext) (l2 : LocalInstances)
   (e : Expr) (idx : IdxCollType) (T : PaInG IdxCollType)
   (emptyCol : IdxCollType) (insert : IdxCollType → IdxCollType → IdxCollType)
   : MetaM (Prod3 (PaInG IdxCollType) LocalContext LocalInstances) := do
-    insertMultiCoreUp insert emptyCol l1 l2 idx .dead (← insertCoreDown l1 l2 false 0 e T .nil) --false 0 e idx T emptyCol intersect empty? k
+    let .mk res l1 l2 ← insertMultiCoreUp insert emptyCol l1 l2 idx .dead (← insertCoreDown l1 l2 false 0 e T .nil) --false 0 e idx T emptyCol intersect empty? k
+    let l2 := l2.cleanPatchesAndWokers
+    return .mk res l1 l2
