@@ -18,4 +18,4 @@ inductive SetTrieP (α : Type _) (IdxCollType : Type u) (PaIn : Type u → Type 
 | root (q : PaIn IdxCollType) (c : Array (SetTrieP α IdxCollType PaIn))
 | node (k : IdxCollType) (q : PaIn IdxCollType) (c : Array (SetTrieP α IdxCollType PaIn))
 | leaf (a : α)
-deriving Inhabited
+deriving Inhabited, Nonempty
