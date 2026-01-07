@@ -5,7 +5,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Author: Yves Jäckle.
 -/
 
-import LeanGrowBeta.Data.SetTrie.Build
+import LeanGrow.Src.Data.SetTrie.Build
 
 open Lean Meta
 
@@ -31,7 +31,7 @@ partial def SetTrie.depth (T : SetTrie α β) : Nat :=
 
 -- # Query
 
-@[specialize]
+@[inline, specialize]
 partial def SetTrie.query [Repr β]
   (inter : β → β → Bool) (Q : β) (T : SetTrie α β) : List α :=
   trace set TracingFlags.none in
@@ -56,7 +56,7 @@ partial def SetTrie.query [Repr β]
 
 
 
-@[specialize]
+@[inline, specialize]
 partial def List.queryPass (inter : β → β → Bool) (Q : β) (L : List (SetTrie α β)) : List α × List (SetTrie α β) :=
   let rec @[specialize] go (done : List α) (ret : List (SetTrie α β)) : List (SetTrie α β) → List α × List (SetTrie α β)
     | [] => (done, ret)
@@ -196,9 +196,9 @@ partial def SetTrie.mapM {γ δ : Type _}
 
 @[specialize]
 partial def SetTrie.merge
-  [Repr α] [Repr β] {γ δ ι : Type _} [Repr δ] [Repr γ]
+  [Repr α] [Repr β] {γ δ : Type _} [Repr δ] [Repr γ]
   (init : γ) (merge : β → γ → γ) (max : γ → OptionProd δ Nat)
-  (find : β → δ → Option ι) (delete : β → δ → β) (empty? : β → Bool)
+  (find : β → δ → Bool) (delete : β → δ → β) (empty? : β → Bool)
   (newkey : δ → β) (addkey : δ → β → β)
   (emptykey : β) (mergekey : β → β → β)
   (fuel : Nat) (fst snd : SetTrie α β) : SetTrie α β :=

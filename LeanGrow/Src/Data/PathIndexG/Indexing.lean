@@ -52,10 +52,10 @@ def getIndicesS
 @[specialize]
 partial def sharesIndicesWith
   (intersect : IdxCollType → IdxCollType → IdxCollType) (empty? : IdxCollType → Bool)
-  (T : PaInG IdxCollType) (inds : IdxCollType) : MetaM Bool :=
+  (T : PaInG IdxCollType) (inds : IdxCollType) : Bool :=
   match T with
-  | .dead => return false
-  | .br tnodes lnodes gnodes unodes bvars sorts consts lits _ _ api _ _ lai _ _ ali _ _ _ lei projs proofsOf _ => do
+  | .dead => false
+  | .br tnodes lnodes gnodes unodes bvars sorts consts lits _ _ api _ _ lai _ _ ali _ _ _ lei projs proofsOf _ => Id.run <| do
       if !(empty? <| intersect api inds)
       then return true
       else

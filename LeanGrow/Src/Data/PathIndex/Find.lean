@@ -13,6 +13,7 @@ open Lean Meta
 variable {IdxCollType : Type _}
 
 namespace PaIn
+open PaIn
 
 @[specialize, inline]
 def findRevert

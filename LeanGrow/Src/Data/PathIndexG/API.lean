@@ -12,6 +12,8 @@ import LeanGrow.Src.Utils.Std.List
 
 open Lean Meta
 
+namespace PaInG
+open PaInG
 
 variable {α : Type _} (r : α → α → Bool) {IdxCollType : Type _} [BEq α]
 

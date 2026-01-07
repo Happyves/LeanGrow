@@ -58,6 +58,7 @@ LG:
 - Add option to include theorems from extentions, such as the simp extention.
 - Take note of meta-data, for example if its a ctor, as we may use this for scoring, or an eq-theorem wich acts as a simplifier.
 - Loading should enable name actions so that functional induction theorems are in env.
+- Theorems who's types are structures : add projections as thms
 
 
 Djv Core:

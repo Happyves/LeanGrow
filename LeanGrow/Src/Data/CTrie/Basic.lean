@@ -1279,3 +1279,22 @@ partial def foldMapM {α β γ: Type u}  [Monad m] (init : γ) (t : CTrie α) (f
 @[specialize, inline]
 partial def foldMap {α β γ: Type u} (init : γ) (t : CTrie α) (f : α → γ → (γ × Option β)) : (γ × CTrie β) :=
   Id.run <| foldMapM init t f
+
+
+
+-- # Measures
+
+/-- Number of values -/
+@[inline]
+partial def size (t : CTrie α) : Nat :=
+  let rec go (count : Nat) : List (CTrie α) → Nat
+    | [] => count
+    | nx :: more =>
+        match nx with
+        | .leaf => go count more
+        | .fruit _ => go (Nat.succ count) more
+        | .lnode1 _ cx =>  go count (cx :: more)
+        | .fnode1 _ _ cx => go (Nat.succ count) (cx :: more)
+        | .lnode _ cx => go count (cx.toList ++ more)
+        | .fnode _ _ cx => go (Nat.succ count) (cx.toList ++ more)
+  go 0 [t]

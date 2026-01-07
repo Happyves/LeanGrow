@@ -21,7 +21,11 @@
 
 # Todo 
 
-- 
+- SetTrieP.ofList with loading
+
+- PaIn intersection that returns indices (indices of one of them, to be chosen)
+  also, intersection up to unification ; isn't this part of Core, as we have to
+  load lnode types ...
 
 # Long term
 

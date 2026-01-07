@@ -13,6 +13,8 @@ open Lean Meta
 variable {IdxCollType : Type _}
 
 namespace PaInG
+open PaInG
+
 
 
 inductive insertCoreType (IdxCollType : Type _) where

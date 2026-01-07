@@ -539,3 +539,16 @@ def deleteOfInds (T : PaIn IdxCollType) (inds : IdxCollType)
   : PaIn IdxCollType :=
     let T := T.mapInds (difference · inds) emptyCol
     T.clean emptyCol empty?
+
+
+
+-- # Keep
+
+@[specialize, inline]
+def keepOnlyOfInds (T : PaIn IdxCollType) (inds : IdxCollType)
+  (difference union : IdxCollType → IdxCollType → IdxCollType)
+  (emptyCol : IdxCollType) (empty? : IdxCollType → Bool)
+  : PaIn IdxCollType :=
+    let all := T.getIndices emptyCol union
+    let toDel := difference all inds
+    deleteOfInds T toDel difference emptyCol empty?
