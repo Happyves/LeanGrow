@@ -153,3 +153,16 @@ partial def SetTrieP.mergeNoJoin
     match fst, snd with
     | .root fk fc, .root sk sc => .root (merge fk sk) (fc ++ sc)
     | _, _ => panic! "[SetTrieP.mergeNoJoin] ill formed tree(s)"
+
+
+-- # pp
+
+@[specialize]
+partial def SetTrieP.pp [Monad m] [Repr IdxCollType] (ind : Nat) (key : PaIn IdxCollType → m String) (val : α → m String) (T : SetTrieP α IdxCollType PaIn) : m String :=
+  let rec @[specialize] go (ind : Nat) : SetTrieP α IdxCollType PaIn  → m String
+    | .root k kids =>
+        return (Blank ind) ++ s!".root {← key k}\n" ++ (← BlankJumpM (ind +3) kids.toList (fun x => go (ind + 3) x))
+    | .node inds k kids =>
+        return (Blank ind) ++ s!".node {repr inds} {← key k}\n" ++ (← BlankJumpM (ind +3) kids.toList (fun x => go (ind + 3) x))
+    | .leaf v => return (Blank ind) ++ (← val v)
+  go ind T
