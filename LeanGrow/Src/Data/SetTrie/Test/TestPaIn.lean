@@ -36,8 +36,9 @@ def test_1 : Array Expr → Array Expr → Array Expr → Array Expr → Array E
     let c := Objs[2]!
     let d := Objs[3]!
     let .mk set1 l1 l2 ← PaInG.ofListS (← getLCtx) (← getLocalInstances) [(0,a),(1,b)] .dead
-    let .mk set2 l1 l2 ← PaInG.ofListS l1 l2 [(0,a),(2,c)] .dead
-    let .mk set3 l1 l2 ← PaInG.ofListS l1 l2 [(3,d)] .dead
+    let .mk set2 l1 l2 ← PaInG.ofListS l1 l2 [(2,a),(3,c)] .dead
+    let .mk set3 l1 l2 ← PaInG.ofListS l1 l2 [(4,d)] .dead
+    -- important that PaIns use disjoint indices
     let st := SetTriePG.ofListS <| ListProd.ofListOfProd [(set1,37),(set2,42),(set3,666)]
     let pst ← st.pp 0
       (fun x => x.ppS l1 l2 [] 0)
@@ -46,6 +47,5 @@ def test_1 : Array Expr → Array Expr → Array Expr → Array Expr → Array E
 
 
 #check 1
-
 
 With context g(n : Nat) u(x : Fin n : Fin.mk 0 sorry) t(0 : 0 : m : Nat) and objects (n + m = 42), (n * m = 37), (x = x), (x.val - n = m) run test_1
