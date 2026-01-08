@@ -59,17 +59,20 @@ def WithLetDecl (n : Name) (type value : Expr) (initD : LocalContext) (initI : L
 
 @[inline]
 def withNonInstLocalDeclU (n : Name) (type : Expr) (init : LocalContext) : MetaM (FVarId × LocalContext) := do
-  let fv ← mkFreshFVarId
+  let disambig ← mkFreshId
+  let fv := FVarId.mk (n ++ disambig)
   return (fv, init.mkLocalDecl fv n type .default .default)
 
 @[inline]
 def withNonInstLetDeclU (n : Name) (type value: Expr) (init : LocalContext) : MetaM (FVarId × LocalContext) := do
-  let fv ← mkFreshFVarId
+  let disambig ← mkFreshId
+  let fv := FVarId.mk (n ++ disambig)
   return (fv, init.mkLetDecl fv n type value false .default)
 
 @[inline]
 def WithLocalDeclU (n : Name) (type : Expr) (initD : LocalContext) (initI : LocalInstances) : MetaM (Prod3 FVarId LocalContext LocalInstances) := do
-  let fv ← mkFreshFVarId
+  let disambig ← mkFreshId
+  let fv := FVarId.mk (n ++ disambig)
   let ltx := initD.mkLocalDecl fv n type .default .default
   withReader (fun ctx => {ctx with lctx := ltx, localInstances := initI}) do
     match (← Lean.Meta.isClassQuick? type) with
@@ -82,7 +85,8 @@ def WithLocalDeclU (n : Name) (type : Expr) (initD : LocalContext) (initI : Loca
 
 @[inline]
 def WithLetDeclU (n : Name) (type value : Expr) (initD : LocalContext) (initI : LocalInstances) : MetaM (Prod3 FVarId LocalContext LocalInstances) := do
-  let fv ← mkFreshFVarId
+  let disambig ← mkFreshId
+  let fv := FVarId.mk (n ++ disambig)
   let ltx := initD.mkLetDecl fv n type value false .default
   withReader (fun ctx => {ctx with lctx := ltx, localInstances := initI}) do
     match (← Lean.Meta.isClassQuick? type) with
@@ -92,6 +96,7 @@ def WithLetDeclU (n : Name) (type value : Expr) (initD : LocalContext) (initI : 
         match (← Lean.Meta.isClassExpensive? type) with
         | .none  => return ⟨fv,ltx,initI⟩
         | .some c => return ⟨fv,ltx, (initI.push {className := c, fvar := .fvar fv})⟩
+
 
 
 
