@@ -99,6 +99,8 @@ Djv Parse:
 # W5 (26-1) Search & Frontend ; Generalize & Denoise ; Delab Calc
 
 LG:
+- split batch between apply and rw
+- relevance of simplifier score (from caching) should decrease with fuel
 - Consider LLM stuff here too, for its influence on IntroTrees and Backtrees and so on
 - Abort when indices (id_gen_ ...) would overflow due to UInt32 or reset them
 - Array representation of Introtree (kids via entry containing indices of kids) ; efficient if we don't delete nodes, which is the case

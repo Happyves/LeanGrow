@@ -29,26 +29,15 @@ structure MCtxData where
 deriving Inhabited
 
 
-def MCtxData.load (data : MCtxData) : MetaM Unit := do
-  let ltx ← getLCtx
-  let linst ← getLocalInstances
+def MCtxData.loadNoCo (data : MCtxData) : MetaM Unit := do
   modifyMCtx (fun mc =>
     let mc := {mc with lDepth := data.lDepth.foldl (fun R (i, j) => R.insert i j) mc.lDepth}
     let mc := {mc with userNames := data.userNames.foldl (fun R (i, j) => R.insert i j) mc.userNames}
     let mc :=  data.decls.foldl (fun R (i, j) =>
-      {R with decls := R.decls.insert i ({j with lctx := ltx, localInstances := linst, index := R.mvarCounter}), mvarCounter := R.mvarCounter + 1 }
+      {R with decls := R.decls.insert i ({j with index := R.mvarCounter}), mvarCounter := R.mvarCounter + 1 }
       ) mc
-    mc) -- *Note* I'm guessing this makes linear use ?
+    mc)
 
-
-def MCtxData.load' (data : MCtxData) : MetaM Unit := do
-  let ltx ← getLCtx
-  let linst ← getLocalInstances
-  modifyMCtx (fun mc => {mc with lDepth := data.lDepth.foldl (fun R (i, j) => R.insert i j) mc.lDepth})
-  modifyMCtx (fun mc =>  {mc with userNames := data.userNames.foldl (fun R (i, j) => R.insert i j) mc.userNames})
-  data.decls.foldlM (fun _ (i, j) => do
-      modifyMCtx (fun R =>  {R with decls := R.decls.insert i ({j with lctx := ltx, localInstances := linst, index := R.mvarCounter}), mvarCounter := R.mvarCounter + 1 })
-      ) ()
 
 
 inductive ThmFormat where
@@ -60,6 +49,7 @@ inductive ThmFormat where
       (hypsNum : Nat)
       (goal : Expr)
       (sinks : List Nat)
+      (badFo badBa : Bool)
 | rw  (name : Name ⊕ FVarId)
       (lvlParamsNum : Nat)
       (kind : RWkind)
@@ -69,10 +59,17 @@ inductive ThmFormat where
       (mctx : MCtxData)
       (hypsNum : Nat)
       (sinks : List Nat)
+      (badFo badBa : Bool)
+      (simpliFactor : Float)
 
 instance : Inhabited ThmFormat where
   default :=
-    .std (.inl `defaultDummyThmFormat) 0 false #[] default 0 (failExpr "Inhabited ThmFormat") []
+    .std (.inl `defaultDummyThmFormat) 0 false #[] default 0 (failExpr "Inhabited ThmFormat") [] true true
+
+instance : ToString (Name ⊕ FVarId) where
+  toString := fun
+    | .inl n => n.toString
+    | .inr fv => fv.name.toString
 
 
 
@@ -84,8 +81,8 @@ def ThmFormat.hypsTypes : ThmFormat → Array Expr
 
 @[inline]
 def ThmFormat.sinks : ThmFormat → List Nat
-  | .std _ _ _ _ _ _ _  hyps => hyps
-  | .rw _ _  _  _ _  _ _ _ hyps => hyps
+  | .std _ _ _ _ _ _ _  hyps .. => hyps
+  | .rw _ _  _  _ _  _ _ _ hyps .. => hyps
 
 
 
@@ -128,6 +125,19 @@ def ThmFormat.lvlParamsNum : ThmFormat → Nat
 def ThmFormat.name : ThmFormat → Name ⊕ FVarId
   | .std   hyps .. => hyps
   | .rw hyps .. => hyps
+
+@[inline]
+def ThmFormat.badFo : ThmFormat → Bool
+  | .std _ _ _ _ _ _ _  _ badFo .. => badFo
+  | .rw _ _  _  _ _  _ _ _ _ badFo .. => badFo
+
+
+@[inline]
+def ThmFormat.badBa : ThmFormat → Bool
+  | .std _ _ _ _ _ _ _ _ _ bad => bad
+  | .rw _ _  _  _ _  _ _ _ _ _ bad .. => bad
+
+
 
 
 instance : Repr ThmFormat where

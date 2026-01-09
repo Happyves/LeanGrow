@@ -5,7 +5,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Author: Yves Jäckle.
 -/
 
-import LeanGrow.Src.Caching.Formating.Types
+import LeanGrow.Src.Caching.Formating.Rate
 import LeanGrow.Src.Utils.LeanGrow.Expr
 
 
@@ -44,12 +44,12 @@ def parseEqIff (goal : Expr) : Option (Bool × Expr × Expr) :=
 partial def processForMain (l1 : LocalContext) (l2 : LocalInstances)
   (module : Name) (thmIdx : Nat)
   (thmName : Name ⊕ FVarId) (lvlC : Array (LMVarId × Nat)) (lvlN : Nat) (T : Expr)
-  : MetaM (Bool × List ThmFormat) :=
+  : MetaM (Prod4 Bool (List ThmFormat) LocalContext LocalInstances) :=
   do
   let rec go (l1 : LocalContext) (l2 : LocalInstances)
     (hyps : Array HypType) (decls : Array (MVarId × MetavarDecl)) (userNames : Array (Name × MVarId))
     (type : Expr) (pos : Nat) (sinkCand : List (Nat × Nat))
-    : MetaM (Bool × List ThmFormat) := do
+    : MetaM (Prod4 Bool (List ThmFormat) LocalContext LocalInstances) := do
     match type with
     | .letE _ _ V B _ => do
         go l1 l2 hyps decls userNames (Expr.instantiate1 B V) pos sinkCand
@@ -74,35 +74,78 @@ partial def processForMain (l1 : LocalContext) (l2 : LocalInstances)
     | goal =>
         let sinkCand := sinkCand.mergeSort (fun x y => x.2 ≥ y.2)
         -- *note* we sort the sinks by decreasing number of dependencies
+        let .mk l1 l2 ← badnessTestPrep l1 l2 module thmIdx hyps
         match parseEqIff goal with
         | .none =>
-            let pred? ← IsProp goal l1 l2
-            let res : ThmFormat :=
-              .std thmName lvlN pred? hyps ⟨lvlC, decls, userNames⟩ hyps.size goal (sinkCand.map Prod.fst)
-            return (false, [res])
+            if goal.isMvarApp
+            then return .mk false [] l1 l2
+            else
+              let pred? ← IsProp goal l1 l2
+              let sinks := (sinkCand.map Prod.fst)
+              let bf ← isBadForForw l1 l2 sinks hyps goal
+              let bb ← isBadForBack l1 l2 sinks hyps goal
+              let res : ThmFormat :=
+                .std thmName lvlN pred? hyps ⟨lvlC, decls, userNames⟩ hyps.size goal sinks bf bb
+              return .mk false [res] l1 l2
         | .some (iff?, left, right) =>
             let goalDeps := goal.getLnodePos
-            let sinkCand := (sinkCand.map Prod.fst)
-            let sinksNotInGoal? := sinkCand.any (fun x => !(goalDeps.contains x))
-            let resN : ThmFormat :=
-              .rw thmName lvlN (if iff? then .iff_mp else .eq_mp)
-                  left right hyps ⟨lvlC, decls, userNames⟩ hyps.size sinkCand
-            let resS : ThmFormat :=
-              .rw thmName lvlN (if iff? then .iff_mpr else .eq_mpr)
-                  right left hyps ⟨lvlC, decls, userNames⟩ hyps.size sinkCand
-            return (sinksNotInGoal?, [resN,resS])
+            let sinks := (sinkCand.map Prod.fst)
+            let sinksNotInGoal? := sinks.any (fun x => !(goalDeps.contains x))
+            match left.isMvarApp, right.isMvarApp with
+            | false, false =>
+                let .mk bf l1 l2 ← isBadForForwRW l1 l2 left right
+                let .mk bb l1 l2 ← isBadForBackRW l1 l2 sinks hyps left right
+                let .mk si l1 l2 ← simplifierScore l1 l2 left right
+                let resN : ThmFormat :=
+                  .rw thmName lvlN (if iff? then .iff_mp else .eq_mp)
+                      left right hyps ⟨lvlC, decls, userNames⟩ hyps.size sinks
+                      bf bb si
+                let .mk bf l1 l2 ← isBadForForwRW l1 l2 right left
+                let .mk bb l1 l2 ← isBadForBackRW l1 l2 sinks hyps right left
+                let .mk si l1 l2 ← simplifierScore l1 l2 right left
+                let resS : ThmFormat :=
+                  .rw thmName lvlN (if iff? then .iff_mpr else .eq_mpr)
+                      right left hyps ⟨lvlC, decls, userNames⟩ hyps.size sinks
+                      bf bb si
+                return .mk sinksNotInGoal? [resN,resS] l1 l2
+            | true, false =>
+                let .mk bf l1 l2 ← isBadForForwRW l1 l2 right left
+                let .mk bb l1 l2 ← isBadForBackRW l1 l2 sinks hyps right left
+                let .mk si l1 l2 ← simplifierScore l1 l2 right left
+                let resS : ThmFormat :=
+                  .rw thmName lvlN (if iff? then .iff_mpr else .eq_mpr)
+                      right left hyps ⟨lvlC, decls, userNames⟩ hyps.size sinks
+                      bf bb si
+                return .mk sinksNotInGoal? [resS] l1 l2
+            | false, true =>
+                let .mk bf l1 l2 ← isBadForForwRW l1 l2 left right
+                let .mk bb l1 l2 ← isBadForBackRW l1 l2 sinks hyps left right
+                let .mk si l1 l2 ← simplifierScore l1 l2 left right
+                let resN : ThmFormat :=
+                  .rw thmName lvlN (if iff? then .iff_mp else .eq_mp)
+                      left right hyps ⟨lvlC, decls, userNames⟩ hyps.size sinks
+                      bf bb si
+                return .mk sinksNotInGoal? [resN] l1 l2
+            | true, true =>
+                return .mk sinksNotInGoal? [] l1 l2
   go l1 l2 #[] #[] #[] T 0 []
 
-
+/--
+- Do not run for induction, as considered pathological
+- list may be empty for such cases
+-/
 partial def processForCache
   (module : Name) (thmIdx : Nat) (cinfo : ConstantInfo)
-  : MetaM (Bool × List ThmFormat) :=
+  : MetaM (Prod4 Bool (List ThmFormat) LocalContext LocalInstances) :=
   do
   let (lvlC,lvlN,T) ← levelsForCache module thmIdx cinfo
   processForMain {} {} module thmIdx (.inl cinfo.name) lvlC lvlN T
 
-
+/--
+- Do not run for induction, as considered pathological
+- list may be empty for such cases
+-/
 partial def processForQuery (l1 : LocalContext) (l2 : LocalInstances)
-  (gnodeIdx : Nat) (type : Expr) : MetaM (Bool × List ThmFormat) :=
+  (gnodeIdx : Nat) (type : Expr) : MetaM (Prod4 Bool (List ThmFormat) LocalContext LocalInstances) :=
   do
   processForMain l1 l2 `processForQuery gnodeIdx (.inr <| ⟨gnode gnodeIdx⟩) #[] 0 type

@@ -19,6 +19,8 @@
 
 - be careful when using PaIn ops : shouldn't be done under external worker local instances, as we delete them after ops
 
+- use `Lean.Meta.resetDefEqPermCaches` and `resetSynthInstanceCache` ?
+
 # Todo 
 
 - SetTrieP.ofList with loading
