@@ -274,6 +274,11 @@ def isBadForBack
         l1 := l1'
         l2 := l2'
         i := i+1
+      i := 0
+      for _ in hyps do
+        let fvn := MVarId.mk <| lnode module thmIdx i
+        fvn.modifyDecl (fun c => {c with lctx := l1, localInstances := l2})
+        i := i+1
       withLCtx l1 l2 <| do
         dbg_trace s!"[isBadForBack] {← ppExpr goal}"
         for sink in sinks do
@@ -283,16 +288,16 @@ def isBadForBack
             | .const n us => .const n (us.map (fun u => (u.onAllSubterms (fun | .mvar id => .param id.name | x => x))))
             | x => x)
           dbg_trace s!"[isBadForBack] {← ppExpr S}"
-          if eqSyntacticUpToMVar goal S
+          -- if eqSyntacticUpToMVar goal S
+          -- then
+          --   return true
+          -- else
+          if ← fullApproxDefEq <| isDefEqGuarded goal S
           then
             return true
           else
-            if ← fullApproxDefEq <| isDefEqGuarded goal S
-            then
-              return true
-            else
-              clearMvarAssignments
-              continue
+            clearMvarAssignments
+            continue
         return false
   | _ => return false
 
