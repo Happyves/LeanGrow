@@ -62,7 +62,7 @@ LG:
 
 
 Djv Core:
-- Hang in there!
+- Main sampling todos and tests
 
 Djv Parse:
 - Induction & Match
@@ -90,7 +90,7 @@ LG:
 
 
 Djv Core:
-- Hang in there!
+- Start generalisation
 
 Djv Parse:
 - Delab Simp
@@ -99,8 +99,9 @@ Djv Parse:
 # W5 (26-1) Search & Frontend ; Generalize & Denoise ; Delab Calc
 
 LG:
+- Eq.efl and Iff.refl being patlogical, add them to tactic support or add them as defaults to caches, but in apply format
 - split batch between apply and rw
-- relevance of simplifier score (from caching) should decrease with fuel
+- relevance of simplifier score (from caching) should decrease with fuel ; also, it should only apply when rewriting terms that aren't Eqs, as for equs we want to score the rewrite by how similar the rewritten Eq sides are.
 - Consider LLM stuff here too, for its influence on IntroTrees and Backtrees and so on
 - Abort when indices (id_gen_ ...) would overflow due to UInt32 or reset them
 - Array representation of Introtree (kids via entry containing indices of kids) ; efficient if we don't delete nodes, which is the case
@@ -171,7 +172,7 @@ Djv Core:
 
 
 Djv Parse:
-- Delab Calc
+- Delab Calc & Congr
 
 
 # W6 (2-8) Search & CallLLM ; Conveyorbelt & Query ; Delab Congr
@@ -186,7 +187,7 @@ Djv Core:
 
 
 Djv Parse:
-- Delab Congr
+- Brec Induction, WF induction and termination by
 
 # W7 (9-15) Search & Heuristic ; Conveyorbelt & Query ; Delab Misc
 
