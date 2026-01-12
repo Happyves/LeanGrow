@@ -158,18 +158,18 @@ def isBadForRW (l1 : LocalContext) (l2 : LocalInstances) (init rep : Expr) : Met
   mtracing
   let Rep ← Whnf rep l1 l2
   mtrace on .zero with s!"\nrep from: {← PpExpr rep l1 l2}\nrep to: {← PpExpr Rep l1 l2}"
-  let Init ← withTransparency .instances <| withLCtx l1 l2 <| reduce init
-  mtrace on .zero with s!"\ninit from: {← PpExpr init l1 l2}\nrep to: {← PpExpr Init l1 l2}"
-  return Init == Rep
+  -- let Init ← withTransparency .instances <| withLCtx l1 l2 <| reduce init
+  mtrace on .zero with s!"\ninit from: {← PpExpr init l1 l2}"
+  return init == Rep
 
 @[inline]
 def isGoodForRW (l1 : LocalContext) (l2 : LocalInstances) (init rep : Expr) : MetaM Bool := do
   mtracing
   let Init ← Whnf init l1 l2
   mtrace on .zero with s!"\ninit from: {← PpExpr init l1 l2}\nrep to: {← PpExpr Init l1 l2}"
-  let Rep ← withTransparency .instances <| withLCtx l1 l2 <| reduce rep
-  mtrace on .zero with s!"\nrep from: {← PpExpr rep l1 l2}\nrep to: {← PpExpr Rep l1 l2}"
-  return Init == Rep
+  -- let Rep ← withTransparency .instances <| withLCtx l1 l2 <| reduce rep
+  mtrace on .zero with s!"\nrep from: {← PpExpr rep l1 l2}"
+  return Init == rep
 
 
 
@@ -210,7 +210,7 @@ def isBadForForw (l1 : LocalContext) (l2 : LocalInstances)
         | .const n us => .const n (us.map (fun u => (u.onAllSubterms (fun | .mvar id => .param id.name | x => x))))
         | x => x)
       let S := hyps[sing]!.type
-      let r ← defEqWiMv goal S l1 l2
+      let r ← withTransparency .instances <| defEqWiMv goal S l1 l2
       return r.isSome
   | _ => return false
 
@@ -235,7 +235,7 @@ def isBadForForwRW (l1 : LocalContext) (l2 : LocalInstances) (init rep : Expr)
           | .const n us => .const n (us.map (fun u => (u.onAllSubterms (fun | .mvar id => .param id.name | x => x))))
           | x => x)
         rep.onAllSubtermsCheckExistsM l1 l2 (fun g _ l1 l2 => do
-          let r ← defEqWiMv init g l1 l2
+          let r ← withTransparency .instances <| defEqWiMv init g l1 l2
           return .mk r.isSome l1 l2
           )
 
@@ -249,7 +249,7 @@ def isBadForBack (l1 : LocalContext) (l2 : LocalInstances)
         | .sort u => .sort (u.onAllSubterms (fun | .mvar id => .param id.name | x => x))
         | .const n us => .const n (us.map (fun u => (u.onAllSubterms (fun | .mvar id => .param id.name | x => x))))
         | x => x)
-      let r ← defEqWiMv goal S l1 l2
+      let r ← withTransparency .instances <| defEqWiMv goal S l1 l2
       match r with
       | .some .. => return true
       | _ => continue
@@ -277,7 +277,7 @@ def isBadForBackRW (l1 : LocalContext) (l2 : LocalInstances)
           | .const n us => .const n (us.map (fun u => (u.onAllSubterms (fun | .mvar id => .param id.name | x => x))))
           | x => x)
         let R@(.mk res l1 l2) ← rep.onAllSubtermsCheckExistsM l1 l2 (fun g _ l1 l2 => do
-          let r ← defEqWiMv init g l1 l2
+          let r ← withTransparency .instances <| defEqWiMv init g l1 l2
           return .mk r.isSome l1 l2
           )
         if res
@@ -294,7 +294,7 @@ def isBadForBackRW (l1 : LocalContext) (l2 : LocalInstances)
               | .const n us => .const n (us.map (fun u => (u.onAllSubterms (fun | .mvar id => .param id.name | x => x))))
               | x => x)
             let R@(.mk r l1' l2') ← S.onAllSubtermsCheckExistsM l1 l2 (fun g _ l1 l2 => do
-              let r ← defEqWiMv init g l1 l2
+              let r ← withTransparency .instances <| defEqWiMv init g l1 l2
               return .mk r.isSome l1 l2
               )
             l1 := l1'
