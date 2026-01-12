@@ -54,7 +54,7 @@ partial def processForMain (l1 : LocalContext) (l2 : LocalInstances)
     | .letE _ _ V B _ => do
         go l1 l2 hyps decls userNames (Expr.instantiate1 B V) pos sinkCand
     | .forallE _ T nx bi => do
-        let T ← withTransparency .instances <| whnf T
+        let T ← withTransparency .instances <| reduce T
         let lid := lnode module thmIdx pos
         let T := T.cleanupAnnotations
         let mv ← mkMvarStdNoCoE lid T
@@ -73,7 +73,7 @@ partial def processForMain (l1 : LocalContext) (l2 : LocalInstances)
           | _ => (pos, affected.length) :: (sinkCand.filter (fun (x,_) => !(affected.contains x)))
         go l1 l2 hyps decls userNames nx (pos + 1) sinkCand
     | goal =>
-        let goal ← withTransparency .instances <| whnf goal -- no need for ltx
+        let goal ← withTransparency .instances <| reduce goal -- no need for ltx
         match goal with
         | .forallE .. | .letE .. =>
           go l1 l2 hyps decls userNames goal pos sinkCand
@@ -180,7 +180,7 @@ partial def processForCacheSpe
     | .letE _ _ V B _ => do
         go l1 l2 hyps decls userNames (Expr.instantiate1 B V) pos sinkCand
     | .forallE _ T nx bi => do
-        let T ← withTransparency .instances <| whnf T
+        let T ← withTransparency .instances <| reduce T
         let lid := lnode module thmIdx pos
         let T := T.cleanupAnnotations
         let mv ← mkMvarStdNoCoE lid T
@@ -199,7 +199,7 @@ partial def processForCacheSpe
           | _ => (pos, affected.length) :: (sinkCand.filter (fun (x,_) => !(affected.contains x)))
         go l1 l2 hyps decls userNames nx (pos + 1) sinkCand
     | goal =>
-        let goal ← withTransparency .instances <| whnf goal -- no need for ltx
+        let goal ← withTransparency .instances <| reduce goal -- no need for ltx
         match goal with
         | .forallE .. | .letE .. =>
           go l1 l2 hyps decls userNames goal pos sinkCand
