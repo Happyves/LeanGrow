@@ -214,10 +214,10 @@ partial def SetTrie.merge
 @[specialize]
 partial def SetTrie.mergeMcps
     [Repr α] [Repr β]
-    {γ δ ι κ : Type _}
+    {γ δ κ : Type _}
     (init : γ) (merge : β → γ → (γ → MetaM κ) → MetaM κ)
     (max : γ → OptionProd δ Nat)
-    (find : β → δ → (Option ι → MetaM κ) → MetaM κ) (delete : β → δ → ι → β) (empty? : β → Bool)
+    (find : β → δ → (Bool → MetaM κ) → MetaM κ) (delete : β → δ → β) (empty? : β → Bool)
     (newkey : δ → (β → MetaM κ) → MetaM κ) (addkey : δ → β → (β → MetaM κ) → MetaM κ)
     (emptykey : β) (mergekey : β → β → β)
     (fuel : Nat) (fst snd : SetTrie α β)

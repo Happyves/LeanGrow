@@ -90,7 +90,13 @@ LG:
 
 
 Djv Core:
-- Start generalisation
+- Generalize : 
+ - Generalize proofs by defaut, but not in the top branch
+ - Version where ratios may change depending on the depth the brach/subexpressions
+ - For score add different generalisations (corresponding to different ratios, for example) from same sample
+   to scoring-structures, possibly with different scores 
+ 
+
 
 Djv Parse:
 - Delab Simp
@@ -163,13 +169,8 @@ LG:
 
 
 Djv Core:
-- Generalize : 
- - Generalize proofs by defaut, but not in the top branch
- - Version where ratios may change depending on the depth the brach/subexpressions
- - For score add different generalisations (corresponding to different ratios, for example) from same sample
-   to scoring-structures, possibly with different scores 
- 
-
+- generalise conveyorbelt
+- caching for generalise
 
 Djv Parse:
 - Delab Calc & Congr
@@ -198,6 +199,7 @@ Djv Core:
 - DéjàVue Codes
 
 Djv Parse:
+- Term style proofs: transform Eq.rec and congrarg etc...
 - Prohibiters for linarith, ring, grind, etc.
 
 # W8 (16-22) Debug

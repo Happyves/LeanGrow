@@ -9,8 +9,9 @@ open Lean Meta
 def test (n : Name) : MetaM Unit := do
   let .some dec := (← getEnv).find? n | throwError "aahh 1"
   let .mk _ thms l1 l2 ← processForCache `dummyMod 42 dec
-  for thm in thms do
+  thms.foldlM () <| fun badu thm _ => do
     IO.println s!"\nTheorem {thm.name}"
+    IO.println s!"Bad uni {repr badu}"
     match thm with
     | .std _ _ _ _ _ _ goal _ bf bb =>
         IO.println s!"Goal: {← PpExpr goal l1 l2}"
@@ -98,3 +99,38 @@ def test (n : Name) : MetaM Unit := do
 
 #check List.getElem_cons_zero
 #eval test `List.getElem_cons_zero
+
+#check absurd
+#eval test `absurd
+
+#check congrArg
+#eval test `congrArg
+
+#check congrFun
+#eval test `congrFun
+
+#check 1
+
+theorem test_badUni_1 (P : Nat → Prop) (h1 : P 42) (h2: ¬ P 42) : 42 = 37 :=
+  absurd h1 h2
+
+#eval test `test_badUni_1
+
+#check 1
+
+
+theorem test_badUni_2 (P : Nat → Prop) (h1 : P 42) (h2: ¬ P 42) : [1].Pairwise (· ≠ ·) :=
+  absurd h1 h2
+
+#eval test `test_badUni_2
+
+
+#check 1
+
+theorem test_badUni_3 (P : Nat → Prop) (h1 : P 42) (h2: ¬ P 42) : [1].Pairwise (fun x y => P x ∨ P y) :=
+  absurd h1 h2
+
+#eval test `test_badUni_3
+
+
+#check 1

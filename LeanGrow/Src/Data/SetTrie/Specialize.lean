@@ -109,6 +109,9 @@ def SetTriePG.ofList [Inhabited α] [Repr α] [Repr IdxCollType]
     (fun (_,es) τ => PaInG.merge union emptyCol es τ)
     l
   SetTrieP.mk (PaInG.merge union emptyCol) .dead (PaInG.getIndices emptyCol union) res
+
+
+
 #exit
 
 @[inline, specialize]

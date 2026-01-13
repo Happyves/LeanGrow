@@ -138,7 +138,9 @@ def ThmFormat.badBa : ThmFormat → Bool
   | .rw _ _  _  _ _  _ _ _ _ _ bad .. => bad
 
 
-
-
 instance : Repr ThmFormat where
   reprPrec := fun x y => instReprString.reprPrec s!"{repr x.name}" y
+
+inductive badUniType where
+| no | both | fwdOnly | bckOnly
+deriving Inhabited, Repr, BEq

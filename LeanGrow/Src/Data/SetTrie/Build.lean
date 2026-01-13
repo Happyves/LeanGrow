@@ -70,8 +70,8 @@ def List.split_on_split {γ : Type _}
 
 
 @[specialize]
-def List.split_on_splitMcps {γ δ ι : Type _}
-  (find : β → γ → (Option δ → m ι) → m ι) (delete : β → γ → δ → β) (empty? : β → Bool)
+def List.split_on_splitMcps {γ ι : Type _}
+  (find : β → γ → (Bool → m ι) → m ι) (delete : β → γ → β) (empty? : β → Bool)
   (c : List (SetTrie α β)) (key : γ)
   (K : List (SetTrie α β) → List (SetTrie α β) → m ι) : m ι :=
     let rec @[specialize] go (pos neg : List (SetTrie α β)) : List (SetTrie α β) → m ι
@@ -79,13 +79,14 @@ def List.split_on_splitMcps {γ δ ι : Type _}
       | x@(.root _ ):: more | x@(.leaf _) :: more => go pos (x :: neg) more
       | x@(.node k c) :: more =>
           find k key <| fun res => do
-            match res with
-            | .some info =>
-                let nk := (delete k key info)
-                if empty? nk
-                then go (c ++ pos) neg more
-                else go ((.node nk c) :: pos) neg more
-            | .none => go pos (x :: neg) more
+            if res
+            then
+              let nk := (delete k key )
+              if empty? nk
+              then go (c ++ pos) neg more
+              else go ((.node nk c) :: pos) neg more
+            else
+              go pos (x :: neg) more
     go [] [] c
 
 
@@ -122,10 +123,10 @@ partial def List.splitGreedyMerge
 
 
 @[specialize]
-partial def List.splitGreedyMergeMcps  {γ δ ι κ : Type _}
+partial def List.splitGreedyMergeMcps  {γ δ κ : Type _}
     (init : γ) (merge : β → γ → (γ → MetaM κ) → MetaM κ)
     (max : γ → OptionProd δ Nat)
-    (find : β → δ → (Option ι → MetaM κ) → MetaM κ) (delete : β → δ → ι → β) (empty? : β → Bool)
+    (find : β → δ → (Bool → MetaM κ) → MetaM κ) (delete : β → δ → β) (empty? : β → Bool)
     (newkey : δ → (β → MetaM κ) → MetaM κ) (addkey : δ → β → (β → MetaM κ) → MetaM κ)
     (c : List (SetTrie α β))
     (K : List (SetTrie α β) → MetaM κ) : MetaM κ :=
@@ -161,10 +162,10 @@ partial def SetTrie.ofList
 
 
 @[specialize]
-partial def SetTrie.ofListMcps {γ δ ι κ : Type _}
+partial def SetTrie.ofListMcps {γ δ κ : Type _}
     (init : γ) (merge : β → γ → (γ → MetaM κ) → MetaM κ)
     (max : γ → OptionProd δ Nat)
-    (find : β → δ → (Option ι → MetaM κ) → MetaM κ) (delete : β → δ → ι → β) (empty? : β → Bool)
+    (find : β → δ → (Bool → MetaM κ) → MetaM κ) (delete : β → δ → β) (empty? : β → Bool)
     (newkey : δ → (β → MetaM κ) → MetaM κ) (addkey : δ → β → (β → MetaM κ) → MetaM κ)
     (l : ListProd β α)
     (K : SetTrie α β → MetaM κ) : MetaM κ :=
