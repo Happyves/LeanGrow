@@ -158,16 +158,37 @@ partial def buildCachDataForCore [Repr IdxCollType]
     else
       let cinfo := cinfos[cinfoI]!
       mtrace on .zero with s!" on decl {cinfo.name} with idx {countThm}"
-      if cinfo.name.blackListCaching (← getEnv)
-      then
-        mtrace on .zero with s!" blacklisted !"
-        go (cinfoI + 1) sofarBack formats sofarBackRW countThm sofarFwd hyptothm sofarFwdRW countHyps thmNameToIdx thmNameToHypIdx
-      else
-        let .mk rwWithSinkNotInGoal data _ _ ← processForCache module countThm cinfo
-        mtrace on .zero with s!" passed processForCache"
-        let ciN := cinfo.name.toString.toUTF8
-        let .mk sofarBack formats sofarBackRW countThm sofarFwd hyptothm sofarFwdRW countHyps thmNameToIdx thmNameToHypIdx ← inner ciN sofarBack formats sofarBackRW countThm sofarFwd hyptothm sofarFwdRW countHyps thmNameToIdx thmNameToHypIdx rwWithSinkNotInGoal data
-        go (cinfoI + 1) sofarBack formats sofarBackRW countThm sofarFwd hyptothm sofarFwdRW countHyps thmNameToIdx thmNameToHypIdx
+      match cinfo with
+      | .thmInfo .. | .axiomInfo .. =>
+        if cinfo.name.blackListCaching (← getEnv)
+        then
+          mtrace on .zero with s!" blacklisted !"
+          go (cinfoI + 1) sofarBack formats sofarBackRW countThm sofarFwd hyptothm sofarFwdRW countHyps thmNameToIdx thmNameToHypIdx
+        else
+          let .mk rwWithSinkNotInGoal data _ _ ← processForCache module countThm cinfo
+          mtrace on .zero with s!" passed processForCache"
+          let ciN := cinfo.name.toString.toUTF8
+          let .mk sofarBack formats sofarBackRW countThm sofarFwd hyptothm sofarFwdRW countHyps thmNameToIdx thmNameToHypIdx ← inner ciN sofarBack formats sofarBackRW countThm sofarFwd hyptothm sofarFwdRW countHyps thmNameToIdx thmNameToHypIdx rwWithSinkNotInGoal data
+          go (cinfoI + 1) sofarBack formats sofarBackRW countThm sofarFwd hyptothm sofarFwdRW countHyps thmNameToIdx thmNameToHypIdx
+        | .ctorInfo .. =>
+          if cinfo.name.blackListCaching (← getEnv)
+          then
+            mtrace on .zero with s!" blacklisted !"
+            go (cinfoI + 1) sofarBack formats sofarBackRW countThm sofarFwd hyptothm sofarFwdRW countHyps thmNameToIdx thmNameToHypIdx
+          else
+            if ← isProp cinfo.type
+            then
+              let .mk rwWithSinkNotInGoal data _ _ ← processForCache module countThm cinfo
+              mtrace on .zero with s!" passed processForCache"
+              let ciN := cinfo.name.toString.toUTF8
+              let .mk sofarBack formats sofarBackRW countThm sofarFwd hyptothm sofarFwdRW countHyps thmNameToIdx thmNameToHypIdx ← inner ciN sofarBack formats sofarBackRW countThm sofarFwd hyptothm sofarFwdRW countHyps thmNameToIdx thmNameToHypIdx rwWithSinkNotInGoal data
+              go (cinfoI + 1) sofarBack formats sofarBackRW countThm sofarFwd hyptothm sofarFwdRW countHyps thmNameToIdx thmNameToHypIdx
+            else
+              mtrace on .zero with s!" non prop ctor !"
+              go (cinfoI + 1) sofarBack formats sofarBackRW countThm sofarFwd hyptothm sofarFwdRW countHyps thmNameToIdx thmNameToHypIdx
+        | _ =>
+          mtrace on .zero with s!" skip !"
+          go (cinfoI + 1) sofarBack formats sofarBackRW countThm sofarFwd hyptothm sofarFwdRW countHyps thmNameToIdx thmNameToHypIdx
   Meta.withUnlimitedHeartbeats do
   mtracing
   mtrace on .zero with s!" unlimited heartbeats"
@@ -175,7 +196,7 @@ partial def buildCachDataForCore [Repr IdxCollType]
     mtrace on .zero with s!" reset rec depth"
     go Cstart sofarBack formats sofarBackRW countThm sofarFwd hyptothm sofarFwdRW countHyps thmNameToIdx thmNameToHypIdx
 
--- #exit
+
 
 def LeanGrow.mkCacheName : Name → String :=
   (fun n => s!"LeanGrow_ThmFormatQueryCache{n.toUnderscoreString}")
@@ -191,65 +212,85 @@ open System
 unsafe def buildPartialCacheData [Repr IdxCollType]
   (emptyCol : IdxCollType)
   (singleton : Nat → IdxCollType) (insert : Nat → IdxCollType → IdxCollType)
-  (modules : Array Name) (StepSize : Nat) (opts : Options := {}) : IO Unit :=
+  (module : Name) (StepSize : Nat) (opts : Options := {}) : IO Unit :=
+  let modules := #[module]
   withImportModules (modules.map (fun x => {module := x})) opts <| fun env => do
     stdMetaRun env do
       let cachePath ← findLeanGrowCacheDir
       let finalPath := FilePath.join cachePath (FilePath.toString "withUnpickleTracing.txt")
-      let mut regs : Array CompactedRegion := Array.replicate modules.size (0 : USize)
-      let mut i := 0
-      for module in modules do
-        let path := FilePath.join cachePath ⟨LeanGrow.mkPartialCacheName module⟩
-        if !(← path.pathExists)
+      let path := FilePath.join cachePath ⟨LeanGrow.mkPartialCacheName module⟩
+      if !(← path.pathExists)
+      then
+        let .some midx := env.getModuleIdx? module | throwError s!"[buildCachData] unknonw module {module}"
+        let cinfos := (env.header.moduleData[midx]!).constants
+        let res ← buildCachDataForCore emptyCol singleton insert
+                    module cinfos
+                    0 StepSize
+                    .dead #[] .dead 0 .nil #[] .dead 0 .empty .empty
+        let finalPath := FilePath.join cachePath (FilePath.toString (LeanGrow.mkPartialCacheName module))
+        pickle finalPath res
+      else
+        let (x, region) ← unpickle (ModuleCacheStatePartial IdxCollType) path
+        let .some midx := env.getModuleIdx? module | throwError s!"[buildCachData] unknonw module {module}"
+        let cinfos := (env.header.moduleData[midx]!).constants
+        if x.Cstop ≥ cinfos.size
         then
-          let .some midx := env.getModuleIdx? module | throwError s!"[buildCachData] unknonw module {module}"
-          let cinfos := (env.header.moduleData[midx]!).constants
+          throwError s!"[buildPartialCacheData] no more steps necessary"
+        else
           let res ← buildCachDataForCore emptyCol singleton insert
                       module cinfos
-                      0 StepSize
-                      .dead #[] .dead 0 .nil #[] .dead 0 .empty .empty
+                      x.Cstop (x.Cstop + StepSize)
+                      x.stdBackPaIn x.thm_data x.rwBackPaIn x.countThm x.stdForwSetTrie  x.stdForwSetTrie_idxToThmIdx x.rwForwPaIn x.countHyps x.thmNameToIdx x.thmNameToHypIdx
           let finalPath := FilePath.join cachePath (FilePath.toString (LeanGrow.mkPartialCacheName module))
           pickle finalPath res
-          i := i+1
-        else
-          let (x, region) ← unpickle (ModuleCacheStatePartial IdxCollType) path
-          regs := regs.set! i region
-          let .some midx := env.getModuleIdx? module | throwError s!"[buildCachData] unknonw module {module}"
-          let cinfos := (env.header.moduleData[midx]!).constants
-          if x.Cstop ≥ cinfos.size
-          then
-            throwError s!"[buildCachData] no more steps necessary"
-          else
-            let res ← buildCachDataForCore emptyCol singleton insert
-                        module cinfos
-                        x.Cstop (x.Cstop + StepSize)
-                        x.stdBackPaIn x.thm_data x.rwBackPaIn x.countThm x.stdForwSetTrie  x.stdForwSetTrie_idxToThmIdx x.rwForwPaIn x.countHyps x.thmNameToIdx x.thmNameToHypIdx
-            let finalPath := FilePath.join cachePath (FilePath.toString (LeanGrow.mkPartialCacheName module))
-            pickle finalPath res
-            i := i+1
-      for reg in regs do
-        reg.free
+        region.free
 
 #check 1
 
 
-
 @[specialize, inline]
-unsafe def buildPartialCacheDataS (modules : Array Name) (StepSize : Nat)  (opts : Options := {}) : IO Unit :=
+unsafe def buildPartialCacheDataS (module : Name) (StepSize : Nat)  (opts : Options := {}) : IO Unit :=
   buildPartialCacheData
     UInt32Array.empty (fun x => UInt32Array.single x.toUInt32) (fun x y => y.oInsert x.toUInt32)
-    modules StepSize opts
+    module StepSize opts
 
+#check 1
+
+@[specialize, inline]
+unsafe def buildPartialCacheDataFull [Repr IdxCollType]
+  (emptyCol : IdxCollType)
+  (singleton : Nat → IdxCollType) (insert : Nat → IdxCollType → IdxCollType)
+  (module : Name) (opts : Options := {}) : IO Unit :=
+  let modules := #[module]
+  withImportModules (modules.map (fun x => {module := x})) opts <| fun env => do
+    stdMetaRun env do
+      let cachePath ← findLeanGrowCacheDir
+      let finalPath := FilePath.join cachePath (FilePath.toString "withUnpickleTracing.txt")
+      let path := FilePath.join cachePath ⟨LeanGrow.mkPartialCacheName module⟩
+      let .some midx := env.getModuleIdx? module | throwError s!"[buildCachData] unknonw module {module}"
+      let cinfos := (env.header.moduleData[midx]!).constants
+      let res ← buildCachDataForCore emptyCol singleton insert
+                  module cinfos
+                  0 cinfos.size
+                  .dead #[] .dead 0 .nil #[] .dead 0 .empty .empty
+      let finalPath := FilePath.join cachePath (FilePath.toString (LeanGrow.mkPartialCacheName module))
+      pickle finalPath res
+
+@[specialize, inline]
+unsafe def buildPartialCacheDataFullS (module : Name) (opts : Options := {}) : IO Unit :=
+  buildPartialCacheDataFull
+    UInt32Array.empty (fun x => UInt32Array.single x.toUInt32) (fun x y => y.oInsert x.toUInt32)
+    module opts
 
 
 @[specialize, inline]
 unsafe def buildCacheData [Repr IdxCollType]
   (intersect union difference : IdxCollType → IdxCollType → IdxCollType)
   (emptyCol : IdxCollType) (empty? : IdxCollType → Bool) (size : IdxCollType → Nat)
-  (modules : Array Name) (opts : Options := {}) : IO Unit :=
+  (module : Name) (opts : Options := {}) : IO Unit :=
+  let modules := #[module]
   withImportModules (modules.map (fun x => {module := x})) opts <| fun env => do
     stdMetaRun env do
-
       let cachePath ← findLeanGrowCacheDir
       let mut regs : Array CompactedRegion := Array.replicate modules.size (0 : USize)
       let mut i := 0
@@ -274,7 +315,7 @@ unsafe def buildCacheData [Repr IdxCollType]
 
 
 @[specialize, inline]
-unsafe def buildCacheDataS (modules : Array Name) (opts : Options := {}) : IO Unit :=
+unsafe def buildCacheDataS (modules : Name) (opts : Options := {}) : IO Unit :=
   buildCacheData
     (UInt32Array.inter) (UInt32Array.union) (UInt32Array.diff) UInt32Array.empty UInt32Array.isEmpty UInt32Array.size
     modules opts

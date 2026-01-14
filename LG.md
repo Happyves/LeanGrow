@@ -86,6 +86,7 @@ LG:
   - Try to speed up ?
   - Elab-elim inductions should detect constroturs of recursed type (ex: Fin.mk) ?
   - refer to revert tests : we should add deps for reverts at rw/induction
+  - caching ...
 
 
 

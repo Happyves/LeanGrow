@@ -6,7 +6,7 @@ Author: Yves Jäckle.
 -/
 
 
-import LeanGrowBeta.Caching.Build
+import LeanGrow.Src.Caching.Query.Build
 
 
 
@@ -20,8 +20,7 @@ variable {IdxCollType : Type _}
 
 @[specialize, inline]
 unsafe def inSandbox [Repr IdxCollType]
-  (toList : IdxCollType → List Nat)
-  (insertMulti intersect union difference : IdxCollType → IdxCollType → IdxCollType)
+  (intersect union difference : IdxCollType → IdxCollType → IdxCollType)
   (emptyCol : IdxCollType) (empty? : IdxCollType → Bool) (size : IdxCollType → Nat)
   (singleton : Nat → IdxCollType) (insert : Nat → IdxCollType → IdxCollType)
   (thms : Array Name)
@@ -43,23 +42,20 @@ unsafe def inSandbox [Repr IdxCollType]
               .dead #[] .dead 0 .nil #[] .dead 0 .empty .empty
   let thmData : CTrie (Array ThmFormat) :=
     CTrie.insert .empty ((`Sandbox  : Name).toString.toUTF8) x.thm_data
-  let hypIndToThm : Nat → ThmFormat := (fun n =>
-    let thmIdx := x.stdForwSetTrie_idxToThmIdx[n]!
-    x.thm_data[thmIdx]!)
-  let res ← SetTrieP.ofList (← getLCtx) (← getLocalInstances) thmData toList hypIndToThm insertMulti intersect union difference emptyCol empty? size x.stdForwSetTrie
+  let res ← SetTriePGSpe.ofList thmData intersect union difference emptyCol empty? size x.stdForwSetTrie
   let final : ModuleCacheState IdxCollType :=
     ⟨x.thm_data, x.thmNameToIdx, x.thmNameToHypIdx, x.stdBackPaIn, res, x.stdForwSetTrie_idxToThmIdx, x.rwBackPaIn, x.rwForwPaIn⟩
   act final
 
 
-@[specialize]
+@[specialize, inline]
 unsafe def inSandboxS
   (thms : Array Name)
-  (act : ModuleCacheState (List Nat) → MetaM Unit)
+  (act : ModuleCacheState UInt32Array → MetaM Unit)
   : MetaM Unit :=
   inSandbox
-    id (fun x y => x.foldl (fun R a => (R.orderedInsertOrLeave a)) y) (List.orderedIntersect)
-    (List.orderedUnion) (List.orderedDiff) [] List.isEmpty List.length
-    (fun x => [x]) ((List.orderedInsertOrLeave))
+    UInt32Array.inter UInt32Array.union UInt32Array.diff
+    UInt32Array.empty UInt32Array.isEmpty UInt32Array.size
+    (fun x => UInt32Array.single x.toUInt32) (fun x y => y.oInsert x.toUInt32)
     thms
     act

@@ -37,3 +37,6 @@
 
 - matches with hyp-patterns for scoring for induction should point to which fvars
   should be reverted to make the induction motive
+
+- at scoring for sampled types that are types, record value so that at scoring
+  we use these for unodes ...
