@@ -157,7 +157,8 @@ partial def buildCachDataForCore [Repr IdxCollType]
       return final
     else
       let cinfo := cinfos[cinfoI]!
-      mtrace on .zero with s!" on decl {cinfo.name} with idx {countThm}"
+      --mtrace on .zero with s!" on decl {cinfo.name} with idx {countThm}"
+      -- ↑ even with tracing disabled, causes overflow at execution ...
       match cinfo with
       | .thmInfo .. | .axiomInfo .. =>
         if cinfo.name.blackListCaching (← getEnv)
@@ -199,10 +200,10 @@ partial def buildCachDataForCore [Repr IdxCollType]
 
 
 def LeanGrow.mkCacheName : Name → String :=
-  (fun n => s!"LeanGrow_ThmFormatQueryCache{n.toUnderscoreString}")
+  (fun n => s!"LeanGrow_ThmFormatQueryCache_{n.toUnderscoreString}")
 
 def LeanGrow.mkPartialCacheName : Name → String :=
-  (fun n => s!"LeanGrow_ThmFormatQueryPartialCache{n.toUnderscoreString}")
+  (fun n => s!"LeanGrow_ThmFormatQueryPartialCache_{n.toUnderscoreString}")
 
 #print Import
 
@@ -262,7 +263,7 @@ unsafe def buildPartialCacheDataFull [Repr IdxCollType]
   (singleton : Nat → IdxCollType) (insert : Nat → IdxCollType → IdxCollType)
   (module : Name) (opts : Options := {}) : IO Unit :=
   let modules := #[module]
-  withImportModules (modules.map (fun x => {module := x})) opts <| fun env => do
+  WithImportModules (modules.map (fun x => {module := x})) opts <| fun env => do
     stdMetaRun env do
       let cachePath ← findLeanGrowCacheDir
       let finalPath := FilePath.join cachePath (FilePath.toString "withUnpickleTracing.txt")
@@ -276,7 +277,6 @@ unsafe def buildPartialCacheDataFull [Repr IdxCollType]
       let finalPath := FilePath.join cachePath (FilePath.toString (LeanGrow.mkPartialCacheName module))
       pickle finalPath res
 
-@[specialize, inline]
 unsafe def buildPartialCacheDataFullS (module : Name) (opts : Options := {}) : IO Unit :=
   buildPartialCacheDataFull
     UInt32Array.empty (fun x => UInt32Array.single x.toUInt32) (fun x y => y.oInsert x.toUInt32)
@@ -289,7 +289,7 @@ unsafe def buildCacheData [Repr IdxCollType]
   (emptyCol : IdxCollType) (empty? : IdxCollType → Bool) (size : IdxCollType → Nat)
   (module : Name) (opts : Options := {}) : IO Unit :=
   let modules := #[module]
-  withImportModules (modules.map (fun x => {module := x})) opts <| fun env => do
+  WithImportModules (modules.map (fun x => {module := x})) opts <| fun env => do
     stdMetaRun env do
       let cachePath ← findLeanGrowCacheDir
       let mut regs : Array CompactedRegion := Array.replicate modules.size (0 : USize)
@@ -314,7 +314,6 @@ unsafe def buildCacheData [Repr IdxCollType]
         reg.free
 
 
-@[specialize, inline]
 unsafe def buildCacheDataS (modules : Name) (opts : Options := {}) : IO Unit :=
   buildCacheData
     (UInt32Array.inter) (UInt32Array.union) (UInt32Array.diff) UInt32Array.empty UInt32Array.isEmpty UInt32Array.size

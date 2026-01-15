@@ -10,6 +10,12 @@ import LeanGrow.Src.Caching.Query.Load
 
 open Lean Meta
 
+unsafe def exploreCaches_thms
+  (moduleNames : Array Name)
+  : MetaM Unit := do
+    loadCacheDataS_forTest  moduleNames <| fun data => do
+      return data.thmData.fold "" (fun key thmV st => st ++ s!"\nKey: {String.fromUTF8! key}\nVals : {(thmV.map (fun x => match x.name with | .inl x => x | .inr v => v.name))} \n")
+
 
 
 unsafe def exploreCaches_ThmHypInds
@@ -102,7 +108,7 @@ unsafe def exploreCaches_stdForwSetTrie_pp
   : MetaM Unit := do
     loadCacheDataS_forTest moduleNames <| fun data => do
         SetTrieP.pp 0
-          (fun T => do T.pp (← getLCtx) (← getLocalInstances) [] 0 UInt32Array.inter UInt32Array.isEmpty)
+          (fun T => do T.ppS (← getLCtx) (← getLocalInstances) [] 0)
           (fun thm => return s!"{repr thm.name}")
           data.data.stdForwSetTrie
 
@@ -123,34 +129,10 @@ def MCtxData.loadAll  (datas : Array MCtxData) : MetaM Unit := do
 
 unsafe def exploreCaches_stdBackPaIn_pp
   (moduleNames : Array Name)
-  (act : PaInG UInt32Array → MetaM String)
   : MetaM Unit := do
     loadCacheDataS_forTest moduleNames <| fun data => do
         let inds := data.data.stdBackPaIn.getIndices UInt32Array.empty UInt32Array.union
         for i in inds do
           let thm := data.data.thm_data[i.toNat]!
           thm.mctx.loadNoCo
-        act data.data.stdBackPaIn
-
-unsafe def exploreCaches_stdBackPaIn_pp'
-  (moduleNames : Array Name)
-  (act : PaInG UInt32Array → MetaM String)
-  : MetaM Unit := do
-    loadCacheDataS_forTest moduleNames <| fun data => do
-        let inds := data.data.stdBackPaIn.getIndices UInt32Array.empty UInt32Array.union
-        let thmsMCs := inds.data.map (fun i => data.data.thm_data[i.toNat]!.mctx)
-        MCtxData.loadAll thmsMCs
-        act data.data.stdBackPaIn
-
-
-unsafe def exploreCaches_stdBackPaIn_pp''
-  (moduleNames : Array Name)
-  (act : PaInG UInt32Array → MetaM String)
-  : MetaM Unit := do
-    loadCacheDataS_forTest moduleNames <| fun data => do
-        let inds := data.data.stdBackPaIn.getIndices UInt32Array.empty UInt32Array.union
-        match (inds.data.map (fun i => data.data.thm_data[i.toNat]!.mctx)).find? (fun d => !d.decls.isEmpty) with
-        | .none => throwError "hmmm"
-        | .some thmsMCs =>
-            thmsMCs.loadNoCo
-            act data.data.stdBackPaIn
+        data.data.stdBackPaIn.ppS (← getLCtx) (← getLocalInstances) [] 0

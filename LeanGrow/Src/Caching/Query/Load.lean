@@ -95,7 +95,6 @@ unsafe def loadCacheData_forTest [Repr IdxCollType]
         k res
 
 
-@[specialize, inline]
 unsafe def loadCacheDataS_forTest
   (moduleNames : Array Name)
   (k : mergeCoreData UInt32Array → MetaM String) : MetaM Unit := do

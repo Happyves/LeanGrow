@@ -200,7 +200,7 @@ Djv Core:
 - DéjàVue Codes
 
 Djv Parse:
-- Term style proofs: transform Eq.rec and congrarg etc...
+- Term style proofs: transform Eq.rec Eq.ndrecand congrarg etc...
 - Prohibiters for linarith, ring, grind, etc.
 
 # W8 (16-22) Debug

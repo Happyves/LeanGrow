@@ -200,6 +200,23 @@ def test8 : CoreM Unit := do
 #check Lean.Meta.abstractNestedProofs
 #check Lean.Meta.mkAuxTheorem
 
+
+#check Fin.isLt
+#print StructureInfo
+
+/-- Projection functions are in the env constants and in
+a private env extention-/
+def test9 : CoreM Unit := do
+  let cs := (← getEnv).constants
+  let has? := cs.contains `Fin.isLt
+  if !has?
+    then throwError "will need fixing"
+  let .some res := getStructureInfo? (← getEnv) `Fin | throwError "hmm"
+  IO.println s!"{res.fieldNames}"
+
+#eval test9
+
+
 end ImportExport
 
 
@@ -366,26 +383,38 @@ unsafe def stdWithUnpickleTracingMulti {m} [Monad m] [MonadLiftT IO m] (α : Sor
   let res ← readFile finalPath
   IO.println res
 
+
 @[specialize, inline]
 unsafe def stdWithUnpickleTracingMulti' {m} [Monad m] [MonadLiftT IO m] (α : Sort _) [Inhabited α]
   (moduleNames : Array Name) (toCacheName : Name → String) (act : ListProd Name α → m String) : m Unit := do
   let cachePath ← findLeanGrowCacheDir
   let finalPath := FilePath.join cachePath (FilePath.toString "withUnpickleTracing.txt")
-  let mut regs : Array CompactedRegion := Array.replicate moduleNames.size (0 : USize)
-  let mut i := 0
-  let mut data : ListProd Name α := .nil
-  for module in moduleNames do
-    let path := FilePath.join cachePath ⟨toCacheName module⟩
-    let (x, region) ← unpickle α path
-    regs := regs.set! i region
-    data := .cons module x data
-    i := i+1
+  -- used to be for loop and caused overflow at Caching.Query.Test.BuildLoad ; codegen error ??
+  let rec main (regs : Array CompactedRegion) (i : Nat) (data : ListProd Name α) : m ((Array CompactedRegion) × (ListProd Name α)) := do
+    if i < moduleNames.size
+    then
+      let module := moduleNames[i]!
+      let path := FilePath.join cachePath ⟨toCacheName module⟩
+      let (x, region) ← unpickle α path
+      let regs := regs.set! i region
+      let data := .cons module x data
+      let i := i+1
+      main regs i data
+    else
+      return .mk regs data
+  let .mk regs data ← main (Array.replicate moduleNames.size (0 : USize)) 0 .nil
   let traces ← act data
   writeFile finalPath traces
-  for reg in regs do
-    reg.free
+  let rec free (i : Nat) : IO Unit := do
+    if h : i < regs.size
+    then
+      let _ ← regs[i].free
+      free (i+1)
+    else
+      return ()
   let res ← readFile finalPath
   IO.println res
+
 
 
 @[specialize, inline]

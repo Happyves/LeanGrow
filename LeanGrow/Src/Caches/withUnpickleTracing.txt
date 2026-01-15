@@ -1,1 +1,141 @@
-Type
+.root (String ::: #[72]) ;;; (Nat ::: #[3, 5, 7, 8, 15, 22, 23, 26, 43, 45, 48, 49, 55, 57, 59, 60, 63, 68, 69, 74]) ;;; (Char ::: #[71]) ;;; (Sort Init.Prelude.40.0 ::: #[34]) ;;; (Sort Init.Prelude.15.0 ::: #[14]) ;;; (Sort Init.PropLemmas.99.0 ::: #[85]) ;;; (Prop ::: #[80, 84, 88, 106]) ;;; (Type Init.Prelude.47.0 ::: #[37]) ;;; (Sort Init.Prelude.40.1 ::: #[35]) ;;; (¬?Init.PropLemmas.8.0 ∨ ¬?Init.PropLemmas.8.1 ::: #[79]) ;;; (Nat.le ?Init.Prelude.2.0 ?Init.Prelude.2.1 ::: #[2]) ;;; (∃ buildCore, ?Init.PropLemmas.105.1 buildCore ::: #[86]) ;;; (∃ buildCore, ?Init.PropLemmas.41.1 buildCore ::: #[83]) ;;; (∃ buildCore, ?Init.PropLemmas.158.1 buildCore ::: #[93]) ;;; (∃ buildCore, ?Init.PropLemmas.318.1 buildCore ::: #[105]) ;;; (∃ buildCore, ¬?Init.PropLemmas.254.1 buildCore ::: #[97]) ;;; (?Init.PropLemmas.135.0 ∧ ¬?Init.PropLemmas.135.1 ::: #[90]) ;;; (0 < ?Init.Prelude.60.1 ∧ ?Init.Prelude.60.1 ≤ ?Init.Prelude.60.0 ::: #[46]) ;;; (?Init.Prelude.7.0 < Nat.succ ?Init.Prelude.7.1 ::: #[4]) ;;; (?Init.Prelude.71.0 < ?Init.Prelude.71.1 ::: #[52]) ;;; (?Init.Prelude.71.1 < ?Init.Prelude.71.2 ::: #[53]) ;;; (0 < ?Init.Prelude.50.0 ::: #[40]) ;;; (0 < ?Init.Prelude.84.0 ::: #[66]) ;;; (0 < ?Init.Prelude.50.1 ::: #[41]) ;;; (0 < ?Init.Prelude.84.1 ::: #[67]) ;;; (0 < ?Init.Prelude.1.1 ::: #[0]) ;;; (?Init.Prelude.13.0 ≤ ?Init.Prelude.13.1 ::: #[10]) ;;; (?Init.Prelude.23.1 ≤ ?Init.Prelude.23.0 ::: #[19]) ;;; (?Init.Prelude.37.0 ≤ ?Init.Prelude.37.1 ::: #[31]) ;;; (?Init.Prelude.51.0 ≤ ?Init.Prelude.51.1 ::: #[42]) ;;; (?Init.Prelude.79.1 ≤ ?Init.Prelude.79.2 ::: #[62]) ;;; (?Init.Prelude.87.0 ≤ ?Init.Prelude.87.1 ::: #[70]) ;;; (?Init.Prelude.79.0 ≤ ?Init.Prelude.79.1 ::: #[61]) ;;; (?Init.Prelude.48.0 ≤ ?Init.Prelude.48.1 ::: #[38]) ;;; (?Init.Prelude.28.0 ≤ ?Init.Prelude.28.1 ::: #[25]) ;;; (?Init.Prelude.22.0 ≤ ?Init.Prelude.22.1 ::: #[17]) ;;; (?Init.Prelude.14.1 ≤ ?Init.Prelude.14.2 ::: #[13]) ;;; (Nat.succ ?Init.Prelude.38.0 ≤ 0 ::: #[32]) ;;; (Nat.succ ?Init.Prelude.61.0 ≤ Nat.succ ?Init.Prelude.61.1 ::: #[47]) ;;; (?Init.PropLemmas.285.4 ∈ ?Init.PropLemmas.285.3 ::: #[102]) ;;; (?Init.PropLemmas.0.5 ∈ ?Init.PropLemmas.0.3 ::: #[75]) ;;; (?Init.Prelude.36.0 = true ::: #[30]) ;;; (?Init.Prelude.24.0 = false ::: #[21]) ;;; (Nat.ble ?Init.Prelude.32.0 ?Init.Prelude.32.1 = true ::: #[28]) ;;; (Nat.beq ?Init.Prelude.74.0 ?Init.Prelude.74.1 = false ::: #[56]) ;;; (decide ?Init.Prelude.12.0 = false ::: #[9]) ;;; (?Init.Prelude.35.0 = List.utf8Encode ?Init.Prelude.35.1 ::: #[29]) ;;; (?Init.Prelude.70.2 = ?Init.Prelude.70.3 ::: #[51]) ;;; (?Init.PropLemmas.274.2 ?Init.PropLemmas.274.3 ≠ ?Init.PropLemmas.274.2 ?Init.PropLemmas.274.4 ::: #[101]) ;;; (Fin ?Init.Prelude.96.0 ::: #[73]) ;;; (¬?Init.Prelude.76.0 = ?Init.Prelude.76.1 ::: #[58]) ;;; (¬Char.val ?Init.Prelude.39.0 = Char.val ?Init.Prelude.39.1 ::: #[33]) ;;; (¬Nat.ble ?Init.Prelude.30.0 ?Init.Prelude.30.1 = true ::: #[27]) ;;; (¬?Init.PropLemmas.285.5 ∈ ?Init.PropLemmas.285.3 ::: #[103]) ;;; (¬?Init.PropLemmas.0.5 ∈ ?Init.PropLemmas.0.4 ::: #[76]) ;;; (¬?Init.Prelude.82.0 ≤ ?Init.Prelude.82.1 ::: #[65]) ;;; (¬?Init.PropLemmas.7.1 ::: #[78]) ;;; (¬?Init.PropLemmas.7.0 ::: #[77]) ;;; (?Init.Prelude.10.0 → Sort Init.Prelude.10.1 ::: #[6]) ;;; (?Init.Prelude.70.0 → Nat ::: #[50]) ;;; (∀ (buildCore : ?Init.PropLemmas.290.0), ¬?Init.PropLemmas.290.1 buildCore ::: #[104]) ;;; (?Init.PropLemmas.29.0 → ?Init.PropLemmas.29.1 ::: #[82]) ;;; (?Init.PropLemmas.139.0 → ?Init.PropLemmas.139.1 ::: #[91]) ;;; (?Init.PropLemmas.196.0 → ?Init.PropLemmas.196.1 ::: #[95]) ;;; (?Init.PropLemmas.273.0 → ?Init.PropLemmas.273.1 ::: #[98]) ;;; (?Init.PropLemmas.273.2 → ?Init.PropLemmas.273.3 ::: #[99]) ;;; ((buildCore : Nat) → Nat.le ?Init.Prelude.72.0 buildCore → Prop ::: #[54])
+      .node #[3, 5, 7, 8, 15, 22, 23, 26, 43, 45, 48, 49, 55, 57, 59, 60, 63, 68, 69, 74] (0 < ?Init.Prelude.27.1 ::: #[24]) ;;; (0 < ?Init.Prelude.81.1 ::: #[64]) ;;; (0 < ?Init.Prelude.56.0 ::: #[44]) ;;; (0 < ?Init.Prelude.20.0 ::: #[16])
+            .node #[16, 24, 44, 64] 
+                  Sum.inl `Nat.pow_pos
+                  Sum.inl `Nat.mod_lt
+                  Sum.inl `Nat.add_pos_right
+                  Sum.inl `Nat.modCore_lt
+            Sum.inl `Nat.lt_add_one
+            Sum.inl `Nat.pred_le
+            Sum.inl `Nat.sub_le
+            Sum.inl `Nat.le.refl
+            Sum.inl `Nat.zero_lt_succ
+            Sum.inl `Nat.lt_succ_self
+            Sum.inl `Nat.not_succ_le_self
+            Sum.inl `Nat.le_refl
+            Sum.inl `Nat.le_succ
+            Sum.inl `Nat.lt_irrefl
+            Sum.inl `Nat.lt_or_ge
+            Sum.inl `Nat.zero_le
+            Sum.inl `Nat.not_lt_zero
+            Sum.inl `Nat.succ_pos
+      .node #[10, 13, 17, 19, 25, 31, 38, 42, 61, 62, 70] (?Init.Prelude.14.0 < ?Init.Prelude.14.1 ::: #[12]) ;;; (?Init.Prelude.13.1 < ?Init.Prelude.13.2 ::: #[11]) ;;; (?Init.Prelude.23.0 < ?Init.Prelude.23.2 + 1 ::: #[20]) ;;; (0 < ?Init.Prelude.23.1 ::: #[18]) ;;; (¬?Init.Prelude.48.0 = ?Init.Prelude.48.1 ::: #[39])
+            .node #[11, 12] 
+                  Sum.inl `Nat.lt_of_lt_of_le
+                  Sum.inl `Nat.lt_of_le_of_lt
+            Sum.inl `Nat.le_step
+            Sum.inl `Nat.le_trans
+            Sum.inl `Nat.le_succ_of_le
+            .node #[39] 
+                  Sum.inl `Nat.lt_of_le_of_ne
+            Sum.inl `Nat.pred_le_pred
+            Sum.inl `Nat.lt_succ_of_le
+            .node #[18, 20] 
+                  Sum.inl `Nat.div_rec_fuel_lemma
+            Sum.inl `Nat.succ_le_succ
+      .node #[14, 34, 35, 37] (Type Init.Prelude.47.0 → Type Init.Prelude.47.1 ::: #[36])
+            .node #[36] 
+                  Sum.inl `instNonemptyOfMonad
+            Sum.inl `instNonemptyForall
+            Sum.inl `instNonemptyOfInhabited
+      .node #[0, 40, 41, 66, 67] (?Init.Prelude.1.3 < ?Init.Prelude.1.0 ::: #[1])
+            .node #[1] 
+                  Sum.inl `Nat.modCoreGo_lt
+            Sum.inl `Nat.sub_lt
+            Sum.inl `Nat.mul_pos
+      .node #[52, 53] 
+            Sum.inl `Nat.lt_trans
+      .node #[73] 
+            Sum.inl `Fin.isLt
+      .node #[72] 
+            Sum.inl `String.isValidUTF8
+      .node #[] 
+            Sum.inl `Lean.Macro.instNonemptyMethodsRef
+      .node #[71] 
+            Sum.inl `Char.valid
+      .node #[65] 
+            Sum.inl `Nat.lt_of_not_le
+      .node #[58] 
+            Sum.inl `Char.val_ne_of_ne
+      .node #[56] 
+            Sum.inl `Nat.ne_of_beq_eq_false
+      .node #[54] 
+            Sum.inl `Nat.le.below.refl
+      .node #[50, 51] 
+            Sum.inl `noConfusion_of_Nat
+      .node #[] 
+            Sum.inl `lcRealWorld
+      .node #[47] 
+            Sum.inl `Nat.le_of_succ_le_succ
+      .node #[46] 
+            Sum.inl `Nat.div_rec_lemma
+      .node #[] 
+            Sum.inl `USize.size_pos
+      .node #[] 
+            Sum.inl `True.intro
+      .node #[33] 
+            Sum.inl `Char.ne_of_val_ne
+      .node #[32] 
+            Sum.inl `Nat.not_succ_le_zero
+      .node #[30] 
+            Sum.inl `ne_false_of_eq_true
+      .node #[29] 
+            Sum.inl `ByteArray.IsValidUTF8.intro
+      .node #[28] 
+            Sum.inl `Nat.le_of_ble_eq_true
+      .node #[] 
+            Sum.inl `lcErased
+      .node #[27] 
+            Sum.inl `Nat.not_le_of_not_ble_eq_true
+      .node #[] 
+            Sum.inl `USize.size_eq
+      .node #[21] 
+            Sum.inl `ne_true_of_eq_false
+      .node #[9] 
+            Sum.inl `of_decide_eq_false
+      .node #[6] 
+            Sum.inl `Pi.instNonempty
+      .node #[4] 
+            Sum.inl `Nat.le_of_lt_succ
+      .node #[] 
+            Sum.inl `lcAny
+      .node #[2] 
+            Sum.inl `Nat.le.step
+      .node #[] 
+            Sum.inl `System.Platform.numBits_eq
+      .node #[80, 84, 85, 88, 106] (¬?Init.PropLemmas.126.1 ::: #[89]) ;;; (¬?Init.PropLemmas.9.0 ::: #[81])
+            .node #[81, 89] 
+                  Sum.inl `not_and_of_not_left
+                  Sum.inl `not_and_of_not_right
+            Sum.inl `not_not_em
+            Sum.inl `exists_false
+            Sum.inl `Decidable.not_or_self
+      .node #[82, 91, 95, 98, 99] (?Init.PropLemmas.273.0 ∧ ?Init.PropLemmas.273.2 ::: #[100]) ;;; (?Init.PropLemmas.139.0 ∧ ?Init.PropLemmas.139.2 ::: #[92]) ;;; (?Init.PropLemmas.196.2 ∧ ?Init.PropLemmas.196.0 ::: #[96])
+            .node #[92, 96, 100] 
+                  Sum.inl `And.imp
+                  Sum.inl `And.imp_right
+                  Sum.inl `And.imp_left
+            Sum.inl `Decidable.not_or_of_imp
+      .node #[83, 86, 93, 105] (∀ (buildCore : ?Init.PropLemmas.105.0), ?Init.PropLemmas.105.1 buildCore → ?Init.PropLemmas.105.2 buildCore ::: #[87]) ;;; (∀ (buildCore : ?Init.PropLemmas.158.0),
+  ?Init.PropLemmas.158.1 buildCore → ?Init.PropLemmas.158.3 (?Init.PropLemmas.158.4 buildCore) ::: #[94])
+            Sum.inl `Exists.nonempty
+            .node #[94] 
+                  Sum.inl `Exists.imp'
+            .node #[87] 
+                  Sum.inl `Exists.imp
+            Sum.inl `nonempty_of_exists
+      .node #[75, 76, 102, 103] 
+            Sum.inl `ne_of_mem_of_not_mem
+            Sum.inl `ne_of_mem_of_not_mem'
+      .node #[77, 78] 
+            Sum.inl `not_or_intro
+      .node #[79] 
+            Sum.inl `not_and_of_not_or_not
+      .node #[90] 
+            Sum.inl `not_imp_of_and_not
+      .node #[97] 
+            Sum.inl `not_forall_of_exists_not
+      .node #[101] 
+            Sum.inl `ne_of_apply_ne
+      .node #[104] 
+            Sum.inl `not_exists_of_forall_not
