@@ -150,15 +150,96 @@ partial def List.splitGreedyMergeMcps  {γ δ κ : Type _}
 
 
 @[specialize]
+partial def SetTrie.cleanFull (T : SetTrie α β) (keyEmpty : β → Bool) (valEq : α → α → Bool) : SetTrie α β :=
+  let rec @[inline] help : SetTrie α β → List (SetTrie α β)
+    | .root k => k
+    | .node _ k => k
+    | .leaf .. => []
+  match T with
+  | .root kids =>
+      let kids := (kids.mapTR (fun t => t.cleanFull keyEmpty valEq))
+      let (kids,nl) := kids.foldl (fun (R,nl) t =>
+        match t with
+        | .root .. => panic! "SetTrie.clean, ill formed tree"
+        | .leaf v => (R, v :: nl)
+        | .node q qs =>
+            if keyEmpty q
+            then (qs ++ R,nl)
+            else (t :: R, nl)
+        ) ([], ([] : List α))
+      let nl := nl.foldl (fun R x =>
+        if @List.contains _ ⟨valEq⟩ R x
+        then R
+        else x :: R
+        ) []
+      .root (kids ++ nl.map .leaf)
+  | .node k kids =>
+      let kids := (kids.mapTR (fun t => t.cleanFull keyEmpty valEq))
+      let (kids,nl) := kids.foldl (fun (R,nl) t =>
+        match t with
+        | .root .. => panic! "SetTrie.clean, ill formed tree"
+        | .leaf v => (R, v :: nl)
+        | .node q qs =>
+            if keyEmpty q
+            then (qs ++ R,nl)
+            else (t :: R, nl)
+        ) ([], ([] : List α))
+      let nl := nl.foldl (fun R x =>
+        if @List.contains _ ⟨valEq⟩ R x
+        then R
+        else x :: R
+        ) []
+      .node k (kids ++ nl.map .leaf)
+  | .leaf .. => T
+
+
+@[specialize]
+partial def SetTrie.clean (T : SetTrie α β) (cleanKey : β → β) (keyEmpty : β → Bool) : SetTrie α β :=
+  let rec @[inline] help : SetTrie α β → List (SetTrie α β)
+    | .root k => k
+    | .node _ k => k
+    | .leaf .. => []
+  match T with
+  | .root kids =>
+      let kids := (kids.mapTR (fun t => t.clean cleanKey keyEmpty))
+      let kids := kids.foldl (fun R t =>
+        match t with
+        | .root .. => panic! "SetTrie.clean, ill formed tree"
+        | .leaf .. => t :: R
+        | .node q qs =>
+            let q := cleanKey q
+            if keyEmpty q
+            then qs ++ R
+            else (.node q qs) :: R
+        ) []
+      .root kids
+  | .node k kids =>
+      let kids := (kids.mapTR (fun t => t.clean cleanKey keyEmpty))
+      let kids := kids.foldl (fun R t =>
+        match t with
+        | .root .. => panic! "SetTrie.clean, ill formed tree"
+        | .leaf .. => t :: R
+        | .node q qs =>
+            let q := cleanKey q
+            if keyEmpty q
+            then qs ++ R
+            else (.node q qs) :: R
+        ) []
+      .node k kids -- don't clean here, as would clean twice
+  | .leaf .. => T
+
+
+
+@[specialize]
 partial def SetTrie.ofList
     [Repr α] [Repr β] {γ δ : Type _} [Repr δ] [Repr γ]
     (init : γ) (merge : β → γ → γ) (max : γ → OptionProd δ Nat)
     (find : β → δ → Bool) (delete : β → δ → β) (empty? : β → Bool)
-    (newkey : δ → β) (addkey : δ → β → β)
+    (newkey : δ → β) (addkey : δ → β → β) (cleanKey : β → β)
     (l : ListProd β α) : SetTrie α β :=
     let ini := l.foldl [] (fun k v R => (.node k [.leaf v]) :: R)
     let res := ini.splitGreedyMerge init merge max find delete empty? newkey addkey
-    .root res
+    SetTrie.clean (.root res) cleanKey empty?
 
 
 @[specialize]
@@ -167,11 +248,12 @@ partial def SetTrie.ofListMcps {γ δ κ : Type _}
     (max : γ → OptionProd δ Nat)
     (find : β → δ → (Bool → MetaM κ) → MetaM κ) (delete : β → δ → β) (empty? : β → Bool)
     (newkey : δ → (β → MetaM κ) → MetaM κ) (addkey : δ → β → (β → MetaM κ) → MetaM κ)
+    (cleanKey : β → β)
     (l : ListProd β α)
     (K : SetTrie α β → MetaM κ) : MetaM κ :=
     let ini := l.foldl [] (fun k v R => (.node k [.leaf v]) :: R)
     ini.splitGreedyMergeMcps init merge max find delete empty? newkey addkey
-      <| fun res => K <| .root res
+      <| fun res => K <| SetTrie.clean (.root res) cleanKey empty?
 
 
 

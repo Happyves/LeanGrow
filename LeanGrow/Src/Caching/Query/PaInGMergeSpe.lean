@@ -377,6 +377,7 @@ def SetTriePGSpe.ofList [Inhabited α] [Repr α] [Repr IdxCollType]
     (fun x => match x.clean emptyCol empty? with | .dead => true | _ => false)
     (fun (_,es) q =>  q es)
     (fun (_,es) τ q => q <| PaInG.merge union emptyCol es τ)
+    (PaInG.clean emptyCol empty?)
     l
     (fun x => return x)
   return SetTrieP.mk (PaInG.merge union emptyCol) .dead (PaInG.getIndices emptyCol union) res

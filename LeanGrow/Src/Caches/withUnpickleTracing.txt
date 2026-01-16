@@ -1,141 +1,201 @@
-.root (String ::: #[72]) ;;; (Nat ::: #[3, 5, 7, 8, 15, 22, 23, 26, 43, 45, 48, 49, 55, 57, 59, 60, 63, 68, 69, 74]) ;;; (Char ::: #[71]) ;;; (Sort Init.Prelude.40.0 ::: #[34]) ;;; (Sort Init.Prelude.15.0 ::: #[14]) ;;; (Sort Init.PropLemmas.99.0 ::: #[85]) ;;; (Prop ::: #[80, 84, 88, 106]) ;;; (Type Init.Prelude.47.0 ::: #[37]) ;;; (Sort Init.Prelude.40.1 ::: #[35]) ;;; (¬?Init.PropLemmas.8.0 ∨ ¬?Init.PropLemmas.8.1 ::: #[79]) ;;; (Nat.le ?Init.Prelude.2.0 ?Init.Prelude.2.1 ::: #[2]) ;;; (∃ buildCore, ?Init.PropLemmas.105.1 buildCore ::: #[86]) ;;; (∃ buildCore, ?Init.PropLemmas.41.1 buildCore ::: #[83]) ;;; (∃ buildCore, ?Init.PropLemmas.158.1 buildCore ::: #[93]) ;;; (∃ buildCore, ?Init.PropLemmas.318.1 buildCore ::: #[105]) ;;; (∃ buildCore, ¬?Init.PropLemmas.254.1 buildCore ::: #[97]) ;;; (?Init.PropLemmas.135.0 ∧ ¬?Init.PropLemmas.135.1 ::: #[90]) ;;; (0 < ?Init.Prelude.60.1 ∧ ?Init.Prelude.60.1 ≤ ?Init.Prelude.60.0 ::: #[46]) ;;; (?Init.Prelude.7.0 < Nat.succ ?Init.Prelude.7.1 ::: #[4]) ;;; (?Init.Prelude.71.0 < ?Init.Prelude.71.1 ::: #[52]) ;;; (?Init.Prelude.71.1 < ?Init.Prelude.71.2 ::: #[53]) ;;; (0 < ?Init.Prelude.50.0 ::: #[40]) ;;; (0 < ?Init.Prelude.84.0 ::: #[66]) ;;; (0 < ?Init.Prelude.50.1 ::: #[41]) ;;; (0 < ?Init.Prelude.84.1 ::: #[67]) ;;; (0 < ?Init.Prelude.1.1 ::: #[0]) ;;; (?Init.Prelude.13.0 ≤ ?Init.Prelude.13.1 ::: #[10]) ;;; (?Init.Prelude.23.1 ≤ ?Init.Prelude.23.0 ::: #[19]) ;;; (?Init.Prelude.37.0 ≤ ?Init.Prelude.37.1 ::: #[31]) ;;; (?Init.Prelude.51.0 ≤ ?Init.Prelude.51.1 ::: #[42]) ;;; (?Init.Prelude.79.1 ≤ ?Init.Prelude.79.2 ::: #[62]) ;;; (?Init.Prelude.87.0 ≤ ?Init.Prelude.87.1 ::: #[70]) ;;; (?Init.Prelude.79.0 ≤ ?Init.Prelude.79.1 ::: #[61]) ;;; (?Init.Prelude.48.0 ≤ ?Init.Prelude.48.1 ::: #[38]) ;;; (?Init.Prelude.28.0 ≤ ?Init.Prelude.28.1 ::: #[25]) ;;; (?Init.Prelude.22.0 ≤ ?Init.Prelude.22.1 ::: #[17]) ;;; (?Init.Prelude.14.1 ≤ ?Init.Prelude.14.2 ::: #[13]) ;;; (Nat.succ ?Init.Prelude.38.0 ≤ 0 ::: #[32]) ;;; (Nat.succ ?Init.Prelude.61.0 ≤ Nat.succ ?Init.Prelude.61.1 ::: #[47]) ;;; (?Init.PropLemmas.285.4 ∈ ?Init.PropLemmas.285.3 ::: #[102]) ;;; (?Init.PropLemmas.0.5 ∈ ?Init.PropLemmas.0.3 ::: #[75]) ;;; (?Init.Prelude.36.0 = true ::: #[30]) ;;; (?Init.Prelude.24.0 = false ::: #[21]) ;;; (Nat.ble ?Init.Prelude.32.0 ?Init.Prelude.32.1 = true ::: #[28]) ;;; (Nat.beq ?Init.Prelude.74.0 ?Init.Prelude.74.1 = false ::: #[56]) ;;; (decide ?Init.Prelude.12.0 = false ::: #[9]) ;;; (?Init.Prelude.35.0 = List.utf8Encode ?Init.Prelude.35.1 ::: #[29]) ;;; (?Init.Prelude.70.2 = ?Init.Prelude.70.3 ::: #[51]) ;;; (?Init.PropLemmas.274.2 ?Init.PropLemmas.274.3 ≠ ?Init.PropLemmas.274.2 ?Init.PropLemmas.274.4 ::: #[101]) ;;; (Fin ?Init.Prelude.96.0 ::: #[73]) ;;; (¬?Init.Prelude.76.0 = ?Init.Prelude.76.1 ::: #[58]) ;;; (¬Char.val ?Init.Prelude.39.0 = Char.val ?Init.Prelude.39.1 ::: #[33]) ;;; (¬Nat.ble ?Init.Prelude.30.0 ?Init.Prelude.30.1 = true ::: #[27]) ;;; (¬?Init.PropLemmas.285.5 ∈ ?Init.PropLemmas.285.3 ::: #[103]) ;;; (¬?Init.PropLemmas.0.5 ∈ ?Init.PropLemmas.0.4 ::: #[76]) ;;; (¬?Init.Prelude.82.0 ≤ ?Init.Prelude.82.1 ::: #[65]) ;;; (¬?Init.PropLemmas.7.1 ::: #[78]) ;;; (¬?Init.PropLemmas.7.0 ::: #[77]) ;;; (?Init.Prelude.10.0 → Sort Init.Prelude.10.1 ::: #[6]) ;;; (?Init.Prelude.70.0 → Nat ::: #[50]) ;;; (∀ (buildCore : ?Init.PropLemmas.290.0), ¬?Init.PropLemmas.290.1 buildCore ::: #[104]) ;;; (?Init.PropLemmas.29.0 → ?Init.PropLemmas.29.1 ::: #[82]) ;;; (?Init.PropLemmas.139.0 → ?Init.PropLemmas.139.1 ::: #[91]) ;;; (?Init.PropLemmas.196.0 → ?Init.PropLemmas.196.1 ::: #[95]) ;;; (?Init.PropLemmas.273.0 → ?Init.PropLemmas.273.1 ::: #[98]) ;;; (?Init.PropLemmas.273.2 → ?Init.PropLemmas.273.3 ::: #[99]) ;;; ((buildCore : Nat) → Nat.le ?Init.Prelude.72.0 buildCore → Prop ::: #[54])
-      .node #[3, 5, 7, 8, 15, 22, 23, 26, 43, 45, 48, 49, 55, 57, 59, 60, 63, 68, 69, 74] (0 < ?Init.Prelude.27.1 ::: #[24]) ;;; (0 < ?Init.Prelude.81.1 ::: #[64]) ;;; (0 < ?Init.Prelude.56.0 ::: #[44]) ;;; (0 < ?Init.Prelude.20.0 ::: #[16])
-            .node #[16, 24, 44, 64] 
-                  Sum.inl `Nat.pow_pos
-                  Sum.inl `Nat.mod_lt
-                  Sum.inl `Nat.add_pos_right
-                  Sum.inl `Nat.modCore_lt
-            Sum.inl `Nat.lt_add_one
-            Sum.inl `Nat.pred_le
-            Sum.inl `Nat.sub_le
-            Sum.inl `Nat.le.refl
-            Sum.inl `Nat.zero_lt_succ
-            Sum.inl `Nat.lt_succ_self
-            Sum.inl `Nat.not_succ_le_self
-            Sum.inl `Nat.le_refl
-            Sum.inl `Nat.le_succ
-            Sum.inl `Nat.lt_irrefl
-            Sum.inl `Nat.lt_or_ge
-            Sum.inl `Nat.zero_le
-            Sum.inl `Nat.not_lt_zero
-            Sum.inl `Nat.succ_pos
-      .node #[10, 13, 17, 19, 25, 31, 38, 42, 61, 62, 70] (?Init.Prelude.14.0 < ?Init.Prelude.14.1 ::: #[12]) ;;; (?Init.Prelude.13.1 < ?Init.Prelude.13.2 ::: #[11]) ;;; (?Init.Prelude.23.0 < ?Init.Prelude.23.2 + 1 ::: #[20]) ;;; (0 < ?Init.Prelude.23.1 ::: #[18]) ;;; (¬?Init.Prelude.48.0 = ?Init.Prelude.48.1 ::: #[39])
-            .node #[11, 12] 
-                  Sum.inl `Nat.lt_of_lt_of_le
-                  Sum.inl `Nat.lt_of_le_of_lt
-            Sum.inl `Nat.le_step
-            Sum.inl `Nat.le_trans
-            Sum.inl `Nat.le_succ_of_le
-            .node #[39] 
-                  Sum.inl `Nat.lt_of_le_of_ne
-            Sum.inl `Nat.pred_le_pred
-            Sum.inl `Nat.lt_succ_of_le
-            .node #[18, 20] 
-                  Sum.inl `Nat.div_rec_fuel_lemma
-            Sum.inl `Nat.succ_le_succ
-      .node #[14, 34, 35, 37] (Type Init.Prelude.47.0 → Type Init.Prelude.47.1 ::: #[36])
-            .node #[36] 
-                  Sum.inl `instNonemptyOfMonad
-            Sum.inl `instNonemptyForall
-            Sum.inl `instNonemptyOfInhabited
-      .node #[0, 40, 41, 66, 67] (?Init.Prelude.1.3 < ?Init.Prelude.1.0 ::: #[1])
-            .node #[1] 
-                  Sum.inl `Nat.modCoreGo_lt
-            Sum.inl `Nat.sub_lt
-            Sum.inl `Nat.mul_pos
-      .node #[52, 53] 
-            Sum.inl `Nat.lt_trans
-      .node #[73] 
-            Sum.inl `Fin.isLt
-      .node #[72] 
-            Sum.inl `String.isValidUTF8
-      .node #[] 
-            Sum.inl `Lean.Macro.instNonemptyMethodsRef
-      .node #[71] 
-            Sum.inl `Char.valid
-      .node #[65] 
-            Sum.inl `Nat.lt_of_not_le
-      .node #[58] 
-            Sum.inl `Char.val_ne_of_ne
-      .node #[56] 
-            Sum.inl `Nat.ne_of_beq_eq_false
-      .node #[54] 
-            Sum.inl `Nat.le.below.refl
-      .node #[50, 51] 
-            Sum.inl `noConfusion_of_Nat
-      .node #[] 
-            Sum.inl `lcRealWorld
-      .node #[47] 
-            Sum.inl `Nat.le_of_succ_le_succ
+.root (Type Init.Data.List.Basic.91.0 ::: #[74]) ;;; (Type Init.Data.List.Basic.287.0 ::: #[87]) ;;; (Type Init.Data.List.Basic.172.0 ::: #[81]) ;;; (Type Init.Data.List.Perm.51.0 ::: #[124]) ;;; (Type Init.Data.List.Basic.1.0 ::: #[70]) ;;; (Type Init.Data.List.Basic.166.0 ::: #[76]) ;;; (Type Init.Data.List.Basic.328.0 ::: #[88]) ;;; (Nat.lt 0 (List.length ?Init.Data.List.Lemmas.138.1) ::: #[8]) ;;; (Nat.lt 0 (List.length ?Init.Data.List.Lemmas.134.1) ::: #[7]) ;;; (Nat.lt 0 (List.length ?Init.Data.List.Lemmas.1188.1) ::: #[65]) ;;; (List.get ?Init.Data.List.Lemmas.750.1 ⟨?Init.Data.List.Lemmas.750.2, ?Init.Data.List.Lemmas.750.3⟩ =
+  ?Init.Data.List.Lemmas.750.4 ::: #[34]) ;;; (List.getLast? ?Init.Data.List.Lemmas.281.1 = some ?Init.Data.List.Lemmas.281.2 ::: #[16]) ;;; (@List.List.head? ?Init.Data.List.Lemmas.48.0 ?Init.Data.List.Lemmas.48.1 = some ?Init.Data.List.Lemmas.48.2 ::: #[1]) ;;; (List.get?Internal ?Init.Data.List.Lemmas.167.3 ?Init.Data.List.Lemmas.167.1 = some ?Init.Data.List.Lemmas.167.2 ::: #[13]) ;;; (List.getLast? ?Init.Data.List.Lemmas.794.1 = some ?Init.Data.List.Lemmas.794.2 ::: #[38]) ;;; (?Init.Data.List.Init.Data.List.Perm.61.1 = ?Init.Data.List.Init.Data.List.Perm.61.2 ::: #[128]) ;;; (@List.List.head? ?Init.Data.List.Lemmas.888.0 ?Init.Data.List.Lemmas.888.1 = some ?Init.Data.List.Lemmas.888.2 ::: #[47]) ;;; (List.append ?Init.Data.List.Lemmas.1207.1 ?Init.Data.List.Lemmas.1207.2 = [] ::: #[66]) ;;; (List.append ?Init.Data.List.Lemmas.1089.1 ?Init.Data.List.Lemmas.1089.3 =
+  @List.List.append ?Init.Data.List.Lemmas.1089.0 ?Init.Data.List.Lemmas.1089.2 ?Init.Data.List.Lemmas.1089.4 ::: #[60]) ;;; (List.append ?Init.Data.List.Lemmas.1089.1 ?Init.Data.List.Lemmas.1089.3 =
+  @List.List.List.append ?Init.Data.List.Lemmas.1089.0 ?Init.Data.List.Lemmas.1089.2 ?Init.Data.List.Lemmas.1089.4 ::: #[60]) ;;; (List.elem ?Init.Data.List.Basic.67.3 ?Init.Data.List.Basic.67.4 = true ::: #[72]) ;;; (List.length ?Init.Data.List.Lemmas.1089.1 = List.length ?Init.Data.List.Lemmas.1089.2 ::: #[59]) ;;; (List.length ?Init.Data.List.Lemmas.787.2 = Nat.add ?Init.Data.List.Lemmas.787.1 1 ::: #[37]) ;;; (List.length ?Init.Data.List.Lemmas.687.1 = Nat.add ?Init.Data.List.Lemmas.687.2 1 ::: #[29]) ;;; (List.length ?Init.Data.List.Lemmas.879.2 = Nat.add ?Init.Data.List.Lemmas.879.1 1 ::: #[43]) ;;; (List.length ?Init.Data.List.Lemmas.514.2 = List.length ?Init.Data.List.Lemmas.514.4 ::: #[24]) ;;; (List.append ?Init.Data.List.Lemmas.514.1 ?Init.Data.List.Lemmas.514.2 =
+  @List.List.append ?Init.Data.List.Lemmas.514.0 ?Init.Data.List.Lemmas.514.3 ?Init.Data.List.Lemmas.514.4 ::: #[25]) ;;; (List.append ?Init.Data.List.Lemmas.514.1 ?Init.Data.List.Lemmas.514.2 =
+  @List.List.List.append ?Init.Data.List.Lemmas.514.0 ?Init.Data.List.Lemmas.514.3 ?Init.Data.List.Lemmas.514.4 ::: #[25]) ;;; (@List.getget?Internal ?Init.Data.List.Lemmas.962.0 ?Init.Data.List.Lemmas.962.1 ?Init.Data.List.Lemmas.962.2 =
+  some ?Init.Data.List.Lemmas.962.3 ::: #[53]) ;;; (@List.List.Mem ?Init.Data.List.Init.Data.List.Perm.68.0 ?Init.Data.List.Init.Data.List.Perm.68.3
+  ?Init.Data.List.Init.Data.List.Perm.68.4 ::: #[131]) ;;; (List.Mem ?Init.Data.List.Lemmas.901.2 ?Init.Data.List.Lemmas.901.3 ::: #[48]) ;;; (List.Mem ?Init.Data.List.Lemmas.242.1 ?Init.Data.List.Lemmas.242.2 ::: #[15]) ;;; (List.Mem ?Init.Data.List.Lemmas.145.1 ?Init.Data.List.Lemmas.145.2 ::: #[9]) ;;; (List.Mem ?Init.Data.List.Lemmas.690.1 ?Init.Data.List.Lemmas.690.2 ::: #[30]) ;;; (List.Mem ?Init.Data.List.Lemmas.817.1 ?Init.Data.List.Lemmas.817.2 ::: #[40]) ;;; (List.Mem ?Init.Data.List.Lemmas.1218.1 ?Init.Data.List.Lemmas.1218.2 ::: #[67]) ;;; (List.Mem ?Init.Data.List.Lemmas.164.1 (?Init.Data.List.Lemmas.164.2 :: ?Init.Data.List.Lemmas.164.3) ::: #[12]) ;;; (List.Mem ?Init.Data.List.Lemmas.164.1
+  (@List.List.cons ?Init.Data.List.Lemmas.164.0 ?Init.Data.List.Lemmas.164.2 ?Init.Data.List.Lemmas.164.3) ::: #[12]) ;;; (List.Mem ?Init.Data.List.Lemmas.122.3
+  (@List.List.set ?Init.Data.List.Lemmas.122.0 ?Init.Data.List.Lemmas.122.1 ?Init.Data.List.Lemmas.122.2
+    ?Init.Data.List.Lemmas.122.4) ::: #[6]) ;;; (List.Mem ?Init.Data.List.Lemmas.558.4 (List.map ?Init.Data.List.Lemmas.558.2 ?Init.Data.List.Lemmas.558.3) ::: #[26]) ;;; (List.Mem ?Init.Data.List.Lemmas.816.1 (@List.List.tail ?Init.Data.List.Lemmas.816.0 ?Init.Data.List.Lemmas.816.2) ::: #[39]) ;;; (List.Mem ?Init.Data.List.Lemmas.884.2 (List.flatten ?Init.Data.List.Lemmas.884.1) ::: #[46]) ;;; (List.Mem ?Init.Data.List.Lemmas.719.4 (List.insert ?Init.Data.List.Lemmas.719.3 ?Init.Data.List.Lemmas.719.5) ::: #[33]) ;;; (List.Mem ?Init.Data.List.Lemmas.410.2
+  (@List.List.flatMap ?Init.Data.List.Lemmas.410.1 ?Init.Data.List.Lemmas.410.0 ?Init.Data.List.Lemmas.410.4
+    ?Init.Data.List.Lemmas.410.3) ::: #[20]) ;;; (List.Mem ?Init.Data.List.Lemmas.66.1 (?Init.Data.List.Lemmas.66.2 :: ?Init.Data.List.Lemmas.66.3) ::: #[2]) ;;; (List.Mem ?Init.Data.List.Lemmas.66.1
+  (@List.List.cons ?Init.Data.List.Lemmas.66.0 ?Init.Data.List.Lemmas.66.2 ?Init.Data.List.Lemmas.66.3) ::: #[2]) ;;; (List.Mem ?Init.Data.List.Lemmas.1126.1 (?Init.Data.List.Lemmas.1126.2 :: ?Init.Data.List.Lemmas.1126.3) ::: #[63]) ;;; (List.Mem ?Init.Data.List.Lemmas.1126.1
+  (@List.List.cons ?Init.Data.List.Lemmas.1126.0 ?Init.Data.List.Lemmas.1126.2 ?Init.Data.List.Lemmas.1126.3) ::: #[63]) ;;; (List.Mem ?Init.Data.List.Lemmas.1026.1 ?Init.Data.List.Lemmas.1026.2 ::: #[56]) ;;; (List.Mem ?Init.Data.List.Lemmas.785.3 ?Init.Data.List.Lemmas.785.2 ::: #[36]) ;;; (List.Mem ?Init.Data.List.Lemmas.205.1 ?Init.Data.List.Lemmas.205.2 ::: #[14]) ;;; (List.Mem ?Init.Data.List.Lemmas.147.5 ?Init.Data.List.Lemmas.147.3 ::: #[10]) ;;; (List.Mem ?Init.Data.List.Lemmas.866.3 ?Init.Data.List.Lemmas.866.2 ::: #[42]) ;;; (List.Pairwise ?Init.Data.List.Basic.171.1 ?Init.Data.List.Basic.171.3 ::: #[79]) ;;; (List.Perm ?Init.Data.List.Init.Data.List.Perm.70.2 ?Init.Data.List.Init.Data.List.Perm.70.3 ::: #[134]) ;;; (List.Perm ?Init.Data.List.Init.Data.List.Perm.39.1 ?Init.Data.List.Init.Data.List.Perm.39.2 ::: #[116]) ;;; (List.Perm ?Init.Data.List.Init.Data.List.Perm.30.2 ?Init.Data.List.Init.Data.List.Perm.30.3 ::: #[107]) ;;; (List.Perm ?Init.Data.List.Init.Data.List.Perm.49.3 ?Init.Data.List.Init.Data.List.Perm.49.4 ::: #[121]) ;;; (List.Perm ?Init.Data.List.Init.Data.List.Perm.49.1 ?Init.Data.List.Init.Data.List.Perm.49.2 ::: #[120]) ;;; (List.Perm ?Init.Data.List.Init.Data.List.Perm.9.2 ?Init.Data.List.Init.Data.List.Perm.9.3 ::: #[93]) ;;; ((List.append ?Init.Data.List.Init.Data.List.Perm.117.2 (?Init.Data.List.Perm.117.1 :: ?Init.Data.List.Perm.117.4)).Perm
+  (List.append ?Init.Data.List.Init.Data.List.Perm.117.3 (?Init.Data.List.Perm.117.1 :: ?Init.Data.List.Perm.117.5)) ::: #[143]) ;;; (List.Perm ?Init.Data.List.Init.Data.List.Perm.43.1 ?Init.Data.List.Init.Data.List.Perm.43.2 ::: #[117]) ;;; (List.Perm ?Init.Data.List.Init.Data.List.Perm.63.1 ?Init.Data.List.Init.Data.List.Perm.63.2 ::: #[129]) ;;; (List.Perm ?Init.Data.List.Init.Data.List.Perm.29.4 ?Init.Data.List.Init.Data.List.Perm.29.5 ::: #[103]) ;;; (List.Perm ?Init.Data.List.Init.Data.List.Perm.33.1 ?Init.Data.List.Init.Data.List.Perm.33.2 ::: #[110]) ;;; (List.Perm ?Init.Data.List.Init.Data.List.Perm.66.1 ?Init.Data.List.Init.Data.List.Perm.66.2 ::: #[130]) ;;; (List.Perm ?Init.Data.List.Basic.367.2 ?Init.Data.List.Basic.367.3 ::: #[90]) ;;; (List.Perm ?Init.Data.List.Basic.367.1 ?Init.Data.List.Basic.367.2 ::: #[89]) ;;; (List.Perm ?Init.Data.List.Init.Data.List.Perm.79.1 ?Init.Data.List.Init.Data.List.Perm.79.2 ::: #[136]) ;;; (List.Perm ?Init.Data.List.Init.Data.List.Perm.46.1 ?Init.Data.List.Init.Data.List.Perm.46.2 ::: #[118]) ;;; (List.Perm ?Init.Data.List.Init.Data.List.Perm.24.3 ?Init.Data.List.Init.Data.List.Perm.24.4 ::: #[98]) ;;; (List.Perm ?Init.Data.List.Init.Data.List.Perm.38.1 ?Init.Data.List.Init.Data.List.Perm.38.2 ::: #[114]) ;;; (List.Perm ?Init.Data.List.Init.Data.List.Perm.124.2 ?Init.Data.List.Init.Data.List.Perm.124.3 ::: #[147]) ;;; ((?Init.Data.List.Init.Data.List.Perm.71.1 :: ?Init.Data.List.Init.Data.List.Perm.71.2).Perm
+  (?Init.Data.List.Init.Data.List.Perm.71.1 :: ?Init.Data.List.Init.Data.List.Perm.71.3) ::: #[135]) ;;; (List.Perm ?Init.Data.List.Init.Data.List.Perm.69.2 ?Init.Data.List.Init.Data.List.Perm.69.3 ::: #[132]) ;;; (List.Perm ?Init.Data.List.Init.Data.List.Perm.113.2 ?Init.Data.List.Init.Data.List.Perm.113.3 ::: #[141]) ;;; (List.Perm ?Init.Data.List.Init.Data.List.Perm.25.1 ?Init.Data.List.Init.Data.List.Perm.25.2 ::: #[100]) ;;; (List.Perm ?Init.Data.List.Init.Data.List.Perm.17.3 ?Init.Data.List.Init.Data.List.Perm.17.4 ::: #[95]) ;;; (List.Perm ?Init.Data.List.Init.Data.List.Perm.50.2 ?Init.Data.List.Init.Data.List.Perm.50.3 ::: #[123]) ;;; (List.Sublist ?Init.Data.List.Init.Data.List.Perm.116.1 ?Init.Data.List.Init.Data.List.Perm.116.2 ::: #[142]) ;;; (List ?Init.Data.List.Lemmas.511.0 ::: #[23]) ;;; (List ?Init.Data.List.Lemmas.691.0 ::: #[31]) ;;; (List ?Init.Data.List.Lemmas.966.0 ::: #[54]) ;;; (List ?Init.Data.List.Lemmas.1224.0 ::: #[68]) ;;; (List ?Init.Data.List.Lemmas.1031.0 ::: #[57]) ;;; (List ?Init.Data.List.Lemmas.922.0 ::: #[51]) ;;; (List ?Init.Data.List.Lemmas.590.0 ::: #[28]) ;;; (List ?Init.Data.List.Basic.170.0 ::: #[77]) ;;; (List ?Init.Data.List.Basic.268.0 ::: #[84]) ;;; (List ?Init.Data.List.Basic.226.0 ::: #[82]) ;;; (List ?Init.Data.List.Init.Data.List.Perm.20.0 ::: #[96]) ;;; (List ?Init.Data.List.Init.Data.List.Perm.37.0 ::: #[112]) ;;; (List ?Init.Data.List.Init.Data.List.Perm.110.0 ::: #[138, 139]) ;;; (List ?Init.Data.List.Init.Data.List.Perm.119.0 ::: #[144]) ;;; (List ?Init.Data.List.Init.Data.List.Perm.52.0 ::: #[125, 126, 127]) ;;; (List ?Init.Data.List.Init.Data.List.Perm.28.0 ::: #[101]) ;;; (Fin (List.length ?Init.Data.List.Lemmas.947.1) ::: #[52]) ;;; (¬List.Mem ?Init.Data.List.Lemmas.297.1 ?Init.Data.List.Lemmas.297.3 ::: #[18]) ;;; (¬List.Mem ?Init.Data.List.Lemmas.883.1 (?Init.Data.List.Lemmas.883.2 :: ?Init.Data.List.Lemmas.883.3) ::: #[45]) ;;; (¬List.Mem ?Init.Data.List.Lemmas.1019.1 (?Init.Data.List.Lemmas.1019.2 :: ?Init.Data.List.Lemmas.1019.3) ::: #[55]) ;;; (¬List.Mem ?Init.Data.List.Lemmas.80.1 (?Init.Data.List.Lemmas.80.2 :: ?Init.Data.List.Lemmas.80.3) ::: #[3]) ;;; (¬List.Mem ?Init.Data.List.Lemmas.89.1 ?Init.Data.List.Lemmas.89.2 ::: #[4]) ;;; (¬List.Mem ?Init.Data.List.Lemmas.89.1 ?Init.Data.List.Lemmas.89.3 ::: #[5]) ;;; (¬@List.List.Mem ?Init.Data.List.Lemmas.297.0 ?Init.Data.List.Lemmas.297.1 ?Init.Data.List.Lemmas.297.3 ::: #[18]) ;;; (¬@List.List.Mem ?Init.Data.List.Lemmas.883.0 ?Init.Data.List.Lemmas.883.1
+    (?Init.Data.List.Lemmas.883.2 :: ?Init.Data.List.Lemmas.883.3) ::: #[45]) ;;; (¬@List.List.Mem ?Init.Data.List.Lemmas.1019.0 ?Init.Data.List.Lemmas.1019.1
+    (?Init.Data.List.Lemmas.1019.2 :: ?Init.Data.List.Lemmas.1019.3) ::: #[55]) ;;; (¬@List.List.Mem ?Init.Data.List.Lemmas.80.0 ?Init.Data.List.Lemmas.80.1
+    (?Init.Data.List.Lemmas.80.2 :: ?Init.Data.List.Lemmas.80.3) ::: #[3]) ;;; (¬@List.List.Mem ?Init.Data.List.Lemmas.89.0 ?Init.Data.List.Lemmas.89.1 ?Init.Data.List.Lemmas.89.2 ::: #[4]) ;;; (¬@List.List.Mem ?Init.Data.List.Lemmas.89.0 ?Init.Data.List.Lemmas.89.1 ?Init.Data.List.Lemmas.89.3 ::: #[5]) ;;; (¬@List.Eq (List ?Init.Data.List.Lemmas.298.0) ?Init.Data.List.Lemmas.298.1 [] ::: #[19]) ;;; (¬@List.Eq (List ?Init.Data.List.Lemmas.466.0) ?Init.Data.List.Lemmas.466.1 [] ::: #[21]) ;;; (¬@List.Eq (List ?Init.Data.List.Lemmas.882.0) (List.tail ?Init.Data.List.Lemmas.882.1) [] ::: #[44]) ;;; (¬@List.Eq (List ?Init.Data.List.Lemmas.579.0) (List.tail ?Init.Data.List.Lemmas.579.1) [] ::: #[27]) ;;; (¬@List.Eq (List ?Init.Data.List.Lemmas.18.0) ?Init.Data.List.Lemmas.18.1 [] ::: #[0]) ;;; (¬@List.Eq (List ?Init.Data.List.Lemmas.1114.0) ?Init.Data.List.Lemmas.1114.1 [] ::: #[61]) ;;; (¬?Init.Data.List.Lemmas.298.1 = [] ::: #[19]) ;;; (¬?Init.Data.List.Lemmas.466.1 = [] ::: #[21]) ;;; (¬List.tail ?Init.Data.List.Lemmas.882.1 = [] ::: #[44]) ;;; (¬List.tail ?Init.Data.List.Lemmas.579.1 = [] ::: #[27]) ;;; (¬?Init.Data.List.Lemmas.18.1 = [] ::: #[0]) ;;; (¬?Init.Data.List.Lemmas.1114.1 = [] ::: #[61]) ;;; ((buildCore : List ?Init.Data.List.Basic.161.0) → List.Pairwise ?Init.Data.List.Basic.161.1 buildCore → Prop ::: #[75]) ;;; ((buildCore buildCore_1 : List ?Init.Data.List.Basic.22.0) → buildCore.Perm buildCore_1 → Prop ::: #[71]) ;;; ((buildCore buildCore_1 : List ?Init.Data.List.Basic.440.0) → buildCore.Sublist buildCore_1 → Prop ::: #[91]) ;;; (∀ (buildCore : ?Init.Data.List.Basic.171.0),
+  buildCore ∈ ?Init.Data.List.Basic.171.3 → ?Init.Data.List.Basic.171.1 ?Init.Data.List.Basic.171.2 buildCore ::: #[80]) ;;; (?Init.Data.List.Basic.78.0 → ?Init.Data.List.Basic.78.0 → Prop ::: #[73]) ;;; (?Init.Data.List.Init.Data.List.Perm.9.0 → List ?Init.Data.List.Perm.9.1 ::: #[92]) ;;; (?Init.Data.List.Lemmas.1144.0 → Prop ::: #[64])
+      .node #[66] 
+            Sum.inl `List.eq_nil_of_append_eq_nil
+      .node #[64] 
+            Sum.inl `List.exists_mem_nil
+      .node #[53] 
+            Sum.inl `List.mem_of_getElem?
+      .node #[52] 
+            Sum.inl `List.get_mem
       .node #[46] 
-            Sum.inl `Nat.div_rec_lemma
-      .node #[] 
-            Sum.inl `USize.size_pos
-      .node #[] 
-            Sum.inl `True.intro
+            Sum.inl `List.exists_of_mem_flatten
+      .node #[39] 
+            Sum.inl `List.mem_of_mem_tail
+      .node #[34] 
+            Sum.inl `List.mem_of_getElem
       .node #[33] 
-            Sum.inl `Char.ne_of_val_ne
-      .node #[32] 
-            Sum.inl `Nat.not_succ_le_zero
-      .node #[30] 
-            Sum.inl `ne_false_of_eq_true
-      .node #[29] 
-            Sum.inl `ByteArray.IsValidUTF8.intro
-      .node #[28] 
-            Sum.inl `Nat.le_of_ble_eq_true
-      .node #[] 
-            Sum.inl `lcErased
-      .node #[27] 
-            Sum.inl `Nat.not_le_of_not_ble_eq_true
-      .node #[] 
-            Sum.inl `USize.size_eq
-      .node #[21] 
-            Sum.inl `ne_true_of_eq_false
-      .node #[9] 
-            Sum.inl `of_decide_eq_false
+            Sum.inl `List.eq_or_mem_of_mem_insert
+      .node #[26] 
+            Sum.inl `List.exists_of_mem_map
+      .node #[20] 
+            Sum.inl `List.exists_of_mem_flatMap
+      .node #[13] 
+            Sum.inl `List.getElem_of_getElem?
       .node #[6] 
-            Sum.inl `Pi.instNonempty
-      .node #[4] 
-            Sum.inl `Nat.le_of_lt_succ
-      .node #[] 
-            Sum.inl `lcAny
-      .node #[2] 
-            Sum.inl `Nat.le.step
-      .node #[] 
-            Sum.inl `System.Platform.numBits_eq
-      .node #[80, 84, 85, 88, 106] (¬?Init.PropLemmas.126.1 ::: #[89]) ;;; (¬?Init.PropLemmas.9.0 ::: #[81])
-            .node #[81, 89] 
-                  Sum.inl `not_and_of_not_left
-                  Sum.inl `not_and_of_not_right
-            Sum.inl `not_not_em
-            Sum.inl `exists_false
-            Sum.inl `Decidable.not_or_self
-      .node #[82, 91, 95, 98, 99] (?Init.PropLemmas.273.0 ∧ ?Init.PropLemmas.273.2 ::: #[100]) ;;; (?Init.PropLemmas.139.0 ∧ ?Init.PropLemmas.139.2 ::: #[92]) ;;; (?Init.PropLemmas.196.2 ∧ ?Init.PropLemmas.196.0 ::: #[96])
-            .node #[92, 96, 100] 
-                  Sum.inl `And.imp
-                  Sum.inl `And.imp_right
-                  Sum.inl `And.imp_left
-            Sum.inl `Decidable.not_or_of_imp
-      .node #[83, 86, 93, 105] (∀ (buildCore : ?Init.PropLemmas.105.0), ?Init.PropLemmas.105.1 buildCore → ?Init.PropLemmas.105.2 buildCore ::: #[87]) ;;; (∀ (buildCore : ?Init.PropLemmas.158.0),
-  ?Init.PropLemmas.158.1 buildCore → ?Init.PropLemmas.158.3 (?Init.PropLemmas.158.4 buildCore) ::: #[94])
-            Sum.inl `Exists.nonempty
+            Sum.inl `List.mem_or_eq_of_mem_set
+      .node #[27, 44] 
+            Sum.inl `List.ne_nil_of_tail_ne_nil
+            Sum.inl `List.one_lt_length_of_tail_ne_nil
+      .node #[16, 38] 
+            Sum.inl `List.mem_of_getLast?
+            Sum.inl `List.mem_of_mem_getLast?
+      .node #[3, 45, 55] 
+            Sum.inl `List.ne_of_not_mem_cons
+            Sum.inl `List.ne_and_not_mem_of_not_mem_cons
+            Sum.inl `List.not_mem_of_not_mem_cons
+      .node #[4, 5, 18] (¬?Init.Data.List.Lemmas.297.1 = ?Init.Data.List.Lemmas.297.2 ::: #[17])
+            Sum.inl `List.not_mem_append
+            .node #[17] 
+                  Sum.inl `List.not_mem_cons_of_ne_of_not_mem
+      .node #[2, 12, 63] (¬?Init.Data.List.Lemmas.1126.1 = ?Init.Data.List.Lemmas.1126.2 ::: #[62])
+            .node #[62] 
+                  Sum.inl `List.mem_of_ne_of_mem
+            Sum.inl `List.eq_or_mem_of_mem_cons
+            Sum.inl `List.eq_or_ne_mem_of_mem
+      .node #[29, 37, 43] 
+            Sum.inl `List.ne_nil_of_length_eq_add_one
+            Sum.inl `List.exists_mem_of_length_eq_add_one
+            Sum.inl `List.exists_cons_of_length_eq_add_one
+      .node #[24, 25, 59, 60] 
+            Sum.inl `List.append_inj'
+            Sum.inl `List.append_inj
+      .node #[1, 47] 
+            Sum.inl `List.mem_of_mem_head?
+            Sum.inl `List.mem_of_head?
+      .node #[7, 8, 65] 
+            Sum.inl `List.exists_mem_of_length_pos
+            Sum.inl `List.ne_nil_of_length_pos
+            Sum.inl `List.exists_cons_of_length_pos
+      .node #[0, 19, 21, 61] 
+            Sum.inl `List.getLast_mem
+            Sum.inl `List.exists_mem_of_ne_nil
+            Sum.inl `List.head_mem
+            Sum.inl `List.exists_cons_of_ne_nil
+      .node #[23, 28, 31, 51, 54, 57, 68] (¬?Init.Data.List.Lemmas.1031.1 = [] ::: #[58]) ;;; (¬?Init.Data.List.Lemmas.1224.1 = [] ::: #[69]) ;;; (?Init.Data.List.Lemmas.922.0 → Bool ::: #[50]) ;;; (?Init.Data.List.Lemmas.691.0 → Option ?Init.Data.List.Lemmas.691.1 ::: #[32]) ;;; (?Init.Data.List.Lemmas.511.0 → Bool ::: #[22])
+            Sum.inl `List.eq_replicate_or_eq_replicate_append_cons
+            .node #[32] 
+                  Sum.inl `List.length_filterMap_le
+            Sum.inl `List.eq_nil_or_concat
+            .node #[22, 50] 
+                  Sum.inl `List.filter_sublist
+                  Sum.inl `List.length_filter_le
+            .node #[58, 69] 
+                  Sum.inl `List.append_ne_nil_of_left_ne_nil
+                  Sum.inl `List.append_ne_nil_of_right_ne_nil
+      .node #[9, 10, 14, 15, 30, 36, 40, 42, 48, 56, 67] (List.Mem ?Init.Data.List.Lemmas.901.1 (?Init.Data.List.Lemmas.901.2 :: ?Init.Data.List.Lemmas.901.3) ::: #[49]) ;;; (List.Mem ?Init.Data.List.Lemmas.147.2 (?Init.Data.List.Lemmas.147.4 ?Init.Data.List.Lemmas.147.5) ::: #[11]) ;;; (List.Mem ?Init.Data.List.Lemmas.785.2 ?Init.Data.List.Lemmas.785.1 ::: #[35]) ;;; (?Init.Data.List.Lemmas.866.0 → ?Init.Data.List.Lemmas.866.1 ::: #[41])
+            Sum.inl `List.getElem?_of_mem
+            .node #[11] 
+                  Sum.inl `List.mem_flatMap_of_mem
+            Sum.inl `List.get_of_mem
+            Sum.inl `List.eq_append_cons_of_mem
+            Sum.inl `List.getElem_of_mem
+            .node #[35] 
+                  Sum.inl `List.mem_flatten_of_mem
+            Sum.inl `List.ne_nil_of_mem
+            .node #[41] 
+                  Sum.inl `List.mem_map_of_mem
+            .node #[49] 
+                  Sum.inl `List.mem_of_mem_cons_of_mem
+            Sum.inl `List.append_of_mem
+            Sum.inl `List.length_pos_of_mem
+      .node #[71] 
+            Sum.inl `List.Perm.below.nil
+      .node #[72] 
+            Sum.inl `List.mem_of_elem_eq_true
+      .node #[73] 
+            Sum.inl `List.Pairwise.nil
+      .node #[75] 
+            Sum.inl `List.Pairwise.below.nil
+      .node #[79, 80] 
+            Sum.inl `List.Pairwise.cons
+      .node #[86] 
+            Sum.inl `List.of_concat_eq_concat
+      .node #[91] 
+            Sum.inl `List.Sublist.below.slnil
+      .node #[89, 90] 
+            Sum.inl `List.Perm.trans
+      .node #[77, 82, 84] (List.Mem ?Init.Data.List.Basic.226.1 ?Init.Data.List.Basic.226.3 ::: #[83]) ;;; (List.Mem ?Init.Data.List.Basic.170.1 ?Init.Data.List.Basic.170.2 ::: #[78]) ;;; ((buildCore : List ?Init.Data.List.Basic.268.0) → List.Mem ?Init.Data.List.Basic.268.1 buildCore → Prop ::: #[85])
+            .node #[85] 
+                  Sum.inl `List.Mem.below.head
+            .node #[78, 83] 
+                  Sum.inl `List.mem_append_left
+                  Sum.inl `List.mem_append_right
+      .node #[70, 74, 76, 81, 87, 88] 
+            Sum.inl `List.instLawfulBEq
+            Sum.inl `List.Perm.nil
+            Sum.inl `List.instAssociativeHAppend
+            Sum.inl `List.Sublist.slnil
+            Sum.inl `List.instLawfulIdentityHAppendNil
+            Sum.inl `List.instReflBEq
+      .node #[143] 
+            Sum.inl `List.perm_inv_core
+      .node #[142] 
+            Sum.inl `List.Sublist.exists_perm_append
+      .node #[135] 
+            Sum.inl `List.Perm.cons_inv
+      .node #[132] 
+            Sum.inl `List.Perm.unattach
+      .node #[131] 
+            Sum.inl `List.perm_cons_erase
+      .node #[128] 
+            Sum.inl `List.Perm.of_eq
+      .node #[124] 
+            Sum.inl `List.Perm.eqv
+      .node #[117] 
+            Sum.inl `List.Perm.flatten
+      .node #[92, 93] 
+            Sum.inl `List.Perm.flatMap_right
+      .node #[96, 101, 112, 125, 126, 127, 138, 139, 144] (?Init.Data.List.Perm.37.0 → Bool ::: #[111])
+            Sum.inl `List.reverse_perm
+            Sum.inl `List.perm_append_comm
+            Sum.inl `List.perm_append_comm_assoc
+            .node #[111] 
+                  Sum.inl `List.filter_append_perm
+            Sum.inl `List.Perm.rfl
+            Sum.inl `List.Perm.refl
+      .node #[95, 98, 100, 103, 107, 110, 114, 116, 118, 120, 121, 123, 129, 130, 134, 136, 141, 147] (List.Nodup ?Init.Data.List.Perm.38.1 ::: #[113]) ;;; (List.Nodup ?Init.Data.List.Perm.25.1 ::: #[99]) ;;; (List.Pairwise ?Init.Data.List.Perm.30.1 ?Init.Data.List.Perm.30.2 ::: #[108]) ;;; (List.Pairwise
+  (fun buildCore buildCore_1 =>
+    ?Init.Data.List.Perm.113.1 buildCore = true → ?Init.Data.List.Perm.113.1 buildCore_1 = true → False)
+  ?Init.Data.List.Perm.113.2 ::: #[140]) ;;; (List.Pairwise ?Init.Data.List.Perm.124.1 ?Init.Data.List.Perm.124.2 ::: #[146]) ;;; ((List.drop ?Init.Data.List.Perm.46.4 ?Init.Data.List.Perm.46.1).Perm
+  (List.drop ?Init.Data.List.Perm.46.4 ?Init.Data.List.Perm.46.2) ::: #[119]) ;;; ((List.take ?Init.Data.List.Perm.79.4 ?Init.Data.List.Perm.79.1).Perm
+  (List.take ?Init.Data.List.Perm.79.4 ?Init.Data.List.Perm.79.2) ::: #[137]) ;;; (List.Sublist ?Init.Data.List.Perm.70.1 ?Init.Data.List.Perm.70.2 ::: #[133]) ;;; (List ?Init.Data.List.Perm.33.0 ::: #[109]) ;;; (List ?Init.Data.List.Perm.39.0 ::: #[115]) ;;; (∀ (buildCore buildCore_1 : ?Init.Data.List.Perm.124.0),
+  ?Init.Data.List.Perm.124.1 buildCore buildCore_1 → ?Init.Data.List.Perm.124.1 buildCore_1 buildCore ::: #[145]) ;;; (?Init.Data.List.Perm.17.0 → Option ?Init.Data.List.Perm.17.1 ::: #[94]) ;;; (∀ (buildCore : ?Init.Data.List.Perm.29.0), buildCore ∈ ?Init.Data.List.Perm.29.5 → ?Init.Data.List.Perm.29.2 buildCore ::: #[105]) ;;; (∀ (buildCore : ?Init.Data.List.Perm.29.0), buildCore ∈ ?Init.Data.List.Perm.29.4 → ?Init.Data.List.Perm.29.2 buildCore ::: #[104]) ;;; ((buildCore : ?Init.Data.List.Perm.29.0) → ?Init.Data.List.Perm.29.2 buildCore → ?Init.Data.List.Perm.29.1 ::: #[102]) ;;; (?Init.Data.List.Perm.50.0 → Bool ::: #[122]) ;;; (?Init.Data.List.Perm.24.0 → ?Init.Data.List.Perm.24.1 ::: #[97]) ;;; (∀ (buildCore buildCore_1 : ?Init.Data.List.Perm.30.0),
+  ?Init.Data.List.Perm.30.1 buildCore buildCore_1 → ?Init.Data.List.Perm.30.1 buildCore_1 buildCore ::: #[106])
+            .node #[140] 
+                  Sum.inl `List.Perm.eraseP
+            .node #[137] 
+                  Sum.inl `List.Perm.drop
+            .node #[133] 
+                  Sum.inl `List.exists_perm_sublist
+            Sum.inl `List.Perm.subset
+            Sum.inl `List.Perm.symm
+            .node #[122] 
+                  Sum.inl `List.Perm.filter
+            Sum.inl `List.Perm.append
+            .node #[119] 
+                  Sum.inl `List.Perm.take
+            .node #[102, 104, 105] 
+                  Sum.inl `List.Perm.pmap
+            .node #[97] 
+                  Sum.inl `List.Perm.map
             .node #[94] 
-                  Sum.inl `Exists.imp'
-            .node #[87] 
-                  Sum.inl `Exists.imp
-            Sum.inl `nonempty_of_exists
-      .node #[75, 76, 102, 103] 
-            Sum.inl `ne_of_mem_of_not_mem
-            Sum.inl `ne_of_mem_of_not_mem'
-      .node #[77, 78] 
-            Sum.inl `not_or_intro
-      .node #[79] 
-            Sum.inl `not_and_of_not_or_not
-      .node #[90] 
-            Sum.inl `not_imp_of_and_not
-      .node #[97] 
-            Sum.inl `not_forall_of_exists_not
-      .node #[101] 
-            Sum.inl `ne_of_apply_ne
-      .node #[104] 
-            Sum.inl `not_exists_of_forall_not
+                  Sum.inl `List.Perm.filterMap
+            .node #[109, 115] 
+                  Sum.inl `List.Perm.append_left
+                  Sum.inl `List.Perm.append_right
+            .node #[106, 108, 145, 146] 
+                  Sum.inl `List.Pairwise.perm
+                  Sum.inl `List.Perm.pairwise
+            .node #[99, 113] 
+                  Sum.inl `List.Nodup.perm
+                  Sum.inl `List.Perm.nodup

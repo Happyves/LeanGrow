@@ -8,20 +8,6 @@ open Lean Meta
 
 #check List
 
-/-
-- Init.Prelude
-- Init.SimpLemmas
-- Init.PropLemmas
-- Init.Internal.Order.Lemmas
-- Init.Data.Nat.Dvd
-- Init.Data.Nat.Div.Lemmas
-- Init.Data.Subtype.Basic
-- Init.Data.Subtype.Order
-- Init.Data.List.Perm
-- Init.Data.List.Range
-- Init.Data.List.Basic
-
--/
 
 
 
@@ -58,9 +44,92 @@ open Lean Meta
 
 
 
+
+
+-- # Test builds
+
 /-
-Todos : at process, maybe make a version of reduce that keeps
-the reductions if no progress was made ?? Else, PaIn matching
-could fail miserably ?
+- Init.Prelude
+- Init.SimpLemmas
+- Init.PropLemmas
+- Init.Internal.Order.Lemmas
+- Init.Data.Nat.Dvd
+- Init.Data.Nat.Div.Lemmas
+- Init.Data.Subtype.Basic
+- Init.Data.Subtype.Order
+- Init.Data.List.Perm
+- Init.Data.List.Range
+- Init.Data.List.Basic
+- Init.Data.List.Lemmas
 
 -/
+
+
+
+-- #eval buildPartialCacheDataFullS `Init.Prelude
+
+-- #eval buildCacheDataS `Init.Prelude
+
+
+-- #eval buildPartialCacheDataFullS `Init.SimpLemmas
+
+-- #eval buildCacheDataS `Init.SimpLemmas
+
+
+-- #eval buildPartialCacheDataFullS `Init.PropLemmas
+
+-- #eval buildCacheDataS `Init.PropLemmas
+
+
+-- #eval buildPartialCacheDataFullS `Init.Internal.Order.Lemmas
+
+-- #eval buildCacheDataS `Init.Internal.Order.Lemmas
+
+
+-- #eval buildPartialCacheDataFullS `Init.Data.Nat.Dvd
+
+-- #eval buildCacheDataS `Init.Data.Nat.Dvd
+
+
+-- #eval buildPartialCacheDataFullS `Init.Data.Nat.Div.Lemmas
+
+-- #eval buildCacheDataS `Init.Data.Nat.Div.Lemmas
+
+
+-- #eval buildPartialCacheDataFullS `Init.Data.Subtype.Basic
+
+-- #eval buildCacheDataS `Init.Data.Subtype.Basic
+
+
+-- #eval buildPartialCacheDataFullS `Init.Data.Subtype.Order
+
+-- #eval buildCacheDataS `Init.Data.Subtype.Order
+
+
+-- #eval buildPartialCacheDataFullS `Init.Data.List.Perm
+
+-- #eval buildCacheDataS `Init.Data.List.Perm
+
+
+-- #eval buildPartialCacheDataFullS `Init.Data.List.Range
+
+-- #eval buildCacheDataS `Init.Data.List.Range
+
+
+-- #eval buildPartialCacheDataFullS `Init.Data.List.Basic
+
+-- #eval buildCacheDataS `Init.Data.List.Basic
+
+
+-- #eval buildPartialCacheDataFullS `Init.Data.List.Lemmas
+
+-- #eval buildCacheDataS `Init.Data.List.Lemmas
+
+
+
+-- # Test Loads
+
+
+-- #eval exploreCaches_stdBackPaIn_pp #[`Init.Data.List.Perm, `Init.Data.List.Range, `Init.Data.List.Basic, `Init.Data.List.Lemmas]
+
+-- #eval exploreCaches_stdForwSetTrie_pp #[`Init.Data.List.Perm, `Init.Data.List.Range, `Init.Data.List.Basic, `Init.Data.List.Lemmas]

@@ -216,6 +216,20 @@ def test9 : CoreM Unit := do
 
 #eval test9
 
+#check Nat.lt_add_left_iff_pos._simp_1
+
+/-- Simp theorems are among environement constants
+-/
+def test10 : CoreM Unit := do
+  let cs := (← getEnv).constants
+  let has? := cs.contains `Nat.lt_add_left_iff_pos._simp_1
+  if !has?
+    then throwError "will need fixing"
+  let res ← getSimpTheorems
+  for n in res.lemmaNames do
+    if n.key == `Nat.lt_add_left_iff_pos then IO.println s!"Found key"
+
+#eval test10
 
 end ImportExport
 

@@ -201,9 +201,10 @@ partial def SetTrie.merge
   (find : β → δ → Bool) (delete : β → δ → β) (empty? : β → Bool)
   (newkey : δ → β) (addkey : δ → β → β)
   (emptykey : β) (mergekey : β → β → β)
+  (cleanKey : β → β)
   (fuel : Nat) (fst snd : SetTrie α β) : SetTrie α β :=
     let shallowed := (fst.shallowify emptykey mergekey fuel).foldl (snd.shallowify emptykey mergekey fuel) ListProd.cons
-    let stst := SetTrie.ofList init merge max find delete empty? newkey addkey shallowed
+    let stst := SetTrie.ofList init merge max find delete empty? newkey addkey cleanKey shallowed
     let rec concat : SetTrie (SetTrie α β) β → SetTrie α β
           | .root c => .root <| c.mapTRR concat
           | .node k c => .node k <| c.mapTRR concat
@@ -220,6 +221,7 @@ partial def SetTrie.mergeMcps
     (find : β → δ → (Bool → MetaM κ) → MetaM κ) (delete : β → δ → β) (empty? : β → Bool)
     (newkey : δ → (β → MetaM κ) → MetaM κ) (addkey : δ → β → (β → MetaM κ) → MetaM κ)
     (emptykey : β) (mergekey : β → β → β)
+    (cleanKey : β → β)
     (fuel : Nat) (fst snd : SetTrie α β)
     (K : SetTrie α β → MetaM κ) : MetaM κ :=
       let rec concat : SetTrie (SetTrie α β) β → SetTrie α β
@@ -228,7 +230,7 @@ partial def SetTrie.mergeMcps
           | .leaf v => v
       let shallowed := (fst.shallowifyTR emptykey mergekey fuel).foldl (snd.shallowifyTR emptykey mergekey fuel) ListProd.cons
       let (toRoot, toMerge) := shallowed.foldl ([], (.nil : ListProd β (SetTrie α β))) (fun key val (R,M) => if empty? key then (val :: R, M) else (R, .cons key val M))
-      SetTrie.ofListMcps init merge max find delete empty? newkey addkey toMerge <| fun stst => do
+      SetTrie.ofListMcps init merge max find delete empty? newkey addkey cleanKey toMerge <| fun stst => do
         match concat stst with
         | .root c => K <| .root (toRoot ++ c)
         | _ => throwError s!"[SetTrie.mergeMcps] ill formed tree ?!?"

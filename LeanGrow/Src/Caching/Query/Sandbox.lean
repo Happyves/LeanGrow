@@ -19,7 +19,7 @@ variable {IdxCollType : Type _}
 
 
 @[specialize, inline]
-unsafe def inSandbox [Repr IdxCollType]
+def inSandbox [Repr IdxCollType]
   (intersect union difference : IdxCollType → IdxCollType → IdxCollType)
   (emptyCol : IdxCollType) (empty? : IdxCollType → Bool) (size : IdxCollType → Nat)
   (singleton : Nat → IdxCollType) (insert : Nat → IdxCollType → IdxCollType)
@@ -49,7 +49,7 @@ unsafe def inSandbox [Repr IdxCollType]
 
 
 @[specialize, inline]
-unsafe def inSandboxS
+def inSandboxS
   (thms : Array Name)
   (act : ModuleCacheState UInt32Array → MetaM Unit)
   : MetaM Unit :=

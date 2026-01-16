@@ -84,9 +84,10 @@ LG:
   - refer to revert tests : we should add deps for reverts at rw/induction
 - Induction:
   - Try to speed up ?
+  - detect ite and dite and allow for case disjunction on their condition
   - Elab-elim inductions should detect constroturs of recursed type (ex: Fin.mk) ?
   - refer to revert tests : we should add deps for reverts at rw/induction
-  - caching ...
+  - caching ... (don't forget realizeGlobalConsts)
 
 
 
@@ -96,7 +97,9 @@ Djv Core:
  - Version where ratios may change depending on the depth the brach/subexpressions
  - For score add different generalisations (corresponding to different ratios, for example) from same sample
    to scoring-structures, possibly with different scores 
- 
+ - somehow disallow mvar-apps as result of generalised patterns,
+   since it's bad for uni ... Should be ok when queried as
+   proper sub-pattern though ...
 
 
 Djv Parse:
@@ -167,7 +170,7 @@ LG:
     durring whnf, and those that have eq_def-theorems ; don't unfold proofs and instances of course.
   - Generalisation: make branche from initial goal in backstate in which we generalise litterals ;
     maybe also generalise function applicaitons that are Type-typed ? (We can do both, one after the other)
-
+- Save search state to some tracing env extention, and write a small DSL to explore its branches
 
 Djv Core:
 - generalise conveyorbelt

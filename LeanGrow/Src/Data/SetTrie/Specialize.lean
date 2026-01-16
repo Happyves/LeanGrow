@@ -34,6 +34,7 @@ def SetTrieT.ofList [Repr α] (l : ListProd (CTrie Unit) α) : SetTrieT α :=
     (fun ct => ct.toList.isEmpty)
     (fun key => CTrie.insert .empty key ())
     (fun key T => CTrie.insert T key ())
+    CTrie.clean
     l
 
 def SetTrieT.query (Q : CTrie Unit) (T : SetTrieT α) : List α :=
@@ -76,6 +77,7 @@ def SetTriePnG.ofList [Inhabited α] [Repr α] [Repr IdxCollType]
     (fun x => match x.clean emptyCol empty? with | .dead => true | _ => false)
     (fun (_,es) => es)
     (fun (_,es) τ => PaIn.merge union emptyCol es τ)
+    (PaIn.clean emptyCol empty?)
     l
   SetTrieP.mk (PaIn.merge union emptyCol) .dead (PaIn.getIndices emptyCol union) res
 
@@ -107,6 +109,7 @@ def SetTriePG.ofList [Inhabited α] [Repr α] [Repr IdxCollType]
     (fun x => match x.clean emptyCol empty? with | .dead => true | _ => false)
     (fun (_,es) => es)
     (fun (_,es) τ => PaInG.merge union emptyCol es τ)
+    (PaInG.clean emptyCol empty?)
     l
   SetTrieP.mk (PaInG.merge union emptyCol) .dead (PaInG.getIndices emptyCol union) res
 
