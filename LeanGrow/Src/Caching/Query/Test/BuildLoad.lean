@@ -127,11 +127,12 @@ open Lean Meta
 
 
 
+
 -- # Test Loads
 
 
 -- #eval exploreCaches_stdBackPaIn_pp #[`Init.Data.List.Perm, `Init.Data.List.Range, `Init.Data.List.Basic, `Init.Data.List.Lemmas]
 
---There is a bug in CTrie.clean that causes caches to be corrupted : replace clean by id and rebuild caches
+-- panic and LList seem to be cused by error at CTrie.merge ...........
 
 -- #eval exploreCaches_stdForwSetTrie_pp #[`Init.Data.List.Perm, `Init.Data.List.Range, `Init.Data.List.Basic, `Init.Data.List.Lemmas]

@@ -1224,8 +1224,7 @@
     (List.append ?Init.Data.List.Init.Data.List.Perm.9.2 ?Init.Data.List.Init.Data.List.Perm.9.3) ↔
   List.Perm ?Init.Data.List.Init.Data.List.Perm.9.1 ?Init.Data.List.Init.Data.List.Perm.9.2 ::: #[2744]) ;;; ([?Init.Data.List.Init.Data.List.Perm.20.1].Perm ?Init.Data.List.Init.Data.List.Perm.20.2 ↔
   [?Init.Data.List.Init.Data.List.Perm.20.1] = ?Init.Data.List.Init.Data.List.Perm.20.2 ::: #[2755]) ;;; (List.Perm ?Init.Data.List.Init.Data.List.Perm.44.2 [?Init.Data.List.Init.Data.List.Perm.44.1] ↔
-  ?Init.Data.List.Init.Data.List.Perm.44.2 =
-    @List.conns ?Init.Data.List.Init.Data.List.Perm.44.0 ?Init.Data.List.Init.Data.List.Perm.44.1 [] ::: #[2779]) ;;; ([?Init.Data.List.Init.Data.List.Perm.74.1].Perm [?Init.Data.List.Init.Data.List.Perm.74.2] ↔
+  ?Init.Data.List.Init.Data.List.Perm.44.2 = [?Init.Data.List.Init.Data.List.Perm.44.1] ::: #[2779]) ;;; ([?Init.Data.List.Init.Data.List.Perm.74.1].Perm [?Init.Data.List.Init.Data.List.Perm.74.2] ↔
   ?Init.Data.List.Init.Data.List.Perm.74.1 = ?Init.Data.List.Init.Data.List.Perm.74.2 ::: #[2809]) ;;; (List.Perm ?Init.Data.List.Init.Data.List.Perm.83.1 ?Init.Data.List.Init.Data.List.Perm.83.4 ↔
   List.Perm ?Init.Data.List.Init.Data.List.Perm.83.2 ?Init.Data.List.Init.Data.List.Perm.83.4 ::: #[2818]) ;;; ((List.replicate ?Init.Data.List.Init.Data.List.Perm.92.1 ?Init.Data.List.Init.Data.List.Perm.92.2).Perm
     ?Init.Data.List.Init.Data.List.Perm.92.3 ↔
@@ -1683,7 +1682,7 @@
   ?Init.Data.List.Lemmas.1800.2 ::: #[1801]) ;;; (@LLLList.removeAll ?Init.Data.List.Lemmas.1800.0 ?Init.Data.List.Lemmas.1800.1 ?Init.Data.List.Lemmas.1800.2 [] =
   ?Init.Data.List.Lemmas.1800.2 ::: #[1801]) ;;; (@LLLList.removeAll ?Init.Data.List.Lemmas.1800.0 ?Init.Data.List.Lemmas.1800.1 ?Init.Data.List.Lemmas.1800.2
     (@List.List.nil ?Init.Data.List.Lemmas.1800.0) =
-  ?Init.Data.List.Lemmas.1800.2 ::: #[1801]) ;;; (?Init.Data.List.Lemmas.1787.1 = @List.List.nil ?Init.Data.List.Lemmas.1787.0 ::: #[1788]) ;;; (List.splitAt.go ?Init.Data.List.Lemmas.1759.1 (?Init.Data.List.Lemmas.1759.3 :: ?Init.Data.List.Lemmas.1759.4)
+  ?Init.Data.List.Lemmas.1800.2 ::: #[1801]) ;;; (?Init.Data.List.Lemmas.1787.1 = [] ::: #[1788]) ;;; (List.splitAt.go ?Init.Data.List.Lemmas.1759.1 (?Init.Data.List.Lemmas.1759.3 :: ?Init.Data.List.Lemmas.1759.4)
     (ListNat.succ ?Init.Data.List.Lemmas.1759.5) ?Init.Data.List.Lemmas.1759.2 =
   List.splitAt.go ?Init.Data.List.Lemmas.1759.1 ?Init.Data.List.Lemmas.1759.4 ?Init.Data.List.Lemmas.1759.5
     (?Init.Data.List.Lemmas.1759.3 :: ?Init.Data.List.Lemmas.1759.2) ::: #[1761]) ;;; (List.splitAt.go ?Init.Data.List.Lemmas.1759.1 (?Init.Data.List.Lemmas.1759.3 :: ?Init.Data.List.Lemmas.1759.4)
@@ -2093,13 +2092,13 @@
   Option.map ?Init.Data.List.Lemmas.1374.2 (List.getLast? ?Init.Data.List.Lemmas.1374.3) ::: #[1376]) ;;; (@LLList.getLast? ?Init.Data.List.Lemmas.1374.1 (List.map ?Init.Data.List.Lemmas.1374.2 ?Init.Data.List.Lemmas.1374.3) =
   Option.map ?Init.Data.List.Lemmas.1374.2 (List.getLast? ?Init.Data.List.Lemmas.1374.3) ::: #[1376]) ;;; (List.filterMap ?Init.Data.List.Lemmas.1359.4
     (List.replicate ?Init.Data.List.Lemmas.1359.3 ?Init.Data.List.Lemmas.1359.2) =
-  @List.List.nil ?Init.Data.List.Lemmas.1359.1 ::: #[1361]) ;;; (@LList.filterMap ?Init.Data.List.Lemmas.1359.0 ?Init.Data.List.Lemmas.1359.1 ?Init.Data.List.Lemmas.1359.4
+  [] ::: #[1361]) ;;; (@LList.filterMap ?Init.Data.List.Lemmas.1359.0 ?Init.Data.List.Lemmas.1359.1 ?Init.Data.List.Lemmas.1359.4
     (List.replicate ?Init.Data.List.Lemmas.1359.3 ?Init.Data.List.Lemmas.1359.2) =
-  @List.List.nil ?Init.Data.List.Lemmas.1359.1 ::: #[1361]) ;;; (@LLList.filterMap ?Init.Data.List.Lemmas.1359.0 ?Init.Data.List.Lemmas.1359.1 ?Init.Data.List.Lemmas.1359.4
+  [] ::: #[1361]) ;;; (@LLList.filterMap ?Init.Data.List.Lemmas.1359.0 ?Init.Data.List.Lemmas.1359.1 ?Init.Data.List.Lemmas.1359.4
     (List.replicate ?Init.Data.List.Lemmas.1359.3 ?Init.Data.List.Lemmas.1359.2) =
-  @List.List.nil ?Init.Data.List.Lemmas.1359.1 ::: #[1361]) ;;; (@LLLList.filterMap ?Init.Data.List.Lemmas.1359.0 ?Init.Data.List.Lemmas.1359.1 ?Init.Data.List.Lemmas.1359.4
+  [] ::: #[1361]) ;;; (@LLLList.filterMap ?Init.Data.List.Lemmas.1359.0 ?Init.Data.List.Lemmas.1359.1 ?Init.Data.List.Lemmas.1359.4
     (List.replicate ?Init.Data.List.Lemmas.1359.3 ?Init.Data.List.Lemmas.1359.2) =
-  @List.List.nil ?Init.Data.List.Lemmas.1359.1 ::: #[1361]) ;;; ((List.replicate ?Init.Data.List.Lemmas.1346.0 ?Init.Data.List.Lemmas.1346.2).get?Internal
+  [] ::: #[1361]) ;;; ((List.replicate ?Init.Data.List.Lemmas.1346.0 ?Init.Data.List.Lemmas.1346.2).get?Internal
     ?Init.Data.List.Lemmas.1346.3 =
   if Nat.lt ?Init.Data.List.Lemmas.1346.3 ?Init.Data.List.Lemmas.1346.0 then some ?Init.Data.List.Lemmas.1346.2
   else @ListListOption.none ?Init.Data.List.Lemmas.1346.1 ::: #[1348]) ;;; ((List.replicate ?Init.Data.List.Lemmas.1346.0 ?Init.Data.List.Lemmas.1346.2).get?Internal
@@ -2145,8 +2144,7 @@
     (List.append ?Init.Data.List.Lemmas.1265.2 ?Init.Data.List.Lemmas.1265.1) =
   List.append ?Init.Data.List.Lemmas.1265.2 (List.dropLast ?Init.Data.List.Lemmas.1265.1) ::: #[1267]) ;;; (@LLList.dropLast ?Init.Data.List.Lemmas.1265.0
     (List.append ?Init.Data.List.Lemmas.1265.2 ?Init.Data.List.Lemmas.1265.1) =
-  List.append ?Init.Data.List.Lemmas.1265.2 (List.dropLast ?Init.Data.List.Lemmas.1265.1) ::: #[1267]) ;;; (List.eraseDupsBy ?Init.Data.List.Lemmas.1239.1 [] = @List.List.nil ?Init.Data.List.Lemmas.1239.0 ::: #[1241]) ;;; (List.eraseDupsBy ?Init.Data.List.Lemmas.1239.1 (@List.List.nil ?Init.Data.List.Lemmas.1239.0) =
-  @List.List.nil ?Init.Data.List.Lemmas.1239.0 ::: #[1241]) ;;; ((?Init.Data.List.Lemmas.1223.1 :: ?Init.Data.List.Lemmas.1223.3).get?Internal
+  List.append ?Init.Data.List.Lemmas.1265.2 (List.dropLast ?Init.Data.List.Lemmas.1265.1) ::: #[1267]) ;;; (List.eraseDupsBy ?Init.Data.List.Lemmas.1239.1 [] = [] ::: #[1241]) ;;; (List.eraseDupsBy ?Init.Data.List.Lemmas.1239.1 (@List.List.nil ?Init.Data.List.Lemmas.1239.0) = [] ::: #[1241]) ;;; ((?Init.Data.List.Lemmas.1223.1 :: ?Init.Data.List.Lemmas.1223.3).get?Internal
     (Nat.add ?Init.Data.List.Lemmas.1223.2 1) =
   @List.getLast?Internal ?Init.Data.List.Lemmas.1223.0 ?Init.Data.List.Lemmas.1223.3 ?Init.Data.List.Lemmas.1223.2 ::: #[1225]) ;;; ((?Init.Data.List.Lemmas.1223.1 :: ?Init.Data.List.Lemmas.1223.3).get?Internal
     (Nat.add ?Init.Data.List.Lemmas.1223.2 1) =
@@ -2351,7 +2349,7 @@
     (List.tail ?Init.Data.List.Lemmas.881.3) =
   List.tail
     (@List.List.map ?Init.Data.List.Lemmas.881.0 ?Init.Data.List.Lemmas.881.1 ?Init.Data.List.Lemmas.881.2
-      ?Init.Data.List.Lemmas.881.3) ::: #[883]) ;;; (?Init.Data.List.Lemmas.860.3 = @List.List.nil ?Init.Data.List.Lemmas.860.0 ::: #[861]) ;;; (List.get ?Init.Data.List.Lemmas.845.1 ⟨0, ?Init.Data.List.Lemmas.845.2⟩ = List.head ?Init.Data.List.Lemmas.845.1 ⋯ ::: #[847]) ;;; (List.get ?Init.Data.List.Lemmas.845.1
+      ?Init.Data.List.Lemmas.881.3) ::: #[883]) ;;; (?Init.Data.List.Lemmas.860.3 = [] ::: #[861]) ;;; (List.get ?Init.Data.List.Lemmas.845.1 ⟨0, ?Init.Data.List.Lemmas.845.2⟩ = List.head ?Init.Data.List.Lemmas.845.1 ⋯ ::: #[847]) ;;; (List.get ?Init.Data.List.Lemmas.845.1
     (Fin.in.mk (List.length ?Init.Data.List.Lemmas.845.1) 0 ?Init.Data.List.Lemmas.845.2) =
   List.head ?Init.Data.List.Lemmas.845.1 ⋯ ::: #[847]) ;;; ((List.append ?Init.Data.List.Lemmas.830.5 ?Init.Data.List.Lemmas.830.6).replace ?Init.Data.List.Lemmas.830.2
     ?Init.Data.List.Lemmas.830.3 =
@@ -2379,9 +2377,7 @@
     (Nat.sub ?Init.Data.List.Lemmas.764.3 (List.length ?Init.Data.List.Lemmas.764.1)) ::: #[766]) ;;; (@List.getLast?Internal ?Init.Data.List.Lemmas.764.0
     (List.append ?Init.Data.List.Lemmas.764.1 ?Init.Data.List.Lemmas.764.2) ?Init.Data.List.Lemmas.764.3 =
   List.get?Internal ?Init.Data.List.Lemmas.764.2
-    (Nat.sub ?Init.Data.List.Lemmas.764.3 (List.length ?Init.Data.List.Lemmas.764.1)) ::: #[766]) ;;; ([].flatten = @List.List.nil ?Init.Data.List.Lemmas.743.0 ::: #[745]) ;;; (List.flatten (@List.List.nil (List ?Init.Data.List.Lemmas.743.0)) = @List.List.nil ?Init.Data.List.Lemmas.743.0 ::: #[745]) ;;; (@LList.flatten ?Init.Data.List.Lemmas.743.0 [] = @List.List.nil ?Init.Data.List.Lemmas.743.0 ::: #[745]) ;;; (@LList.flatten ?Init.Data.List.Lemmas.743.0 (@List.List.nil (List ?Init.Data.List.Lemmas.743.0)) =
-  @List.List.nil ?Init.Data.List.Lemmas.743.0 ::: #[745]) ;;; (@LLList.flatten ?Init.Data.List.Lemmas.743.0 [] = @List.List.nil ?Init.Data.List.Lemmas.743.0 ::: #[745]) ;;; (@LLList.flatten ?Init.Data.List.Lemmas.743.0 (@List.List.nil (List ?Init.Data.List.Lemmas.743.0)) =
-  @List.List.nil ?Init.Data.List.Lemmas.743.0 ::: #[745]) ;;; (List.map ?Init.Data.List.Lemmas.725.2 (List.flatten ?Init.Data.List.Lemmas.725.3) =
+    (Nat.sub ?Init.Data.List.Lemmas.764.3 (List.length ?Init.Data.List.Lemmas.764.1)) ::: #[766]) ;;; ([].flatten = [] ::: #[745]) ;;; (List.flatten (@List.List.nil (List ?Init.Data.List.Lemmas.743.0)) = [] ::: #[745]) ;;; (@LList.flatten ?Init.Data.List.Lemmas.743.0 [] = [] ::: #[745]) ;;; (@LList.flatten ?Init.Data.List.Lemmas.743.0 (@List.List.nil (List ?Init.Data.List.Lemmas.743.0)) = [] ::: #[745]) ;;; (@LLList.flatten ?Init.Data.List.Lemmas.743.0 [] = [] ::: #[745]) ;;; (@LLList.flatten ?Init.Data.List.Lemmas.743.0 (@List.List.nil (List ?Init.Data.List.Lemmas.743.0)) = [] ::: #[745]) ;;; (List.map ?Init.Data.List.Lemmas.725.2 (List.flatten ?Init.Data.List.Lemmas.725.3) =
   (List.map (@List.List.map ?Init.Data.List.Lemmas.725.0 ?Init.Data.List.Lemmas.725.1 ?Init.Data.List.Lemmas.725.2)
       ?Init.Data.List.Lemmas.725.3).flatten ::: #[727]) ;;; (List.map ?Init.Data.List.Lemmas.725.2 (List.flatten ?Init.Data.List.Lemmas.725.3) =
   (List.map (List.map ?Init.Data.List.Lemmas.725.2) ?Init.Data.List.Lemmas.725.3).flatten ::: #[727]) ;;; (List.map ?Init.Data.List.Lemmas.725.2 (List.flatten ?Init.Data.List.Lemmas.725.3) =
@@ -2774,7 +2770,7 @@
   (List.flatten ?Init.Data.List.Lemmas.566.1).append (List.flatten ?Init.Data.List.Lemmas.566.2) ::: #[568]) ;;; (@LLList.flatten ?Init.Data.List.Lemmas.566.0 (List.append ?Init.Data.List.Lemmas.566.1 ?Init.Data.List.Lemmas.566.2) =
   (List.flatten ?Init.Data.List.Lemmas.566.1).append (List.flatten ?Init.Data.List.Lemmas.566.2) ::: #[568]) ;;; ((List.dropLast ?Init.Data.List.Lemmas.534.1).append
     [List.getLast ?Init.Data.List.Lemmas.534.1 ?Init.Data.List.Lemmas.534.2] =
-  ?Init.Data.List.Lemmas.534.1 ::: #[535]) ;;; (?Init.Data.List.Lemmas.520.1 = @List.List.nil ?Init.Data.List.Lemmas.520.0 ::: #[521]) ;;; ([].getLast ?Init.Data.List.Lemmas.508.1 = absurd ⋯ ?Init.Data.List.Lemmas.508.1 ::: #[510]) ;;; (List.getLast (@ListList.nil ?Init.Data.List.Lemmas.508.0) ?Init.Data.List.Lemmas.508.1 =
+  ?Init.Data.List.Lemmas.534.1 ::: #[535]) ;;; (?Init.Data.List.Lemmas.520.1 = [] ::: #[521]) ;;; ([].getLast ?Init.Data.List.Lemmas.508.1 = absurd ⋯ ?Init.Data.List.Lemmas.508.1 ::: #[510]) ;;; (List.getLast (@ListList.nil ?Init.Data.List.Lemmas.508.0) ?Init.Data.List.Lemmas.508.1 =
   absurd ⋯ ?Init.Data.List.Lemmas.508.1 ::: #[510]) ;;; (@List.getLastLast ?Init.Data.List.Lemmas.508.0 [] ?Init.Data.List.Lemmas.508.1 = absurd ⋯ ?Init.Data.List.Lemmas.508.1 ::: #[510]) ;;; (@List.getLastLast ?Init.Data.List.Lemmas.508.0 (@ListList.nil ?Init.Data.List.Lemmas.508.0)
     ?Init.Data.List.Lemmas.508.1 =
   absurd ⋯ ?Init.Data.List.Lemmas.508.1 ::: #[510]) ;;; (List.map ?Init.Data.List.Lemmas.496.3
@@ -3441,7 +3437,7 @@
   @LProd.mk ?Init.Data.List.Basic.9.0 Nat ?Init.Data.List.Basic.9.1 ?Init.Data.List.Basic.9.3 ::
     List.zipIdx ?Init.Data.List.Basic.9.2 (Nat.add ?Init.Data.List.Basic.9.3 1) ::: #[1876]) ;;; ((?Init.Data.List.Basic.9.1 :: ?Init.Data.List.Basic.9.2).zipIdx ?Init.Data.List.Basic.9.3 =
   (?Init.Data.List.Basic.9.1, ?Init.Data.List.Basic.9.3) ::
-    List.zipIdx ?Init.Data.List.Basic.9.2 (Nat.add ?Init.Data.List.Basic.9.3 1) ::: #[1876]) ;;; ([].replace ?Init.Data.List.Basic.18.1 ?Init.Data.List.Basic.18.2 = @List.List.nil ?Init.Data.List.Basic.18.0 ::: #[1885]) ;;; ((?Init.Data.List.Basic.111.1 :: ?Init.Data.List.Basic.111.2).tail = ?Init.Data.List.Basic.111.2 ::: #[1977]) ;;; (@LList.tail ?Init.Data.List.Basic.111.0 (?Init.Data.List.Basic.111.1 :: ?Init.Data.List.Basic.111.2) =
+    List.zipIdx ?Init.Data.List.Basic.9.2 (Nat.add ?Init.Data.List.Basic.9.3 1) ::: #[1876]) ;;; ([].replace ?Init.Data.List.Basic.18.1 ?Init.Data.List.Basic.18.2 = [] ::: #[1885]) ;;; ((?Init.Data.List.Basic.111.1 :: ?Init.Data.List.Basic.111.2).tail = ?Init.Data.List.Basic.111.2 ::: #[1977]) ;;; (@LList.tail ?Init.Data.List.Basic.111.0 (?Init.Data.List.Basic.111.1 :: ?Init.Data.List.Basic.111.2) =
   ?Init.Data.List.Basic.111.2 ::: #[1977]) ;;; (@LLList.tail ?Init.Data.List.Basic.111.0 (?Init.Data.List.Basic.111.1 :: ?Init.Data.List.Basic.111.2) =
   ?Init.Data.List.Basic.111.2 ::: #[1977]) ;;; (List.filter ?Init.Data.List.Basic.124.1 ?Init.Data.List.Basic.124.2 =
   match ?Init.Data.List.Basic.124.2 with
@@ -3479,16 +3475,13 @@
     fun buildCore buildCore_1 => [] ::: #[2082]) ;;; ([].append ?Init.Data.List.Basic.221.1 = ?Init.Data.List.Basic.221.1 ::: #[2087]) ;;; (List.append (@ListList.nil ?Init.Data.List.Basic.221.0) ?Init.Data.List.Basic.221.1 = ?Init.Data.List.Basic.221.1 ::: #[2087]) ;;; ((?Init.Data.List.Basic.226.3 :: ?Init.Data.List.Basic.226.2).unzip =
   (?Init.Data.List.Basic.226.3.1 :: (List.unzip ?Init.Data.List.Basic.226.2).1,
     ?Init.Data.List.Basic.226.3.2 :: (List.unzip ?Init.Data.List.Basic.226.2).2) ::: #[2093]) ;;; (@List.intersperse = @List.intersperseTR ::: #[2111]) ;;; (List.foldr ?Init.Data.List.Basic.258.2 ?Init.Data.List.Basic.258.3 [] = ?Init.Data.List.Basic.258.3 ::: #[2124]) ;;; (List.foldr ?Init.Data.List.Basic.258.2 ?Init.Data.List.Basic.258.3 (@List.List.nil ?Init.Data.List.Basic.258.0) =
-  ?Init.Data.List.Basic.258.3 ::: #[2124]) ;;; (List.takeWhile ?Init.Data.List.Basic.271.1 [] = @List.List.nil ?Init.Data.List.Basic.271.0 ::: #[2138]) ;;; (List.takeWhile ?Init.Data.List.Basic.271.1 (@List.List.nil ?Init.Data.List.Basic.271.0) =
-  @List.List.nil ?Init.Data.List.Basic.271.0 ::: #[2138]) ;;; ([].rotateRight ?Init.Data.List.Basic.277.1 = @List.List.nil ?Init.Data.List.Basic.277.0 ::: #[2144]) ;;; (List.rotateRight (@ListList.nil ?Init.Data.List.Basic.277.0) ?Init.Data.List.Basic.277.1 =
-  @List.List.nil ?Init.Data.List.Basic.277.0 ::: #[2144]) ;;; ((?Init.Data.List.Basic.294.2 :: ?Init.Data.List.Basic.294.3).append ?Init.Data.List.Basic.294.1 =
-  ?Init.Data.List.Basic.294.2 :: List.append ?Init.Data.List.Basic.294.3 ?Init.Data.List.Basic.294.1 ::: #[2161]) ;;; ([].zipIdx ?Init.Data.List.Basic.302.1 = @List.List.nil (?Init.Data.List.Basic.302.0 × Nat) ::: #[2169]) ;;; (List.zipIdx (@ListList.nil ?Init.Data.List.Basic.302.0) ?Init.Data.List.Basic.302.1 =
-  @List.List.nil (?Init.Data.List.Basic.302.0 × Nat) ::: #[2169]) ;;; ((?Init.Data.List.Basic.324.1 :: ?Init.Data.List.Basic.324.2).eraseIdx 0 = ?Init.Data.List.Basic.324.2 ::: #[2190]) ;;; (List.modifyHead ?Init.Data.List.Basic.328.3 (?Init.Data.List.Basic.328.1 :: ?Init.Data.List.Basic.328.2) =
+  ?Init.Data.List.Basic.258.3 ::: #[2124]) ;;; (List.takeWhile ?Init.Data.List.Basic.271.1 [] = [] ::: #[2138]) ;;; (List.takeWhile ?Init.Data.List.Basic.271.1 (@List.List.nil ?Init.Data.List.Basic.271.0) = [] ::: #[2138]) ;;; ([].rotateRight ?Init.Data.List.Basic.277.1 = [] ::: #[2144]) ;;; (List.rotateRight (@ListList.nil ?Init.Data.List.Basic.277.0) ?Init.Data.List.Basic.277.1 = [] ::: #[2144]) ;;; ((?Init.Data.List.Basic.294.2 :: ?Init.Data.List.Basic.294.3).append ?Init.Data.List.Basic.294.1 =
+  ?Init.Data.List.Basic.294.2 :: List.append ?Init.Data.List.Basic.294.3 ?Init.Data.List.Basic.294.1 ::: #[2161]) ;;; ([].zipIdx ?Init.Data.List.Basic.302.1 = [] ::: #[2169]) ;;; (List.zipIdx (@ListList.nil ?Init.Data.List.Basic.302.0) ?Init.Data.List.Basic.302.1 = [] ::: #[2169]) ;;; ((?Init.Data.List.Basic.324.1 :: ?Init.Data.List.Basic.324.2).eraseIdx 0 = ?Init.Data.List.Basic.324.2 ::: #[2190]) ;;; (List.modifyHead ?Init.Data.List.Basic.328.3 (?Init.Data.List.Basic.328.1 :: ?Init.Data.List.Basic.328.2) =
   ?Init.Data.List.Basic.328.3 ?Init.Data.List.Basic.328.1 :: ?Init.Data.List.Basic.328.2 ::: #[2195]) ;;; ([].reverseAux ?Init.Data.List.Basic.334.1 = ?Init.Data.List.Basic.334.1 ::: #[2200]) ;;; (List.reverseAux (@ListList.nil ?Init.Data.List.Basic.334.0) ?Init.Data.List.Basic.334.1 = ?Init.Data.List.Basic.334.1 ::: #[2200]) ;;; (List.zipWith ?Init.Data.List.Basic.357.7 (?Init.Data.List.Basic.357.3 :: ?Init.Data.List.Basic.357.4)
     (?Init.Data.List.Basic.357.5 :: ?Init.Data.List.Basic.357.6) =
   ?Init.Data.List.Basic.357.7 ?Init.Data.List.Basic.357.3 ?Init.Data.List.Basic.357.5 ::
     List.zipWith ?Init.Data.List.Basic.357.7 ?Init.Data.List.Basic.357.4 ?Init.Data.List.Basic.357.6 ::: #[2224]) ;;; ((?Init.Data.List.Basic.377.1 :: ?Init.Data.List.Basic.377.2).reverseAux ?Init.Data.List.Basic.377.3 =
-  List.reverseAux ?Init.Data.List.Basic.377.2 (?Init.Data.List.Basic.377.1 :: ?Init.Data.List.Basic.377.3) ::: #[2244]) ;;; ([?Init.Data.List.Basic.392.1].dropLast = @List.List.nil ?Init.Data.List.Basic.392.0 ::: #[2259]) ;;; (@LList.dropLast ?Init.Data.List.Basic.392.0 [?Init.Data.List.Basic.392.1] = @List.List.nil ?Init.Data.List.Basic.392.0 ::: #[2259]) ;;; (@LLList.dropLast ?Init.Data.List.Basic.392.0 [?Init.Data.List.Basic.392.1] = @List.List.nil ?Init.Data.List.Basic.392.0 ::: #[2259]) ;;; (List.zipWithAll ?Init.Data.List.Basic.398.3 (?Init.Data.List.Basic.398.4 :: ?Init.Data.List.Basic.398.5)
+  List.reverseAux ?Init.Data.List.Basic.377.2 (?Init.Data.List.Basic.377.1 :: ?Init.Data.List.Basic.377.3) ::: #[2244]) ;;; ([?Init.Data.List.Basic.392.1].dropLast = [] ::: #[2259]) ;;; (@LList.dropLast ?Init.Data.List.Basic.392.0 [?Init.Data.List.Basic.392.1] = [] ::: #[2259]) ;;; (@LLList.dropLast ?Init.Data.List.Basic.392.0 [?Init.Data.List.Basic.392.1] = [] ::: #[2259]) ;;; (List.zipWithAll ?Init.Data.List.Basic.398.3 (?Init.Data.List.Basic.398.4 :: ?Init.Data.List.Basic.398.5)
     (?Init.Data.List.Basic.398.6 :: ?Init.Data.List.Basic.398.7) =
   ?Init.Data.List.Basic.398.3 (some ?Init.Data.List.Basic.398.4) (some ?Init.Data.List.Basic.398.6) ::
     List.zipWithAll ?Init.Data.List.Basic.398.3 ?Init.Data.List.Basic.398.5 ?Init.Data.List.Basic.398.7 ::: #[2265]) ;;; (List.reverseAux ?Init.Data.List.Basic.414.1 ?Init.Data.List.Basic.414.2 =
@@ -3505,9 +3498,7 @@
     fun buildCore buildCore_1 buildCore_2 => buildCore_1.reverseAux (buildCore :: buildCore_2) ::: #[2281]) ;;; (List.reverseAux ?Init.Data.List.Basic.414.1 ?Init.Data.List.Basic.414.2 =
   match ?Init.Data.List.Basic.414.1, ?Init.Data.List.Basic.414.2 with
   | [], buildCore => buildCore
-  | buildCore :: buildCore_1, buildCore_2 => buildCore_1.reverseAux (buildCore :: buildCore_2) ::: #[2281]) ;;; (List.modifyHead ?Init.Data.List.Basic.431.1 [] = @List.List.nil ?Init.Data.List.Basic.431.0 ::: #[2298]) ;;; (List.modifyHead ?Init.Data.List.Basic.431.1 (@List.List.nil ?Init.Data.List.Basic.431.0) =
-  @List.List.nil ?Init.Data.List.Basic.431.0 ::: #[2298]) ;;; ([].eraseIdx ?Init.Data.List.Basic.440.1 = @List.List.nil ?Init.Data.List.Basic.440.0 ::: #[2307]) ;;; (List.eraseIdx (@ListList.nil ?Init.Data.List.Basic.440.0) ?Init.Data.List.Basic.440.1 =
-  @List.List.nil ?Init.Data.List.Basic.440.0 ::: #[2307]) ;;; ([].tailD ?Init.Data.List.Basic.449.1 = ?Init.Data.List.Basic.449.1 ::: #[2315]) ;;; (List.tailD (@ListList.nil ?Init.Data.List.Basic.449.0) ?Init.Data.List.Basic.449.1 = ?Init.Data.List.Basic.449.1 ::: #[2315]) ;;; (@List.replicate = @List.replicateTR ::: #[2330]) ;;; (List.replicate ?Init.Data.List.Basic.473.1 ?Init.Data.List.Basic.473.2 =
+  | buildCore :: buildCore_1, buildCore_2 => buildCore_1.reverseAux (buildCore :: buildCore_2) ::: #[2281]) ;;; (List.modifyHead ?Init.Data.List.Basic.431.1 [] = [] ::: #[2298]) ;;; (List.modifyHead ?Init.Data.List.Basic.431.1 (@List.List.nil ?Init.Data.List.Basic.431.0) = [] ::: #[2298]) ;;; ([].eraseIdx ?Init.Data.List.Basic.440.1 = [] ::: #[2307]) ;;; (List.eraseIdx (@ListList.nil ?Init.Data.List.Basic.440.0) ?Init.Data.List.Basic.440.1 = [] ::: #[2307]) ;;; ([].tailD ?Init.Data.List.Basic.449.1 = ?Init.Data.List.Basic.449.1 ::: #[2315]) ;;; (List.tailD (@ListList.nil ?Init.Data.List.Basic.449.0) ?Init.Data.List.Basic.449.1 = ?Init.Data.List.Basic.449.1 ::: #[2315]) ;;; (@List.replicate = @List.replicateTR ::: #[2330]) ;;; (List.replicate ?Init.Data.List.Basic.473.1 ?Init.Data.List.Basic.473.2 =
   @List.List.reeplicate.match_1 ?Init.Data.List.Basic.473.0
     (fun buildCore buildCore_1 => List ?Init.Data.List.Basic.473.0) ?Init.Data.List.Basic.473.1
     ?Init.Data.List.Basic.473.2 (fun buildCore => []) fun buildCore buildCore_1 =>
@@ -3524,33 +3515,23 @@
   | buildCore.succ, buildCore_1 => buildCore_1 :: List.replicate buildCore buildCore_1 ::: #[2340]) ;;; ([].tail? = none ::: #[2349]) ;;; ([].tail? = none ::: #[2349]) ;;; ([].tail? = none ::: #[2349]) ;;; (List.tail? (@List.List.nil ?Init.Data.List.Basic.482.0) = none ::: #[2349]) ;;; (List.tail? (@List.List.nil ?Init.Data.List.Basic.482.0) = none ::: #[2349]) ;;; (List.tail? (@List.List.nil ?Init.Data.List.Basic.482.0) = none ::: #[2349]) ;;; (@LList.tail? ?Init.Data.List.Basic.482.0 [] = none ::: #[2349]) ;;; (@LList.tail? ?Init.Data.List.Basic.482.0 [] = none ::: #[2349]) ;;; (@LList.tail? ?Init.Data.List.Basic.482.0 [] = none ::: #[2349]) ;;; (@LList.tail? ?Init.Data.List.Basic.482.0 (@List.List.nil ?Init.Data.List.Basic.482.0) = none ::: #[2349]) ;;; (@LList.tail? ?Init.Data.List.Basic.482.0 (@List.List.nil ?Init.Data.List.Basic.482.0) = none ::: #[2349]) ;;; (@LList.tail? ?Init.Data.List.Basic.482.0 (@List.List.nil ?Init.Data.List.Basic.482.0) = none ::: #[2349]) ;;; (@LLList.tail? ?Init.Data.List.Basic.482.0 [] = none ::: #[2349]) ;;; (@LLList.tail? ?Init.Data.List.Basic.482.0 [] = none ::: #[2349]) ;;; (@LLList.tail? ?Init.Data.List.Basic.482.0 [] = none ::: #[2349]) ;;; (@LLList.tail? ?Init.Data.List.Basic.482.0 (@List.List.nil ?Init.Data.List.Basic.482.0) = none ::: #[2349]) ;;; (@LLList.tail? ?Init.Data.List.Basic.482.0 (@List.List.nil ?Init.Data.List.Basic.482.0) = none ::: #[2349]) ;;; (@LLList.tail? ?Init.Data.List.Basic.482.0 (@List.List.nil ?Init.Data.List.Basic.482.0) = none ::: #[2349]) ;;; (List.replicate (Nat.add ?Init.Data.List.Basic.492.2 1) ?Init.Data.List.Basic.492.1 =
   ?Init.Data.List.Basic.492.1 ::
     @List.reeplicate ?Init.Data.List.Basic.492.0 ?Init.Data.List.Basic.492.2 ?Init.Data.List.Basic.492.1 ::: #[2359]) ;;; (List.replicate (Nat.add ?Init.Data.List.Basic.492.2 1) ?Init.Data.List.Basic.492.1 =
-  ?Init.Data.List.Basic.492.1 :: List.replicate ?Init.Data.List.Basic.492.2 ?Init.Data.List.Basic.492.1 ::: #[2359]) ;;; (List.take 0 ?Init.Data.List.Basic.499.1 = @List.List.nil ?Init.Data.List.Basic.499.0 ::: #[2366]) ;;; (List.zipWithAll ?Init.Data.List.Basic.515.3 [] ?Init.Data.List.Basic.515.4 =
+  ?Init.Data.List.Basic.492.1 :: List.replicate ?Init.Data.List.Basic.492.2 ?Init.Data.List.Basic.492.1 ::: #[2359]) ;;; (List.take 0 ?Init.Data.List.Basic.499.1 = [] ::: #[2366]) ;;; (List.zipWithAll ?Init.Data.List.Basic.515.3 [] ?Init.Data.List.Basic.515.4 =
   List.map (fun buildCore => ?Init.Data.List.Basic.515.3 none (some buildCore)) ?Init.Data.List.Basic.515.4 ::: #[2382]) ;;; (List.zipWithAll ?Init.Data.List.Basic.515.3 (@ListList.nil ?Init.Data.List.Basic.515.0) ?Init.Data.List.Basic.515.4 =
-  List.map (fun buildCore => ?Init.Data.List.Basic.515.3 none (some buildCore)) ?Init.Data.List.Basic.515.4 ::: #[2382]) ;;; ([].tail = @List.List.nil ?Init.Data.List.Basic.525.0 ::: #[2392]) ;;; (List.tail (@List.List.nil ?Init.Data.List.Basic.525.0) = @List.List.nil ?Init.Data.List.Basic.525.0 ::: #[2392]) ;;; (@LList.tail ?Init.Data.List.Basic.525.0 [] = @List.List.nil ?Init.Data.List.Basic.525.0 ::: #[2392]) ;;; (@LList.tail ?Init.Data.List.Basic.525.0 (@List.List.nil ?Init.Data.List.Basic.525.0) =
-  @List.List.nil ?Init.Data.List.Basic.525.0 ::: #[2392]) ;;; (@LLList.tail ?Init.Data.List.Basic.525.0 [] = @List.List.nil ?Init.Data.List.Basic.525.0 ::: #[2392]) ;;; (@LLList.tail ?Init.Data.List.Basic.525.0 (@List.List.nil ?Init.Data.List.Basic.525.0) =
-  @List.List.nil ?Init.Data.List.Basic.525.0 ::: #[2392]) ;;; (List.modifyHead ?Init.Data.List.Basic.535.1 [] = @List.List.nil ?Init.Data.List.Basic.535.0 ::: #[2402]) ;;; (List.modifyHead ?Init.Data.List.Basic.535.1 (@List.List.nil ?Init.Data.List.Basic.535.0) =
-  @List.List.nil ?Init.Data.List.Basic.535.0 ::: #[2402]) ;;; (List.drop (Nat.add ?Init.Data.List.Basic.541.3 1) (?Init.Data.List.Basic.541.1 :: ?Init.Data.List.Basic.541.2) =
-  List.drop ?Init.Data.List.Basic.541.3 ?Init.Data.List.Basic.541.2 ::: #[2408]) ;;; (List.drop ?Init.Data.List.Basic.561.1 [] = @List.List.nil ?Init.Data.List.Basic.561.0 ::: #[2428]) ;;; (List.drop ?Init.Data.List.Basic.561.1 (@List.List.nil ?Init.Data.List.Basic.561.0) =
-  @List.List.nil ?Init.Data.List.Basic.561.0 ::: #[2428]) ;;; (List.filter ?Init.Data.List.Basic.567.1 [] = @List.List.nil ?Init.Data.List.Basic.567.0 ::: #[2434]) ;;; (List.filter ?Init.Data.List.Basic.567.1 (@List.List.nil ?Init.Data.List.Basic.567.0) =
-  @List.List.nil ?Init.Data.List.Basic.567.0 ::: #[2434]) ;;; (List.zipWithAll ?Init.Data.List.Basic.575.3 ?Init.Data.List.Basic.575.4 [] =
+  List.map (fun buildCore => ?Init.Data.List.Basic.515.3 none (some buildCore)) ?Init.Data.List.Basic.515.4 ::: #[2382]) ;;; ([].tail = [] ::: #[2392]) ;;; (List.tail (@List.List.nil ?Init.Data.List.Basic.525.0) = [] ::: #[2392]) ;;; (@LList.tail ?Init.Data.List.Basic.525.0 [] = [] ::: #[2392]) ;;; (@LList.tail ?Init.Data.List.Basic.525.0 (@List.List.nil ?Init.Data.List.Basic.525.0) = [] ::: #[2392]) ;;; (@LLList.tail ?Init.Data.List.Basic.525.0 [] = [] ::: #[2392]) ;;; (@LLList.tail ?Init.Data.List.Basic.525.0 (@List.List.nil ?Init.Data.List.Basic.525.0) = [] ::: #[2392]) ;;; (List.modifyHead ?Init.Data.List.Basic.535.1 [] = [] ::: #[2402]) ;;; (List.modifyHead ?Init.Data.List.Basic.535.1 (@List.List.nil ?Init.Data.List.Basic.535.0) = [] ::: #[2402]) ;;; (List.drop (Nat.add ?Init.Data.List.Basic.541.3 1) (?Init.Data.List.Basic.541.1 :: ?Init.Data.List.Basic.541.2) =
+  List.drop ?Init.Data.List.Basic.541.3 ?Init.Data.List.Basic.541.2 ::: #[2408]) ;;; (List.drop ?Init.Data.List.Basic.561.1 [] = [] ::: #[2428]) ;;; (List.drop ?Init.Data.List.Basic.561.1 (@List.List.nil ?Init.Data.List.Basic.561.0) = [] ::: #[2428]) ;;; (List.filter ?Init.Data.List.Basic.567.1 [] = [] ::: #[2434]) ;;; (List.filter ?Init.Data.List.Basic.567.1 (@List.List.nil ?Init.Data.List.Basic.567.0) = [] ::: #[2434]) ;;; (List.zipWithAll ?Init.Data.List.Basic.575.3 ?Init.Data.List.Basic.575.4 [] =
   List.map (fun buildCore => ?Init.Data.List.Basic.575.3 (some buildCore) none) ?Init.Data.List.Basic.575.4 ::: #[2442]) ;;; (List.zipWithAll ?Init.Data.List.Basic.575.3 ?Init.Data.List.Basic.575.4 (@List.List.nil ?Init.Data.List.Basic.575.1) =
   List.map (fun buildCore => ?Init.Data.List.Basic.575.3 (some buildCore) none) ?Init.Data.List.Basic.575.4 ::: #[2442]) ;;; (List.mapTR.loop ?Init.Data.List.Basic.580.2 ?Init.Data.List.Basic.580.3 ?Init.Data.List.Basic.580.4 =
   (List.reverse ?Init.Data.List.Basic.580.4).append (List.map ?Init.Data.List.Basic.580.2 ?Init.Data.List.Basic.580.3) ::: #[2447]) ;;; (List.mapTR.loop ?Init.Data.List.Basic.580.2 ?Init.Data.List.Basic.580.3 ?Init.Data.List.Basic.580.4 =
   (List.reverse ?Init.Data.List.Basic.580.4).append
     (@List.List.map ?Init.Data.List.Basic.580.0 ?Init.Data.List.Basic.580.1 ?Init.Data.List.Basic.580.2
       ?Init.Data.List.Basic.580.3) ::: #[2447]) ;;; ((List.append ?Init.Data.List.Basic.591.1 ?Init.Data.List.Basic.591.2).append ?Init.Data.List.Basic.591.3 =
-  List.append ?Init.Data.List.Basic.591.1 (List.append ?Init.Data.List.Basic.591.2 ?Init.Data.List.Basic.591.3) ::: #[2458]) ;;; (List.drop 0 ?Init.Data.List.Basic.598.1 = ?Init.Data.List.Basic.598.1 ::: #[2464]) ;;; (List.drop ?Init.Data.List.Basic.603.2 ?Init.Data.List.Basic.603.1 = @List.List.nil ?Init.Data.List.Basic.603.0 ::: #[2470]) ;;; (List.replicate (ListNat.succ ?Init.Data.List.Basic.609.2) ?Init.Data.List.Basic.609.1 =
+  List.append ?Init.Data.List.Basic.591.1 (List.append ?Init.Data.List.Basic.591.2 ?Init.Data.List.Basic.591.3) ::: #[2458]) ;;; (List.drop 0 ?Init.Data.List.Basic.598.1 = ?Init.Data.List.Basic.598.1 ::: #[2464]) ;;; (List.drop ?Init.Data.List.Basic.603.2 ?Init.Data.List.Basic.603.1 = [] ::: #[2470]) ;;; (List.replicate (ListNat.succ ?Init.Data.List.Basic.609.2) ?Init.Data.List.Basic.609.1 =
   ?Init.Data.List.Basic.609.1 ::
     @List.reeplicate ?Init.Data.List.Basic.609.0 ?Init.Data.List.Basic.609.2 ?Init.Data.List.Basic.609.1 ::: #[2476]) ;;; (List.replicate (ListNat.succ ?Init.Data.List.Basic.609.2) ?Init.Data.List.Basic.609.1 =
   ?Init.Data.List.Basic.609.1 :: List.replicate ?Init.Data.List.Basic.609.2 ?Init.Data.List.Basic.609.1 ::: #[2476]) ;;; (List.replicate (Nat.succ ?Init.Data.List.Basic.609.2) ?Init.Data.List.Basic.609.1 =
   ?Init.Data.List.Basic.609.1 ::
     @List.reeplicate ?Init.Data.List.Basic.609.0 ?Init.Data.List.Basic.609.2 ?Init.Data.List.Basic.609.1 ::: #[2476]) ;;; (List.replicate (Nat.succ ?Init.Data.List.Basic.609.2) ?Init.Data.List.Basic.609.1 =
-  ?Init.Data.List.Basic.609.1 :: List.replicate ?Init.Data.List.Basic.609.2 ?Init.Data.List.Basic.609.1 ::: #[2476]) ;;; ([].flatten = @List.List.nil ?Init.Data.List.Basic.615.0 ::: #[2482]) ;;; (List.flatten (@List.List.nil (List ?Init.Data.List.Basic.615.0)) = @List.List.nil ?Init.Data.List.Basic.615.0 ::: #[2482]) ;;; (@LList.flatten ?Init.Data.List.Basic.615.0 [] = @List.List.nil ?Init.Data.List.Basic.615.0 ::: #[2482]) ;;; (@LList.flatten ?Init.Data.List.Basic.615.0 (@List.List.nil (List ?Init.Data.List.Basic.615.0)) =
-  @List.List.nil ?Init.Data.List.Basic.615.0 ::: #[2482]) ;;; (@LLList.flatten ?Init.Data.List.Basic.615.0 [] = @List.List.nil ?Init.Data.List.Basic.615.0 ::: #[2482]) ;;; (@LLList.flatten ?Init.Data.List.Basic.615.0 (@List.List.nil (List ?Init.Data.List.Basic.615.0)) =
-  @List.List.nil ?Init.Data.List.Basic.615.0 ::: #[2482]) ;;; ([?Init.Data.List.Basic.621.1].dropLast = @List.List.nil ?Init.Data.List.Basic.621.0 ::: #[2488]) ;;; (@LList.dropLast ?Init.Data.List.Basic.621.0 [?Init.Data.List.Basic.621.1] = @List.List.nil ?Init.Data.List.Basic.621.0 ::: #[2488]) ;;; (@LLList.dropLast ?Init.Data.List.Basic.621.0 [?Init.Data.List.Basic.621.1] = @List.List.nil ?Init.Data.List.Basic.621.0 ::: #[2488]) ;;; (@List.length = @List.lengthTR ::: #[2496]) ;;; ([].dropLast = @List.List.nil ?Init.Data.List.Basic.638.0 ::: #[2505]) ;;; (List.dropLast (@List.List.nil ?Init.Data.List.Basic.638.0) = @List.List.nil ?Init.Data.List.Basic.638.0 ::: #[2505]) ;;; (@LList.dropLast ?Init.Data.List.Basic.638.0 [] = @List.List.nil ?Init.Data.List.Basic.638.0 ::: #[2505]) ;;; (@LList.dropLast ?Init.Data.List.Basic.638.0 (@List.List.nil ?Init.Data.List.Basic.638.0) =
-  @List.List.nil ?Init.Data.List.Basic.638.0 ::: #[2505]) ;;; (@LLList.dropLast ?Init.Data.List.Basic.638.0 [] = @List.List.nil ?Init.Data.List.Basic.638.0 ::: #[2505]) ;;; (@LLList.dropLast ?Init.Data.List.Basic.638.0 (@List.List.nil ?Init.Data.List.Basic.638.0) =
-  @List.List.nil ?Init.Data.List.Basic.638.0 ::: #[2505]) ;;; (List.append ?Init.Data.List.Basic.652.1 [] = ?Init.Data.List.Basic.652.1 ::: #[2518]) ;;; (List.append ?Init.Data.List.Basic.652.1 (@List.List.nil ?Init.Data.List.Basic.652.0) = ?Init.Data.List.Basic.652.1 ::: #[2518]) ;;; (List.zipWith ?Init.Data.List.Basic.697.4 ?Init.Data.List.Basic.697.3 [] = @List.List.nil ?Init.Data.List.Basic.697.2 ::: #[2564]) ;;; (List.zipWith ?Init.Data.List.Basic.697.4 ?Init.Data.List.Basic.697.3 (@List.List.nil ?Init.Data.List.Basic.697.1) =
-  @List.List.nil ?Init.Data.List.Basic.697.2 ::: #[2564]) ;;; (List.get ?Init.Data.List.Lemmas.6.1 ⟨?Init.Data.List.Lemmas.6.2, ?Init.Data.List.Lemmas.6.3⟩ =
+  ?Init.Data.List.Basic.609.1 :: List.replicate ?Init.Data.List.Basic.609.2 ?Init.Data.List.Basic.609.1 ::: #[2476]) ;;; ([].flatten = [] ::: #[2482]) ;;; (List.flatten (@List.List.nil (List ?Init.Data.List.Basic.615.0)) = [] ::: #[2482]) ;;; (@LList.flatten ?Init.Data.List.Basic.615.0 [] = [] ::: #[2482]) ;;; (@LList.flatten ?Init.Data.List.Basic.615.0 (@List.List.nil (List ?Init.Data.List.Basic.615.0)) = [] ::: #[2482]) ;;; (@LLList.flatten ?Init.Data.List.Basic.615.0 [] = [] ::: #[2482]) ;;; (@LLList.flatten ?Init.Data.List.Basic.615.0 (@List.List.nil (List ?Init.Data.List.Basic.615.0)) = [] ::: #[2482]) ;;; ([?Init.Data.List.Basic.621.1].dropLast = [] ::: #[2488]) ;;; (@LList.dropLast ?Init.Data.List.Basic.621.0 [?Init.Data.List.Basic.621.1] = [] ::: #[2488]) ;;; (@LLList.dropLast ?Init.Data.List.Basic.621.0 [?Init.Data.List.Basic.621.1] = [] ::: #[2488]) ;;; (@List.length = @List.lengthTR ::: #[2496]) ;;; ([].dropLast = [] ::: #[2505]) ;;; (List.dropLast (@List.List.nil ?Init.Data.List.Basic.638.0) = [] ::: #[2505]) ;;; (@LList.dropLast ?Init.Data.List.Basic.638.0 [] = [] ::: #[2505]) ;;; (@LList.dropLast ?Init.Data.List.Basic.638.0 (@List.List.nil ?Init.Data.List.Basic.638.0) = [] ::: #[2505]) ;;; (@LLList.dropLast ?Init.Data.List.Basic.638.0 [] = [] ::: #[2505]) ;;; (@LLList.dropLast ?Init.Data.List.Basic.638.0 (@List.List.nil ?Init.Data.List.Basic.638.0) = [] ::: #[2505]) ;;; (List.append ?Init.Data.List.Basic.652.1 [] = ?Init.Data.List.Basic.652.1 ::: #[2518]) ;;; (List.append ?Init.Data.List.Basic.652.1 (@List.List.nil ?Init.Data.List.Basic.652.0) = ?Init.Data.List.Basic.652.1 ::: #[2518]) ;;; (List.zipWith ?Init.Data.List.Basic.697.4 ?Init.Data.List.Basic.697.3 [] = [] ::: #[2564]) ;;; (List.zipWith ?Init.Data.List.Basic.697.4 ?Init.Data.List.Basic.697.3 (@List.List.nil ?Init.Data.List.Basic.697.1) = [] ::: #[2564]) ;;; (List.get ?Init.Data.List.Lemmas.6.1 ⟨?Init.Data.List.Lemmas.6.2, ?Init.Data.List.Lemmas.6.3⟩ =
   (List.get?Internal ?Init.Data.List.Lemmas.6.1 ?Init.Data.List.Lemmas.6.2).get ⋯ ::: #[8]) ;;; (List.get ?Init.Data.List.Lemmas.6.1
     (Fin.in.mk (List.length ?Init.Data.List.Lemmas.6.1) ?Init.Data.List.Lemmas.6.2 ?Init.Data.List.Lemmas.6.3) =
   (List.get?Internal ?Init.Data.List.Lemmas.6.1 ?Init.Data.List.Lemmas.6.2).get ⋯ ::: #[8]) ;;; ((List.append ?Init.Data.List.Lemmas.33.2 ?Init.Data.List.Lemmas.33.1).getLast ?Init.Data.List.Lemmas.33.3 =
@@ -4038,8 +4019,7 @@
   else some ?Init.Data.List.Lemmas.712.1 ::: #[714]) ;;; (@LLList.head? ?Init.Data.List.Lemmas.712.0 (List.replicate ?Init.Data.List.Lemmas.712.2 ?Init.Data.List.Lemmas.712.1) =
   if ?Init.Data.List.Lemmas.712.2 = 0 then none else some ?Init.Data.List.Lemmas.712.1 ::: #[714]) ;;; (@LLList.head? ?Init.Data.List.Lemmas.712.0 (List.replicate ?Init.Data.List.Lemmas.712.2 ?Init.Data.List.Lemmas.712.1) =
   if ?Init.Data.List.Lemmas.712.2 = 0 then @ListOption.none ?Init.Data.List.Lemmas.712.0
-  else some ?Init.Data.List.Lemmas.712.1 ::: #[714]) ;;; (List.filter ?Init.Data.List.Lemmas.728.1 (List.replicate ?Init.Data.List.Lemmas.728.2 ?Init.Data.List.Lemmas.728.3) =
-  @List.List.nil ?Init.Data.List.Lemmas.728.0 ::: #[730]) ;;; ((List.set ?Init.Data.List.Lemmas.752.5 ?Init.Data.List.Lemmas.752.3 ?Init.Data.List.Lemmas.752.1).set
+  else some ?Init.Data.List.Lemmas.712.1 ::: #[714]) ;;; (List.filter ?Init.Data.List.Lemmas.728.1 (List.replicate ?Init.Data.List.Lemmas.728.2 ?Init.Data.List.Lemmas.728.3) = [] ::: #[730]) ;;; ((List.set ?Init.Data.List.Lemmas.752.5 ?Init.Data.List.Lemmas.752.3 ?Init.Data.List.Lemmas.752.1).set
     ?Init.Data.List.Lemmas.752.4 ?Init.Data.List.Lemmas.752.2 =
   (List.set ?Init.Data.List.Lemmas.752.5 ?Init.Data.List.Lemmas.752.4 ?Init.Data.List.Lemmas.752.2).set
     ?Init.Data.List.Lemmas.752.3 ?Init.Data.List.Lemmas.752.1 ::: #[754]) ;;; (@LList.set ?Init.Data.List.Lemmas.752.0
@@ -6378,7 +6358,7 @@
     ?Init.Data.List.Init.Data.List.Range.29.2 =
   List.map (fun buildCore => buildCore.add 1)
     (List.range' ?Init.Data.List.Init.Data.List.Range.29.0 ?Init.Data.List.Init.Data.List.Range.29.1
-      ?Init.Data.List.Init.Data.List.Range.29.2) ::: #[2604]) ;;; (List.range' ?Init.Data.List.Basic.37.0 0 ?Init.Data.List.Basic.37.1 = @List.List.nil Nat ::: #[1904]) ;;; (List.range' ?Init.Data.List.Basic.127.0 1 ?Init.Data.List.Basic.127.1 = [?Init.Data.List.Basic.127.0] ::: #[1994]) ;;; (List.range' ?Init.Data.List.Basic.127.0 1 ?Init.Data.List.Basic.127.1 = ?Init.Data.List.Basic.127.0 :: @ListList.nil Nat ::: #[1994]) ;;; (List.range' ?Init.Data.List.Basic.127.0 1 ?Init.Data.List.Basic.127.1 =
+      ?Init.Data.List.Init.Data.List.Range.29.2) ::: #[2604]) ;;; (List.range' ?Init.Data.List.Basic.37.0 0 ?Init.Data.List.Basic.37.1 = [] ::: #[1904]) ;;; (List.range' ?Init.Data.List.Basic.127.0 1 ?Init.Data.List.Basic.127.1 = [?Init.Data.List.Basic.127.0] ::: #[1994]) ;;; (List.range' ?Init.Data.List.Basic.127.0 1 ?Init.Data.List.Basic.127.1 = ?Init.Data.List.Basic.127.0 :: @ListList.nil Nat ::: #[1994]) ;;; (List.range' ?Init.Data.List.Basic.127.0 1 ?Init.Data.List.Basic.127.1 =
   ?Init.Data.List.Basic.127.0 :: @ListListList.nil Nat ::: #[1994]) ;;; (List.range' ?Init.Data.List.Basic.586.0 (Nat.add ?Init.Data.List.Basic.586.1 1) ?Init.Data.List.Basic.586.2 =
   ?Init.Data.List.Basic.586.0 ::
     List.range' (Nat.add ?Init.Data.List.Basic.586.0 ?Init.Data.List.Basic.586.2) ?Init.Data.List.Basic.586.1
@@ -6400,11 +6380,11 @@
     List.range' (Nat.add ?Init.Data.List.Init.Data.List.Range.63.0 ?Init.Data.List.Init.Data.List.Range.63.1)
       ?Init.Data.List.Init.Data.List.Range.63.2 ?Init.Data.List.Init.Data.List.Range.63.1 ::: #[2638]) ;;; (List.range' ?Init.Data.List.Init.Data.List.Range.95.0 (Nat.add ?Init.Data.List.Init.Data.List.Range.95.1 1) 1 =
   (List.range' ?Init.Data.List.Init.Data.List.Range.95.0 ?Init.Data.List.Init.Data.List.Range.95.1 1).append
-    [Nat.add ?Init.Data.List.Init.Data.List.Range.95.0 ?Init.Data.List.Init.Data.List.Range.95.1] ::: #[2670]) ;;; (List.range' ?Init.Data.List.Init.Data.List.Range.116.0 0 ?Init.Data.List.Init.Data.List.Range.116.1 = @List.List.nil Nat ::: #[2691]) ;;; (List.range (Nat.succ ?Init.Data.List.Init.Data.List.Range.54.0) =
+    [Nat.add ?Init.Data.List.Init.Data.List.Range.95.0 ?Init.Data.List.Init.Data.List.Range.95.1] ::: #[2670]) ;;; (List.range' ?Init.Data.List.Init.Data.List.Range.116.0 0 ?Init.Data.List.Init.Data.List.Range.116.1 = [] ::: #[2691]) ;;; (List.range (Nat.succ ?Init.Data.List.Init.Data.List.Range.54.0) =
   List.append (ListList.range ?Init.Data.List.Init.Data.List.Range.54.0) [?Init.Data.List.Init.Data.List.Range.54.0] ::: #[2629]) ;;; (List.range (Nat.succ ?Init.Data.List.Init.Data.List.Range.54.0) =
   (List.range ?Init.Data.List.Init.Data.List.Range.54.0).append [?Init.Data.List.Init.Data.List.Range.54.0] ::: #[2629]) ;;; (List.range (List.Nat.succ ?Init.Data.List.Init.Data.List.Range.54.0) =
   List.append (ListList.range ?Init.Data.List.Init.Data.List.Range.54.0) [?Init.Data.List.Init.Data.List.Range.54.0] ::: #[2629]) ;;; (List.range (List.Nat.succ ?Init.Data.List.Init.Data.List.Range.54.0) =
-  (List.range ?Init.Data.List.Init.Data.List.Range.54.0).append [?Init.Data.List.Init.Data.List.Range.54.0] ::: #[2629]) ;;; (List.range ?Init.Data.List.Init.Data.List.Range.66.0 = List.range' 0 ?Init.Data.List.Init.Data.List.Range.66.0 1 ::: #[2641]) ;;; (List.range 0 = @List.List.nil Nat ::: #[2425]) ;;; (((List.isEqv ?Init.Data.List.Lemmas.244.3 ?Init.Data.List.Lemmas.244.4 fun buildCore buildCore_1 =>
+  (List.range ?Init.Data.List.Init.Data.List.Range.54.0).append [?Init.Data.List.Init.Data.List.Range.54.0] ::: #[2629]) ;;; (List.range ?Init.Data.List.Init.Data.List.Range.66.0 = List.range' 0 ?Init.Data.List.Init.Data.List.Range.66.0 1 ::: #[2641]) ;;; (List.range 0 = [] ::: #[2425]) ;;; (((List.isEqv ?Init.Data.List.Lemmas.244.3 ?Init.Data.List.Lemmas.244.4 fun buildCore buildCore_1 =>
       buildCore == buildCore_1) =
     true) =
   (?Init.Data.List.Lemmas.244.3 = ?Init.Data.List.Lemmas.244.4) ::: #[246]) ;;; (((@List.iisEqv ?Init.Data.List.Lemmas.244.0 ?Init.Data.List.Lemmas.244.3 ?Init.Data.List.Lemmas.244.4
@@ -8399,110 +8379,56 @@
   Nat.add (@LList.ist.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.0)
     (List.sum ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; ((List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1).sum =
   Nat.add (@LList.ist.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.0)
-    (List.sum ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; ((List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1).sum =
-  Nat.add (@LList.ist.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.0)
-    (List.sum ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; ((List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1).sum =
-  Nat.add (@LList.ist.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.0)
-    (@List.List.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; ((List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1).sum =
-  Nat.add (@LList.ist.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.0)
     (@List.List.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; ((List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1).sum =
   Nat.add (@LList.ist.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.0)
     (@List.List.sum Nat instAddNat (@Nat.Zero.ofOfNat0 Nat (instOfNatNat 0)) ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; ((List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1).sum =
-  Nat.add (@LList.ist.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.0)
-    (@List.List.sum Nat instAddNat (@Nat.Zero.ofOfNat0 Nat (ListinstOfNatNat 0)) ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; ((List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1).sum =
   Nat.add (@LList.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.0) (List.sum ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; ((List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1).sum =
   Nat.add (@LList.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.0) (List.sum ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; ((List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1).sum =
-  Nat.add (@LList.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.0) (List.sum ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; ((List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1).sum =
-  Nat.add (@LList.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.0) (List.sum ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; ((List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1).sum =
-  Nat.add (@LList.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.0)
-    (@List.List.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; ((List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1).sum =
   Nat.add (@LList.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.0)
     (@List.List.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; ((List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1).sum =
   Nat.add (@LList.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.0)
     (@List.List.sum Nat instAddNat (@Nat.Zero.ofOfNat0 Nat (instOfNatNat 0)) ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; ((List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1).sum =
-  Nat.add (@LList.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.0)
-    (@List.List.sum Nat instAddNat (@Nat.Zero.ofOfNat0 Nat (ListinstOfNatNat 0)) ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; ((List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1).sum =
   Nat.add (@List.ist.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.0)
     (List.sum ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; ((List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1).sum =
   Nat.add (@List.ist.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.0)
     (List.sum ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; ((List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1).sum =
-  Nat.add (@List.ist.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.0)
-    (List.sum ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; ((List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1).sum =
-  Nat.add (@List.ist.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.0)
-    (List.sum ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; ((List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1).sum =
-  Nat.add (@List.ist.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.0)
-    (@List.List.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; ((List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1).sum =
   Nat.add (@List.ist.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.0)
     (@List.List.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; ((List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1).sum =
   Nat.add (@List.ist.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.0)
     (@List.List.sum Nat instAddNat (@Nat.Zero.ofOfNat0 Nat (instOfNatNat 0)) ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; ((List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1).sum =
-  Nat.add (@List.ist.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.0)
-    (@List.List.sum Nat instAddNat (@Nat.Zero.ofOfNat0 Nat (ListinstOfNatNat 0)) ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; ((List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1).sum =
-  (List.sum ?Init.Data.List.Lemmas.171.0).add (List.sum ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; ((List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1).sum =
-  (List.sum ?Init.Data.List.Lemmas.171.0).add (List.sum ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; ((List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1).sum =
   (List.sum ?Init.Data.List.Lemmas.171.0).add (List.sum ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; ((List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1).sum =
   (List.sum ?Init.Data.List.Lemmas.171.0).add (List.sum ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; ((List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1).sum =
   (List.sum ?Init.Data.List.Lemmas.171.0).add (@List.List.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; ((List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1).sum =
-  (List.sum ?Init.Data.List.Lemmas.171.0).add (@List.List.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; ((List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1).sum =
   (List.sum ?Init.Data.List.Lemmas.171.0).add
-    (@List.List.sum Nat instAddNat (@Nat.Zero.ofOfNat0 Nat (instOfNatNat 0)) ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; ((List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1).sum =
-  (List.sum ?Init.Data.List.Lemmas.171.0).add
-    (@List.List.sum Nat instAddNat (@Nat.Zero.ofOfNat0 Nat (ListinstOfNatNat 0)) ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; ((List.reverse ?Init.Data.List.Lemmas.952.0).sum = List.sum ?Init.Data.List.Lemmas.952.0 ::: #[954]) ;;; ((List.reverse ?Init.Data.List.Lemmas.952.0).sum = List.sum ?Init.Data.List.Lemmas.952.0 ::: #[954]) ;;; (@LList.sum Nat instAddNat Zero.ofOfNat0 (List.replicate ?Init.Data.List.Lemmas.681.0 ?Init.Data.List.Lemmas.681.1) =
+    (@List.List.sum Nat instAddNat (@Nat.Zero.ofOfNat0 Nat (instOfNatNat 0)) ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; ((List.reverse ?Init.Data.List.Lemmas.952.0).sum = List.sum ?Init.Data.List.Lemmas.952.0 ::: #[954]) ;;; ((List.reverse ?Init.Data.List.Lemmas.952.0).sum = List.sum ?Init.Data.List.Lemmas.952.0 ::: #[954]) ;;; (@LList.sum Nat instAddNat Zero.ofOfNat0 (List.replicate ?Init.Data.List.Lemmas.681.0 ?Init.Data.List.Lemmas.681.1) =
   Nat.mul ?Init.Data.List.Lemmas.681.0 ?Init.Data.List.Lemmas.681.1 ::: #[683]) ;;; (@LList.sum Nat instAddNat Zero.ofOfNat0 (List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1) =
   Nat.add (@LList.ist.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.0)
     (List.sum ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; (@LList.sum Nat instAddNat Zero.ofOfNat0 (List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1) =
   Nat.add (@LList.ist.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.0)
     (List.sum ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; (@LList.sum Nat instAddNat Zero.ofOfNat0 (List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1) =
   Nat.add (@LList.ist.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.0)
-    (List.sum ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; (@LList.sum Nat instAddNat Zero.ofOfNat0 (List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1) =
-  Nat.add (@LList.ist.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.0)
-    (List.sum ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; (@LList.sum Nat instAddNat Zero.ofOfNat0 (List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1) =
-  Nat.add (@LList.ist.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.0)
-    (@List.List.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; (@LList.sum Nat instAddNat Zero.ofOfNat0 (List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1) =
-  Nat.add (@LList.ist.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.0)
     (@List.List.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; (@LList.sum Nat instAddNat Zero.ofOfNat0 (List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1) =
   Nat.add (@LList.ist.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.0)
     (@List.List.sum Nat instAddNat (@Nat.Zero.ofOfNat0 Nat (instOfNatNat 0)) ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; (@LList.sum Nat instAddNat Zero.ofOfNat0 (List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1) =
-  Nat.add (@LList.ist.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.0)
-    (@List.List.sum Nat instAddNat (@Nat.Zero.ofOfNat0 Nat (ListinstOfNatNat 0)) ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; (@LList.sum Nat instAddNat Zero.ofOfNat0 (List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1) =
   Nat.add (@LList.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.0) (List.sum ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; (@LList.sum Nat instAddNat Zero.ofOfNat0 (List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1) =
   Nat.add (@LList.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.0) (List.sum ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; (@LList.sum Nat instAddNat Zero.ofOfNat0 (List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1) =
-  Nat.add (@LList.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.0) (List.sum ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; (@LList.sum Nat instAddNat Zero.ofOfNat0 (List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1) =
-  Nat.add (@LList.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.0) (List.sum ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; (@LList.sum Nat instAddNat Zero.ofOfNat0 (List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1) =
-  Nat.add (@LList.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.0)
-    (@List.List.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; (@LList.sum Nat instAddNat Zero.ofOfNat0 (List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1) =
   Nat.add (@LList.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.0)
     (@List.List.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; (@LList.sum Nat instAddNat Zero.ofOfNat0 (List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1) =
   Nat.add (@LList.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.0)
     (@List.List.sum Nat instAddNat (@Nat.Zero.ofOfNat0 Nat (instOfNatNat 0)) ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; (@LList.sum Nat instAddNat Zero.ofOfNat0 (List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1) =
-  Nat.add (@LList.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.0)
-    (@List.List.sum Nat instAddNat (@Nat.Zero.ofOfNat0 Nat (ListinstOfNatNat 0)) ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; (@LList.sum Nat instAddNat Zero.ofOfNat0 (List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1) =
   Nat.add (@List.ist.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.0)
     (List.sum ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; (@LList.sum Nat instAddNat Zero.ofOfNat0 (List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1) =
   Nat.add (@List.ist.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.0)
     (List.sum ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; (@LList.sum Nat instAddNat Zero.ofOfNat0 (List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1) =
-  Nat.add (@List.ist.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.0)
-    (List.sum ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; (@LList.sum Nat instAddNat Zero.ofOfNat0 (List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1) =
-  Nat.add (@List.ist.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.0)
-    (List.sum ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; (@LList.sum Nat instAddNat Zero.ofOfNat0 (List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1) =
-  Nat.add (@List.ist.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.0)
-    (@List.List.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; (@LList.sum Nat instAddNat Zero.ofOfNat0 (List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1) =
   Nat.add (@List.ist.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.0)
     (@List.List.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; (@LList.sum Nat instAddNat Zero.ofOfNat0 (List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1) =
   Nat.add (@List.ist.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.0)
     (@List.List.sum Nat instAddNat (@Nat.Zero.ofOfNat0 Nat (instOfNatNat 0)) ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; (@LList.sum Nat instAddNat Zero.ofOfNat0 (List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1) =
-  Nat.add (@List.ist.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.0)
-    (@List.List.sum Nat instAddNat (@Nat.Zero.ofOfNat0 Nat (ListinstOfNatNat 0)) ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; (@LList.sum Nat instAddNat Zero.ofOfNat0 (List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1) =
-  (List.sum ?Init.Data.List.Lemmas.171.0).add (List.sum ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; (@LList.sum Nat instAddNat Zero.ofOfNat0 (List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1) =
-  (List.sum ?Init.Data.List.Lemmas.171.0).add (List.sum ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; (@LList.sum Nat instAddNat Zero.ofOfNat0 (List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1) =
   (List.sum ?Init.Data.List.Lemmas.171.0).add (List.sum ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; (@LList.sum Nat instAddNat Zero.ofOfNat0 (List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1) =
   (List.sum ?Init.Data.List.Lemmas.171.0).add (List.sum ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; (@LList.sum Nat instAddNat Zero.ofOfNat0 (List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1) =
   (List.sum ?Init.Data.List.Lemmas.171.0).add (@List.List.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; (@LList.sum Nat instAddNat Zero.ofOfNat0 (List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1) =
-  (List.sum ?Init.Data.List.Lemmas.171.0).add (@List.List.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; (@LList.sum Nat instAddNat Zero.ofOfNat0 (List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1) =
   (List.sum ?Init.Data.List.Lemmas.171.0).add
-    (@List.List.sum Nat instAddNat (@Nat.Zero.ofOfNat0 Nat (instOfNatNat 0)) ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; (@LList.sum Nat instAddNat Zero.ofOfNat0 (List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1) =
-  (List.sum ?Init.Data.List.Lemmas.171.0).add
-    (@List.List.sum Nat instAddNat (@Nat.Zero.ofOfNat0 Nat (ListinstOfNatNat 0)) ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; (@LList.sum Nat instAddNat Zero.ofOfNat0 (List.reverse ?Init.Data.List.Lemmas.952.0) =
+    (@List.List.sum Nat instAddNat (@Nat.Zero.ofOfNat0 Nat (instOfNatNat 0)) ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; (@LList.sum Nat instAddNat Zero.ofOfNat0 (List.reverse ?Init.Data.List.Lemmas.952.0) =
   List.sum ?Init.Data.List.Lemmas.952.0 ::: #[954]) ;;; (@LList.sum Nat instAddNat Zero.ofOfNat0 (List.reverse ?Init.Data.List.Lemmas.952.0) =
   List.sum ?Init.Data.List.Lemmas.952.0 ::: #[954]) ;;; (@LLList.sum Nat instAddNat Zero.ofOfNat0 (List.replicate ?Init.Data.List.Lemmas.681.0 ?Init.Data.List.Lemmas.681.1) =
   Nat.mul ?Init.Data.List.Lemmas.681.0 ?Init.Data.List.Lemmas.681.1 ::: #[683]) ;;; (@LLList.sum Nat instAddNat Zero.ofOfNat0 (List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1) =
@@ -8511,55 +8437,28 @@
   Nat.add (@LList.ist.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.0)
     (List.sum ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; (@LLList.sum Nat instAddNat Zero.ofOfNat0 (List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1) =
   Nat.add (@LList.ist.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.0)
-    (List.sum ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; (@LLList.sum Nat instAddNat Zero.ofOfNat0 (List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1) =
-  Nat.add (@LList.ist.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.0)
-    (List.sum ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; (@LLList.sum Nat instAddNat Zero.ofOfNat0 (List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1) =
-  Nat.add (@LList.ist.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.0)
-    (@List.List.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; (@LLList.sum Nat instAddNat Zero.ofOfNat0 (List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1) =
-  Nat.add (@LList.ist.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.0)
     (@List.List.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; (@LLList.sum Nat instAddNat Zero.ofOfNat0 (List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1) =
   Nat.add (@LList.ist.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.0)
     (@List.List.sum Nat instAddNat (@Nat.Zero.ofOfNat0 Nat (instOfNatNat 0)) ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; (@LLList.sum Nat instAddNat Zero.ofOfNat0 (List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1) =
-  Nat.add (@LList.ist.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.0)
-    (@List.List.sum Nat instAddNat (@Nat.Zero.ofOfNat0 Nat (ListinstOfNatNat 0)) ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; (@LLList.sum Nat instAddNat Zero.ofOfNat0 (List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1) =
   Nat.add (@LList.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.0) (List.sum ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; (@LLList.sum Nat instAddNat Zero.ofOfNat0 (List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1) =
   Nat.add (@LList.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.0) (List.sum ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; (@LLList.sum Nat instAddNat Zero.ofOfNat0 (List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1) =
-  Nat.add (@LList.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.0) (List.sum ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; (@LLList.sum Nat instAddNat Zero.ofOfNat0 (List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1) =
-  Nat.add (@LList.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.0) (List.sum ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; (@LLList.sum Nat instAddNat Zero.ofOfNat0 (List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1) =
-  Nat.add (@LList.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.0)
-    (@List.List.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; (@LLList.sum Nat instAddNat Zero.ofOfNat0 (List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1) =
   Nat.add (@LList.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.0)
     (@List.List.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; (@LLList.sum Nat instAddNat Zero.ofOfNat0 (List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1) =
   Nat.add (@LList.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.0)
     (@List.List.sum Nat instAddNat (@Nat.Zero.ofOfNat0 Nat (instOfNatNat 0)) ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; (@LLList.sum Nat instAddNat Zero.ofOfNat0 (List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1) =
-  Nat.add (@LList.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.0)
-    (@List.List.sum Nat instAddNat (@Nat.Zero.ofOfNat0 Nat (ListinstOfNatNat 0)) ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; (@LLList.sum Nat instAddNat Zero.ofOfNat0 (List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1) =
   Nat.add (@List.ist.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.0)
     (List.sum ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; (@LLList.sum Nat instAddNat Zero.ofOfNat0 (List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1) =
   Nat.add (@List.ist.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.0)
     (List.sum ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; (@LLList.sum Nat instAddNat Zero.ofOfNat0 (List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1) =
-  Nat.add (@List.ist.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.0)
-    (List.sum ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; (@LLList.sum Nat instAddNat Zero.ofOfNat0 (List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1) =
-  Nat.add (@List.ist.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.0)
-    (List.sum ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; (@LLList.sum Nat instAddNat Zero.ofOfNat0 (List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1) =
-  Nat.add (@List.ist.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.0)
-    (@List.List.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; (@LLList.sum Nat instAddNat Zero.ofOfNat0 (List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1) =
   Nat.add (@List.ist.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.0)
     (@List.List.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; (@LLList.sum Nat instAddNat Zero.ofOfNat0 (List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1) =
   Nat.add (@List.ist.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.0)
     (@List.List.sum Nat instAddNat (@Nat.Zero.ofOfNat0 Nat (instOfNatNat 0)) ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; (@LLList.sum Nat instAddNat Zero.ofOfNat0 (List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1) =
-  Nat.add (@List.ist.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.0)
-    (@List.List.sum Nat instAddNat (@Nat.Zero.ofOfNat0 Nat (ListinstOfNatNat 0)) ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; (@LLList.sum Nat instAddNat Zero.ofOfNat0 (List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1) =
-  (List.sum ?Init.Data.List.Lemmas.171.0).add (List.sum ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; (@LLList.sum Nat instAddNat Zero.ofOfNat0 (List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1) =
-  (List.sum ?Init.Data.List.Lemmas.171.0).add (List.sum ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; (@LLList.sum Nat instAddNat Zero.ofOfNat0 (List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1) =
   (List.sum ?Init.Data.List.Lemmas.171.0).add (List.sum ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; (@LLList.sum Nat instAddNat Zero.ofOfNat0 (List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1) =
   (List.sum ?Init.Data.List.Lemmas.171.0).add (List.sum ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; (@LLList.sum Nat instAddNat Zero.ofOfNat0 (List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1) =
   (List.sum ?Init.Data.List.Lemmas.171.0).add (@List.List.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; (@LLList.sum Nat instAddNat Zero.ofOfNat0 (List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1) =
-  (List.sum ?Init.Data.List.Lemmas.171.0).add (@List.List.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; (@LLList.sum Nat instAddNat Zero.ofOfNat0 (List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1) =
   (List.sum ?Init.Data.List.Lemmas.171.0).add
-    (@List.List.sum Nat instAddNat (@Nat.Zero.ofOfNat0 Nat (instOfNatNat 0)) ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; (@LLList.sum Nat instAddNat Zero.ofOfNat0 (List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1) =
-  (List.sum ?Init.Data.List.Lemmas.171.0).add
-    (@List.List.sum Nat instAddNat (@Nat.Zero.ofOfNat0 Nat (ListinstOfNatNat 0)) ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; (@LLList.sum Nat instAddNat Zero.ofOfNat0 (List.reverse ?Init.Data.List.Lemmas.952.0) =
+    (@List.List.sum Nat instAddNat (@Nat.Zero.ofOfNat0 Nat (instOfNatNat 0)) ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; (@LLList.sum Nat instAddNat Zero.ofOfNat0 (List.reverse ?Init.Data.List.Lemmas.952.0) =
   List.sum ?Init.Data.List.Lemmas.952.0 ::: #[954]) ;;; (@LLList.sum Nat instAddNat Zero.ofOfNat0 (List.reverse ?Init.Data.List.Lemmas.952.0) =
   List.sum ?Init.Data.List.Lemmas.952.0 ::: #[954]) ;;; (@LLLList.sum Nat instAddNat Zero.ofOfNat0 (List.replicate ?Init.Data.List.Lemmas.681.0 ?Init.Data.List.Lemmas.681.1) =
   Nat.mul ?Init.Data.List.Lemmas.681.0 ?Init.Data.List.Lemmas.681.1 ::: #[683]) ;;; (@LLLList.sum Nat instAddNat Zero.ofOfNat0 (List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1) =
@@ -8568,55 +8467,28 @@
   Nat.add (@LList.ist.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.0)
     (List.sum ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; (@LLLList.sum Nat instAddNat Zero.ofOfNat0 (List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1) =
   Nat.add (@LList.ist.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.0)
-    (List.sum ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; (@LLLList.sum Nat instAddNat Zero.ofOfNat0 (List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1) =
-  Nat.add (@LList.ist.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.0)
-    (List.sum ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; (@LLLList.sum Nat instAddNat Zero.ofOfNat0 (List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1) =
-  Nat.add (@LList.ist.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.0)
-    (@List.List.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; (@LLLList.sum Nat instAddNat Zero.ofOfNat0 (List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1) =
-  Nat.add (@LList.ist.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.0)
     (@List.List.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; (@LLLList.sum Nat instAddNat Zero.ofOfNat0 (List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1) =
   Nat.add (@LList.ist.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.0)
     (@List.List.sum Nat instAddNat (@Nat.Zero.ofOfNat0 Nat (instOfNatNat 0)) ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; (@LLLList.sum Nat instAddNat Zero.ofOfNat0 (List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1) =
-  Nat.add (@LList.ist.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.0)
-    (@List.List.sum Nat instAddNat (@Nat.Zero.ofOfNat0 Nat (ListinstOfNatNat 0)) ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; (@LLLList.sum Nat instAddNat Zero.ofOfNat0 (List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1) =
   Nat.add (@LList.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.0) (List.sum ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; (@LLLList.sum Nat instAddNat Zero.ofOfNat0 (List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1) =
   Nat.add (@LList.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.0) (List.sum ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; (@LLLList.sum Nat instAddNat Zero.ofOfNat0 (List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1) =
-  Nat.add (@LList.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.0) (List.sum ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; (@LLLList.sum Nat instAddNat Zero.ofOfNat0 (List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1) =
-  Nat.add (@LList.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.0) (List.sum ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; (@LLLList.sum Nat instAddNat Zero.ofOfNat0 (List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1) =
-  Nat.add (@LList.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.0)
-    (@List.List.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; (@LLLList.sum Nat instAddNat Zero.ofOfNat0 (List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1) =
   Nat.add (@LList.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.0)
     (@List.List.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; (@LLLList.sum Nat instAddNat Zero.ofOfNat0 (List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1) =
   Nat.add (@LList.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.0)
     (@List.List.sum Nat instAddNat (@Nat.Zero.ofOfNat0 Nat (instOfNatNat 0)) ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; (@LLLList.sum Nat instAddNat Zero.ofOfNat0 (List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1) =
-  Nat.add (@LList.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.0)
-    (@List.List.sum Nat instAddNat (@Nat.Zero.ofOfNat0 Nat (ListinstOfNatNat 0)) ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; (@LLLList.sum Nat instAddNat Zero.ofOfNat0 (List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1) =
   Nat.add (@List.ist.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.0)
     (List.sum ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; (@LLLList.sum Nat instAddNat Zero.ofOfNat0 (List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1) =
   Nat.add (@List.ist.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.0)
     (List.sum ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; (@LLLList.sum Nat instAddNat Zero.ofOfNat0 (List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1) =
-  Nat.add (@List.ist.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.0)
-    (List.sum ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; (@LLLList.sum Nat instAddNat Zero.ofOfNat0 (List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1) =
-  Nat.add (@List.ist.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.0)
-    (List.sum ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; (@LLLList.sum Nat instAddNat Zero.ofOfNat0 (List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1) =
-  Nat.add (@List.ist.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.0)
-    (@List.List.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; (@LLLList.sum Nat instAddNat Zero.ofOfNat0 (List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1) =
   Nat.add (@List.ist.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.0)
     (@List.List.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; (@LLLList.sum Nat instAddNat Zero.ofOfNat0 (List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1) =
   Nat.add (@List.ist.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.0)
     (@List.List.sum Nat instAddNat (@Nat.Zero.ofOfNat0 Nat (instOfNatNat 0)) ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; (@LLLList.sum Nat instAddNat Zero.ofOfNat0 (List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1) =
-  Nat.add (@List.ist.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.0)
-    (@List.List.sum Nat instAddNat (@Nat.Zero.ofOfNat0 Nat (ListinstOfNatNat 0)) ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; (@LLLList.sum Nat instAddNat Zero.ofOfNat0 (List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1) =
-  (List.sum ?Init.Data.List.Lemmas.171.0).add (List.sum ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; (@LLLList.sum Nat instAddNat Zero.ofOfNat0 (List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1) =
-  (List.sum ?Init.Data.List.Lemmas.171.0).add (List.sum ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; (@LLLList.sum Nat instAddNat Zero.ofOfNat0 (List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1) =
   (List.sum ?Init.Data.List.Lemmas.171.0).add (List.sum ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; (@LLLList.sum Nat instAddNat Zero.ofOfNat0 (List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1) =
   (List.sum ?Init.Data.List.Lemmas.171.0).add (List.sum ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; (@LLLList.sum Nat instAddNat Zero.ofOfNat0 (List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1) =
   (List.sum ?Init.Data.List.Lemmas.171.0).add (@List.List.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; (@LLLList.sum Nat instAddNat Zero.ofOfNat0 (List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1) =
-  (List.sum ?Init.Data.List.Lemmas.171.0).add (@List.List.sum Nat instAddNat Zero.ofOfNat0 ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; (@LLLList.sum Nat instAddNat Zero.ofOfNat0 (List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1) =
   (List.sum ?Init.Data.List.Lemmas.171.0).add
-    (@List.List.sum Nat instAddNat (@Nat.Zero.ofOfNat0 Nat (instOfNatNat 0)) ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; (@LLLList.sum Nat instAddNat Zero.ofOfNat0 (List.append ?Init.Data.List.Lemmas.171.0 ?Init.Data.List.Lemmas.171.1) =
-  (List.sum ?Init.Data.List.Lemmas.171.0).add
-    (@List.List.sum Nat instAddNat (@Nat.Zero.ofOfNat0 Nat (ListinstOfNatNat 0)) ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; (@LLLList.sum Nat instAddNat Zero.ofOfNat0 (List.reverse ?Init.Data.List.Lemmas.952.0) =
+    (@List.List.sum Nat instAddNat (@Nat.Zero.ofOfNat0 Nat (instOfNatNat 0)) ?Init.Data.List.Lemmas.171.1) ::: #[173]) ;;; (@LLLList.sum Nat instAddNat Zero.ofOfNat0 (List.reverse ?Init.Data.List.Lemmas.952.0) =
   List.sum ?Init.Data.List.Lemmas.952.0 ::: #[954]) ;;; (@LLLList.sum Nat instAddNat Zero.ofOfNat0 (List.reverse ?Init.Data.List.Lemmas.952.0) =
   List.sum ?Init.Data.List.Lemmas.952.0 ::: #[954]) ;;; (List.foldl (fun buildCore buildCore_1 => buildCore.add ?Init.Data.List.Lemmas.1340.2) ?Init.Data.List.Lemmas.1340.3
     ?Init.Data.List.Lemmas.1340.1 =
@@ -9224,66 +9096,42 @@
   ?Init.Data.List.Lemmas.1396.1 ::: #[1397]) ;;; (List.filterMap ?Init.Data.List.Lemmas.1383.2 (?Init.Data.List.Lemmas.1383.3 :: ?Init.Data.List.Lemmas.1383.4) =
   match ?Init.Data.List.Lemmas.1383.2 ?Init.Data.List.Lemmas.1383.3 with
   | none => List.filterMap ?Init.Data.List.Lemmas.1383.2 ?Init.Data.List.Lemmas.1383.4
-  | some buildCore =>
-    buildCore ::
-      @List.List.filterMap ?Init.Data.List.Lemmas.1383.0 ?Init.Data.List.Lemmas.1383.1 ?Init.Data.List.Lemmas.1383.2
-        ?Init.Data.List.Lemmas.1383.4 ::: #[1385]) ;;; (List.filterMap ?Init.Data.List.Lemmas.1383.2 (?Init.Data.List.Lemmas.1383.3 :: ?Init.Data.List.Lemmas.1383.4) =
+  | some buildCore => buildCore :: List.filterMap ?Init.Data.List.Lemmas.1383.2 ?Init.Data.List.Lemmas.1383.4 ::: #[1385]) ;;; (List.filterMap ?Init.Data.List.Lemmas.1383.2 (?Init.Data.List.Lemmas.1383.3 :: ?Init.Data.List.Lemmas.1383.4) =
   match ?Init.Data.List.Lemmas.1383.2 ?Init.Data.List.Lemmas.1383.3 with
   | none =>
     @List.List.filterMap ?Init.Data.List.Lemmas.1383.0 ?Init.Data.List.Lemmas.1383.1 ?Init.Data.List.Lemmas.1383.2
       ?Init.Data.List.Lemmas.1383.4
-  | some buildCore =>
-    buildCore ::
-      @List.List.filterMap ?Init.Data.List.Lemmas.1383.0 ?Init.Data.List.Lemmas.1383.1 ?Init.Data.List.Lemmas.1383.2
-        ?Init.Data.List.Lemmas.1383.4 ::: #[1385]) ;;; (@LList.filterMap ?Init.Data.List.Lemmas.1383.0 ?Init.Data.List.Lemmas.1383.1 ?Init.Data.List.Lemmas.1383.2
+  | some buildCore => buildCore :: List.filterMap ?Init.Data.List.Lemmas.1383.2 ?Init.Data.List.Lemmas.1383.4 ::: #[1385]) ;;; (@LList.filterMap ?Init.Data.List.Lemmas.1383.0 ?Init.Data.List.Lemmas.1383.1 ?Init.Data.List.Lemmas.1383.2
     (?Init.Data.List.Lemmas.1383.3 :: ?Init.Data.List.Lemmas.1383.4) =
   match ?Init.Data.List.Lemmas.1383.2 ?Init.Data.List.Lemmas.1383.3 with
   | none => List.filterMap ?Init.Data.List.Lemmas.1383.2 ?Init.Data.List.Lemmas.1383.4
-  | some buildCore =>
-    buildCore ::
-      @List.List.filterMap ?Init.Data.List.Lemmas.1383.0 ?Init.Data.List.Lemmas.1383.1 ?Init.Data.List.Lemmas.1383.2
-        ?Init.Data.List.Lemmas.1383.4 ::: #[1385]) ;;; (@LList.filterMap ?Init.Data.List.Lemmas.1383.0 ?Init.Data.List.Lemmas.1383.1 ?Init.Data.List.Lemmas.1383.2
+  | some buildCore => buildCore :: List.filterMap ?Init.Data.List.Lemmas.1383.2 ?Init.Data.List.Lemmas.1383.4 ::: #[1385]) ;;; (@LList.filterMap ?Init.Data.List.Lemmas.1383.0 ?Init.Data.List.Lemmas.1383.1 ?Init.Data.List.Lemmas.1383.2
     (?Init.Data.List.Lemmas.1383.3 :: ?Init.Data.List.Lemmas.1383.4) =
   match ?Init.Data.List.Lemmas.1383.2 ?Init.Data.List.Lemmas.1383.3 with
   | none =>
     @List.List.filterMap ?Init.Data.List.Lemmas.1383.0 ?Init.Data.List.Lemmas.1383.1 ?Init.Data.List.Lemmas.1383.2
       ?Init.Data.List.Lemmas.1383.4
-  | some buildCore =>
-    buildCore ::
-      @List.List.filterMap ?Init.Data.List.Lemmas.1383.0 ?Init.Data.List.Lemmas.1383.1 ?Init.Data.List.Lemmas.1383.2
-        ?Init.Data.List.Lemmas.1383.4 ::: #[1385]) ;;; (@LLList.filterMap ?Init.Data.List.Lemmas.1383.0 ?Init.Data.List.Lemmas.1383.1 ?Init.Data.List.Lemmas.1383.2
+  | some buildCore => buildCore :: List.filterMap ?Init.Data.List.Lemmas.1383.2 ?Init.Data.List.Lemmas.1383.4 ::: #[1385]) ;;; (@LLList.filterMap ?Init.Data.List.Lemmas.1383.0 ?Init.Data.List.Lemmas.1383.1 ?Init.Data.List.Lemmas.1383.2
     (?Init.Data.List.Lemmas.1383.3 :: ?Init.Data.List.Lemmas.1383.4) =
   match ?Init.Data.List.Lemmas.1383.2 ?Init.Data.List.Lemmas.1383.3 with
   | none => List.filterMap ?Init.Data.List.Lemmas.1383.2 ?Init.Data.List.Lemmas.1383.4
-  | some buildCore =>
-    buildCore ::
-      @List.List.filterMap ?Init.Data.List.Lemmas.1383.0 ?Init.Data.List.Lemmas.1383.1 ?Init.Data.List.Lemmas.1383.2
-        ?Init.Data.List.Lemmas.1383.4 ::: #[1385]) ;;; (@LLList.filterMap ?Init.Data.List.Lemmas.1383.0 ?Init.Data.List.Lemmas.1383.1 ?Init.Data.List.Lemmas.1383.2
+  | some buildCore => buildCore :: List.filterMap ?Init.Data.List.Lemmas.1383.2 ?Init.Data.List.Lemmas.1383.4 ::: #[1385]) ;;; (@LLList.filterMap ?Init.Data.List.Lemmas.1383.0 ?Init.Data.List.Lemmas.1383.1 ?Init.Data.List.Lemmas.1383.2
     (?Init.Data.List.Lemmas.1383.3 :: ?Init.Data.List.Lemmas.1383.4) =
   match ?Init.Data.List.Lemmas.1383.2 ?Init.Data.List.Lemmas.1383.3 with
   | none =>
     @List.List.filterMap ?Init.Data.List.Lemmas.1383.0 ?Init.Data.List.Lemmas.1383.1 ?Init.Data.List.Lemmas.1383.2
       ?Init.Data.List.Lemmas.1383.4
-  | some buildCore =>
-    buildCore ::
-      @List.List.filterMap ?Init.Data.List.Lemmas.1383.0 ?Init.Data.List.Lemmas.1383.1 ?Init.Data.List.Lemmas.1383.2
-        ?Init.Data.List.Lemmas.1383.4 ::: #[1385]) ;;; (@LLLList.filterMap ?Init.Data.List.Lemmas.1383.0 ?Init.Data.List.Lemmas.1383.1 ?Init.Data.List.Lemmas.1383.2
+  | some buildCore => buildCore :: List.filterMap ?Init.Data.List.Lemmas.1383.2 ?Init.Data.List.Lemmas.1383.4 ::: #[1385]) ;;; (@LLLList.filterMap ?Init.Data.List.Lemmas.1383.0 ?Init.Data.List.Lemmas.1383.1 ?Init.Data.List.Lemmas.1383.2
     (?Init.Data.List.Lemmas.1383.3 :: ?Init.Data.List.Lemmas.1383.4) =
   match ?Init.Data.List.Lemmas.1383.2 ?Init.Data.List.Lemmas.1383.3 with
   | none => List.filterMap ?Init.Data.List.Lemmas.1383.2 ?Init.Data.List.Lemmas.1383.4
-  | some buildCore =>
-    buildCore ::
-      @List.List.filterMap ?Init.Data.List.Lemmas.1383.0 ?Init.Data.List.Lemmas.1383.1 ?Init.Data.List.Lemmas.1383.2
-        ?Init.Data.List.Lemmas.1383.4 ::: #[1385]) ;;; (@LLLList.filterMap ?Init.Data.List.Lemmas.1383.0 ?Init.Data.List.Lemmas.1383.1 ?Init.Data.List.Lemmas.1383.2
+  | some buildCore => buildCore :: List.filterMap ?Init.Data.List.Lemmas.1383.2 ?Init.Data.List.Lemmas.1383.4 ::: #[1385]) ;;; (@LLLList.filterMap ?Init.Data.List.Lemmas.1383.0 ?Init.Data.List.Lemmas.1383.1 ?Init.Data.List.Lemmas.1383.2
     (?Init.Data.List.Lemmas.1383.3 :: ?Init.Data.List.Lemmas.1383.4) =
   match ?Init.Data.List.Lemmas.1383.2 ?Init.Data.List.Lemmas.1383.3 with
   | none =>
     @List.List.filterMap ?Init.Data.List.Lemmas.1383.0 ?Init.Data.List.Lemmas.1383.1 ?Init.Data.List.Lemmas.1383.2
       ?Init.Data.List.Lemmas.1383.4
-  | some buildCore =>
-    buildCore ::
-      @List.List.filterMap ?Init.Data.List.Lemmas.1383.0 ?Init.Data.List.Lemmas.1383.1 ?Init.Data.List.Lemmas.1383.2
-        ?Init.Data.List.Lemmas.1383.4 ::: #[1385]) ;;; ((List.append ?Init.Data.List.Lemmas.1371.1 ?Init.Data.List.Lemmas.1371.2).tail? =
+  | some buildCore => buildCore :: List.filterMap ?Init.Data.List.Lemmas.1383.2 ?Init.Data.List.Lemmas.1383.4 ::: #[1385]) ;;; ((List.append ?Init.Data.List.Lemmas.1371.1 ?Init.Data.List.Lemmas.1371.2).tail? =
   Option.or
     (@LOption.map (List ?Init.Data.List.Lemmas.1371.0) (List ?Init.Data.List.Lemmas.1371.0)
       (fun buildCore => buildCore.append ?Init.Data.List.Lemmas.1371.2) (List.tail? ?Init.Data.List.Lemmas.1371.1))
@@ -10188,7 +10036,7 @@
   | [], buildCore, buildCore_1 => (?Init.Data.List.Lemmas.505.1, [])
   | buildCore :: buildCore_1, buildCore_2.succ, buildCore_3 =>
     List.splitAt.go ?Init.Data.List.Lemmas.505.1 buildCore_1 buildCore_2 (buildCore :: buildCore_3)
-  | buildCore, buildCore_1, buildCore_2 => (buildCore_2.reverse, buildCore) ::: #[507]) ;;; ([].eraseDups = @List.List.nil ?Init.Data.List.Lemmas.493.0 ::: #[495]) ;;; (List.eraseDups (@List.List.nil ?Init.Data.List.Lemmas.493.0) = @List.List.nil ?Init.Data.List.Lemmas.493.0 ::: #[495]) ;;; (List.flatMap (fun buildCore => buildCore) ?Init.Data.List.Lemmas.481.1 = List.flatten ?Init.Data.List.Lemmas.481.1 ::: #[483]) ;;; (List.flatMap (fun buildCore => buildCore) ?Init.Data.List.Lemmas.481.1 =
+  | buildCore, buildCore_1, buildCore_2 => (buildCore_2.reverse, buildCore) ::: #[507]) ;;; ([].eraseDups = [] ::: #[495]) ;;; (List.eraseDups (@List.List.nil ?Init.Data.List.Lemmas.493.0) = [] ::: #[495]) ;;; (List.flatMap (fun buildCore => buildCore) ?Init.Data.List.Lemmas.481.1 = List.flatten ?Init.Data.List.Lemmas.481.1 ::: #[483]) ;;; (List.flatMap (fun buildCore => buildCore) ?Init.Data.List.Lemmas.481.1 =
   @List.ist.flatten ?Init.Data.List.Lemmas.481.0 ?Init.Data.List.Lemmas.481.1 ::: #[483]) ;;; (@LList.flatMap (List ?Init.Data.List.Lemmas.481.0) ?Init.Data.List.Lemmas.481.0 (fun buildCore => buildCore)
     ?Init.Data.List.Lemmas.481.1 =
   List.flatten ?Init.Data.List.Lemmas.481.1 ::: #[483]) ;;; (@LList.flatMap (List ?Init.Data.List.Lemmas.481.0) ?Init.Data.List.Lemmas.481.0 (fun buildCore => buildCore)
@@ -10901,30 +10749,22 @@
     (fun buildCore buildCore_1 => List ?Init.Data.List.Basic.667.1) ?Init.Data.List.Basic.667.3
     ?Init.Data.List.Basic.667.4 (fun buildCore => @List.List.reverse ?Init.Data.List.Basic.667.1 buildCore)
     fun buildCore buildCore_1 buildCore_2 =>
-    List.mapTR.loop ?Init.Data.List.Basic.667.2 buildCore_1 (?Init.Data.List.Basic.667.2 buildCore :: buildCore_2) ::: #[2534]) ;;; (List.replicate 0 ?Init.Data.List.Basic.657.1 = @List.List.nil ?Init.Data.List.Basic.657.0 ::: #[2524]) ;;; ([].concat ?Init.Data.List.Basic.649.1 = [?Init.Data.List.Basic.649.1] ::: #[2516]) ;;; ([].concat ?Init.Data.List.Basic.649.1 = ?Init.Data.List.Basic.649.1 :: @ListList.nil ?Init.Data.List.Basic.649.0 ::: #[2516]) ;;; ([].concat ?Init.Data.List.Basic.649.1 = ?Init.Data.List.Basic.649.1 :: @ListListList.nil ?Init.Data.List.Basic.649.0 ::: #[2516]) ;;; (List.concat (@ListList.nil ?Init.Data.List.Basic.649.0) ?Init.Data.List.Basic.649.1 = [?Init.Data.List.Basic.649.1] ::: #[2516]) ;;; (List.concat (@ListList.nil ?Init.Data.List.Basic.649.0) ?Init.Data.List.Basic.649.1 =
+    List.mapTR.loop ?Init.Data.List.Basic.667.2 buildCore_1 (?Init.Data.List.Basic.667.2 buildCore :: buildCore_2) ::: #[2534]) ;;; (List.replicate 0 ?Init.Data.List.Basic.657.1 = [] ::: #[2524]) ;;; ([].concat ?Init.Data.List.Basic.649.1 = [?Init.Data.List.Basic.649.1] ::: #[2516]) ;;; ([].concat ?Init.Data.List.Basic.649.1 = ?Init.Data.List.Basic.649.1 :: @ListList.nil ?Init.Data.List.Basic.649.0 ::: #[2516]) ;;; ([].concat ?Init.Data.List.Basic.649.1 = ?Init.Data.List.Basic.649.1 :: @ListListList.nil ?Init.Data.List.Basic.649.0 ::: #[2516]) ;;; (List.concat (@ListList.nil ?Init.Data.List.Basic.649.0) ?Init.Data.List.Basic.649.1 = [?Init.Data.List.Basic.649.1] ::: #[2516]) ;;; (List.concat (@ListList.nil ?Init.Data.List.Basic.649.0) ?Init.Data.List.Basic.649.1 =
   ?Init.Data.List.Basic.649.1 :: @ListList.nil ?Init.Data.List.Basic.649.0 ::: #[2516]) ;;; (List.concat (@ListList.nil ?Init.Data.List.Basic.649.0) ?Init.Data.List.Basic.649.1 =
   ?Init.Data.List.Basic.649.1 :: @ListListList.nil ?Init.Data.List.Basic.649.0 ::: #[2516]) ;;; ([].getLast? = none ::: #[2508]) ;;; (List.getLast? (@List.List.nil ?Init.Data.List.Basic.641.0) = none ::: #[2508]) ;;; (@LList.getLast? ?Init.Data.List.Basic.641.0 [] = none ::: #[2508]) ;;; (@LList.getLast? ?Init.Data.List.Basic.641.0 (@List.List.nil ?Init.Data.List.Basic.641.0) = none ::: #[2508]) ;;; (@LLList.getLast? ?Init.Data.List.Basic.641.0 [] = none ::: #[2508]) ;;; (@LLList.getLast? ?Init.Data.List.Basic.641.0 (@List.List.nil ?Init.Data.List.Basic.641.0) = none ::: #[2508]) ;;; ((?Init.Data.List.Basic.627.1 :: ?Init.Data.List.Basic.627.2).head ?Init.Data.List.Basic.627.3 =
   ?Init.Data.List.Basic.627.1 ::: #[2493]) ;;; (List.zipWith ?Init.Data.List.Basic.595.3 (?Init.Data.List.Basic.595.4 :: ?Init.Data.List.Basic.595.5)
     (?Init.Data.List.Basic.595.6 :: ?Init.Data.List.Basic.595.7) =
   ?Init.Data.List.Basic.595.3 ?Init.Data.List.Basic.595.4 ?Init.Data.List.Basic.595.6 ::
-    List.zipWith ?Init.Data.List.Basic.595.3 ?Init.Data.List.Basic.595.5 ?Init.Data.List.Basic.595.7 ::: #[2462]) ;;; ([].reverse = @List.List.nil ?Init.Data.List.Basic.583.0 ::: #[2450]) ;;; (List.reverse (@List.List.nil ?Init.Data.List.Basic.583.0) = @List.List.nil ?Init.Data.List.Basic.583.0 ::: #[2450]) ;;; (@LList.reverse ?Init.Data.List.Basic.583.0 [] = @List.List.nil ?Init.Data.List.Basic.583.0 ::: #[2450]) ;;; (@LList.reverse ?Init.Data.List.Basic.583.0 (@List.List.nil ?Init.Data.List.Basic.583.0) =
-  @List.List.nil ?Init.Data.List.Basic.583.0 ::: #[2450]) ;;; (@LLList.reverse ?Init.Data.List.Basic.583.0 [] = @List.List.nil ?Init.Data.List.Basic.583.0 ::: #[2450]) ;;; (@LLList.reverse ?Init.Data.List.Basic.583.0 (@List.List.nil ?Init.Data.List.Basic.583.0) =
-  @List.List.nil ?Init.Data.List.Basic.583.0 ::: #[2450]) ;;; ((?Init.Data.List.Basic.578.1 :: ?Init.Data.List.Basic.578.2).tailD ?Init.Data.List.Basic.578.3 =
+    List.zipWith ?Init.Data.List.Basic.595.3 ?Init.Data.List.Basic.595.5 ?Init.Data.List.Basic.595.7 ::: #[2462]) ;;; ([].reverse = [] ::: #[2450]) ;;; (List.reverse (@List.List.nil ?Init.Data.List.Basic.583.0) = [] ::: #[2450]) ;;; (@LList.reverse ?Init.Data.List.Basic.583.0 [] = [] ::: #[2450]) ;;; (@LList.reverse ?Init.Data.List.Basic.583.0 (@List.List.nil ?Init.Data.List.Basic.583.0) = [] ::: #[2450]) ;;; (@LLList.reverse ?Init.Data.List.Basic.583.0 [] = [] ::: #[2450]) ;;; (@LLList.reverse ?Init.Data.List.Basic.583.0 (@List.List.nil ?Init.Data.List.Basic.583.0) = [] ::: #[2450]) ;;; ((?Init.Data.List.Basic.578.1 :: ?Init.Data.List.Basic.578.2).tailD ?Init.Data.List.Basic.578.3 =
   ?Init.Data.List.Basic.578.2 ::: #[2444]) ;;; (List.foldl ?Init.Data.List.Basic.570.2 ?Init.Data.List.Basic.570.3 [] = ?Init.Data.List.Basic.570.3 ::: #[2436]) ;;; (List.foldl ?Init.Data.List.Basic.570.2 ?Init.Data.List.Basic.570.3 (@List.List.nil ?Init.Data.List.Basic.570.1) =
   ?Init.Data.List.Basic.570.3 ::: #[2436]) ;;; (List.intersperse ?Init.Data.List.Basic.564.1 [?Init.Data.List.Basic.564.2] = [?Init.Data.List.Basic.564.2] ::: #[2431]) ;;; (List.intersperse ?Init.Data.List.Basic.564.1 [?Init.Data.List.Basic.564.2] =
   ?Init.Data.List.Basic.564.2 :: @ListList.nil ?Init.Data.List.Basic.564.0 ::: #[2431]) ;;; (List.intersperse ?Init.Data.List.Basic.564.1 [?Init.Data.List.Basic.564.2] =
-  ?Init.Data.List.Basic.564.2 :: @ListListList.nil ?Init.Data.List.Basic.564.0 ::: #[2431]) ;;; ([].head? = none ::: #[2422]) ;;; (List.head? (@List.List.nil ?Init.Data.List.Basic.555.0) = none ::: #[2422]) ;;; (@LList.head? ?Init.Data.List.Basic.555.0 [] = none ::: #[2422]) ;;; (@LList.head? ?Init.Data.List.Basic.555.0 (@List.List.nil ?Init.Data.List.Basic.555.0) = none ::: #[2422]) ;;; (@LLList.head? ?Init.Data.List.Basic.555.0 [] = none ::: #[2422]) ;;; (@LLList.head? ?Init.Data.List.Basic.555.0 (@List.List.nil ?Init.Data.List.Basic.555.0) = none ::: #[2422]) ;;; (List.intersperse ?Init.Data.List.Basic.538.1 [] = @List.List.nil ?Init.Data.List.Basic.538.0 ::: #[2405]) ;;; (List.intersperse ?Init.Data.List.Basic.538.1 (@List.List.nil ?Init.Data.List.Basic.538.0) =
-  @List.List.nil ?Init.Data.List.Basic.538.0 ::: #[2405]) ;;; ([].rotateLeft ?Init.Data.List.Basic.529.1 = @List.List.nil ?Init.Data.List.Basic.529.0 ::: #[2396]) ;;; (List.rotateLeft (@ListList.nil ?Init.Data.List.Basic.529.0) ?Init.Data.List.Basic.529.1 =
-  @List.List.nil ?Init.Data.List.Basic.529.0 ::: #[2396]) ;;; (List.intersperseTR ?Init.Data.List.Basic.506.1 [?Init.Data.List.Basic.506.2] = [?Init.Data.List.Basic.506.2] ::: #[2373]) ;;; (List.intersperseTR ?Init.Data.List.Basic.506.1 [?Init.Data.List.Basic.506.2] =
+  ?Init.Data.List.Basic.564.2 :: @ListListList.nil ?Init.Data.List.Basic.564.0 ::: #[2431]) ;;; ([].head? = none ::: #[2422]) ;;; (List.head? (@List.List.nil ?Init.Data.List.Basic.555.0) = none ::: #[2422]) ;;; (@LList.head? ?Init.Data.List.Basic.555.0 [] = none ::: #[2422]) ;;; (@LList.head? ?Init.Data.List.Basic.555.0 (@List.List.nil ?Init.Data.List.Basic.555.0) = none ::: #[2422]) ;;; (@LLList.head? ?Init.Data.List.Basic.555.0 [] = none ::: #[2422]) ;;; (@LLList.head? ?Init.Data.List.Basic.555.0 (@List.List.nil ?Init.Data.List.Basic.555.0) = none ::: #[2422]) ;;; (List.intersperse ?Init.Data.List.Basic.538.1 [] = [] ::: #[2405]) ;;; (List.intersperse ?Init.Data.List.Basic.538.1 (@List.List.nil ?Init.Data.List.Basic.538.0) = [] ::: #[2405]) ;;; ([].rotateLeft ?Init.Data.List.Basic.529.1 = [] ::: #[2396]) ;;; (List.rotateLeft (@ListList.nil ?Init.Data.List.Basic.529.0) ?Init.Data.List.Basic.529.1 = [] ::: #[2396]) ;;; (List.intersperseTR ?Init.Data.List.Basic.506.1 [?Init.Data.List.Basic.506.2] = [?Init.Data.List.Basic.506.2] ::: #[2373]) ;;; (List.intersperseTR ?Init.Data.List.Basic.506.1 [?Init.Data.List.Basic.506.2] =
   ?Init.Data.List.Basic.506.2 :: @ListList.nil ?Init.Data.List.Basic.506.0 ::: #[2373]) ;;; (List.intersperseTR ?Init.Data.List.Basic.506.1 [?Init.Data.List.Basic.506.2] =
   ?Init.Data.List.Basic.506.2 :: @ListListList.nil ?Init.Data.List.Basic.506.0 ::: #[2373]) ;;; (List.head ?Init.Data.List.Basic.488.1 ?Init.Data.List.Basic.488.4 = List.head ?Init.Data.List.Basic.488.2 ⋯ ::: #[2355]) ;;; (List.mapTR.loop ?Init.Data.List.Basic.469.2 [] ?Init.Data.List.Basic.469.3 =
   @List.ist.reverse ?Init.Data.List.Basic.469.1 ?Init.Data.List.Basic.469.3 ::: #[2336]) ;;; (List.mapTR.loop ?Init.Data.List.Basic.469.2 [] ?Init.Data.List.Basic.469.3 = List.reverse ?Init.Data.List.Basic.469.3 ::: #[2336]) ;;; (List.mapTR.loop ?Init.Data.List.Basic.469.2 (@ListList.nil ?Init.Data.List.Basic.469.0) ?Init.Data.List.Basic.469.3 =
   @List.ist.reverse ?Init.Data.List.Basic.469.1 ?Init.Data.List.Basic.469.3 ::: #[2336]) ;;; (List.mapTR.loop ?Init.Data.List.Basic.469.2 (@ListList.nil ?Init.Data.List.Basic.469.0) ?Init.Data.List.Basic.469.3 =
-  List.reverse ?Init.Data.List.Basic.469.3 ::: #[2336]) ;;; (List.take ?Init.Data.List.Basic.443.1 [] = @List.List.nil ?Init.Data.List.Basic.443.0 ::: #[2310]) ;;; (List.take ?Init.Data.List.Basic.443.1 (@List.List.nil ?Init.Data.List.Basic.443.0) =
-  @List.List.nil ?Init.Data.List.Basic.443.0 ::: #[2310]) ;;; ([].dropLast = @List.List.nil ?Init.Data.List.Basic.434.0 ::: #[2301]) ;;; (List.dropLast (@List.List.nil ?Init.Data.List.Basic.434.0) = @List.List.nil ?Init.Data.List.Basic.434.0 ::: #[2301]) ;;; (@LList.dropLast ?Init.Data.List.Basic.434.0 [] = @List.List.nil ?Init.Data.List.Basic.434.0 ::: #[2301]) ;;; (@LList.dropLast ?Init.Data.List.Basic.434.0 (@List.List.nil ?Init.Data.List.Basic.434.0) =
-  @List.List.nil ?Init.Data.List.Basic.434.0 ::: #[2301]) ;;; (@LLList.dropLast ?Init.Data.List.Basic.434.0 [] = @List.List.nil ?Init.Data.List.Basic.434.0 ::: #[2301]) ;;; (@LLList.dropLast ?Init.Data.List.Basic.434.0 (@List.List.nil ?Init.Data.List.Basic.434.0) =
-  @List.List.nil ?Init.Data.List.Basic.434.0 ::: #[2301]) ;;; (List.zipWith ?Init.Data.List.Basic.423.4 [] ?Init.Data.List.Basic.423.3 = @List.List.nil ?Init.Data.List.Basic.423.2 ::: #[2290]) ;;; (List.zipWith ?Init.Data.List.Basic.423.4 (@ListList.nil ?Init.Data.List.Basic.423.0) ?Init.Data.List.Basic.423.3 =
-  @List.List.nil ?Init.Data.List.Basic.423.2 ::: #[2290]) ;;; ((?Init.Data.List.Basic.417.2 :: ?Init.Data.List.Basic.417.3).reverseAux ?Init.Data.List.Basic.417.1 =
+  List.reverse ?Init.Data.List.Basic.469.3 ::: #[2336]) ;;; (List.take ?Init.Data.List.Basic.443.1 [] = [] ::: #[2310]) ;;; (List.take ?Init.Data.List.Basic.443.1 (@List.List.nil ?Init.Data.List.Basic.443.0) = [] ::: #[2310]) ;;; ([].dropLast = [] ::: #[2301]) ;;; (List.dropLast (@List.List.nil ?Init.Data.List.Basic.434.0) = [] ::: #[2301]) ;;; (@LList.dropLast ?Init.Data.List.Basic.434.0 [] = [] ::: #[2301]) ;;; (@LList.dropLast ?Init.Data.List.Basic.434.0 (@List.List.nil ?Init.Data.List.Basic.434.0) = [] ::: #[2301]) ;;; (@LLList.dropLast ?Init.Data.List.Basic.434.0 [] = [] ::: #[2301]) ;;; (@LLList.dropLast ?Init.Data.List.Basic.434.0 (@List.List.nil ?Init.Data.List.Basic.434.0) = [] ::: #[2301]) ;;; (List.zipWith ?Init.Data.List.Basic.423.4 [] ?Init.Data.List.Basic.423.3 = [] ::: #[2290]) ;;; (List.zipWith ?Init.Data.List.Basic.423.4 (@ListList.nil ?Init.Data.List.Basic.423.0) ?Init.Data.List.Basic.423.3 = [] ::: #[2290]) ;;; ((?Init.Data.List.Basic.417.2 :: ?Init.Data.List.Basic.417.3).reverseAux ?Init.Data.List.Basic.417.1 =
   List.reverseAux ?Init.Data.List.Basic.417.3 (?Init.Data.List.Basic.417.2 :: ?Init.Data.List.Basic.417.1) ::: #[2284]) ;;; ([].reverseAux ?Init.Data.List.Basic.401.1 = ?Init.Data.List.Basic.401.1 ::: #[2267]) ;;; (List.reverseAux (@ListList.nil ?Init.Data.List.Basic.401.0) ?Init.Data.List.Basic.401.1 = ?Init.Data.List.Basic.401.1 ::: #[2267]) ;;; (List.modifyHead ?Init.Data.List.Basic.395.1 (?Init.Data.List.Basic.395.2 :: ?Init.Data.List.Basic.395.3) =
   ?Init.Data.List.Basic.395.1 ?Init.Data.List.Basic.395.2 :: ?Init.Data.List.Basic.395.3 ::: #[2262]) ;;; (@List.unzip = @List.unzipTR ::: #[2256]) ;;; (List.reverse ?Init.Data.List.Basic.380.1 = List.reverseAux ?Init.Data.List.Basic.380.1 [] ::: #[2247]) ;;; (List.reverse ?Init.Data.List.Basic.380.1 =
   List.reverseAux ?Init.Data.List.Basic.380.1 (@ListList.nil ?Init.Data.List.Basic.380.0) ::: #[2247]) ;;; (List.reverse ?Init.Data.List.Basic.380.1 =
@@ -10938,25 +10778,20 @@
     (?Init.Data.List.Basic.363.2 :: ?Init.Data.List.Basic.363.3) =
   List.foldl ?Init.Data.List.Basic.363.4
     (?Init.Data.List.Basic.363.4 ?Init.Data.List.Basic.363.5 ?Init.Data.List.Basic.363.2) ?Init.Data.List.Basic.363.3 ::: #[2230]) ;;; (List.appendTR ?Init.Data.List.Basic.354.1 ?Init.Data.List.Basic.354.2 =
-  (List.reverse ?Init.Data.List.Basic.354.1).reverseAux ?Init.Data.List.Basic.354.2 ::: #[2221]) ;;; (List.filter ?Init.Data.List.Basic.348.1 [] = @List.List.nil ?Init.Data.List.Basic.348.0 ::: #[2215]) ;;; (List.filter ?Init.Data.List.Basic.348.1 (@List.List.nil ?Init.Data.List.Basic.348.0) =
-  @List.List.nil ?Init.Data.List.Basic.348.0 ::: #[2215]) ;;; ([].append ?Init.Data.List.Basic.343.1 = ?Init.Data.List.Basic.343.1 ::: #[2209]) ;;; (List.append (@ListList.nil ?Init.Data.List.Basic.343.0) ?Init.Data.List.Basic.343.1 = ?Init.Data.List.Basic.343.1 ::: #[2209]) ;;; (List.replicate 0 ?Init.Data.List.Basic.336.1 = @List.List.nil ?Init.Data.List.Basic.336.0 ::: #[2203]) ;;; (List.intersperse ?Init.Data.List.Basic.331.1 [] = @List.List.nil ?Init.Data.List.Basic.331.0 ::: #[2198]) ;;; (List.intersperse ?Init.Data.List.Basic.331.1 (@List.List.nil ?Init.Data.List.Basic.331.0) =
-  @List.List.nil ?Init.Data.List.Basic.331.0 ::: #[2198]) ;;; (List.lookup ?Init.Data.List.Basic.326.2 [] = none ::: #[2192]) ;;; (List.lookup ?Init.Data.List.Basic.326.2 (@List.List.nil (?Init.Data.List.Basic.326.0 × ?Init.Data.List.Basic.326.1)) =
+  (List.reverse ?Init.Data.List.Basic.354.1).reverseAux ?Init.Data.List.Basic.354.2 ::: #[2221]) ;;; (List.filter ?Init.Data.List.Basic.348.1 [] = [] ::: #[2215]) ;;; (List.filter ?Init.Data.List.Basic.348.1 (@List.List.nil ?Init.Data.List.Basic.348.0) = [] ::: #[2215]) ;;; ([].append ?Init.Data.List.Basic.343.1 = ?Init.Data.List.Basic.343.1 ::: #[2209]) ;;; (List.append (@ListList.nil ?Init.Data.List.Basic.343.0) ?Init.Data.List.Basic.343.1 = ?Init.Data.List.Basic.343.1 ::: #[2209]) ;;; (List.replicate 0 ?Init.Data.List.Basic.336.1 = [] ::: #[2203]) ;;; (List.intersperse ?Init.Data.List.Basic.331.1 [] = [] ::: #[2198]) ;;; (List.intersperse ?Init.Data.List.Basic.331.1 (@List.List.nil ?Init.Data.List.Basic.331.0) = [] ::: #[2198]) ;;; (List.lookup ?Init.Data.List.Basic.326.2 [] = none ::: #[2192]) ;;; (List.lookup ?Init.Data.List.Basic.326.2 (@List.List.nil (?Init.Data.List.Basic.326.0 × ?Init.Data.List.Basic.326.1)) =
   none ::: #[2192]) ;;; (@List.append = @List.appendTR ::: #[2188]) ;;; ((?Init.Data.List.Basic.274.1 :: ?Init.Data.List.Basic.274.2).append ?Init.Data.List.Basic.274.3 =
   ?Init.Data.List.Basic.274.1 :: List.append ?Init.Data.List.Basic.274.2 ?Init.Data.List.Basic.274.3 ::: #[2141]) ;;; ([].unzip = (@ListList.nil ?Init.Data.List.Basic.235.0, []) ::: #[2102]) ;;; ([].unzip = (@ListList.nil ?Init.Data.List.Basic.235.0, @ListList.nil ?Init.Data.List.Basic.235.1) ::: #[2102]) ;;; ([].unzip = (@ListList.nil ?Init.Data.List.Basic.235.0, @ListListList.nil ?Init.Data.List.Basic.235.1) ::: #[2102]) ;;; ([].unzip = ([], []) ::: #[2102]) ;;; ([].unzip = ([], @ListList.nil ?Init.Data.List.Basic.235.1) ::: #[2102]) ;;; ([].unzip = ([], @ListListList.nil ?Init.Data.List.Basic.235.1) ::: #[2102]) ;;; (List.unzip (@List.List.nil (?Init.Data.List.Basic.235.0 × ?Init.Data.List.Basic.235.1)) =
   (@ListList.nil ?Init.Data.List.Basic.235.0, []) ::: #[2102]) ;;; (List.unzip (@List.List.nil (?Init.Data.List.Basic.235.0 × ?Init.Data.List.Basic.235.1)) =
   (@ListList.nil ?Init.Data.List.Basic.235.0, @ListList.nil ?Init.Data.List.Basic.235.1) ::: #[2102]) ;;; (List.unzip (@List.List.nil (?Init.Data.List.Basic.235.0 × ?Init.Data.List.Basic.235.1)) =
   (@ListList.nil ?Init.Data.List.Basic.235.0, @ListListList.nil ?Init.Data.List.Basic.235.1) ::: #[2102]) ;;; (List.unzip (@List.List.nil (?Init.Data.List.Basic.235.0 × ?Init.Data.List.Basic.235.1)) = ([], []) ::: #[2102]) ;;; (List.unzip (@List.List.nil (?Init.Data.List.Basic.235.0 × ?Init.Data.List.Basic.235.1)) =
   ([], @ListList.nil ?Init.Data.List.Basic.235.1) ::: #[2102]) ;;; (List.unzip (@List.List.nil (?Init.Data.List.Basic.235.0 × ?Init.Data.List.Basic.235.1)) =
-  ([], @ListListList.nil ?Init.Data.List.Basic.235.1) ::: #[2102]) ;;; (List.zipWith ?Init.Data.List.Basic.229.3 ?Init.Data.List.Basic.229.4 ?Init.Data.List.Basic.229.5 =
-  @List.List.nil ?Init.Data.List.Basic.229.2 ::: #[2096]) ;;; (@List.map = @List.mapTR ::: #[2085]) ;;; (List.intersperse ?Init.Data.List.Basic.212.2 [?Init.Data.List.Basic.212.1] = [?Init.Data.List.Basic.212.1] ::: #[2079]) ;;; (List.intersperse ?Init.Data.List.Basic.212.2 [?Init.Data.List.Basic.212.1] =
+  ([], @ListListList.nil ?Init.Data.List.Basic.235.1) ::: #[2102]) ;;; (List.zipWith ?Init.Data.List.Basic.229.3 ?Init.Data.List.Basic.229.4 ?Init.Data.List.Basic.229.5 = [] ::: #[2096]) ;;; (@List.map = @List.mapTR ::: #[2085]) ;;; (List.intersperse ?Init.Data.List.Basic.212.2 [?Init.Data.List.Basic.212.1] = [?Init.Data.List.Basic.212.1] ::: #[2079]) ;;; (List.intersperse ?Init.Data.List.Basic.212.2 [?Init.Data.List.Basic.212.1] =
   ?Init.Data.List.Basic.212.1 :: @ListList.nil ?Init.Data.List.Basic.212.0 ::: #[2079]) ;;; (List.intersperse ?Init.Data.List.Basic.212.2 [?Init.Data.List.Basic.212.1] =
-  ?Init.Data.List.Basic.212.1 :: @ListListList.nil ?Init.Data.List.Basic.212.0 ::: #[2079]) ;;; (List.zip = List.zipWith Prod.mk ::: #[2030]) ;;; (@LList.zip ?Init.Data.List.Basic.163.0 ?Init.Data.List.Basic.163.1 = List.zipWith Prod.mk ::: #[2030]) ;;; (@LLList.zip ?Init.Data.List.Basic.163.0 ?Init.Data.List.Basic.163.1 = List.zipWith Prod.mk ::: #[2030]) ;;; (List.intersperseTR ?Init.Data.List.Basic.149.1 [] = @List.List.nil ?Init.Data.List.Basic.149.0 ::: #[2016]) ;;; (List.intersperseTR ?Init.Data.List.Basic.149.1 (@List.List.nil ?Init.Data.List.Basic.149.0) =
-  @List.List.nil ?Init.Data.List.Basic.149.0 ::: #[2016]) ;;; ((?Init.Data.List.Basic.137.1 :: ?Init.Data.List.Basic.137.2).dropLast =
+  ?Init.Data.List.Basic.212.1 :: @ListListList.nil ?Init.Data.List.Basic.212.0 ::: #[2079]) ;;; (List.zip = List.zipWith Prod.mk ::: #[2030]) ;;; (@LList.zip ?Init.Data.List.Basic.163.0 ?Init.Data.List.Basic.163.1 = List.zipWith Prod.mk ::: #[2030]) ;;; (@LLList.zip ?Init.Data.List.Basic.163.0 ?Init.Data.List.Basic.163.1 = List.zipWith Prod.mk ::: #[2030]) ;;; (List.intersperseTR ?Init.Data.List.Basic.149.1 [] = [] ::: #[2016]) ;;; (List.intersperseTR ?Init.Data.List.Basic.149.1 (@List.List.nil ?Init.Data.List.Basic.149.0) = [] ::: #[2016]) ;;; ((?Init.Data.List.Basic.137.1 :: ?Init.Data.List.Basic.137.2).dropLast =
   ?Init.Data.List.Basic.137.1 :: List.dropLast ?Init.Data.List.Basic.137.2 ::: #[2004]) ;;; (@LList.dropLast ?Init.Data.List.Basic.137.0 (?Init.Data.List.Basic.137.1 :: ?Init.Data.List.Basic.137.2) =
   ?Init.Data.List.Basic.137.1 :: List.dropLast ?Init.Data.List.Basic.137.2 ::: #[2004]) ;;; (@LLList.dropLast ?Init.Data.List.Basic.137.0 (?Init.Data.List.Basic.137.1 :: ?Init.Data.List.Basic.137.2) =
   ?Init.Data.List.Basic.137.1 :: List.dropLast ?Init.Data.List.Basic.137.2 ::: #[2004]) ;;; (@List.filter = @List.filterTR ::: #[1997]) ;;; (List.take (Nat.add ?Init.Data.List.Basic.92.3 1) (?Init.Data.List.Basic.92.1 :: ?Init.Data.List.Basic.92.2) =
-  ?Init.Data.List.Basic.92.1 :: List.take ?Init.Data.List.Basic.92.3 ?Init.Data.List.Basic.92.2 ::: #[1959]) ;;; (@List.leftpad = @List.leftpadTR ::: #[1939]) ;;; ([?Init.Data.List.Basic.66.1].dropLast = @List.List.nil ?Init.Data.List.Basic.66.0 ::: #[1933]) ;;; (@LList.dropLast ?Init.Data.List.Basic.66.0 [?Init.Data.List.Basic.66.1] = @List.List.nil ?Init.Data.List.Basic.66.0 ::: #[1933]) ;;; (@LLList.dropLast ?Init.Data.List.Basic.66.0 [?Init.Data.List.Basic.66.1] = @List.List.nil ?Init.Data.List.Basic.66.0 ::: #[1933]) ;;; (List.dropWhile ?Init.Data.List.Basic.60.1 [] = @List.List.nil ?Init.Data.List.Basic.60.0 ::: #[1927]) ;;; (List.dropWhile ?Init.Data.List.Basic.60.1 (@List.List.nil ?Init.Data.List.Basic.60.0) =
-  @List.List.nil ?Init.Data.List.Basic.60.0 ::: #[1927]) ;;; ((?Init.Data.List.Basic.40.1 :: ?Init.Data.List.Basic.40.2).flatten =
+  ?Init.Data.List.Basic.92.1 :: List.take ?Init.Data.List.Basic.92.3 ?Init.Data.List.Basic.92.2 ::: #[1959]) ;;; (@List.leftpad = @List.leftpadTR ::: #[1939]) ;;; ([?Init.Data.List.Basic.66.1].dropLast = [] ::: #[1933]) ;;; (@LList.dropLast ?Init.Data.List.Basic.66.0 [?Init.Data.List.Basic.66.1] = [] ::: #[1933]) ;;; (@LLList.dropLast ?Init.Data.List.Basic.66.0 [?Init.Data.List.Basic.66.1] = [] ::: #[1933]) ;;; (List.dropWhile ?Init.Data.List.Basic.60.1 [] = [] ::: #[1927]) ;;; (List.dropWhile ?Init.Data.List.Basic.60.1 (@List.List.nil ?Init.Data.List.Basic.60.0) = [] ::: #[1927]) ;;; ((?Init.Data.List.Basic.40.1 :: ?Init.Data.List.Basic.40.2).flatten =
   List.append ?Init.Data.List.Basic.40.1 (List.flatten ?Init.Data.List.Basic.40.2) ::: #[1907]) ;;; (@LList.flatten ?Init.Data.List.Basic.40.0 (?Init.Data.List.Basic.40.1 :: ?Init.Data.List.Basic.40.2) =
   List.append ?Init.Data.List.Basic.40.1 (List.flatten ?Init.Data.List.Basic.40.2) ::: #[1907]) ;;; (@LLList.flatten ?Init.Data.List.Basic.40.0 (?Init.Data.List.Basic.40.1 :: ?Init.Data.List.Basic.40.2) =
   List.append ?Init.Data.List.Basic.40.1 (List.flatten ?Init.Data.List.Basic.40.2) ::: #[1907]) ;;; ((?Init.Data.List.Basic.21.1 :: ?Init.Data.List.Basic.21.2).reverse =
@@ -11061,10 +10896,7 @@
   List.replicate (Nat.mul ?Init.Data.List.Lemmas.71.0 ?Init.Data.List.Lemmas.71.1) ?Init.Data.List.Lemmas.71.3 ::: #[73]) ;;; (@LLList.flatten ?Init.Data.List.Lemmas.71.2
     (List.replicate ?Init.Data.List.Lemmas.71.0
       (List.replicate ?Init.Data.List.Lemmas.71.1 ?Init.Data.List.Lemmas.71.3)) =
-  List.replicate (Nat.mul ?Init.Data.List.Lemmas.71.0 ?Init.Data.List.Lemmas.71.1) ?Init.Data.List.Lemmas.71.3 ::: #[73]) ;;; ([].set ?Init.Data.List.Lemmas.84.1 ?Init.Data.List.Lemmas.84.2 = @List.List.nil ?Init.Data.List.Lemmas.84.0 ::: #[86]) ;;; (@LList.set ?Init.Data.List.Lemmas.84.0 [] ?Init.Data.List.Lemmas.84.1 ?Init.Data.List.Lemmas.84.2 =
-  @List.List.nil ?Init.Data.List.Lemmas.84.0 ::: #[86]) ;;; (@LLList.set ?Init.Data.List.Lemmas.84.0 [] ?Init.Data.List.Lemmas.84.1 ?Init.Data.List.Lemmas.84.2 =
-  @List.List.nil ?Init.Data.List.Lemmas.84.0 ::: #[86]) ;;; (@LLLList.set ?Init.Data.List.Lemmas.84.0 [] ?Init.Data.List.Lemmas.84.1 ?Init.Data.List.Lemmas.84.2 =
-  @List.List.nil ?Init.Data.List.Lemmas.84.0 ::: #[86]) ;;; ((List.append ?Init.Data.List.Lemmas.95.5 ?Init.Data.List.Lemmas.95.6).replace ?Init.Data.List.Lemmas.95.2
+  List.replicate (Nat.mul ?Init.Data.List.Lemmas.71.0 ?Init.Data.List.Lemmas.71.1) ?Init.Data.List.Lemmas.71.3 ::: #[73]) ;;; ([].set ?Init.Data.List.Lemmas.84.1 ?Init.Data.List.Lemmas.84.2 = [] ::: #[86]) ;;; (@LList.set ?Init.Data.List.Lemmas.84.0 [] ?Init.Data.List.Lemmas.84.1 ?Init.Data.List.Lemmas.84.2 = [] ::: #[86]) ;;; (@LLList.set ?Init.Data.List.Lemmas.84.0 [] ?Init.Data.List.Lemmas.84.1 ?Init.Data.List.Lemmas.84.2 = [] ::: #[86]) ;;; (@LLLList.set ?Init.Data.List.Lemmas.84.0 [] ?Init.Data.List.Lemmas.84.1 ?Init.Data.List.Lemmas.84.2 = [] ::: #[86]) ;;; ((List.append ?Init.Data.List.Lemmas.95.5 ?Init.Data.List.Lemmas.95.6).replace ?Init.Data.List.Lemmas.95.2
     ?Init.Data.List.Lemmas.95.3 =
   if List.Mem ?Init.Data.List.Lemmas.95.2 ?Init.Data.List.Lemmas.95.5 then
     (List.replace ?Init.Data.List.Lemmas.95.5 ?Init.Data.List.Lemmas.95.2 ?Init.Data.List.Lemmas.95.3).append
@@ -11157,17 +10989,13 @@
   ?Init.Data.List.Lemmas.149.1 ::: #[150]) ;;; (List.getLast? ?Init.Data.List.Lemmas.165.1 =
   some (List.getLast ?Init.Data.List.Lemmas.165.1 ?Init.Data.List.Lemmas.165.2) ::: #[167]) ;;; (@LList.getLast? ?Init.Data.List.Lemmas.165.0 ?Init.Data.List.Lemmas.165.1 =
   some (List.getLast ?Init.Data.List.Lemmas.165.1 ?Init.Data.List.Lemmas.165.2) ::: #[167]) ;;; (@LLList.getLast? ?Init.Data.List.Lemmas.165.0 ?Init.Data.List.Lemmas.165.1 =
-  some (List.getLast ?Init.Data.List.Lemmas.165.1 ?Init.Data.List.Lemmas.165.2) ::: #[167]) ;;; (List.filterMap ?Init.Data.List.Lemmas.197.2 [] = @List.List.nil ?Init.Data.List.Lemmas.197.1 ::: #[199]) ;;; (List.filterMap ?Init.Data.List.Lemmas.197.2 (@List.List.nil ?Init.Data.List.Lemmas.197.0) =
-  @List.List.nil ?Init.Data.List.Lemmas.197.1 ::: #[199]) ;;; (@LList.filterMap ?Init.Data.List.Lemmas.197.0 ?Init.Data.List.Lemmas.197.1 ?Init.Data.List.Lemmas.197.2 [] =
-  @List.List.nil ?Init.Data.List.Lemmas.197.1 ::: #[199]) ;;; (@LList.filterMap ?Init.Data.List.Lemmas.197.0 ?Init.Data.List.Lemmas.197.1 ?Init.Data.List.Lemmas.197.2
+  some (List.getLast ?Init.Data.List.Lemmas.165.1 ?Init.Data.List.Lemmas.165.2) ::: #[167]) ;;; (List.filterMap ?Init.Data.List.Lemmas.197.2 [] = [] ::: #[199]) ;;; (List.filterMap ?Init.Data.List.Lemmas.197.2 (@List.List.nil ?Init.Data.List.Lemmas.197.0) = [] ::: #[199]) ;;; (@LList.filterMap ?Init.Data.List.Lemmas.197.0 ?Init.Data.List.Lemmas.197.1 ?Init.Data.List.Lemmas.197.2 [] = [] ::: #[199]) ;;; (@LList.filterMap ?Init.Data.List.Lemmas.197.0 ?Init.Data.List.Lemmas.197.1 ?Init.Data.List.Lemmas.197.2
     (@List.List.nil ?Init.Data.List.Lemmas.197.0) =
-  @List.List.nil ?Init.Data.List.Lemmas.197.1 ::: #[199]) ;;; (@LLList.filterMap ?Init.Data.List.Lemmas.197.0 ?Init.Data.List.Lemmas.197.1 ?Init.Data.List.Lemmas.197.2 [] =
-  @List.List.nil ?Init.Data.List.Lemmas.197.1 ::: #[199]) ;;; (@LLList.filterMap ?Init.Data.List.Lemmas.197.0 ?Init.Data.List.Lemmas.197.1 ?Init.Data.List.Lemmas.197.2
+  [] ::: #[199]) ;;; (@LLList.filterMap ?Init.Data.List.Lemmas.197.0 ?Init.Data.List.Lemmas.197.1 ?Init.Data.List.Lemmas.197.2 [] = [] ::: #[199]) ;;; (@LLList.filterMap ?Init.Data.List.Lemmas.197.0 ?Init.Data.List.Lemmas.197.1 ?Init.Data.List.Lemmas.197.2
     (@List.List.nil ?Init.Data.List.Lemmas.197.0) =
-  @List.List.nil ?Init.Data.List.Lemmas.197.1 ::: #[199]) ;;; (@LLLList.filterMap ?Init.Data.List.Lemmas.197.0 ?Init.Data.List.Lemmas.197.1 ?Init.Data.List.Lemmas.197.2 [] =
-  @List.List.nil ?Init.Data.List.Lemmas.197.1 ::: #[199]) ;;; (@LLLList.filterMap ?Init.Data.List.Lemmas.197.0 ?Init.Data.List.Lemmas.197.1 ?Init.Data.List.Lemmas.197.2
+  [] ::: #[199]) ;;; (@LLLList.filterMap ?Init.Data.List.Lemmas.197.0 ?Init.Data.List.Lemmas.197.1 ?Init.Data.List.Lemmas.197.2 [] = [] ::: #[199]) ;;; (@LLLList.filterMap ?Init.Data.List.Lemmas.197.0 ?Init.Data.List.Lemmas.197.1 ?Init.Data.List.Lemmas.197.2
     (@List.List.nil ?Init.Data.List.Lemmas.197.0) =
-  @List.List.nil ?Init.Data.List.Lemmas.197.1 ::: #[199]) ;;; ((List.append ?Init.Data.List.Lemmas.213.1 ?Init.Data.List.Lemmas.213.2).getLast? =
+  [] ::: #[199]) ;;; ((List.append ?Init.Data.List.Lemmas.213.1 ?Init.Data.List.Lemmas.213.2).getLast? =
   (List.getLast? ?Init.Data.List.Lemmas.213.2).or (List.getLast? ?Init.Data.List.Lemmas.213.1) ::: #[215]) ;;; (@LList.getLast? ?Init.Data.List.Lemmas.213.0 (List.append ?Init.Data.List.Lemmas.213.1 ?Init.Data.List.Lemmas.213.2) =
   (List.getLast? ?Init.Data.List.Lemmas.213.2).or (List.getLast? ?Init.Data.List.Lemmas.213.1) ::: #[215]) ;;; (@LLList.getLast? ?Init.Data.List.Lemmas.213.0 (List.append ?Init.Data.List.Lemmas.213.1 ?Init.Data.List.Lemmas.213.2) =
   (List.getLast? ?Init.Data.List.Lemmas.213.2).or (List.getLast? ?Init.Data.List.Lemmas.213.1) ::: #[215]) ;;; (List.flatMap ?Init.Data.List.Lemmas.229.2 ?Init.Data.List.Lemmas.229.3 =
@@ -11433,9 +11261,7 @@
   List.replicate ?Init.Data.List.Lemmas.490.0 ?Init.Data.List.Lemmas.490.2 ::: #[492]) ;;; (@LLList.flatten ?Init.Data.List.Lemmas.490.1
     (List.replicate ?Init.Data.List.Lemmas.490.0 [?Init.Data.List.Lemmas.490.2]) =
   List.replicate ?Init.Data.List.Lemmas.490.0 ?Init.Data.List.Lemmas.490.2 ::: #[492]) ;;; (List.get ?Init.Data.List.Lemmas.502.1 ?Init.Data.List.Lemmas.502.2 =
-  List.get ?Init.Data.List.Lemmas.502.1 ⟨?Init.Data.List.Lemmas.502.2.1, ⋯⟩ ::: #[504]) ;;; ((List.replicate ?Init.Data.List.Lemmas.514.0 []).flatten = @List.List.nil ?Init.Data.List.Lemmas.514.1 ::: #[516]) ;;; (@LList.flatten ?Init.Data.List.Lemmas.514.1 (List.replicate ?Init.Data.List.Lemmas.514.0 []) =
-  @List.List.nil ?Init.Data.List.Lemmas.514.1 ::: #[516]) ;;; (@LLList.flatten ?Init.Data.List.Lemmas.514.1 (List.replicate ?Init.Data.List.Lemmas.514.0 []) =
-  @List.List.nil ?Init.Data.List.Lemmas.514.1 ::: #[516]) ;;; ((?Init.Data.List.Lemmas.528.2 :: ?Init.Data.List.Lemmas.528.3).get
+  List.get ?Init.Data.List.Lemmas.502.1 ⟨?Init.Data.List.Lemmas.502.2.1, ⋯⟩ ::: #[504]) ;;; ((List.replicate ?Init.Data.List.Lemmas.514.0 []).flatten = [] ::: #[516]) ;;; (@LList.flatten ?Init.Data.List.Lemmas.514.1 (List.replicate ?Init.Data.List.Lemmas.514.0 []) = [] ::: #[516]) ;;; (@LLList.flatten ?Init.Data.List.Lemmas.514.1 (List.replicate ?Init.Data.List.Lemmas.514.0 []) = [] ::: #[516]) ;;; ((?Init.Data.List.Lemmas.528.2 :: ?Init.Data.List.Lemmas.528.3).get
     ⟨Nat.add ?Init.Data.List.Lemmas.528.1 1, ?Init.Data.List.Lemmas.528.4⟩ =
   List.get ?Init.Data.List.Lemmas.528.3 ⟨?Init.Data.List.Lemmas.528.1, ⋯⟩ ::: #[530]) ;;; ((?Init.Data.List.Lemmas.528.2 :: ?Init.Data.List.Lemmas.528.3).get
     (Fin.in.mk (?Init.Data.List.Lemmas.528.2 :: ?Init.Data.List.Lemmas.528.3).length
@@ -13687,16 +13513,14 @@
   (List.set ?Init.Data.List.Lemmas.586.1 ?Init.Data.List.Lemmas.586.2 ?Init.Data.List.Lemmas.586.4) ::: #[586]) ;;; (List.Mem ?Init.Data.List.Lemmas.1135.4 ?Init.Data.List.Lemmas.1135.1 ::: #[1135]) ;;; (List.Mem ?Init.Data.List.Lemmas.1200.2 ?Init.Data.List.Lemmas.1200.1 ::: #[1200]) ;;; (List.Mem (List.getLastD ?Init.Data.List.Lemmas.1277.1 ?Init.Data.List.Lemmas.1277.2)
   (?Init.Data.List.Lemmas.1277.2 :: ?Init.Data.List.Lemmas.1277.1) ::: #[1277]) ;;; (List.Mem (@List.getLastLastD ?Init.Data.List.Lemmas.1277.0 ?Init.Data.List.Lemmas.1277.1 ?Init.Data.List.Lemmas.1277.2)
   (?Init.Data.List.Lemmas.1277.2 :: ?Init.Data.List.Lemmas.1277.1) ::: #[1277]) ;;; (List.Mem ?Init.Data.List.Lemmas.1339.2 ?Init.Data.List.Lemmas.1339.1 ::: #[1339]) ;;; (List.Mem ?Init.Data.List.Lemmas.1364.2
-  (List.append ?Init.Data.List.Lemmas.1364.1 (?Init.Data.List.Lemmas.1364.2 :: ?Init.Data.List.Lemmas.1364.3)) ::: #[1364]) ;;; (List.Mem (List.get ?Init.Data.List.Lemmas.1426.1 ?Init.Data.List.Lemmas.1426.2) ?Init.Data.List.Lemmas.1426.1 ::: #[1426]) ;;; (List.Mem ?Init.Data.List.Lemmas.1532.1 (?Init.Data.List.Lemmas.1532.1 :: ?Init.Data.List.Lemmas.1532.2) ::: #[1532]) ;;; (List.Mem ?Init.Data.List.Lemmas.1676.3 (List.insert ?Init.Data.List.Lemmas.1676.3 ?Init.Data.List.Lemmas.1676.4) ::: #[1676]) ;;; (List.Pairwise ?Init.Data.List.Basic.256.1 (?Init.Data.List.Basic.256.2 :: ?Init.Data.List.Basic.256.3) ::: #[2121]) ;;; (List.Pairwise ?Init.Data.List.Init.Data.List.Perm.39.1 ?Init.Data.List.Init.Data.List.Perm.39.3 ::: #[2772]) ;;; (List.Pairwise ?Init.Data.List.Init.Data.List.Perm.166.1 ?Init.Data.List.Init.Data.List.Perm.166.3 ::: #[2899]) ;;; (List.Pairwise ?Init.Data.List.Basic.117.1 (@List.List.nil ?Init.Data.List.Basic.117.0) ::: #[1982]) ;;; (List.Perm ?Init.Data.List.Basic.548.1 ?Init.Data.List.Basic.548.3 ::: #[2413]) ;;; ((?Init.Data.List.Basic.254.2 :: ?Init.Data.List.Basic.254.1 :: ?Init.Data.List.Basic.254.3).Perm
+  (List.append ?Init.Data.List.Lemmas.1364.1 (?Init.Data.List.Lemmas.1364.2 :: ?Init.Data.List.Lemmas.1364.3)) ::: #[1364]) ;;; (List.Mem (List.get ?Init.Data.List.Lemmas.1426.1 ?Init.Data.List.Lemmas.1426.2) ?Init.Data.List.Lemmas.1426.1 ::: #[1426]) ;;; (List.Mem ?Init.Data.List.Lemmas.1532.1 (?Init.Data.List.Lemmas.1532.1 :: ?Init.Data.List.Lemmas.1532.2) ::: #[1532]) ;;; (List.Mem ?Init.Data.List.Lemmas.1676.3 (List.insert ?Init.Data.List.Lemmas.1676.3 ?Init.Data.List.Lemmas.1676.4) ::: #[1676]) ;;; (List.Pairwise ?Init.Data.List.Basic.256.1 (?Init.Data.List.Basic.256.2 :: ?Init.Data.List.Basic.256.3) ::: #[2121]) ;;; (List.Pairwise ?Init.Data.List.Init.Data.List.Perm.39.1 ?Init.Data.List.Init.Data.List.Perm.39.3 ::: #[2772]) ;;; (List.Pairwise ?Init.Data.List.Init.Data.List.Perm.166.1 ?Init.Data.List.Init.Data.List.Perm.166.3 ::: #[2899]) ;;; (List.Pairwise ?Init.Data.List.Basic.117.1 [] ::: #[1982]) ;;; (List.Perm ?Init.Data.List.Basic.548.1 ?Init.Data.List.Basic.548.3 ::: #[2413]) ;;; ((?Init.Data.List.Basic.254.2 :: ?Init.Data.List.Basic.254.1 :: ?Init.Data.List.Basic.254.3).Perm
   (?Init.Data.List.Basic.254.1 :: ?Init.Data.List.Basic.254.2 :: ?Init.Data.List.Basic.254.3) ::: #[2119]) ;;; ((?Init.Data.List.Init.Data.List.Perm.4.2 ::
       ?Init.Data.List.Init.Data.List.Perm.4.1 :: ?Init.Data.List.Init.Data.List.Perm.4.3).Perm
   (?Init.Data.List.Init.Data.List.Perm.4.1 ::
-    @List.conns ?Init.Data.List.Init.Data.List.Perm.4.0 ?Init.Data.List.Init.Data.List.Perm.4.2
-      ?Init.Data.List.Init.Data.List.Perm.4.4) ::: #[2737]) ;;; ((List.append ?Init.Data.List.Init.Data.List.Perm.5.2
+    ?Init.Data.List.Init.Data.List.Perm.4.2 :: ?Init.Data.List.Init.Data.List.Perm.4.4) ::: #[2737]) ;;; ((List.append ?Init.Data.List.Init.Data.List.Perm.5.2
       (?Init.Data.List.Init.Data.List.Perm.5.1 :: ?Init.Data.List.Init.Data.List.Perm.5.4)).Perm
   (List.append ?Init.Data.List.Init.Data.List.Perm.5.3
-    (@List.conns ?Init.Data.List.Init.Data.List.Perm.5.0 ?Init.Data.List.Init.Data.List.Perm.5.1
-      ?Init.Data.List.Init.Data.List.Perm.5.5)) ::: #[2738]) ;;; ((List.concat ?Init.Data.List.Init.Data.List.Perm.19.1 ?Init.Data.List.Init.Data.List.Perm.19.2).Perm
+    (?Init.Data.List.Init.Data.List.Perm.5.1 :: ?Init.Data.List.Init.Data.List.Perm.5.5)) ::: #[2738]) ;;; ((List.concat ?Init.Data.List.Init.Data.List.Perm.19.1 ?Init.Data.List.Init.Data.List.Perm.19.2).Perm
   (?Init.Data.List.Init.Data.List.Perm.19.2 :: ?Init.Data.List.Init.Data.List.Perm.19.1) ::: #[2752]) ;;; (List.Perm ?Init.Data.List.Init.Data.List.Perm.27.1 ?Init.Data.List.Init.Data.List.Perm.27.1 ::: #[2760]) ;;; (List.Perm ?Init.Data.List.Init.Data.List.Perm.37.1 ?Init.Data.List.Init.Data.List.Perm.37.1 ::: #[2770]) ;;; ((List.pmap ?Init.Data.List.Init.Data.List.Perm.38.3 ?Init.Data.List.Init.Data.List.Perm.38.4
       ?Init.Data.List.Init.Data.List.Perm.38.7).Perm
   (List.pmap ?Init.Data.List.Init.Data.List.Perm.38.3 ?Init.Data.List.Init.Data.List.Perm.38.5
@@ -13713,25 +13537,22 @@
   (List.append ?Init.Data.List.Init.Data.List.Perm.67.2
     (List.append ?Init.Data.List.Init.Data.List.Perm.67.1 ?Init.Data.List.Init.Data.List.Perm.67.3)) ::: #[2800]) ;;; (List.Perm ?Init.Data.List.Init.Data.List.Perm.80.1 ?Init.Data.List.Init.Data.List.Perm.80.2 ::: #[2813]) ;;; (List.Perm ?Init.Data.List.Init.Data.List.Perm.82.2 ?Init.Data.List.Init.Data.List.Perm.82.1 ::: #[2815]) ;;; ((?Init.Data.List.Init.Data.List.Perm.87.4 :: ?Init.Data.List.Init.Data.List.Perm.87.1).Perm
   (List.append ?Init.Data.List.Init.Data.List.Perm.87.2
-    (@List.conns ?Init.Data.List.Init.Data.List.Perm.87.0 ?Init.Data.List.Init.Data.List.Perm.87.4
-      ?Init.Data.List.Init.Data.List.Perm.87.3)) ::: #[2820]) ;;; (List.Perm ?Init.Data.List.Init.Data.List.Perm.88.4
+    (?Init.Data.List.Init.Data.List.Perm.87.4 :: ?Init.Data.List.Init.Data.List.Perm.87.3)) ::: #[2820]) ;;; (List.Perm ?Init.Data.List.Init.Data.List.Perm.88.4
   (?Init.Data.List.Init.Data.List.Perm.88.3 ::
     List.erase ?Init.Data.List.Init.Data.List.Perm.88.4 ?Init.Data.List.Init.Data.List.Perm.88.3) ::: #[2821]) ;;; ((List.unattach ?Init.Data.List.Init.Data.List.Perm.89.2).Perm (List.unattach ?Init.Data.List.Init.Data.List.Perm.89.3) ::: #[2822]) ;;; (List.Perm ?Init.Data.List.Init.Data.List.Perm.91.2 ?Init.Data.List.Init.Data.List.Perm.91.3 ::: #[2824]) ;;; ((List.append ?Init.Data.List.Init.Data.List.Perm.98.2 [?Init.Data.List.Init.Data.List.Perm.98.1]).Perm
   (?Init.Data.List.Init.Data.List.Perm.98.1 :: ?Init.Data.List.Init.Data.List.Perm.98.2) ::: #[2831]) ;;; ((List.drop ?Init.Data.List.Init.Data.List.Perm.102.4 ?Init.Data.List.Init.Data.List.Perm.102.1).Perm
   (List.drop ?Init.Data.List.Init.Data.List.Perm.102.4 ?Init.Data.List.Init.Data.List.Perm.102.2) ::: #[2835]) ;;; (((?Init.Data.List.Init.Data.List.Perm.118.1 :: ?Init.Data.List.Init.Data.List.Perm.118.3).append
       (?Init.Data.List.Init.Data.List.Perm.118.2 :: ?Init.Data.List.Init.Data.List.Perm.118.4)).Perm
   ((?Init.Data.List.Init.Data.List.Perm.118.2 :: ?Init.Data.List.Init.Data.List.Perm.118.3).append
-    (@List.conns ?Init.Data.List.Init.Data.List.Perm.118.0 ?Init.Data.List.Init.Data.List.Perm.118.1
-      ?Init.Data.List.Init.Data.List.Perm.118.4)) ::: #[2851]) ;;; ((List.append ?Init.Data.List.Init.Data.List.Perm.122.2
+    (?Init.Data.List.Init.Data.List.Perm.118.1 :: ?Init.Data.List.Init.Data.List.Perm.118.4)) ::: #[2851]) ;;; ((List.append ?Init.Data.List.Init.Data.List.Perm.122.2
       (?Init.Data.List.Init.Data.List.Perm.122.1 :: ?Init.Data.List.Init.Data.List.Perm.122.3)).Perm
   (?Init.Data.List.Init.Data.List.Perm.122.1 ::
     List.append ?Init.Data.List.Init.Data.List.Perm.122.2 ?Init.Data.List.Init.Data.List.Perm.122.3) ::: #[2855]) ;;; ((List.append ?Init.Data.List.Init.Data.List.Perm.148.1 ?Init.Data.List.Init.Data.List.Perm.148.2).Perm
   (List.append ?Init.Data.List.Init.Data.List.Perm.148.2 ?Init.Data.List.Init.Data.List.Perm.148.1) ::: #[2881]) ;;; ((List.eraseP ?Init.Data.List.Init.Data.List.Perm.152.1 ?Init.Data.List.Init.Data.List.Perm.152.2).Perm
   (List.eraseP ?Init.Data.List.Init.Data.List.Perm.152.1 ?Init.Data.List.Init.Data.List.Perm.152.3) ::: #[2885]) ;;; ((List.append ?Init.Data.List.Init.Data.List.Perm.157.2 ?Init.Data.List.Init.Data.List.Perm.157.4).Perm
-  (List.append ?Init.Data.List.Init.Data.List.Perm.157.3 ?Init.Data.List.Init.Data.List.Perm.157.5) ::: #[2890]) ;;; ([].Perm (@List.List.nil ?Init.Data.List.Basic.136.0) ::: #[2001]) ;;; ((?Init.Data.List.Basic.287.1 :: ?Init.Data.List.Basic.287.2).Perm
+  (List.append ?Init.Data.List.Init.Data.List.Perm.157.3 ?Init.Data.List.Init.Data.List.Perm.157.5) ::: #[2890]) ;;; ([].Perm [] ::: #[2001]) ;;; ((?Init.Data.List.Basic.287.1 :: ?Init.Data.List.Basic.287.2).Perm
   (?Init.Data.List.Basic.287.1 :: ?Init.Data.List.Basic.287.3) ::: #[2152]) ;;; ((List.filter ?Init.Data.List.Lemmas.1389.1 ?Init.Data.List.Lemmas.1389.2).Sublist ?Init.Data.List.Lemmas.1389.2 ::: #[1389]) ;;; ((?Init.Data.List.Basic.521.3 :: ?Init.Data.List.Basic.521.1).Sublist
-  (?Init.Data.List.Basic.521.3 :: ?Init.Data.List.Basic.521.2) ::: #[2386]) ;;; ([].Sublist (@List.List.nil ?Init.Data.List.Basic.257.0) ::: #[2122]) ;;; (List.Sublist ?Init.Data.List.Basic.211.1 (?Init.Data.List.Basic.211.3 :: ?Init.Data.List.Basic.211.2) ::: #[2076]) ;;; (List.Subset ?Init.Data.List.Init.Data.List.Perm.86.1 ?Init.Data.List.Init.Data.List.Perm.86.2 ::: #[2819]) ;;; (Std.LawfulIdentity (fun buildCore buildCore_1 => buildCore.append buildCore_1)
-  (@List.List.nil ?Init.Data.List.Basic.430.0) ::: #[2295]) ;;; (¬List.Mem ?Init.Data.List.Lemmas.657.1 [] ::: #[657]) ;;; (¬List.Mem ?Init.Data.List.Lemmas.657.1 (@ListList.nil ?Init.Data.List.Lemmas.657.0) ::: #[657]) ;;; (¬List.Mem ?Init.Data.List.Lemmas.657.1 (@ListListList.nil ?Init.Data.List.Lemmas.657.0) ::: #[657]) ;;; (¬List.Mem ?Init.Data.List.Lemmas.122.1 ?Init.Data.List.Lemmas.122.3 ::: #[122]) ;;; (¬List.Mem ?Init.Data.List.Lemmas.135.1 (List.append ?Init.Data.List.Lemmas.135.2 ?Init.Data.List.Lemmas.135.3) ::: #[135]) ;;; (¬List.Mem ?Init.Data.List.Lemmas.449.1 (?Init.Data.List.Lemmas.449.2 :: ?Init.Data.List.Lemmas.449.3) ::: #[449]) ;;; (¬?Init.Data.List.Lemmas.209.1 = [] ::: #[209]) ;;; (¬?Init.Data.List.Lemmas.209.1 = @ListList.nil ?Init.Data.List.Lemmas.209.0 ::: #[209]) ;;; (¬?Init.Data.List.Lemmas.209.1 = @ListListList.nil ?Init.Data.List.Lemmas.209.0 ::: #[209]) ;;; (¬?Init.Data.List.Lemmas.651.2 = ?Init.Data.List.Lemmas.651.1 :: ?Init.Data.List.Lemmas.651.2 ::: #[651]) ;;; (¬?Init.Data.List.Lemmas.1235.2 = [] ::: #[1235]) ;;; (¬?Init.Data.List.Lemmas.1235.2 = @ListList.nil ?Init.Data.List.Lemmas.1235.0 ::: #[1235]) ;;; (¬?Init.Data.List.Lemmas.1235.2 = @ListListList.nil ?Init.Data.List.Lemmas.1235.0 ::: #[1235]) ;;; (¬?Init.Data.List.Lemmas.1533.1 = ?Init.Data.List.Lemmas.1533.2 ::: #[1533]) ;;; (¬?Init.Data.List.Lemmas.1039.1 = [] ::: #[1039]) ;;; (¬?Init.Data.List.Lemmas.1039.1 = @ListList.nil ?Init.Data.List.Lemmas.1039.0 ::: #[1039]) ;;; (¬?Init.Data.List.Lemmas.1039.1 = @ListListList.nil ?Init.Data.List.Lemmas.1039.0 ::: #[1039]) ;;; (¬List.replicate (Nat.add ?Init.Data.List.Lemmas.721.1 1) ?Init.Data.List.Lemmas.721.2 = [] ::: #[721]) ;;; (¬List.replicate (Nat.add ?Init.Data.List.Lemmas.721.1 1) ?Init.Data.List.Lemmas.721.2 =
+  (?Init.Data.List.Basic.521.3 :: ?Init.Data.List.Basic.521.2) ::: #[2386]) ;;; ([].Sublist [] ::: #[2122]) ;;; (List.Sublist ?Init.Data.List.Basic.211.1 (?Init.Data.List.Basic.211.3 :: ?Init.Data.List.Basic.211.2) ::: #[2076]) ;;; (List.Subset ?Init.Data.List.Init.Data.List.Perm.86.1 ?Init.Data.List.Init.Data.List.Perm.86.2 ::: #[2819]) ;;; (Std.LawfulIdentity (fun buildCore buildCore_1 => buildCore.append buildCore_1) [] ::: #[2295]) ;;; (¬List.Mem ?Init.Data.List.Lemmas.657.1 [] ::: #[657]) ;;; (¬List.Mem ?Init.Data.List.Lemmas.657.1 (@ListList.nil ?Init.Data.List.Lemmas.657.0) ::: #[657]) ;;; (¬List.Mem ?Init.Data.List.Lemmas.657.1 (@ListListList.nil ?Init.Data.List.Lemmas.657.0) ::: #[657]) ;;; (¬List.Mem ?Init.Data.List.Lemmas.122.1 ?Init.Data.List.Lemmas.122.3 ::: #[122]) ;;; (¬List.Mem ?Init.Data.List.Lemmas.135.1 (List.append ?Init.Data.List.Lemmas.135.2 ?Init.Data.List.Lemmas.135.3) ::: #[135]) ;;; (¬List.Mem ?Init.Data.List.Lemmas.449.1 (?Init.Data.List.Lemmas.449.2 :: ?Init.Data.List.Lemmas.449.3) ::: #[449]) ;;; (¬?Init.Data.List.Lemmas.209.1 = [] ::: #[209]) ;;; (¬?Init.Data.List.Lemmas.209.1 = @ListList.nil ?Init.Data.List.Lemmas.209.0 ::: #[209]) ;;; (¬?Init.Data.List.Lemmas.209.1 = @ListListList.nil ?Init.Data.List.Lemmas.209.0 ::: #[209]) ;;; (¬?Init.Data.List.Lemmas.651.2 = ?Init.Data.List.Lemmas.651.1 :: ?Init.Data.List.Lemmas.651.2 ::: #[651]) ;;; (¬?Init.Data.List.Lemmas.1235.2 = [] ::: #[1235]) ;;; (¬?Init.Data.List.Lemmas.1235.2 = @ListList.nil ?Init.Data.List.Lemmas.1235.0 ::: #[1235]) ;;; (¬?Init.Data.List.Lemmas.1235.2 = @ListListList.nil ?Init.Data.List.Lemmas.1235.0 ::: #[1235]) ;;; (¬?Init.Data.List.Lemmas.1533.1 = ?Init.Data.List.Lemmas.1533.2 ::: #[1533]) ;;; (¬?Init.Data.List.Lemmas.1039.1 = [] ::: #[1039]) ;;; (¬?Init.Data.List.Lemmas.1039.1 = @ListList.nil ?Init.Data.List.Lemmas.1039.0 ::: #[1039]) ;;; (¬?Init.Data.List.Lemmas.1039.1 = @ListListList.nil ?Init.Data.List.Lemmas.1039.0 ::: #[1039]) ;;; (¬List.replicate (Nat.add ?Init.Data.List.Lemmas.721.1 1) ?Init.Data.List.Lemmas.721.2 = [] ::: #[721]) ;;; (¬List.replicate (Nat.add ?Init.Data.List.Lemmas.721.1 1) ?Init.Data.List.Lemmas.721.2 =
     @ListList.nil ?Init.Data.List.Lemmas.721.0 ::: #[721]) ;;; (¬List.replicate (Nat.add ?Init.Data.List.Lemmas.721.1 1) ?Init.Data.List.Lemmas.721.2 =
     @ListListList.nil ?Init.Data.List.Lemmas.721.0 ::: #[721]) ;;; (¬List.append ?Init.Data.List.Lemmas.1841.2 ?Init.Data.List.Lemmas.1841.1 = [] ::: #[1841]) ;;; (¬List.append ?Init.Data.List.Lemmas.1841.2 ?Init.Data.List.Lemmas.1841.1 = @ListList.nil ?Init.Data.List.Lemmas.1841.0 ::: #[1841]) ;;; (¬List.append ?Init.Data.List.Lemmas.1841.2 ?Init.Data.List.Lemmas.1841.1 =
     @ListListList.nil ?Init.Data.List.Lemmas.1841.0 ::: #[1841]) ;;; (¬List.append ?Init.Data.List.Lemmas.1550.1 ?Init.Data.List.Lemmas.1550.3 = [] ::: #[1550]) ;;; (¬List.append ?Init.Data.List.Lemmas.1550.1 ?Init.Data.List.Lemmas.1550.3 = @ListList.nil ?Init.Data.List.Lemmas.1550.0 ::: #[1550]) ;;; (¬List.append ?Init.Data.List.Lemmas.1550.1 ?Init.Data.List.Lemmas.1550.3 =

@@ -877,7 +877,6 @@ where
         | .leaf => clean_inner cs ts bs Ts n
         | _ => clean_inner cs ts ((cs[n]!) :: bs) (X :: Ts) n
 
-
 @[inline]
 def clean (t : CTrie α) : CTrie α :=
   cleanUp t (unzip .nil t)

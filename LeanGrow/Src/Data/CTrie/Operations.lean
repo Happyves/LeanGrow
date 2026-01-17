@@ -577,17 +577,20 @@ partial def mergeImplMultiInit  (L R : Array ByteArray) (TL TR : Array (CTrie α
         .done doneB doneT
 
 
-
 @[specialize]
 partial def mergeImplDown
   [Monad m]  (merge : α → α → m α) (done : CTrieZipMe α) (l r : CTrie α) (ol or : Nat) : m (CTrieZipMe α) :=
   match l, r with
   | .leaf, x | x, .leaf => return (.atom x done)
   | .fruit v,  .fruit u => do return (.atom (.fruit (← merge v u)) done)
-  | .fruit v,  .fnode1 u c t | .fnode1 v c t,  .fruit u => do return (.atom (.fnode1 (← merge v u) c t) done)
-  | .fruit v,  .fnode u c t  | .fnode v c t,  .fruit u => do return (.atom (.fnode (← merge v u) c t) done)
-  | .fruit v,  .lnode1 c t | .lnode1 c t,  .fruit v => return (.atom (.fnode1 v c t) done)
-  | .fruit v,  .lnode c t  | .lnode c t,  .fruit v => return (.atom (.fnode v c t) done)
+  | .fruit v,  .fnode1 u c t => do return (.atom (.fnode1 (← merge v u) (c.drop or) t) done)
+  | .fnode1 v c t,  .fruit u => do return (.atom (.fnode1 (← merge v u) (c.drop ol) t) done)
+  | .fruit v,  .fnode u c t => do return (.atom (.fnode (← merge v u) (c.drop or) t) done)
+  | .fnode v c t,  .fruit u => do return (.atom (.fnode (← merge v u) (c.drop ol) t) done)
+  | .fruit v,  .lnode1 c t => return (.atom (.fnode1 v (c.drop or) t) done)
+  | .lnode1 c t,  .fruit v => return (.atom (.fnode1 v (c.drop ol) t) done)
+  | .fruit v,  .lnode c t => return (.atom (.fnode v (c.drop or) t) done)
+  | .lnode c t,  .fruit v => return (.atom (.fnode v (c.drop ol) t) done)
   | .lnode1 ax cx, .lnode1 ay cy =>
       let com := ByteArray.getLongestMatch_wOffsets ax ay ol or
       if ol + com == ax.size
@@ -696,12 +699,12 @@ partial def mergeImplDown
               mergeImplDown merge (.multi (.lnode ay cy) idx done) cx cy' 0 0
               -- return .node (← mini_merge x y) ay (cy.set! idx sofar)
             else
-              mergeImplDown merge (.multi (.lnode (ay.set! idx (ax.drop or)) cy) idx done) cx (.lnode1 ay' cy') com 0
+              mergeImplDown merge (.multi (.lnode (ay.set! idx (ax.drop or)) cy) idx done) cx (.lnode1 ay' cy') 0 com
               -- return .node (← mini_merge x y) (ay.set! idx (ax.drop ol)) (cy.set! idx sofar)
           else
             if com == ay'.size
             then
-              mergeImplDown merge (.multi (.lnode ay cy) idx done) l cy' 0 (or + com)
+              mergeImplDown merge (.multi (.lnode ay cy) idx done) l cy' (or + com) 0
               -- return .node (← mini_merge x y) ay (cy.set! idx sofar)
             else
               let join := (ax.drop or).take (com)
@@ -754,12 +757,12 @@ partial def mergeImplDown
               mergeImplDown merge (.multi (.fnode v ay cy) idx done) cx cy' 0 0
               -- return .node (← mini_merge x y) ay (cy.set! idx sofar)
             else
-              mergeImplDown merge (.multi (.fnode v (ay.set! idx (ax.drop ol)) cy) idx done) cx (.lnode1 ay' cy') com 0
+              mergeImplDown merge (.multi (.fnode v (ay.set! idx (ax.drop or)) cy) idx done) cx (.lnode1 ay' cy') 0 com
               -- return .node (← mini_merge x y) (ay.set! idx (ax.drop ol)) (cy.set! idx sofar)
           else
             if com == ay'.size
             then
-              mergeImplDown merge (.multi (.fnode v ay cy) idx done) l cy' 0 (or + com)
+              mergeImplDown merge (.multi (.fnode v ay cy) idx done) l cy' (or + com) 0
               -- return .node (← mini_merge x y) ay (cy.set! idx sofar)
             else
               let join := (ax.drop or).take (com)
@@ -812,12 +815,12 @@ partial def mergeImplDown
               mergeImplDown merge (.multi (.fnode (← merge v u) ay cy) idx done) cx cy' 0 0
               -- return .node (← mini_merge x y) ay (cy.set! idx sofar)
             else
-              mergeImplDown merge (.multi (.fnode (← merge v u) (ay.set! idx (ax.drop ol)) cy) idx done) cx (.lnode1 ay' cy') com 0
+              mergeImplDown merge (.multi (.fnode (← merge v u) (ay.set! idx (ax.drop or)) cy) idx done) cx (.lnode1 ay' cy') 0 com
               -- return .node (← mini_merge x y) (ay.set! idx (ax.drop ol)) (cy.set! idx sofar)
           else
             if com == ay'.size
             then
-              mergeImplDown merge (.multi (.fnode (← merge v u) ay cy) idx done) l cy' 0 (or + com)
+              mergeImplDown merge (.multi (.fnode (← merge v u) ay cy) idx done) l cy' (or + com) 0
               -- return .node (← mini_merge x y) ay (cy.set! idx sofar)
             else
               let join := (ax.drop or).take (com)

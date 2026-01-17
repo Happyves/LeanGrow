@@ -53,3 +53,19 @@ def dbg1 := CTrie.ofList <| .cons "HAdd.hadd" 1 <| .cons "HSub.hsub" 2 <| .cons 
 def dbg2 := CTrie.ofList <| .cons "HAdd.hadd" 7 .nil
 
 #eval (CTrie.merge (fun x y => x + y) dbg1 dbg2).toList
+
+def dbg3 := CTrie.ofList <| .cons "ba" 1 .nil
+def dbg4 := CTrie.ofList <| .cons "banjo" 2 .nil
+
+#eval dbg3
+#eval dbg4
+
+#eval (CTrie.merge (fun x y => x + y) dbg3 dbg4).toList
+
+def dbg5 := CTrie.ofList <| .cons "ba" 1 .nil
+def dbg6 := CTrie.ofList <| .cons "banjo" 2 <| .cons "else" 2 .nil
+
+#eval dbg5
+#eval dbg6
+
+#eval (CTrie.merge (fun x y => x + y) dbg6 dbg5).toList
