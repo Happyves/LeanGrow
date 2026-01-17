@@ -380,3 +380,7 @@ Fix notes
 - defEqNoMv → defEqWiMv
 
 -/
+
+
+#check isClass?
+#check isClass

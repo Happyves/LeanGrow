@@ -25,6 +25,21 @@ def test (n : Name) : MetaM Unit := do
         IO.println s!"Bad back: {bb}"
 
 
+def testSpe (n : Name) (badu : badUniType) : MetaM Unit := do
+  let .some dec := (← getEnv).find? n | throwError "aahh 1"
+  let .mk _ thms l1 l2 ← processForCacheSpe `dummyMod 42 dec badu
+  thms.foldlM () <| fun badu thm _ => do
+    IO.println s!"\nTheorem {thm.name}"
+    IO.println s!"Bad uni {repr badu}"
+    match thm with
+    | .std _ _ _ _ _ _ goal _ bf bb =>
+        IO.println s!"Goal: {← PpExpr goal l1 l2}"
+        IO.println s!"Bad forw: {bf}"
+        IO.println s!"Bad back: {bb}"
+    | .rw .. =>
+        IO.println "shouldn't"
+
+
 
 #check if_pos
 #eval test `if_pos
@@ -77,6 +92,18 @@ def test (n : Name) : MetaM Unit := do
 
 #check Eq.symm
 #eval test `Eq.symm
+
+#check Eq.refl
+#eval test `Eq.refl
+#eval testSpe `Eq.refl .fwdOnly
+
+
+#check Iff.refl
+#eval test `Iff.refl
+#eval testSpe `Iff.refl .fwdOnly
+-- not recognized as bad forward though it is ....
+
+
 
 #check le_trans
 #eval test `le_trans

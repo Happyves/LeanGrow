@@ -23,7 +23,7 @@ def testInsert : Array Expr → Array Expr → Array Expr → Array Expr → Arr
       let ⟨T,l1,l2⟩ ← PaInG.ofList (← getLCtx) (← getLocalInstances) L .dead UInt32Array.empty (fun x => UInt32Array.single x.toUInt32)
         (fun x y => UInt32Array.oInsert y x.toUInt32)
       withReader (fun ctx => {ctx with lctx := l1, localInstances := l2}) do
-        let built := (T.buildCore [] 0 id UInt32Array.inter UInt32Array.isEmpty).toListOfProd
+        let built := (← T.buildCore l1 l2 [] 0 id UInt32Array.inter UInt32Array.isEmpty).toListOfProd
         IO.println s!"{built}"
         let built := ← built.mapM (fun (x,y) => return (← ppExpr x, y))
         IO.println s!"{built}"

@@ -138,23 +138,23 @@ def buildCoreDown (T : PaInG IdxCollType) (workas : List FVarId) (depth : Nat)
 
 
 @[specialize]
-partial def buildCoreUp (workas : List FVarId)
+partial def buildCoreUp (l1 : LocalContext) (l2 : LocalInstances) (workas : List FVarId)
   (focus : IdxCollType → IdxCollType) (intersect : IdxCollType → IdxCollType → IdxCollType) (empty? : IdxCollType → Bool)
-  (sofar : ListProd Expr IdxCollType) (todo : bCType IdxCollType) : ListProd Expr IdxCollType :=
+  (sofar : ListProd Expr IdxCollType) (todo : bCType IdxCollType) : MetaM (ListProd Expr IdxCollType) :=
   let buildCoreDownSpec (T : PaInG IdxCollType) (workas : List FVarId) (depth : Nat)
     (sofar : bCType IdxCollType) : bCType IdxCollType := buildCoreDown T workas depth focus empty? sofar
   match todo with
-  | .nil => sofar
-  | .load data nx => buildCoreUp workas focus intersect empty? (data.append sofar) nx
+  | .nil => return sofar
+  | .load data nx => buildCoreUp l1 l2 workas focus intersect empty? (data.append sofar) nx
   | .app turn depth l r tmp branch nx =>
       if turn == 0
       then
         let NX := buildCoreDownSpec l workas depth <| .app 1 depth l r tmp sofar nx
-        buildCoreUp workas focus intersect empty? .nil NX
+        buildCoreUp l1 l2 workas focus intersect empty? .nil NX
       else if turn == 1
       then
         let NX := buildCoreDownSpec r workas depth <| .app 2 depth l r sofar branch nx
-        buildCoreUp workas focus intersect empty? .nil NX
+        buildCoreUp l1 l2 workas focus intersect empty? .nil NX
       else
         let sofar := (tmp.foldl branch (fun x y R =>
           (sofar.foldl R (fun X Y R =>
@@ -163,56 +163,62 @@ partial def buildCoreUp (workas : List FVarId)
               then R
               else .cons (.app x X) inter R
             ))))
-        buildCoreUp workas  focus intersect empty? sofar nx
-  | .lam turn depth l r tmp branch nx =>
+        buildCoreUp l1 l2 workas  focus intersect empty? sofar nx
+  | .lam turn depth l r tmp branch nx => do
       if turn == 0
       then
         let NX := buildCoreDownSpec l workas depth <| .lam 1 depth l r tmp sofar nx
-        buildCoreUp workas  focus intersect empty? .nil NX
+        buildCoreUp l1 l2 workas  focus intersect empty? .nil NX
       else if turn == 1
       then
         let NX := buildCoreDownSpec r workas (depth+1) <| .lam 2 depth l r sofar branch nx
-        buildCoreUp workas  focus intersect empty? .nil NX
+        buildCoreUp l1 l2 workas  focus intersect empty? .nil NX
       else
-        let sofar := (tmp.foldl branch (fun x y R =>
-          (sofar.foldl R (fun X Y R =>
+        let sofar ←  (tmp.foldlM branch (fun x y R =>
+          (sofar.foldlM R (fun X Y R => do
               let inter := intersect y Y
               if empty? inter
-              then R
-              else .cons (.lam `buildCore x X .default) inter R
+              then return  R
+              else
+                match ← IsClass? x l1 l2 with
+                | .none => return .cons (.lam `buildCore x X .default) inter R
+                | .some _ => return .cons (.lam `buildCore x X .instImplicit) inter R
             ))))
-        buildCoreUp workas  focus intersect empty? sofar nx
-  | .all turn depth l r tmp branch nx =>
+        buildCoreUp l1 l2 workas  focus intersect empty? sofar nx
+  | .all turn depth l r tmp branch nx => do
       if turn == 0
       then
         let NX := buildCoreDownSpec l workas depth <| .all 1 depth l r tmp sofar nx
-        buildCoreUp workas  focus intersect empty? .nil NX
+        buildCoreUp l1 l2 workas  focus intersect empty? .nil NX
       else if turn == 1
       then
         let NX := buildCoreDownSpec r workas (depth+1) <| .all 2 depth l r sofar branch nx
-        buildCoreUp workas  focus intersect empty? .nil NX
+        buildCoreUp l1 l2 workas  focus intersect empty? .nil NX
       else
-        let sofar := (tmp.foldl branch (fun x y R =>
-          (sofar.foldl R (fun X Y R =>
+        let sofar ← (tmp.foldlM branch (fun x y R =>
+          (sofar.foldlM R (fun X Y R => do
               let inter := intersect y Y
               if empty? inter
-              then R
-              else .cons (.forallE `buildCore x X .default) inter R
+              then return R
+              else
+                match ← IsClass? x l1 l2 with
+                | .none => return .cons (.forallE `buildCore x X .default) inter R
+                | .some _ => return .cons (.forallE `buildCore x X .instImplicit) inter R
             ))))
-        buildCoreUp workas  focus intersect empty? sofar nx
+        buildCoreUp l1 l2 workas  focus intersect empty? sofar nx
   | .letE turn depth l r z tmp1 tmp2 branch nx =>
       if turn == 0
       then
         let NX := buildCoreDownSpec l workas depth <| .letE 1 depth l r z tmp1 tmp2 sofar nx
-        buildCoreUp workas  focus intersect empty? .nil NX
+        buildCoreUp l1 l2 workas  focus intersect empty? .nil NX
       else if turn == 1
       then
         let NX := buildCoreDownSpec r workas depth <| .letE 2 depth l r z sofar tmp2 branch nx
-        buildCoreUp workas  focus intersect empty? .nil NX
+        buildCoreUp l1 l2 workas  focus intersect empty? .nil NX
       else if turn == 2
       then
         let NX := buildCoreDownSpec z workas (depth + 1) <| .letE 3 depth l r z tmp1 sofar branch nx
-        buildCoreUp workas  focus intersect empty? .nil NX
+        buildCoreUp l1 l2 workas  focus intersect empty? .nil NX
       else
         let sofar := (tmp1.foldl branch (fun x y R =>
           (tmp2.foldl R (fun X Y R =>
@@ -222,57 +228,60 @@ partial def buildCoreUp (workas : List FVarId)
               then R
               else .cons (.letE `buildCore x X X' false) inter R
           ))))))
-        buildCoreUp workas  focus intersect empty? sofar nx
+        buildCoreUp l1 l2 workas  focus intersect empty? sofar nx
   | .proj fst name idx is depth T branch nx =>
       if fst
       then
         let NX := buildCoreDownSpec T workas depth <| .proj false name idx is depth T sofar nx
-        buildCoreUp workas  focus intersect empty? .nil NX
+        buildCoreUp l1 l2 workas  focus intersect empty? .nil NX
       else
         let res := sofar.foldl branch (fun e is R => .cons (.proj name idx e) is R)
-        buildCoreUp workas  focus intersect empty? res nx
+        buildCoreUp l1 l2 workas  focus intersect empty? res nx
   | .proofs fst depth T branch nx =>
       if fst
       then
         let NX := buildCoreDownSpec T workas depth <| .proofs false depth T sofar nx
-        buildCoreUp workas  focus intersect empty? .nil NX
+        buildCoreUp l1 l2 workas  focus intersect empty? .nil NX
       else
         let res := sofar.append branch
-        buildCoreUp workas  focus intersect empty? res nx
+        buildCoreUp l1 l2 workas  focus intersect empty? res nx
+
 
 
 @[specialize, inline]
-partial def buildCore (T : PaInG IdxCollType) (workas : List FVarId) (depth : Nat)
+partial def buildCore (l1 : LocalContext) (l2 : LocalInstances)
+  (T : PaInG IdxCollType) (workas : List FVarId) (depth : Nat)
   (focus : IdxCollType → IdxCollType) (intersect : IdxCollType → IdxCollType → IdxCollType) (empty? : IdxCollType → Bool)
-  : ListProd Expr IdxCollType :=
-  buildCoreUp workas focus intersect empty? .nil (buildCoreDown T workas depth focus empty? .nil)
+  : MetaM (ListProd Expr IdxCollType) :=
+  buildCoreUp l1 l2 workas focus intersect empty? .nil (buildCoreDown T workas depth focus empty? .nil)
 
 
 @[specialize, inline]
-def buildAll (T : PaInG IdxCollType) (workas : List FVarId) (depth : Nat)
+def buildAll (l1 : LocalContext) (l2 : LocalInstances)
+  (T : PaInG IdxCollType) (workas : List FVarId) (depth : Nat)
   (intersect : IdxCollType → IdxCollType → IdxCollType) (empty? : IdxCollType → Bool)
-  : ListProd Expr IdxCollType :=
-  buildCore T workas depth id intersect empty?
+  : MetaM (ListProd Expr IdxCollType) :=
+  buildCore l1 l2 T workas depth id intersect empty?
 
 @[specialize, inline]
-def buildAllTop (T : PaInG IdxCollType)
+def buildAllTop (l1 : LocalContext) (l2 : LocalInstances) (T : PaInG IdxCollType)
   (intersect : IdxCollType → IdxCollType → IdxCollType) (empty? : IdxCollType → Bool)
-  : ListProd Expr IdxCollType :=
-  buildCore T [] 0 id intersect empty?
+  : MetaM (ListProd Expr IdxCollType) :=
+  buildCore l1 l2 T [] 0 id intersect empty?
 
 
 
 -- # Specialize
 
-def buildS (T : PaInG UInt32Array) (workas : List FVarId) (depth : Nat)
-  (among : UInt32Array) : ListProd Expr UInt32Array :=
-    buildCore T workas depth (fun x => UInt32Array.inter among x) UInt32Array.inter UInt32Array.isEmpty
+def buildS (l1 : LocalContext) (l2 : LocalInstances) (T : PaInG UInt32Array) (workas : List FVarId) (depth : Nat)
+  (among : UInt32Array) : MetaM (ListProd Expr UInt32Array) :=
+    buildCore l1 l2 T workas depth (fun x => UInt32Array.inter among x) UInt32Array.inter UInt32Array.isEmpty
 
-def buildAllS (T : PaInG UInt32Array) (workas : List FVarId) (depth : Nat) :=
-  buildAll T workas depth UInt32Array.inter UInt32Array.isEmpty
+def buildAllS (l1 : LocalContext) (l2 : LocalInstances) (T : PaInG UInt32Array) (workas : List FVarId) (depth : Nat) :=
+  buildAll l1 l2 T workas depth UInt32Array.inter UInt32Array.isEmpty
 
-def buildAllTopS (T : PaInG UInt32Array) :=
-  buildAllTop T UInt32Array.inter UInt32Array.isEmpty
+def buildAllTopS (l1 : LocalContext) (l2 : LocalInstances) (T : PaInG UInt32Array) :=
+  buildAllTop l1 l2 T UInt32Array.inter UInt32Array.isEmpty
 
 
 
@@ -287,7 +296,7 @@ def ppPaInGHelp [Repr IdxCollType] (l1 : LocalContext) (l2 : LocalInstances) (bu
 def pp [Repr IdxCollType] (l1 : LocalContext) (l2 : LocalInstances) (T : PaInG IdxCollType) (workas : List FVarId) (depth : Nat)
   (intersect : IdxCollType → IdxCollType → IdxCollType) (empty? : IdxCollType → Bool)
   : MetaM String := do
-  let built := buildCore T workas depth id intersect empty?
+  let built ← buildCore l1 l2 T workas depth id intersect empty?
   ppPaInGHelp l1 l2 built
 
 
@@ -441,7 +450,7 @@ partial def buildMvarifyTnodesCoreUp (l1 : LocalContext) (l2 : LocalInstances) (
               else .cons (.app x X) inter R
             ))))
         buildMvarifyTnodesCoreUp l1 l2 workas  focus intersect empty? sofar nx
-  | .lam turn depth l r tmp branch nx =>
+  | .lam turn depth l r tmp branch nx => do
       if turn == 0
       then
         let NX ← buildMvarifyTnodesCoreDownSpec l workas depth <| .lam 1 depth l r tmp sofar nx
@@ -451,15 +460,18 @@ partial def buildMvarifyTnodesCoreUp (l1 : LocalContext) (l2 : LocalInstances) (
         let NX ← buildMvarifyTnodesCoreDownSpec r workas (depth+1) <| .lam 2 depth l r sofar branch nx
         buildMvarifyTnodesCoreUp l1 l2 workas  focus intersect empty? .nil NX
       else
-        let sofar := (tmp.foldl branch (fun x y R =>
-          (sofar.foldl R (fun X Y R =>
+        let sofar ← (tmp.foldlM branch (fun x y R =>
+          (sofar.foldlM R (fun X Y R => do
               let inter := intersect y Y
               if empty? inter
-              then R
-              else .cons (.lam `buildCore x X .default) inter R
+              then return R
+              else
+                match ← IsClass? x l1 l2 with
+                | .none => return .cons (.lam `buildCore x X .default) inter R
+                | .some _ => return .cons (.lam `buildCore x X .instImplicit) inter R
             ))))
         buildMvarifyTnodesCoreUp l1 l2 workas  focus intersect empty? sofar nx
-  | .all turn depth l r tmp branch nx =>
+  | .all turn depth l r tmp branch nx => do
       if turn == 0
       then
         let NX ← buildMvarifyTnodesCoreDownSpec l workas depth <| .all 1 depth l r tmp sofar nx
@@ -469,12 +481,15 @@ partial def buildMvarifyTnodesCoreUp (l1 : LocalContext) (l2 : LocalInstances) (
         let NX ← buildMvarifyTnodesCoreDownSpec r workas (depth+1) <| .all 2 depth l r sofar branch nx
         buildMvarifyTnodesCoreUp l1 l2 workas  focus intersect empty? .nil NX
       else
-        let sofar := (tmp.foldl branch (fun x y R =>
-          (sofar.foldl R (fun X Y R =>
+        let sofar ← (tmp.foldlM branch (fun x y R =>
+          (sofar.foldlM R (fun X Y R => do
               let inter := intersect y Y
               if empty? inter
-              then R
-              else .cons (.forallE `buildCore x X .default) inter R
+              then return R
+              else
+                match ← IsClass? x l1 l2 with
+                | .none => return .cons (.forallE `buildCore x X .default) inter R
+                | _ => return .cons (.forallE `buildCore x X .instImplicit) inter R
             ))))
         buildMvarifyTnodesCoreUp l1 l2 workas  focus intersect empty? sofar nx
   | .letE turn depth l r z tmp1 tmp2 branch nx =>
@@ -641,23 +656,23 @@ def buildNoLoBvCoreDown (T : PaInG IdxCollType) (depth : Nat)
 
 
 @[specialize]
-partial def buildNoLoBvCoreUp
+partial def buildNoLoBvCoreUp (l1 : LocalContext) (l2 : LocalInstances)
   (focus : IdxCollType → IdxCollType) (intersect : IdxCollType → IdxCollType → IdxCollType) (empty? : IdxCollType → Bool)
-  (sofar : ListProd Expr IdxCollType) (todo : bCType IdxCollType) : ListProd Expr IdxCollType :=
+  (sofar : ListProd Expr IdxCollType) (todo : bCType IdxCollType) : MetaM (ListProd Expr IdxCollType) :=
   let buildNoLoBvCoreDownSpec (T : PaInG IdxCollType) (depth : Nat)
     (sofar : bCType IdxCollType) : bCType IdxCollType := buildNoLoBvCoreDown T depth focus empty? sofar
   match todo with
-  | .nil => sofar
-  | .load data nx => buildNoLoBvCoreUp focus intersect empty? (data.append sofar) nx
+  | .nil => return sofar
+  | .load data nx => buildNoLoBvCoreUp l1 l2 focus intersect empty? (data.append sofar) nx
   | .app turn depth l r tmp branch nx =>
       if turn == 0
       then
         let NX := buildNoLoBvCoreDownSpec l depth <| .app 1 depth l r tmp sofar nx
-        buildNoLoBvCoreUp focus intersect empty? .nil NX
+        buildNoLoBvCoreUp l1 l2 focus intersect empty? .nil NX
       else if turn == 1
       then
         let NX := buildNoLoBvCoreDownSpec r depth <| .app 2 depth l r sofar branch nx
-        buildNoLoBvCoreUp focus intersect empty? .nil NX
+        buildNoLoBvCoreUp l1 l2 focus intersect empty? .nil NX
       else
         let sofar := (tmp.foldl branch (fun x y R =>
           (sofar.foldl R (fun X Y R =>
@@ -666,56 +681,62 @@ partial def buildNoLoBvCoreUp
               then R
               else .cons (.app x X) inter R
             ))))
-        buildNoLoBvCoreUp  focus intersect empty? sofar nx
-  | .lam turn depth l r tmp branch nx =>
+        buildNoLoBvCoreUp l1 l2  focus intersect empty? sofar nx
+  | .lam turn depth l r tmp branch nx => do
       if turn == 0
       then
         let NX := buildNoLoBvCoreDownSpec l depth <| .lam 1 depth l r tmp sofar nx
-        buildNoLoBvCoreUp  focus intersect empty? .nil NX
+        buildNoLoBvCoreUp l1 l2  focus intersect empty? .nil NX
       else if turn == 1
       then
         let NX := buildNoLoBvCoreDownSpec r (depth+1) <| .lam 2 depth l r sofar branch nx
-        buildNoLoBvCoreUp  focus intersect empty? .nil NX
+        buildNoLoBvCoreUp l1 l2  focus intersect empty? .nil NX
       else
-        let sofar := (tmp.foldl branch (fun x y R =>
-          (sofar.foldl R (fun X Y R =>
+        let sofar ← (tmp.foldlM branch (fun x y R =>
+          (sofar.foldlM R (fun X Y R => do
               let inter := intersect y Y
               if empty? inter
-              then R
-              else .cons (.lam `buildCore x X .default) inter R
+              then return R
+              else
+                match ← IsClass? x l1 l2 with
+                | .none => return .cons (.lam `buildCore x X .default) inter R
+                | _ => return .cons (.lam `buildCore x X .instImplicit) inter R
             ))))
-        buildNoLoBvCoreUp  focus intersect empty? sofar nx
-  | .all turn depth l r tmp branch nx =>
+        buildNoLoBvCoreUp l1 l2  focus intersect empty? sofar nx
+  | .all turn depth l r tmp branch nx => do
       if turn == 0
       then
         let NX := buildNoLoBvCoreDownSpec l depth <| .all 1 depth l r tmp sofar nx
-        buildNoLoBvCoreUp  focus intersect empty? .nil NX
+        buildNoLoBvCoreUp l1 l2  focus intersect empty? .nil NX
       else if turn == 1
       then
         let NX := buildNoLoBvCoreDownSpec r (depth+1) <| .all 2 depth l r sofar branch nx
-        buildNoLoBvCoreUp  focus intersect empty? .nil NX
+        buildNoLoBvCoreUp l1 l2  focus intersect empty? .nil NX
       else
-        let sofar := (tmp.foldl branch (fun x y R =>
-          (sofar.foldl R (fun X Y R =>
+        let sofar ← (tmp.foldlM branch (fun x y R =>
+          (sofar.foldlM R (fun X Y R => do
               let inter := intersect y Y
               if empty? inter
-              then R
-              else .cons (.forallE `buildCore x X .default) inter R
+              then return R
+              else
+                match ← IsClass? x l1 l2 with
+                | .none => return .cons (.forallE `buildCore x X .default) inter R
+                | _ => return .cons (.forallE `buildCore x X .instImplicit) inter R
             ))))
-        buildNoLoBvCoreUp  focus intersect empty? sofar nx
+        buildNoLoBvCoreUp l1 l2  focus intersect empty? sofar nx
   | .letE turn depth l r z tmp1 tmp2 branch nx =>
       if turn == 0
       then
         let NX := buildNoLoBvCoreDownSpec l depth <| .letE 1 depth l r z tmp1 tmp2 sofar nx
-        buildNoLoBvCoreUp  focus intersect empty? .nil NX
+        buildNoLoBvCoreUp l1 l2  focus intersect empty? .nil NX
       else if turn == 1
       then
         let NX := buildNoLoBvCoreDownSpec r depth <| .letE 2 depth l r z sofar tmp2 branch nx
-        buildNoLoBvCoreUp  focus intersect empty? .nil NX
+        buildNoLoBvCoreUp l1 l2  focus intersect empty? .nil NX
       else if turn == 2
       then
         let NX := buildNoLoBvCoreDownSpec z (depth + 1) <| .letE 3 depth l r z tmp1 sofar branch nx
-        buildNoLoBvCoreUp  focus intersect empty? .nil NX
+        buildNoLoBvCoreUp l1 l2  focus intersect empty? .nil NX
       else
         let sofar := (tmp1.foldl branch (fun x y R =>
           (tmp2.foldl R (fun X Y R =>
@@ -725,30 +746,30 @@ partial def buildNoLoBvCoreUp
               then R
               else .cons (.letE `buildCore x X X' false) inter R
           ))))))
-        buildNoLoBvCoreUp  focus intersect empty? sofar nx
+        buildNoLoBvCoreUp l1 l2  focus intersect empty? sofar nx
   | .proj fst name idx is depth T branch nx =>
       if fst
       then
         let NX := buildNoLoBvCoreDownSpec T depth <| .proj false name idx is depth T sofar nx
-        buildNoLoBvCoreUp  focus intersect empty? .nil NX
+        buildNoLoBvCoreUp l1 l2  focus intersect empty? .nil NX
       else
         let res := sofar.foldl branch (fun e is R => .cons (.proj name idx e) is R)
-        buildNoLoBvCoreUp  focus intersect empty? res nx
+        buildNoLoBvCoreUp l1 l2  focus intersect empty? res nx
   | .proofs fst depth T branch nx =>
       if fst
       then
         let NX := buildNoLoBvCoreDownSpec T depth <| .proofs false depth T sofar nx
-        buildNoLoBvCoreUp  focus intersect empty? .nil NX
+        buildNoLoBvCoreUp l1 l2  focus intersect empty? .nil NX
       else
         let res := sofar.append branch
-        buildNoLoBvCoreUp  focus intersect empty? res nx
+        buildNoLoBvCoreUp l1 l2  focus intersect empty? res nx
 
 
 @[specialize, inline]
-partial def buildNoLoBvCore (T : PaInG IdxCollType) (depth : Nat)
+partial def buildNoLoBvCore (l1 : LocalContext) (l2 : LocalInstances) (T : PaInG IdxCollType) (depth : Nat)
   (focus : IdxCollType → IdxCollType) (intersect : IdxCollType → IdxCollType → IdxCollType) (empty? : IdxCollType → Bool)
-  : ListProd Expr IdxCollType :=
-  buildNoLoBvCoreUp focus intersect empty? .nil (buildNoLoBvCoreDown T depth focus empty? .nil)
+  : MetaM (ListProd Expr IdxCollType) :=
+  buildNoLoBvCoreUp l1 l2 focus intersect empty? .nil (buildNoLoBvCoreDown T depth focus empty? .nil)
 
 
 
@@ -866,24 +887,25 @@ def buildMultiCoreDown (T : PaInG IdxCollType) (workas : ListProd IdxCollType (L
       | _ => .proofs true depth proofs .nil sofar
 
 
+
 @[specialize]
-partial def buildMultiCoreUp (workas : ListProd IdxCollType (List FVarId))
+partial def buildMultiCoreUp (l1 : LocalContext) (l2 : LocalInstances) (workas : ListProd IdxCollType (List FVarId))
   (focus : IdxCollType → IdxCollType) (intersect : IdxCollType → IdxCollType → IdxCollType) (empty? : IdxCollType → Bool)
-  (sofar : ListProd Expr IdxCollType) (todo : bCType IdxCollType) : ListProd Expr IdxCollType :=
+  (sofar : ListProd Expr IdxCollType) (todo : bCType IdxCollType) : MetaM (ListProd Expr IdxCollType) :=
   let buildMultiCoreDownSpec (T : PaInG IdxCollType) (workas : ListProd IdxCollType (List FVarId)) (depth : Nat)
     (sofar : bCType IdxCollType) : bCType IdxCollType := buildMultiCoreDown T workas depth intersect focus empty? sofar
   match todo with
-  | .nil => sofar
-  | .load data nx => buildMultiCoreUp workas focus intersect empty? (data.append sofar) nx
+  | .nil => return sofar
+  | .load data nx => buildMultiCoreUp l1 l2 workas focus intersect empty? (data.append sofar) nx
   | .app turn depth l r tmp branch nx =>
       if turn == 0
       then
         let NX := buildMultiCoreDownSpec l workas depth <| .app 1 depth l r tmp sofar nx
-        buildMultiCoreUp workas focus intersect empty? .nil NX
+        buildMultiCoreUp l1 l2 workas focus intersect empty? .nil NX
       else if turn == 1
       then
         let NX := buildMultiCoreDownSpec r workas depth <| .app 2 depth l r sofar branch nx
-        buildMultiCoreUp workas focus intersect empty? .nil NX
+        buildMultiCoreUp l1 l2 workas focus intersect empty? .nil NX
       else
         let sofar := (tmp.foldl branch (fun x y R =>
           (sofar.foldl R (fun X Y R =>
@@ -892,56 +914,62 @@ partial def buildMultiCoreUp (workas : ListProd IdxCollType (List FVarId))
               then R
               else .cons (.app x X) inter R
             ))))
-        buildMultiCoreUp workas  focus intersect empty? sofar nx
-  | .lam turn depth l r tmp branch nx =>
+        buildMultiCoreUp l1 l2 workas  focus intersect empty? sofar nx
+  | .lam turn depth l r tmp branch nx => do
       if turn == 0
       then
         let NX := buildMultiCoreDownSpec l workas depth <| .lam 1 depth l r tmp sofar nx
-        buildMultiCoreUp workas  focus intersect empty? .nil NX
+        buildMultiCoreUp l1 l2 workas  focus intersect empty? .nil NX
       else if turn == 1
       then
         let NX := buildMultiCoreDownSpec r workas (depth+1) <| .lam 2 depth l r sofar branch nx
-        buildMultiCoreUp workas  focus intersect empty? .nil NX
+        buildMultiCoreUp l1 l2 workas  focus intersect empty? .nil NX
       else
-        let sofar := (tmp.foldl branch (fun x y R =>
-          (sofar.foldl R (fun X Y R =>
+        let sofar ← (tmp.foldlM branch (fun x y R =>
+          (sofar.foldlM R (fun X Y R => do
               let inter := intersect y Y
               if empty? inter
-              then R
-              else .cons (.lam `buildCore x X .default) inter R
+              then return R
+              else
+                match ← IsClass? x l1 l2 with
+                | .none => return .cons (.lam `buildCore x X .default) inter R
+                | _ => return .cons (.lam `buildCore x X .instImplicit) inter R
             ))))
-        buildMultiCoreUp workas  focus intersect empty? sofar nx
-  | .all turn depth l r tmp branch nx =>
+        buildMultiCoreUp l1 l2 workas  focus intersect empty? sofar nx
+  | .all turn depth l r tmp branch nx => do
       if turn == 0
       then
         let NX := buildMultiCoreDownSpec l workas depth <| .all 1 depth l r tmp sofar nx
-        buildMultiCoreUp workas  focus intersect empty? .nil NX
+        buildMultiCoreUp l1 l2 workas  focus intersect empty? .nil NX
       else if turn == 1
       then
         let NX := buildMultiCoreDownSpec r workas (depth+1) <| .all 2 depth l r sofar branch nx
-        buildMultiCoreUp workas  focus intersect empty? .nil NX
+        buildMultiCoreUp l1 l2 workas  focus intersect empty? .nil NX
       else
-        let sofar := (tmp.foldl branch (fun x y R =>
-          (sofar.foldl R (fun X Y R =>
+        let sofar ← (tmp.foldlM branch (fun x y R =>
+          (sofar.foldlM R (fun X Y R => do
               let inter := intersect y Y
               if empty? inter
-              then R
-              else .cons (.forallE `buildCore x X .default) inter R
+              then return R
+              else
+                match ← IsClass? x l1 l2 with
+                | .none => return .cons (.forallE `buildCore x X .default) inter R
+                | _ => return .cons (.forallE `buildCore x X .instImplicit) inter R
             ))))
-        buildMultiCoreUp workas  focus intersect empty? sofar nx
+        buildMultiCoreUp l1 l2 workas  focus intersect empty? sofar nx
   | .letE turn depth l r z tmp1 tmp2 branch nx =>
       if turn == 0
       then
         let NX := buildMultiCoreDownSpec l workas depth <| .letE 1 depth l r z tmp1 tmp2 sofar nx
-        buildMultiCoreUp workas  focus intersect empty? .nil NX
+        buildMultiCoreUp l1 l2 workas  focus intersect empty? .nil NX
       else if turn == 1
       then
         let NX := buildMultiCoreDownSpec r workas depth <| .letE 2 depth l r z sofar tmp2 branch nx
-        buildMultiCoreUp workas  focus intersect empty? .nil NX
+        buildMultiCoreUp l1 l2 workas  focus intersect empty? .nil NX
       else if turn == 2
       then
         let NX := buildMultiCoreDownSpec z workas (depth + 1) <| .letE 3 depth l r z tmp1 sofar branch nx
-        buildMultiCoreUp workas  focus intersect empty? .nil NX
+        buildMultiCoreUp l1 l2 workas  focus intersect empty? .nil NX
       else
         let sofar := (tmp1.foldl branch (fun x y R =>
           (tmp2.foldl R (fun X Y R =>
@@ -951,30 +979,30 @@ partial def buildMultiCoreUp (workas : ListProd IdxCollType (List FVarId))
               then R
               else .cons (.letE `buildCore x X X' false) inter R
           ))))))
-        buildMultiCoreUp workas  focus intersect empty? sofar nx
+        buildMultiCoreUp l1 l2 workas  focus intersect empty? sofar nx
   | .proj fst name idx is depth T branch nx =>
       if fst
       then
         let NX := buildMultiCoreDownSpec T workas depth <| .proj false name idx is depth T sofar nx
-        buildMultiCoreUp workas  focus intersect empty? .nil NX
+        buildMultiCoreUp l1 l2 workas  focus intersect empty? .nil NX
       else
         let res := sofar.foldl branch (fun e is R => .cons (.proj name idx e) is R)
-        buildMultiCoreUp workas  focus intersect empty? res nx
+        buildMultiCoreUp l1 l2 workas  focus intersect empty? res nx
   | .proofs fst depth T branch nx =>
       if fst
       then
         let NX := buildMultiCoreDownSpec T workas depth <| .proofs false depth T sofar nx
-        buildMultiCoreUp workas  focus intersect empty? .nil NX
+        buildMultiCoreUp l1 l2 workas  focus intersect empty? .nil NX
       else
         let res := sofar.append branch
-        buildMultiCoreUp workas  focus intersect empty? res nx
+        buildMultiCoreUp l1 l2 workas  focus intersect empty? res nx
 
 
 @[specialize, inline]
-partial def buildMultiCore (T : PaInG IdxCollType) (workas : ListProd IdxCollType (List FVarId)) (depth : Nat)
+partial def buildMultiCore (l1 : LocalContext) (l2 : LocalInstances) (T : PaInG IdxCollType) (workas : ListProd IdxCollType (List FVarId)) (depth : Nat)
   (focus : IdxCollType → IdxCollType) (intersect : IdxCollType → IdxCollType → IdxCollType) (empty? : IdxCollType → Bool)
-  : ListProd Expr IdxCollType :=
-  buildMultiCoreUp workas focus intersect empty? .nil (buildMultiCoreDown T workas depth intersect focus empty? .nil)
+  : MetaM (ListProd Expr IdxCollType) :=
+  buildMultiCoreUp l1 l2 workas focus intersect empty? .nil (buildMultiCoreDown T workas depth intersect focus empty? .nil)
 
 
 -- # Indices Only

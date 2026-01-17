@@ -85,6 +85,7 @@ LG:
 - Induction:
   - Try to speed up ?
   - detect ite and dite and allow for case disjunction on their condition
+  - prohibit reco on eq ?
   - Elab-elim inductions should detect constroturs of recursed type (ex: Fin.mk) ?
   - refer to revert tests : we should add deps for reverts at rw/induction
   - caching ... (don't forget realizeGlobalConsts)

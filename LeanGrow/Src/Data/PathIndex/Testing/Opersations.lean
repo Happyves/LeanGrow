@@ -24,14 +24,14 @@ def testMerge : Array Expr → Array Expr → MetaM Unit
       let ⟨Tr,l1,l2⟩ ← PaIn.ofList l1 l2 R .dead UInt32Array.empty (fun x => UInt32Array.single x.toUInt32)
         (fun x y => UInt32Array.oInsert y x.toUInt32)
       withReader (fun ctx => {ctx with lctx := l1, localInstances := l2}) do
-        let built := (Tl.buildCore [] 0 id UInt32Array.inter UInt32Array.isEmpty).toListOfProd
+        let built := (← Tl.buildCore l1 l2 [] 0 id UInt32Array.inter UInt32Array.isEmpty).toListOfProd
         let built := ← built.mapM (fun (x,y) => return (← ppExpr x, y))
         IO.println s!"T left:\n{built}"
-        let built := (Tr.buildCore [] 0 id UInt32Array.inter UInt32Array.isEmpty).toListOfProd
+        let built := (← Tr.buildCore l1 l2 [] 0 id UInt32Array.inter UInt32Array.isEmpty).toListOfProd
         let built := ← built.mapM (fun (x,y) => return (← ppExpr x, y))
         IO.println s!"T right:\n{built}"
         let Tm := PaIn.merge UInt32Array.union .empty Tl Tr
-        let built := (Tm.buildCore [] 0 id UInt32Array.inter UInt32Array.isEmpty).toListOfProd
+        let built := (← Tm.buildCore l1 l2 [] 0 id UInt32Array.inter UInt32Array.isEmpty).toListOfProd
         let built := ← built.mapM (fun (x,y) => return (← ppExpr x, y))
         IO.println s!"T merged:\n{built}"
 
@@ -56,7 +56,7 @@ def testMapInds : Array Expr → Array Expr → MetaM Unit
         (fun x y => UInt32Array.oInsert y x.toUInt32)
       withReader (fun ctx => {ctx with lctx := l1, localInstances := l2}) do
         let T := T.mapInds (UInt32Array.shiftAdd · 42) .empty
-        let built := (T.buildCore [] 0 id UInt32Array.inter UInt32Array.isEmpty).toListOfProd
+        let built := (← T.buildCore l1 l2 [] 0 id UInt32Array.inter UInt32Array.isEmpty).toListOfProd
         let built := ← built.mapM (fun (x,y) => return (← ppExpr x, y))
         IO.println s!"T:\n{built}"
 
@@ -75,7 +75,7 @@ def testDelete : Array Expr → Array Expr → MetaM Unit
         (fun x y => UInt32Array.oInsert y x.toUInt32)
       withReader (fun ctx => {ctx with lctx := l1, localInstances := l2}) do
         let T := T.deleteOfInds (.mk #[0,2,4]) UInt32Array.diff .empty UInt32Array.isEmpty
-        let built := (T.buildCore [] 0 id UInt32Array.inter UInt32Array.isEmpty).toListOfProd
+        let built := (← T.buildCore l1 l2 [] 0 id UInt32Array.inter UInt32Array.isEmpty).toListOfProd
         let built := ← built.mapM (fun (x,y) => return (← ppExpr x, y))
         IO.println s!"T:\n{built}"
 
