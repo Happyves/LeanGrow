@@ -28,7 +28,7 @@ def uniBEwFTrevert
   -- trace set Tracing.Flags.none in do
   withReader (fun ctx => {ctx with lctx := l1, localInstances := l2}) do
   mtracing
-  let built := T.buildCore workas 0
+  let built ← T.buildCore l1 l2 workas 0
     (fun inds => intersect inds constr)
     intersect empty?
   mtrace on .zero with s!"[uniBEwFTrevert] call on E {← ppExpr E}"
@@ -373,14 +373,3 @@ partial def uniBEwFTMain
 
 
 #check 1
-
-/-
-Fix notes
-- PaIn → PaInG
-- defEqNoMv → defEqWiMv
-
--/
-
-
-#check isClass?
-#check isClass

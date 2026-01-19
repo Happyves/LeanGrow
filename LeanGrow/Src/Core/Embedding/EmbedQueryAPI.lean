@@ -7,10 +7,10 @@ Author: Yves Jäckle.
 -/
 
 
-import LeanGrowBeta.Core.Embedding.UnifyAPI
-import LeanGrowBeta.Caching.Formating.Types
+import LeanGrow.Src.Core.Embedding.UnifyAPI
+import LeanGrow.Src.Caching.Formating.Types
 
-open Lean Meta PaIn
+open Lean Meta PaInG
 
 
 variable {IdxCollType : Type _}
@@ -41,6 +41,7 @@ def embedPropagateAsTnodes (l1 : LocalContext) (l2 : LocalInstances) (ef : embed
   (La : PersistentHashMap LMVarId Level) (Ta : PersistentHashMap MVarId Expr) :
   MetaM (Option embedBackData) :=
   withReader (fun ctx => {ctx with lctx := l1, localInstances := l2}) do
+    mtracing
     -- trace set Tracing.Flags.none in do
     let mut res := ef
     for (mv, lv) in Ta do
@@ -86,6 +87,7 @@ def embedUpdateWrtLevel [Repr IdxCollType]
   (asInds : IdxCollType) (mv : LMVarId) (lv : Level)
   (sofar : ListProd IdxCollType embedBackData)
   : MetaM <| ListProd IdxCollType embedBackData := do
+    mtracing
     -- trace set Tracing.Flags.none in do
     mtrace on .zero with s!"[embedUpdateWrtLevels] call on asInds {repr asInds}"
     sofar.foldlM .nil (fun is ef S => do
@@ -153,6 +155,7 @@ def embedUpdateWrtLevelNotT [Repr IdxCollType]
   (asInds : IdxCollType) (mv : LMVarId) (lv : Level)
   (sofar : ListProd IdxCollType embedForwRWData)
   : MetaM <| ListProd IdxCollType embedForwRWData := do
+    mtracing
     -- trace set Tracing.Flags.none in do
     mtrace on .zero with s!"[embedUpdateWrtLevelNotTs] call on asInds {repr asInds}"
     sofar.foldlM .nil (fun is ef S => do
@@ -204,6 +207,7 @@ def embedUpdateWrtLevels [Repr IdxCollType]
   (asInds : IdxCollType) (As : PersistentHashMap LMVarId Level)
   (sofar : ListProd IdxCollType embedBackData)
   : MetaM <| ListProd IdxCollType embedBackData := do
+    mtracing
     -- trace set Tracing.Flags.none in do
     mtrace on .zero with s!"[embedUpdateWrtLevels] call on asInds {repr asInds}"
     sofar.foldlM .nil (fun is ef S => do
@@ -287,6 +291,7 @@ def embedUpdateWrtLevelsNoT [Repr IdxCollType]
   (asInds : IdxCollType) (As : PersistentHashMap LMVarId Level)
   (sofar : ListProd IdxCollType embedForwRWData)
   : MetaM <| ListProd IdxCollType embedForwRWData := do
+    mtracing
     -- trace set Tracing.Flags.none in do
     mtrace on .zero with s!"[embedUpdateWrtLevelsNoT] call on asInds {repr asInds}"
     sofar.foldlM .nil (fun is ef S => do
@@ -339,6 +344,7 @@ def embedUpdateWrtMvar [Repr IdxCollType]
   (asInds : IdxCollType) (mv : MVarId) (lv : Expr)
   (sofar : ListProd IdxCollType embedBackData)
   : MetaM (ListProd IdxCollType embedBackData) := do
+    mtracing
     -- trace set Tracing.Flags.none in do
     sofar.foldlM .nil (fun is ef S => do
       let I := intersect asInds is
@@ -369,7 +375,7 @@ def embedUpdateWrtMvar [Repr IdxCollType]
                 then
                   return pre S
                 else
-                  let ⟨lv,l1,l2⟩ ← mvarifyTnodesRecWiContextIn lv l1 l2
+                  let ⟨lv,l1,l2⟩ ← mvarifyTnodesRec lv l1 l2
                   match ← defEqWiMv al lv l1 l2 with
                   | .none =>
                       return pre S
@@ -380,7 +386,7 @@ def embedUpdateWrtMvar [Repr IdxCollType]
                       | .none =>
                           return pre S
               else
-                let ⟨al,l1,l2⟩ ← mvarifyTnodesRecWiContextIn al l1 l2
+                let ⟨al,l1,l2⟩ ← mvarifyTnodesRec al l1 l2
                 match ← defEqWiMv al lv l1 l2 with
                 | .none =>
                     return pre S
@@ -403,6 +409,7 @@ def embedUpdateWrtMvarNoT [Repr IdxCollType]
   (asInds : IdxCollType) (mv : MVarId) (lv : Expr)
   (sofar : ListProd IdxCollType embedForwRWData)
   : MetaM (ListProd IdxCollType embedForwRWData) := do
+    mtracing
     -- trace set Tracing.Flags.none in do
     sofar.foldlM .nil (fun is ef S => do
       let I := intersect asInds is
@@ -446,6 +453,7 @@ def embedUpdateWrtMvars [Repr IdxCollType]
   (asInds : IdxCollType) (As : PersistentHashMap MVarId Expr)
   (sofar : ListProd IdxCollType embedBackData)
   : MetaM (ListProd IdxCollType embedBackData) := do
+    mtracing
     -- trace set Tracing.Flags.none in do
     mtrace on .zero with s!"[embedUpdateWrtMvars] call on asInds {repr asInds}"
     sofar.foldlM .nil (fun is ef S => do
@@ -482,7 +490,7 @@ def embedUpdateWrtMvars [Repr IdxCollType]
                         broke? := true
                         break
                       else
-                        let ⟨lv,l1,l2⟩ ← mvarifyTnodesRecWiContextIn lv l1 l2
+                        let ⟨lv,l1,l2⟩ ← mvarifyTnodesRec lv l1 l2
                         match ← defEqWiMv al lv l1 l2 with
                         | .none =>
                             broke? := true
@@ -495,7 +503,7 @@ def embedUpdateWrtMvars [Repr IdxCollType]
                                 broke? := true
                                 break
                     else
-                      let ⟨al,l1,l2⟩ ← mvarifyTnodesRecWiContextIn al l1 l2
+                      let ⟨al,l1,l2⟩ ← mvarifyTnodesRec al l1 l2
                       match ← defEqWiMv al lv l1 l2 with
                       | .none =>
                           broke? := true
@@ -523,6 +531,7 @@ def embedUpdateWrtMvarsNoT [Repr IdxCollType]
   (asInds : IdxCollType) (As : PersistentHashMap MVarId Expr)
   (sofar : ListProd IdxCollType embedForwRWData)
   : MetaM (ListProd IdxCollType embedForwRWData) := do
+    mtracing
     -- trace set Tracing.Flags.none in do
     mtrace on .zero with s!"[embedUpdateWrtMvarsNoT] call on asInds {repr asInds}"
     sofar.foldlM .nil (fun is ef S => do
@@ -615,7 +624,7 @@ def embedUnion
 
 
 
-/- does **not** check if candidates are compatible ; keeps assignement fromarg `B`-/
+/-- does **not** check if candidates are compatible ; keeps assignement fromarg `B`-/
 @[specialize, inline]
 def embedUnionF
   (empty? : IdxCollType → Bool) (intersect difference : IdxCollType → IdxCollType → IdxCollType)

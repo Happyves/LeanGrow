@@ -43,7 +43,7 @@ namespace PaInG
 
 
 @[specialize, inline]
-partial def queryCore [Repr IdxCollType]
+partial def queryCoreWW [Repr IdxCollType]
     (l1 : LocalContext) (l2 : LocalInstances)
     {α : Sort _}
     (unionS : α → α → α)
@@ -64,6 +64,7 @@ partial def queryCore [Repr IdxCollType]
     (cProcess : Name → List Level → CTrie (ListProd IdxCollType (List Level))→ IdxCollType → α → Bool → LocalContext → LocalInstances → MetaM (Prod5 UInt8 IdxCollType α LocalContext LocalInstances))
     (tnProcess : Nat → Nat → ListProd IdxCollType (Nat × Nat) → (List FVarId) →  (PaInG IdxCollType) → IdxCollType → α → Bool → LocalContext → LocalInstances → MetaM (Prod5 UInt8 IdxCollType α LocalContext LocalInstances))
     (lnProcess : Name → Nat → Nat → CTrie (ListProd IdxCollType (Nat × Nat)) → (List FVarId) → (PaInG IdxCollType) → IdxCollType → α → Bool → LocalContext → LocalInstances → MetaM (Prod5 UInt8 IdxCollType α LocalContext LocalInstances))
+    (ws : List FVarId)
     : MetaM (Prod5 UInt8 IdxCollType α LocalContext LocalInstances) :=
     let rec @[specialize] go (l1 : LocalContext) (l2 : LocalInstances)
       (constr : IdxCollType) (state : α) (naive? throw? revert? skipP : Bool) (revCount : Nat)
@@ -322,15 +323,47 @@ partial def queryCore [Repr IdxCollType]
                         go l1 l2 constr state naive? throw? revert? skipP revCount ankers (.cons e T workas moreT)
     do
     let .mk r1 r2 r3 l1 l2 ← go l1 l2 constr state naive? throw? revert? skipP revCount ankers todo
-    let l2 := l2.cleanPatchesAndWokers
+    let l2 := l2.cleanPatchesAndWokersExcept ws
     return .mk r1 r2 r3 l1 l2
+
+#check 1
+
+@[specialize, inline]
+partial def queryCore [Repr IdxCollType]
+    (l1 : LocalContext) (l2 : LocalInstances)
+    {α : Sort _}
+    (unionS : α → α → α)
+    (empty? : IdxCollType → Bool) (intersect union : IdxCollType → IdxCollType → IdxCollType)
+    (constr : IdxCollType) (state : α)
+    (naive? throw? revert? skipP : Bool) (revCount revCountMax : Nat)
+    (ankers : ListProd3S IdxCollType (@ListProd3SigL IdxCollType Expr (PaInG IdxCollType) (List FVarId) α) α)
+    (todo : @ListProd3SigL IdxCollType Expr (PaInG IdxCollType) (List FVarId) α)
+    (revertAct : Expr → (PaInG IdxCollType) → (List FVarId) → IdxCollType → α → LocalContext → LocalInstances → MetaM (Prod5 Bool IdxCollType α LocalContext LocalInstances))
+    (tProcess : Expr → (List FVarId) → ListProd IdxCollType (Nat × Nat) → IdxCollType → α → LocalContext → LocalInstances → MetaM (Prod4 IdxCollType α LocalContext LocalInstances) )
+    (lProcess : Expr → (List FVarId) → CTrie (ListProd IdxCollType (Nat × Nat)) → IdxCollType → α → LocalContext → LocalInstances → MetaM (Prod4 IdxCollType α LocalContext LocalInstances))
+    (appProcess lamProcess allProcess : Expr → Expr → (PaInG IdxCollType) → (PaInG IdxCollType) → IdxCollType → IdxCollType → α → Bool → LocalContext → LocalInstances → MetaM (Prod5 UInt8 IdxCollType α LocalContext LocalInstances))
+    (letProcess : Expr → Expr → Expr → (PaInG IdxCollType) → (PaInG IdxCollType) → (PaInG IdxCollType) → IdxCollType → IdxCollType → α → Bool → LocalContext → LocalInstances → MetaM (Prod5 UInt8 IdxCollType α LocalContext LocalInstances))
+    (projProcess : Name → Nat → Expr → (CTrie (ListProd IdxCollType (Nat × PaInG IdxCollType))) → IdxCollType → α → Bool → LocalContext → LocalInstances → MetaM (Prod6 UInt8 (OptionProd Expr (PaInG IdxCollType)) IdxCollType α LocalContext LocalInstances))
+    (bProcess gProcess uProcess : Nat → ListProd IdxCollType Nat → IdxCollType → α → Bool → LocalContext → LocalInstances → MetaM (Prod5 UInt8 IdxCollType α LocalContext LocalInstances))
+    (sProcess : Level → ListProd IdxCollType Level → IdxCollType → α → Bool → LocalContext → LocalInstances → MetaM (Prod5 UInt8 IdxCollType α LocalContext LocalInstances))
+    (liProcess : Literal → ListProd IdxCollType Literal → IdxCollType → α → Bool → LocalContext → LocalInstances → MetaM (Prod5 UInt8 IdxCollType α LocalContext LocalInstances))
+    (cProcess : Name → List Level → CTrie (ListProd IdxCollType (List Level))→ IdxCollType → α → Bool → LocalContext → LocalInstances → MetaM (Prod5 UInt8 IdxCollType α LocalContext LocalInstances))
+    (tnProcess : Nat → Nat → ListProd IdxCollType (Nat × Nat) → (List FVarId) →  (PaInG IdxCollType) → IdxCollType → α → Bool → LocalContext → LocalInstances → MetaM (Prod5 UInt8 IdxCollType α LocalContext LocalInstances))
+    (lnProcess : Name → Nat → Nat → CTrie (ListProd IdxCollType (Nat × Nat)) → (List FVarId) → (PaInG IdxCollType) → IdxCollType → α → Bool → LocalContext → LocalInstances → MetaM (Prod5 UInt8 IdxCollType α LocalContext LocalInstances))
+    : MetaM (Prod5 UInt8 IdxCollType α LocalContext LocalInstances) :=
+    queryCoreWW l1 l2 unionS empty? intersect union constr state
+      naive? throw? revert? skipP revCount revCountMax ankers todo
+      revertAct tProcess lProcess appProcess lamProcess allProcess
+      letProcess projProcess bProcess gProcess uProcess sProcess
+      liProcess cProcess tnProcess lnProcess []
 
 #check 1
 
 
 
+
 @[specialize, inline]
-partial def queryLCore [Repr IdxCollType]
+partial def queryLCoreWW [Repr IdxCollType]
     (l1 : LocalContext) (l2 : LocalInstances)
     {α : Sort _}
     (unionS : α → α → α)
@@ -351,6 +384,7 @@ partial def queryLCore [Repr IdxCollType]
     (cProcess : Name → List Level → CTrie (ListProd IdxCollType (List Level))→ IdxCollType → α → Bool → LocalContext → LocalInstances → MetaM (Prod5 UInt8 IdxCollType α LocalContext LocalInstances))
     (tnProcess : Nat → Nat → ListProd IdxCollType (Nat × Nat) → (List FVarId) →  (PaInG IdxCollType) → IdxCollType → α → Bool → LocalContext → LocalInstances → MetaM (Prod5 UInt8 IdxCollType α LocalContext LocalInstances))
     (lnProcess : Name → Nat → Nat → CTrie (ListProd IdxCollType (Nat × Nat)) → (List FVarId) → (PaInG IdxCollType) → IdxCollType → α → Bool → LocalContext → LocalInstances → MetaM (Prod5 UInt8 IdxCollType α LocalContext LocalInstances))
+    (ws : List FVarId)
     : MetaM (Prod5 UInt8 IdxCollType α LocalContext LocalInstances) :=
     let rec @[specialize] go (l1 : LocalContext) (l2 : LocalInstances)
       (constr : IdxCollType) (state : α) (naive? throw? revert? skipP : Bool) (revCount : Nat)
@@ -730,5 +764,37 @@ partial def queryLCore [Repr IdxCollType]
                         go l1 l2 constr state naive? throw? revert? skipP revCount ankers (.cons e T workas moreT)
     do
     let .mk r1 r2 r3 l1 l2 ← go l1 l2 constr state naive? throw? revert? skipP revCount ankers todo
-    let l2 := l2.cleanPatchesAndWokers
+    let l2 := l2.cleanPatchesAndWokersExcept ws
     return .mk r1 r2 r3 l1 l2
+
+
+#check 1
+
+@[specialize, inline]
+partial def queryLCore [Repr IdxCollType]
+    (l1 : LocalContext) (l2 : LocalInstances)
+    {α : Sort _}
+    (unionS : α → α → α)
+    (empty? : IdxCollType → Bool) (intersect union : IdxCollType → IdxCollType → IdxCollType)
+    (constr : IdxCollType) (state : α)
+    (naive? throw? revert? skipP : Bool) (revCount revCountMax : Nat)
+    (ankers : ListProd3S IdxCollType (@ListProd3SigL IdxCollType Expr (PaInG IdxCollType) (List FVarId) α) α)
+    (todo : @ListProd3SigL IdxCollType Expr (PaInG IdxCollType) (List FVarId) α)
+    (revertAct : Expr → (PaInG IdxCollType) → (List FVarId) → IdxCollType → α → LocalContext → LocalInstances → MetaM (Prod5 Bool IdxCollType α LocalContext LocalInstances))
+    (tProcess : Expr → (List FVarId) → ListProd IdxCollType (Nat × Nat) → IdxCollType → α → LocalContext → LocalInstances → MetaM (Prod5 Bool IdxCollType α LocalContext LocalInstances) )
+    (lProcess : IdxCollType → α → Expr → (List FVarId) → CTrie (ListProd IdxCollType (Nat × Nat)) → IdxCollType → α → LocalContext → LocalInstances → MetaM (Prod5 Bool IdxCollType α LocalContext LocalInstances))
+    (appProcess lamProcess allProcess : Expr → Expr → (PaInG IdxCollType) → (PaInG IdxCollType) → IdxCollType → IdxCollType → α → Bool → LocalContext → LocalInstances → MetaM (Prod5 UInt8 IdxCollType α LocalContext LocalInstances))
+    (letProcess : Expr → Expr → Expr → (PaInG IdxCollType) → (PaInG IdxCollType) → (PaInG IdxCollType) → IdxCollType → IdxCollType → α → Bool → LocalContext → LocalInstances → MetaM (Prod5 UInt8 IdxCollType α LocalContext LocalInstances))
+    (projProcess : Name → Nat → Expr → (CTrie (ListProd IdxCollType (Nat × PaInG IdxCollType))) → IdxCollType → α → Bool → LocalContext → LocalInstances → MetaM (Prod6 UInt8 (OptionProd Expr (PaInG IdxCollType)) IdxCollType α LocalContext LocalInstances))
+    (bProcess gProcess uProcess : Nat → ListProd IdxCollType Nat → IdxCollType → α → Bool → LocalContext → LocalInstances → MetaM (Prod5 UInt8 IdxCollType α LocalContext LocalInstances))
+    (sProcess : Level → ListProd IdxCollType Level → IdxCollType → α → Bool → LocalContext → LocalInstances → MetaM (Prod5 UInt8 IdxCollType α LocalContext LocalInstances))
+    (liProcess : Literal → ListProd IdxCollType Literal → IdxCollType → α → Bool → LocalContext → LocalInstances → MetaM (Prod5 UInt8 IdxCollType α LocalContext LocalInstances))
+    (cProcess : Name → List Level → CTrie (ListProd IdxCollType (List Level))→ IdxCollType → α → Bool → LocalContext → LocalInstances → MetaM (Prod5 UInt8 IdxCollType α LocalContext LocalInstances))
+    (tnProcess : Nat → Nat → ListProd IdxCollType (Nat × Nat) → (List FVarId) →  (PaInG IdxCollType) → IdxCollType → α → Bool → LocalContext → LocalInstances → MetaM (Prod5 UInt8 IdxCollType α LocalContext LocalInstances))
+    (lnProcess : Name → Nat → Nat → CTrie (ListProd IdxCollType (Nat × Nat)) → (List FVarId) → (PaInG IdxCollType) → IdxCollType → α → Bool → LocalContext → LocalInstances → MetaM (Prod5 UInt8 IdxCollType α LocalContext LocalInstances))
+    : MetaM (Prod5 UInt8 IdxCollType α LocalContext LocalInstances) :=
+    queryLCoreWW l1 l2 unionS empty? intersect union constr state
+      naive? throw? revert? skipP revCount revCountMax ankers todo
+      revertAct tProcess lProcess appProcess lamProcess allProcess
+      letProcess projProcess bProcess gProcess uProcess sProcess
+      liProcess cProcess tnProcess lnProcess []

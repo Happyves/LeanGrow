@@ -6,14 +6,14 @@ Author: Yves Jäckle.
 -/
 
 
-import LeanGrowBeta.Core.Embedding.UnifyAPI
+import LeanGrow.Src.Core.Embedding.UnifyAPI
 
-open Lean Meta PaIn
+open Lean Meta PaInG
 
 
 variable {IdxCollType : Type _}
 
-namespace PaIn
+namespace PaInG
 
 
 @[specialize, inline]
@@ -26,6 +26,7 @@ def uniDefEqCore [Repr IdxCollType]
   : MetaM (IdxCollType × ListProd3 IdxCollType (ListProd3 Nat Nat Expr) (ListProd3 Nat Nat Level)) :=
   -- trace set Tracing.Flags.none in do
   withReader (fun ctx => {ctx with lctx := l1, localInstances := l2}) do
+  mtracing
   match ← defEqWiMv E e l1 l2 with
   | .none =>
       mtrace on .zero with s!"[uniDefEqCore] negative defeq of e {← ppExpr e} and E {← ppExpr E}"
@@ -64,22 +65,24 @@ def uniDefEqCore [Repr IdxCollType]
         return (Sc, Su)
 
 
+
 @[specialize, inline]
 def uniFEwBTrevert
   [Repr IdxCollType] [ToString IdxCollType]
   (empty? : IdxCollType → Bool) (intersect union difference : IdxCollType → IdxCollType → IdxCollType)
   (empty : IdxCollType)
   (l1 : LocalContext) (l2 : LocalInstances)
-  (E : Expr) (T : PaIn IdxCollType) (workas : List FVarId)
+  (E : Expr) (T : PaInG IdxCollType) (workas : List FVarId)
   (constr : IdxCollType) (uni : ListProd3 IdxCollType (ListProd3 Nat Nat Expr) (ListProd3 Nat Nat Level))
   : MetaM (Prod5 Bool IdxCollType (ListProd3 IdxCollType (ListProd3 Nat Nat Expr) (ListProd3 Nat Nat Level)) LocalContext LocalInstances) :=
   -- trace set Tracing.Flags.none in do
   withReader (fun ctx => {ctx with lctx := l1, localInstances := l2}) do
-  let built ← T.buildMvarifyTnodesCore l1 l2 workas 0
+  mtracing
+  let built ← T.buildMvarifyTnodesNoCo l1 l2 workas 0
     (fun inds => intersect inds constr)
     intersect empty?
   mtrace on .zero with s!"[uniFEwBTrevert] call on E {← ppExpr E}"
-  mtrace on .zero with s!"[uniFEwBTrevert] with built {← ppPainHelp l1 l2 built}"
+  mtrace on .zero with s!"[uniFEwBTrevert] with built {← ppPaInGHelp l1 l2 built}"
   mtrace on .zero with s!"[uniFEwBTrevert] and constr {repr constr}"
   mtrace on .one with s!"[uniFEwBTrevert] and uni {toString uni}"
   let (resI,resU) ← built.foldlM (empty, uni) (fun e inds (Sc,Su) => do
@@ -102,6 +105,7 @@ def uniTnodes
   : MetaM (Prod5 Bool IdxCollType (ListProd3 IdxCollType (ListProd3 Nat Nat Expr) (ListProd3 Nat Nat Level)) LocalContext LocalInstances) :=
     -- trace set Tracing.Flags.none in do
   withReader (fun ctx => {ctx with lctx := l1, localInstances := l2}) do
+    mtracing
     mtrace on .zero with s!"[uniTnodes] call on e {← ppExpr e}"
     tnodes.foldlM ⟨false,empty,.nil,l1,l2⟩ (fun is (bIdx,pos) ⟨ match?,sI, sU,l1,l2⟩ => do
       let I := intersect is constr
@@ -110,10 +114,10 @@ def uniTnodes
       else
         let tn := tnode bIdx pos
         let T ← (⟨tn⟩ : FVarId).getType
-        let ⟨T,l1,l2⟩ ← mvarifyTnodesRecWiContextIn T l1 l2
+        let ⟨T,l1,l2⟩ ← mvarifyTnodesRec T l1 l2
         withReader (fun ctx => {ctx with lctx := l1, localInstances := l2}) do
         mtrace on .zero with s!"[uniTnodes] looking at {tn} with mvaified type {← ppExpr T}"
-        let mv ← mkMvarStdWiCoE tn T l1 l2
+        let mv ← mkMvarStdNoCoE tn T
         match ← defEqWiMv mv e l1 l2 with
         | .none =>
             mtrace on .zero with s!"[uniTnodes] negative defeq"
@@ -189,10 +193,12 @@ partial def uniFEwBTCore
     (l1 : LocalContext) (l2 : LocalInstances)
     (constr : IdxCollType)
     (revCountMax : Nat)
-    (E : Expr) (T : PaIn IdxCollType)
+    (E : Expr) (T : PaInG IdxCollType)
     : MetaM (Prod5 UInt8 IdxCollType (ListProd3 IdxCollType (ListProd3 Nat Nat Expr) (ListProd3 Nat Nat Level)) LocalContext LocalInstances) :=
       trace set TracingFlags.none in
       let inittodo := .cons E T [] .nil
+      do
+      mtracing
       @queryLCore IdxCollType expl l1 l2 (ListProd3 IdxCollType (ListProd3 Nat Nat Expr) (ListProd3 Nat Nat Level))
         (fun x y => let res := uniUnion empty? intersect difference x y ; trace on .two with s!"[uniFEwBTCore] union res {toString res}" in res )
         empty? intersect union
@@ -285,7 +291,7 @@ partial def uniFEwBTCore
           )
         (fun i bvs constr uni naive? l1 l2 => do
           mtrace on .two with s!"[uniFEwBTCore] uni {toString uni}"
-          match bvs.find_pain_nat i with
+          match bvs.find_PaInG_nat i with
           | .none => if naive? then return ⟨0,constr, uni, l1,l2⟩ else return ⟨1,constr, uni, l1,l2⟩
           | .some inds _ =>
               let constr := intersect inds constr
@@ -302,7 +308,7 @@ partial def uniFEwBTCore
           )
         (fun i bvs constr uni naive? l1 l2 => do
           mtrace on .two with s!"[uniFEwBTCore] uni {toString uni}"
-          match bvs.find_pain_nat i with
+          match bvs.find_PaInG_nat i with
           | .none => if naive? then return ⟨0,constr, uni, l1,l2⟩ else return ⟨1,constr, uni, l1,l2⟩
           | .some inds _ =>
               let constr := intersect inds constr
@@ -319,7 +325,7 @@ partial def uniFEwBTCore
           )
         (fun i bvs constr uni naive? l1 l2 => do
           mtrace on .two with s!"[uniFEwBTCore] uni {toString uni}"
-          match bvs.find_pain_nat i with
+          match bvs.find_PaInG_nat i with
           | .none => if naive? then return ⟨0,constr, uni, l1,l2⟩ else return ⟨1,constr, uni, l1,l2⟩
           | .some inds _ =>
               let constr := intersect inds constr
@@ -482,11 +488,6 @@ partial def uniFEwBTCore
                           -- else cont <| .cons D tn ln R
                         else
                           cont <| .cons I ntn nln R
-                          -- if empty? D
-                          -- then
-                          --   mtrace on .zero with s!"[uniFEwBTCore] ntn {ntn} nln {nln}"
-                          --   cont <| .cons I ntn nln R
-                          -- else cont <| .cons I ntn nln <| .cons D tn ln R
                       ) <| fun uni => do
                         let constr := uni.foldl empty (fun ds _ _ R =>
                           union ds R)
@@ -512,7 +513,7 @@ partial def uniFEwBTMain
     (l1 : LocalContext) (l2 : LocalInstances)
     (constr : IdxCollType)
     (revCountMax : Nat)
-    (E : Expr) (T : PaIn IdxCollType)
+    (E : Expr) (T : PaInG IdxCollType)
     : MetaM (Prod5 UInt8 IdxCollType (ListProd3 IdxCollType (ListProd3 Nat Nat Expr) (ListProd3 Nat Nat Level)) LocalContext LocalInstances) :=
     do
     clearMvarAssignments -- this is needed so that we may fold over assignement PHachMaps in ↓ and get new assignements only

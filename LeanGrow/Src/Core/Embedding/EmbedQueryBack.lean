@@ -6,14 +6,14 @@ Author: Yves Jäckle.
 -/
 
 
-import LeanGrowBeta.Core.Embedding.EmbedQueryAPI
+import LeanGrow.Src.Core.Embedding.EmbedQueryAPI
 
-open Lean Meta PaIn
+open Lean Meta PaInG
 
 
 variable {IdxCollType : Type _}
 
-namespace PaIn
+namespace PaInG
 
 
 @[specialize, inline]
@@ -26,6 +26,7 @@ def embedBackDefEqCore
   (E e : Expr) (extWorkas : List FVarId) (inds : IdxCollType)
   (Sc : IdxCollType) (Su : ListProd IdxCollType embedBackData)
   : MetaM (IdxCollType × ListProd IdxCollType embedBackData) := do
+  mtracing
   -- trace set Tracing.Flags.none in do
   let rec load : MetaM Unit := do
     mtrace on .zero with s!"[embedBackDefEqCore] looking at e {← ppExpr e}"
@@ -38,7 +39,7 @@ def embedBackDefEqCore
         | .none => throwError s!"[embedBackDefEqCore] module {module} isn't in thmData"
         | .some thmDs =>
             let thmD := thmDs[thmIdx]!
-            thmD.mctx.load
+            thmD.mctx.loadNoCo
   load
   match ← defEqWiMv E e l1 l2 with
   | .none =>
@@ -84,16 +85,17 @@ def embedBackRevert (thmData : CTrie (Array ThmFormat))
   (empty? : IdxCollType → Bool) (intersect union difference : IdxCollType → IdxCollType → IdxCollType)
   (empty : IdxCollType)
   (l1 : LocalContext) (l2 : LocalInstances)
-  (E : Expr) (T : PaIn IdxCollType) (workas extWorkas : List FVarId)
+  (E : Expr) (T : PaInG IdxCollType) (workas extWorkas : List FVarId)
   (constr : IdxCollType) (uni : ListProd IdxCollType embedBackData)
   : MetaM (Prod5 Bool IdxCollType (ListProd IdxCollType embedBackData) LocalContext LocalInstances) :=
   -- trace set Tracing.Flags.none in do
   do
+  mtracing
   mtrace on .zero with s!"[embedBackRevert] call on E {← ppExpr E}"
-  let built ← T.buildMvarifyTnodesCore l1 l2 workas 0
+  let built ← T.buildMvarifyTnodesNoCo l1 l2 workas 0
     (fun inds => intersect inds constr)
     intersect empty?
-  mtrace on .zero with s!"[embedBackRevert] with built {← ppPainHelp l1 l2 built}"
+  mtrace on .zero with s!"[embedBackRevert] with built {← ppPaInGHelp l1 l2 built}"
   mtrace on .zero with s!"[embedBackRevert] and constr {repr constr}"
   mtrace on .one with s!"[embedBackRevert] and uni {toString uni}"
   let (resI,resU) ← built.foldlM (empty, uni) (fun e inds (Sc,Su) => do
@@ -114,6 +116,7 @@ def embedLnodes [ToString IdxCollType] (thmData : CTrie (Array ThmFormat))
   (constr : IdxCollType) (uni : (ListProd IdxCollType embedBackData))
   : MetaM (Prod5 Bool IdxCollType (ListProd IdxCollType embedBackData) LocalContext LocalInstances) :=
   withReader (fun ctx => {ctx with lctx := l1, localInstances := l2}) do
+    mtracing
     -- trace set Tracing.Flags.none in do
     mtrace on .zero with s!"[embedLnodes] call on e {← ppExpr e}"
     lnodes.foldM ⟨false,empty,.nil,l1,l2⟩ (fun module D S => do
@@ -126,7 +129,7 @@ def embedLnodes [ToString IdxCollType] (thmData : CTrie (Array ThmFormat))
             | .none => throwError s!"[embedLnodes] module {String.fromUTF8! module} isn't in thmData"
             | .some thmDs =>
                 let thmD := thmDs[thmIdx]!
-                thmD.mctx.load
+                thmD.mctx.loadNoCo
                 let mv := Expr.mvar ⟨lnode (String.fromUTF8! module).toName thmIdx pos ⟩
                 mtrace on .zero with s!"[embedLnodes] looking at {mv} with mvaified type {← ppExpr <| ← inferType mv}"
                 match ← defEqWiMv mv e l1 l2 with
@@ -225,7 +228,7 @@ def embedLnodes [ToString IdxCollType] (thmData : CTrie (Array ThmFormat))
                                           nope? := true
                                           break
                                         else
-                                          let ⟨lv,l1',l2'⟩ ← mvarifyTnodesRecWiContextIn lv l1 l2
+                                          let ⟨lv,l1',l2'⟩ ← mvarifyTnodesRec lv l1 l2
                                           l1 := l1'
                                           l2 := l2'
                                           match ← defEqWiMv al lv l1 l2 with
@@ -240,7 +243,7 @@ def embedLnodes [ToString IdxCollType] (thmData : CTrie (Array ThmFormat))
                                                   nope? := true
                                                   break
                                       else
-                                        let ⟨al,l1',l2'⟩ ← mvarifyTnodesRecWiContextIn al l1 l2
+                                        let ⟨al,l1',l2'⟩ ← mvarifyTnodesRec al l1 l2
                                         l1 := l1'
                                         l2 := l2'
                                         match ← defEqWiMv al lv l1 l2 with
@@ -277,15 +280,16 @@ def embedTnodes [ToString IdxCollType]
   (empty? : IdxCollType → Bool) (intersect difference : IdxCollType → IdxCollType → IdxCollType)
   (l1 : LocalContext) (l2 : LocalInstances)
   (backIdx : Nat) (pos : Nat)
-  (workas extWorkas: List FVarId) (T : PaIn IdxCollType)
+  (workas extWorkas: List FVarId) (T : PaInG IdxCollType)
   (constr : IdxCollType) (uni : (ListProd IdxCollType embedBackData))
   (naive? : Bool)
   : MetaM (Prod5 UInt8 IdxCollType (ListProd IdxCollType embedBackData) LocalContext LocalInstances) := do
+  mtracing
   -- trace set Tracing.Flags.none in do
-  let built ← T.buildMvarifyTnodesCore l1 l2 workas 0
+  let built ← T.buildMvarifyTnodesNoCo l1 l2 workas 0
     (fun inds => intersect inds constr)
     intersect empty?
-  let ⟨tn,l1,l2⟩ ← mvarifyTnodesRecWiContextIn (.fvar ⟨.num (.num `t backIdx) pos⟩) l1 l2
+  let ⟨tn,l1,l2⟩ ← mvarifyTnodesRec (.fvar ⟨.num (.num `t backIdx) pos⟩) l1 l2
   withReader (fun ctx => {ctx with lctx := l1, localInstances := l2}) do
   mtrace on .zero with s!"[embedTnodes] built {toString built}"
   mtrace on .zero with s!"[embedTnodes] tnode {backIdx} {pos} {← ppExpr <| ← inferType tn}"
@@ -361,10 +365,11 @@ partial def embedBackCore (thmData : CTrie (Array ThmFormat))
     (l1 : LocalContext) (l2 : LocalInstances)
     (constr : IdxCollType)
     (revCountMax : Nat) (extWorkas : List FVarId)
-    (E : Expr) (T : PaIn IdxCollType)
+    (E : Expr) (T : PaInG IdxCollType)
     : MetaM (Prod5 UInt8 IdxCollType (ListProd IdxCollType embedBackData) LocalContext LocalInstances) := do
       trace set TracingFlags.none in
       do
+      mtracing
       let inittodo := .cons E T [] .nil
       @queryLCore IdxCollType expl l1 l2 (ListProd IdxCollType embedBackData)
         (fun x y => let res := embedUnion empty? intersect difference x y
@@ -461,7 +466,7 @@ partial def embedBackCore (thmData : CTrie (Array ThmFormat))
           )
         (fun i bvs constr uni naive? l1 l2 => do
           mtrace on .two with s!"[embedBackCore] uni {toString uni}"
-          match bvs.find_pain_nat i with
+          match bvs.find_PaInG_nat i with
           | .none => if naive? then return ⟨0,constr,uni,l1,l2⟩ else return ⟨1,constr,uni,l1,l2⟩
           | .some inds _ =>
               let constr := intersect inds constr
@@ -478,7 +483,7 @@ partial def embedBackCore (thmData : CTrie (Array ThmFormat))
           )
         (fun i bvs constr uni naive? l1 l2 => do
           mtrace on .two with s!"[embedBackCore] uni {toString uni}"
-          match bvs.find_pain_nat i with
+          match bvs.find_PaInG_nat i with
           | .none => if naive? then return ⟨0,constr,uni,l1,l2⟩ else return ⟨1,constr,uni,l1,l2⟩
           | .some inds _ =>
               let constr := intersect inds constr
@@ -495,7 +500,7 @@ partial def embedBackCore (thmData : CTrie (Array ThmFormat))
           )
         (fun i bvs constr uni naive? l1 l2 => do
           mtrace on .two with s!"[embedBackCore] uni {toString uni}"
-          match bvs.find_pain_nat i with
+          match bvs.find_PaInG_nat i with
           | .none => if naive? then return ⟨0,constr,uni,l1,l2⟩ else return ⟨1,constr,uni,l1,l2⟩
           | .some inds _ =>
               let constr := intersect inds constr
@@ -530,7 +535,7 @@ partial def embedBackCore (thmData : CTrie (Array ThmFormat))
                       | .none => throwError s!"[embedBackDefEqCore] module {module} isn't in thmData"
                       | .some thmDs =>
                           let thmD := thmDs[thmIdx]!
-                          thmD.mctx.load
+                          thmD.mctx.loadNoCo
                 load
                 match ← defEqWiMv (.sort i) (.sort lv) l1 l2 with
                 | .none =>
@@ -611,7 +616,7 @@ partial def embedBackCore (thmData : CTrie (Array ThmFormat))
                         | .none => throwError s!"[embedBackDefEqCore] module {module} isn't in thmData"
                         | .some thmDs =>
                             let thmD := thmDs[thmIdx]!
-                            thmD.mctx.load
+                            thmD.mctx.loadNoCo
                   load
                   let mut uni := uni
                   let mut nope? := false
@@ -686,8 +691,22 @@ partial def embedBackMain (l1 : LocalContext) (l2 : LocalInstances) (thmData : C
     (empty? : IdxCollType → Bool) (intersect union difference : IdxCollType → IdxCollType → IdxCollType) (empty : IdxCollType)
     (constr : IdxCollType)
     (revCountMax : Nat) (extWorkas : List FVarId)
-    (E : Expr) (T : PaIn IdxCollType)
+    (E : Expr) (T : PaInG IdxCollType)
     : MetaM (Prod5 UInt8 IdxCollType (ListProd IdxCollType embedBackData) LocalContext LocalInstances) := do
     do
     clearMvarAssignments -- this is needed so that we may fold over assignement PHachMaps in ↓ and get new assignements only
     embedBackCore thmData empty? intersect union difference empty l1 l2 constr revCountMax extWorkas E T
+
+
+
+/-
+Fix notes
+- PaIn → PaInG
+- defEqNoMv → defEqWiMv
+
+TODO:
+- Continue at forwSimple, then do rw with ↓ inmind and processes and sandbox and tests
+- use queryLCoreWW at rewrite
+- test on library size ?
+
+-/

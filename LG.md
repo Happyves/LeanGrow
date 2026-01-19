@@ -193,7 +193,7 @@ Djv Core:
 
 
 Djv Parse:
-- Brec Induction, WF induction and termination by
+- Brec Induction, WF induction and termination by, split & split ifs ?
 
 # W7 (9-15) Search & Heuristic ; Conveyorbelt & Query ; Delab Misc
 

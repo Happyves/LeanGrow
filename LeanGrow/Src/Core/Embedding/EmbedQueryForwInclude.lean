@@ -7,7 +7,7 @@ Author: Yves Jäckle.
 
 
 
-import LeanGrowBeta.Core.Embedding.EmbedQueryForwSimple
+import LeanGrow.Src.Core.Embedding.EmbedQueryForwSimple
 
 
 open Lean Meta

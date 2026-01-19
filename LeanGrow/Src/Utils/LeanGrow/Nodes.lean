@@ -52,3 +52,7 @@ def ifGNode (e : Expr) {α : Sort _} (pos : Nat → α) (neg : α) : α :=
 @[inline]
 def Lean.LocalInstances.cleanPatchesAndWokers (l : LocalInstances) : LocalInstances :=
   l.filter (fun x => x.className != `LtxPatcher && !(x.fvar.fvarId!.isWorker))
+
+@[inline]
+def Lean.LocalInstances.cleanPatchesAndWokersExcept (l : LocalInstances) (ws : List FVarId) : LocalInstances :=
+  l.filter (fun x => x.className != `LtxPatcher && (if x.fvar.fvarId!.isWorker then !(ws.contains x.fvar.fvarId!) else true))

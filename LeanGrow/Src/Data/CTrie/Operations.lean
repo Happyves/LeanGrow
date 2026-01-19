@@ -585,12 +585,12 @@ partial def mergeImplDown
   | .fruit v,  .fruit u => do return (.atom (.fruit (← merge v u)) done)
   | .fruit v,  .fnode1 u c t => do return (.atom (.fnode1 (← merge v u) (c.drop or) t) done)
   | .fnode1 v c t,  .fruit u => do return (.atom (.fnode1 (← merge v u) (c.drop ol) t) done)
-  | .fruit v,  .fnode u c t => do return (.atom (.fnode (← merge v u) (c.drop or) t) done)
-  | .fnode v c t,  .fruit u => do return (.atom (.fnode (← merge v u) (c.drop ol) t) done)
+  | .fruit v,  .fnode u c t => do return (.atom (.fnode (← merge v u) c t) done)
+  | .fnode v c t,  .fruit u => do return (.atom (.fnode (← merge v u) c t) done)
   | .fruit v,  .lnode1 c t => return (.atom (.fnode1 v (c.drop or) t) done)
   | .lnode1 c t,  .fruit v => return (.atom (.fnode1 v (c.drop ol) t) done)
-  | .fruit v,  .lnode c t => return (.atom (.fnode v (c.drop or) t) done)
-  | .lnode c t,  .fruit v => return (.atom (.fnode v (c.drop ol) t) done)
+  | .fruit v,  .lnode c t => return (.atom (.fnode v c t) done)
+  | .lnode c t,  .fruit v => return (.atom (.fnode v c t) done)
   | .lnode1 ax cx, .lnode1 ay cy =>
       let com := ByteArray.getLongestMatch_wOffsets ax ay ol or
       if ol + com == ax.size
@@ -659,7 +659,7 @@ partial def mergeImplDown
             return .atom (.fnode1 (← merge v u) join (.lnode #[ay',ax'] #[cy,cx])) done
   | .lnode1 ax cx, .lnode ay cy =>
       match ByteArray.matchSingleHits_wOffset ax ol ay with
-      | .ins idx => return .atom (.lnode (ay.insertIdx! idx ax) (cy.insertIdx! idx cx)) done
+      | .ins idx => return .atom (.lnode (ay.insertIdx! idx (ax.drop ol)) (cy.insertIdx! idx cx)) done
       | .hit idx com => do
           let ay' := ay[idx]!
           let cy' := cy[idx]!
@@ -688,7 +688,7 @@ partial def mergeImplDown
                 return .atom (.lnode  (ay.set! idx join) (cy.set! idx (.lnode #[ay'',ax'] #[cy',cx]))) done
   | .lnode ay cy, .lnode1 ax cx =>
       match ByteArray.matchSingleHits_wOffset ax or ay with
-      | .ins idx => return .atom (.lnode (ay.insertIdx! idx ax) (cy.insertIdx! idx cx)) done
+      | .ins idx => return .atom (.lnode (ay.insertIdx! idx (ax.drop or)) (cy.insertIdx! idx cx)) done
       | .hit idx com => do
           let ay' := ay[idx]!
           let cy' := cy[idx]!
@@ -717,7 +717,7 @@ partial def mergeImplDown
                 return .atom (.lnode  (ay.set! idx join) (cy.set! idx (.lnode #[ay'',ax'] #[cy',cx]))) done
   | .lnode1 ax cx, .fnode v ay cy | .fnode1 v ax cx, .lnode ay cy =>
       match ByteArray.matchSingleHits_wOffset ax ol ay with
-      | .ins idx => return .atom (.fnode v (ay.insertIdx! idx ax) (cy.insertIdx! idx cx)) done
+      | .ins idx => return .atom (.fnode v (ay.insertIdx! idx (ax.drop ol)) (cy.insertIdx! idx cx)) done
       | .hit idx com => do
           let ay' := ay[idx]!
           let cy' := cy[idx]!
@@ -746,7 +746,7 @@ partial def mergeImplDown
                 return .atom (.fnode v  (ay.set! idx join) (cy.set! idx (.lnode #[ay'',ax'] #[cy',cx]))) done
   | .fnode v ay cy, .lnode1 ax cx | .lnode ay cy, .fnode1 v ax cx =>
       match ByteArray.matchSingleHits_wOffset ax or ay with
-      | .ins idx => return .atom (.fnode v (ay.insertIdx! idx ax) (cy.insertIdx! idx cx)) done
+      | .ins idx => return .atom (.fnode v (ay.insertIdx! idx (ax.drop or)) (cy.insertIdx! idx cx)) done
       | .hit idx com => do
           let ay' := ay[idx]!
           let cy' := cy[idx]!
@@ -775,7 +775,7 @@ partial def mergeImplDown
                 return .atom (.fnode v  (ay.set! idx join) (cy.set! idx (.lnode #[ay'',ax'] #[cy',cx]))) done
   | .fnode1 v ax cx, .fnode u ay cy => do
       match ByteArray.matchSingleHits_wOffset ax ol ay with
-      | .ins idx => return .atom (.fnode (← merge v u) (ay.insertIdx! idx ax) (cy.insertIdx! idx cx)) done
+      | .ins idx => return .atom (.fnode (← merge v u) (ay.insertIdx! idx (ax.drop ol)) (cy.insertIdx! idx cx)) done
       | .hit idx com => do
           let ay' := ay[idx]!
           let cy' := cy[idx]!
@@ -804,7 +804,7 @@ partial def mergeImplDown
                 return .atom (.fnode (← merge v u)  (ay.set! idx join) (cy.set! idx (.lnode #[ay'',ax'] #[cy',cx]))) done
   | .fnode v ay cy, .fnode1 u ax cx => do
       match ByteArray.matchSingleHits_wOffset ax or ay with
-      | .ins idx => return .atom (.fnode (← merge v u) (ay.insertIdx! idx ax) (cy.insertIdx! idx cx)) done
+      | .ins idx => return .atom (.fnode (← merge v u) (ay.insertIdx! idx (ax.drop or)) (cy.insertIdx! idx cx)) done
       | .hit idx com => do
           let ay' := ay[idx]!
           let cy' := cy[idx]!
