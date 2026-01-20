@@ -137,7 +137,8 @@ LG:
   then, wouldn't they enter it at some next iteration anyway ??
 - Consider adding grind to the tactic support, maybe even as only tactic support
 - make non-obvious induction (say, Nat but not Or & Subtype ...) a configurable option since its an absolute
-  performance crusher ... or allow it in first iterations only or have its score decrease with iters ... 
+  performance crusher ... or allow it in first iterations only or have its score decrease with iters ...
+- At new forward type, don't just look for patterns in type, but also if the type itself is a target: for example an Or ... 
 - Find system where we check if goal is already there, in the same introtree path to root
   and do not expand that goal (don't query candidates), but still consider it for unification,
   so that when the first occurence of the goal gets solved, it will be added to the forward
