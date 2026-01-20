@@ -371,7 +371,7 @@ partial def embedBackCore (thmData : CTrie (Array ThmFormat))
       do
       mtracing
       let inittodo := .cons E T [] .nil
-      @queryLCore IdxCollType expl l1 l2 (ListProd IdxCollType embedBackData)
+      @queryLCoreWW IdxCollType expl l1 l2 (ListProd IdxCollType embedBackData)
         (fun x y => let res := embedUnion empty? intersect difference x y
           trace on .two with s!"[embedBackCore] union res {toString res}" in res)
         empty? intersect union
@@ -681,7 +681,7 @@ partial def embedBackCore (thmData : CTrie (Array ThmFormat))
           )
         (fun _ _ _ _ _ _ _ _ _ _ _ _ =>
           throwError s!"[embedBackCore] we don't expect lnodes in backward term")
-
+        extWorkas
 
 
 
@@ -696,17 +696,3 @@ partial def embedBackMain (l1 : LocalContext) (l2 : LocalInstances) (thmData : C
     do
     clearMvarAssignments -- this is needed so that we may fold over assignement PHachMaps in ↓ and get new assignements only
     embedBackCore thmData empty? intersect union difference empty l1 l2 constr revCountMax extWorkas E T
-
-
-
-/-
-Fix notes
-- PaIn → PaInG
-- defEqNoMv → defEqWiMv
-
-TODO:
-- Continue at forwSimple, then do rw with ↓ inmind and processes and sandbox and tests
-- use queryLCoreWW at rewrite
-- test on library size ?
-
--/

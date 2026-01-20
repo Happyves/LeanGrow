@@ -6,17 +6,17 @@ Author: Yves Jäckle.
 -/
 
 
-import LeanGrowBeta.Core.Embedding.EmbedQueryAPI
-import LeanGrowBeta.Core.Embedding.EmbedRWAPI
+import LeanGrow.Src.Core.Embedding.EmbedQueryAPI
+import LeanGrow.Src.Core.Embedding.EmbedRWAPI
 
 
 
-open Lean Meta PaIn
+open Lean Meta PaInG
 
 
 variable {IdxCollType : Type _}
 
-namespace PaIn
+namespace PaInG
 
 @[specialize, inline]
 def embedForwRWDefEqCore
@@ -30,6 +30,7 @@ def embedForwRWDefEqCore
   {β : Sort _} (cont : IdxCollType × ListProd IdxCollType embedForwRWData → MetaM β)
   : MetaM β :=
   do --trace set Tracing.Flags.none in do
+  mtracing
   let load : MetaM Unit :=
     match getFirstLnodeDataFrom e with
     | .none => pure ()
@@ -39,7 +40,7 @@ def embedForwRWDefEqCore
         | .none => throwError s!"[embedForwRWDefEqCore] module {module} isn't in thmData"
         | .some thmDs =>
             let thmD := thmDs[thmIdx]!
-            thmD.mctx.load
+            thmD.mctx.loadNoCo
   load
   match ← defEqWiMv E e l1 l2 with
   | .none =>
@@ -86,15 +87,16 @@ def embedForwRWRevert (thmData : CTrie (Array ThmFormat))
   (empty? : IdxCollType → Bool) (intersect union difference : IdxCollType → IdxCollType → IdxCollType)
   (empty : IdxCollType)
   (l1 : LocalContext) (l2 : LocalInstances)
-  (E : Expr) (T : PaIn IdxCollType) (workas extWorkas : List FVarId)
+  (E : Expr) (T : PaInG IdxCollType) (workas extWorkas : List FVarId)
   (constr : IdxCollType) (uni : ListProd IdxCollType embedForwRWData)
   : MetaM (Prod5 Bool IdxCollType (ListProd IdxCollType embedForwRWData) LocalContext LocalInstances) :=
   do --trace set Tracing.Flags.none in do
-  let built ← T.buildMvarifyTnodesCore l1 l2 workas 0
+  mtracing
+  let built ← T.buildMvarifyTnodesNoCo l1 l2 workas 0
     (fun inds => intersect inds constr)
     intersect empty?
   mtrace on .zero with s!"[embedForwRWRevert] call on E {← ppExpr E}"
-  mtrace on .zero with s!"[embedForwRWRevert] with built {← ppPainHelp l1 l2 built}"
+  mtrace on .zero with s!"[embedForwRWRevert] with built {← ppPaInGHelp l1 l2 built}"
   mtrace on .zero with s!"[embedForwRWRevert] and constr {repr constr}"
   mtrace on .one with s!"[embedForwRWRevert] and uni {toString uni}"
   built.foldlMcps (empty, uni) (fun e inds (Sc,Su) cont => do
@@ -106,8 +108,9 @@ def embedForwRWRevert (thmData : CTrie (Array ThmFormat))
     then return ⟨false,resI,resU,l1,l2⟩
     else return ⟨true,resI,resU,l1,l2⟩
 
+#check 1
 
-
+-- #exit
 
 @[specialize, inline]
 def embedLnodesFRW [Inhabited IdxCollType] (thmData : CTrie (Array ThmFormat))
@@ -117,6 +120,7 @@ def embedLnodesFRW [Inhabited IdxCollType] (thmData : CTrie (Array ThmFormat))
   (constr : IdxCollType) (uni : (ListProd IdxCollType embedForwRWData))
   : MetaM (Prod3 IdxCollType (ListProd IdxCollType embedForwRWData) Bool) :=
     do --trace set Tracing.Flags.none in do
+    mtracing
     mtrace on .zero with s!"[embedLnodesFRW] call on e {← ppExpr e}"
     lnodes.foldMcps (⟨empty, .nil, false⟩ : Prod3 _ _ _) ( fun module D S cont => do
         D.foldlMcps S (fun is (thmIdx,pos) ⟨sI, sU, match?⟩ cont => do
@@ -128,10 +132,10 @@ def embedLnodesFRW [Inhabited IdxCollType] (thmData : CTrie (Array ThmFormat))
             | .none => throwError s!"[embedLnodesFRW] module {String.fromUTF8! module} isn't in thmData"
             | .some thmDs =>
                 let thmD := thmDs[thmIdx]!
-                thmD.mctx.load
+                thmD.mctx.loadNoCo
                 let mv := Expr.mvar ⟨lnode (String.fromUTF8! module).toName thmIdx pos ⟩
                 mtrace on .zero with s!"[embedLnodesFRW] looking at {mv} with mvaified type {← ppExpr <| ← inferType mv}"
-                match ← defEqNoMv mv e with
+                match ← defEqWiMv mv e l1 l2 with
                 -- *Note* order matters ! The above order should make sure that its the lnode that gets assigned
                 -- even if e contained mvarified tnodes
                 | .none =>
@@ -210,7 +214,7 @@ def embedLnodesFRW [Inhabited IdxCollType] (thmData : CTrie (Array ThmFormat))
                         ) (fun ⟨sI, sU, match?⟩  => return ⟨sI, sU, match?⟩)
 
 
-
+-- #exit
 
 #check 1
 
@@ -221,11 +225,13 @@ partial def embedForwRWCore [Inhabited IdxCollType] (thmData : CTrie (Array ThmF
     (l1 : LocalContext) (l2 : LocalInstances)
     (constr : IdxCollType)
     (revCountMax : Nat) (extWorkas : List FVarId)
-    (E : Expr) (T : PaIn IdxCollType)
+    (E : Expr) (T : PaInG IdxCollType)
     : MetaM (Prod5 UInt8 IdxCollType (ListProd IdxCollType embedForwRWData) LocalContext LocalInstances) := do
       trace set TracingFlags.none in
+      do
+      mtracing
       let inittodo := .cons E T [] .nil
-      @queryLCore IdxCollType expl l1 l2 (ListProd IdxCollType embedForwRWData)
+      @queryLCoreWW IdxCollType expl l1 l2 (ListProd IdxCollType embedForwRWData)
         (fun x y => let res := embedUnionF empty? intersect difference x y
           trace on .two with s!"[embedForwRWCore] union res {toString res}" in res)
         empty? intersect union
@@ -320,7 +326,7 @@ partial def embedForwRWCore [Inhabited IdxCollType] (thmData : CTrie (Array ThmF
           )
         (fun i bvs constr uni naive? l1 l2 => do
           mtrace on .two with s!"[embedForwRWCore] uni {toString uni}"
-          match bvs.find_pain_nat i with
+          match bvs.find_PaInG_nat i with
           | .none => if naive? then return ⟨0,constr,uni,l1,l2⟩ else return ⟨1,constr,uni,l1,l2⟩
           | .some inds _ =>
               let constr := intersect inds constr
@@ -337,7 +343,7 @@ partial def embedForwRWCore [Inhabited IdxCollType] (thmData : CTrie (Array ThmF
           )
         (fun i bvs constr uni naive? l1 l2 => do
           mtrace on .two with s!"[embedForwRWCore] uni {toString uni}"
-          match bvs.find_pain_nat i with
+          match bvs.find_PaInG_nat i with
           | .none => if naive? then return ⟨0,constr,uni,l1,l2⟩ else return ⟨1,constr,uni,l1,l2⟩
           | .some inds _ =>
               let constr := intersect inds constr
@@ -354,7 +360,7 @@ partial def embedForwRWCore [Inhabited IdxCollType] (thmData : CTrie (Array ThmF
           )
         (fun i bvs constr uni naive? l1 l2 => do
           mtrace on .two with s!"[embedForwRWCore] uni {toString uni}"
-          match bvs.find_pain_nat i with
+          match bvs.find_PaInG_nat i with
           | .none => if naive? then return ⟨0,constr,uni,l1,l2⟩ else return ⟨1,constr,uni,l1,l2⟩
           | .some inds _ =>
               let constr := intersect inds constr
@@ -485,11 +491,12 @@ partial def embedForwRWCore [Inhabited IdxCollType] (thmData : CTrie (Array ThmF
           )
         (fun _ _ _ _ _ _ _ _ _ _ _ _ =>
           throwError s!"[embedForwRWCore] we don't expect lnodes in forward term")
-
+        extWorkas
 
 
 
 #check 1
+
 
 @[specialize]
 partial def embedForwRWTop [Inhabited IdxCollType] (thmData : CTrie (Array ThmFormat))
@@ -498,7 +505,7 @@ partial def embedForwRWTop [Inhabited IdxCollType] (thmData : CTrie (Array ThmFo
     (l1 : LocalContext) (l2 : LocalInstances)
     (constr : IdxCollType)
     (revCountMax : Nat) (extWorkas : List FVarId)
-    (E : Expr) (T : PaIn IdxCollType)
+    (E : Expr) (T : PaInG IdxCollType)
     : MetaM (Prod5 UInt8 IdxCollType (ListProd IdxCollType embedForwRWData) LocalContext LocalInstances) := do
     do
     clearMvarAssignments -- this is needed so that we may fold over assignement PHachMaps in ↓ and get new assignements only
@@ -532,80 +539,73 @@ def embedForwRWData.eq (l1 : LocalContext) (l2 : LocalInstances) (A B : embedFor
                 ) <| fun _ => do
                   return true
 
+#check 1
+
 
 
 @[specialize]
 partial def embedForwRWMain [Inhabited IdxCollType]  [Repr IdxCollType] [ToString IdxCollType]
     (thmData : CTrie (Array ThmFormat))
     (empty? : IdxCollType → Bool) (intersect union difference : IdxCollType → IdxCollType → IdxCollType) (empty : IdxCollType)
-    (toList : IdxCollType → List Nat)
+    (fold : ∀ {β : Type _}, IdxCollType → (init : β) → (f : Nat → β → β) → β)
     (l1 : LocalContext) (l2 : LocalInstances) (constr : IdxCollType)
     (revCountMax : Nat) (extWorkas : List FVarId)
-    (E : Expr) (T : PaIn IdxCollType)
+    (E : Expr) (T : PaInG IdxCollType)
     : MetaM (Prod3 (ListProd Nat (ListProd embedForwRWData rwDirs)) LocalContext LocalInstances) :=
     do --trace set Tracing.Flags.none in do
-      let rec @[inline] core
-        (l1 : LocalContext) (l2 : LocalInstances)
-        (here : ListProd IdxCollType embedForwRWData) : MetaM (Prod3 (ListProd Nat (ListProd embedForwRWData rwDirs)) LocalContext LocalInstances) := do
+      let core (l1 : LocalContext) (l2 : LocalInstances) (here : ListProd IdxCollType embedForwRWData) := do
         match E with
         | .app f a =>
-            let ⟨resf,l1,l2⟩ ← embedForwRWMain thmData empty? intersect union difference empty toList l1 l2 constr revCountMax extWorkas f T
-            let ⟨resa,l1,l2⟩ ← embedForwRWMain thmData empty? intersect union difference empty toList l1 l2 constr revCountMax extWorkas a T
-            let res ← mergeOccsTwo (fun x y => withReader (fun ctx => {ctx with lctx := l1, localInstances := l2}) do embedForwRWData.eq l1 l2 x y) .ap resf resa
+            let ⟨resf,l1,l2⟩ ← embedForwRWMain thmData empty? intersect union difference empty fold l1 l2 constr revCountMax extWorkas f T
+            let ⟨resa,l1,l2⟩ ← embedForwRWMain thmData empty? intersect union difference empty fold l1 l2 constr revCountMax extWorkas a T
+            let res ← mergeOccsTwo (fun x y => withLCtx l1 l2 do embedForwRWData.eq l1 l2 x y) .ap resf resa
             let res := mergeOnIndSpe
               (fun x y => x.foldl y (fun x y R => .cons x y R))
               (fun x => .cons x .yes .nil )
-              res (listIndxSingleOut toList here)
+              res (listIndxSingleOut fold here)
             return ⟨res,l1,l2⟩
         | .lam _ f a _ =>
-              let ⟨resf,l1,l2⟩ ← embedForwRWMain thmData empty? intersect union difference empty toList l1 l2 constr revCountMax extWorkas f T
               let w ← worker extWorkas.length
               let ⟨wfv,a,l1,l2⟩ ← withFreeing w f a l1 l2
-              let ⟨resa,l1,l2⟩ ← embedForwRWMain thmData empty? intersect union difference empty toList l1 l2 constr revCountMax (wfv :: extWorkas) a T
-                let res ← mergeOccsTwo (fun x y => withReader (fun ctx => {ctx with lctx := l1, localInstances := l2}) do embedForwRWData.eq l1 l2 x y) .la resf resa
-                let res := mergeOnIndSpe
-                  (fun x y => x.foldl y (fun x y R => .cons x y R))
-                  (fun x => .cons x .yes .nil )
-                  res (listIndxSingleOut toList here)
-                return ⟨res,l1,l2⟩
-        | .forallE _ f a _ =>
-             let ⟨resf,l1,l2⟩ ← embedForwRWMain thmData empty? intersect union difference empty toList l1 l2 constr revCountMax extWorkas f T
-              let w ← worker extWorkas.length
-              let ⟨wfv,a,l1,l2⟩ ← withFreeing w f a l1 l2
-              let ⟨resa,l1,l2⟩ ← embedForwRWMain thmData empty? intersect union difference empty toList l1 l2 constr revCountMax (wfv :: extWorkas) a T
-              let res ← mergeOccsTwo (fun x y => withReader (fun ctx => {ctx with lctx := l1, localInstances := l2}) do embedForwRWData.eq l1 l2 x y) .al resf resa
+              let ⟨res,l1,l2⟩ ← embedForwRWMain thmData empty? intersect union difference empty fold l1 l2 constr revCountMax (wfv :: extWorkas) a T
               let res := mergeOnIndSpe
                 (fun x y => x.foldl y (fun x y R => .cons x y R))
                 (fun x => .cons x .yes .nil )
-                res (listIndxSingleOut toList here)
+                res (listIndxSingleOut fold here)
+              return ⟨res,l1,l2⟩
+        | .forallE _ f a _ =>
+              let w ← worker extWorkas.length
+              let ⟨wfv,a,l1,l2⟩ ← withFreeing w f a l1 l2
+              let ⟨res,l1,l2⟩ ← embedForwRWMain thmData empty? intersect union difference empty fold l1 l2 constr revCountMax (wfv :: extWorkas) a T
+              let res := mergeOnIndSpe
+                (fun x y => x.foldl y (fun x y R => .cons x y R))
+                (fun x => .cons x .yes .nil )
+                res (listIndxSingleOut fold here)
               return ⟨res,l1,l2⟩
         | .letE _ f a z _ =>
-              let ⟨resf,l1,l2⟩ ← embedForwRWMain thmData empty? intersect union difference empty toList l1 l2 constr revCountMax extWorkas f T
-              let ⟨resa,l1,l2⟩ ← embedForwRWMain thmData empty? intersect union difference empty toList l1 l2 constr revCountMax extWorkas a T
               let w ← worker extWorkas.length
               let ⟨wfv,z,l1,l2⟩ ← withFreeingLet w f a z l1 l2
-              let ⟨resz,l1,l2⟩ ← embedForwRWMain thmData empty? intersect union difference empty toList l1 l2 constr revCountMax (wfv :: extWorkas) z T
-              let res ← mergeOccsThree (fun x y => withReader (fun ctx => {ctx with lctx := l1, localInstances := l2}) do embedForwRWData.eq l1 l2 x y) resf resa resz
+              let ⟨res,l1,l2⟩ ← embedForwRWMain thmData empty? intersect union difference empty fold l1 l2 constr revCountMax (wfv :: extWorkas) z T
               let res := mergeOnIndSpe
                 (fun x y => x.foldl y (fun x y R => .cons x y R))
                 (fun x => .cons x .yes .nil )
-                res (listIndxSingleOut toList here)
+                res (listIndxSingleOut fold here)
               return ⟨res,l1,l2⟩
         | .proj _ _ f =>
-              let ⟨resf,l1,l2⟩ ← embedForwRWMain thmData empty? intersect union difference empty toList l1 l2 constr revCountMax extWorkas f T
+              let ⟨resf,l1,l2⟩ ← embedForwRWMain thmData empty? intersect union difference empty fold l1 l2 constr revCountMax extWorkas f T
               let res := resf.foldl .nil (fun n l R => let fix := l.foldl .nil (fun e d R => .cons e (.pro d) R) ; .cons n fix R)
               let res := mergeOnIndSpe
                 (fun x y => x.foldl y (fun x y R => .cons x y R))
                 (fun x => .cons x .yes .nil )
-                res (listIndxSingleOut toList here)
+                res (listIndxSingleOut fold here)
               return ⟨res,l1,l2⟩
         | .mdata _ f =>
-            embedForwRWMain thmData empty? intersect union difference empty toList l1 l2 constr revCountMax extWorkas f T
+            embedForwRWMain thmData empty? intersect union difference empty fold l1 l2 constr revCountMax extWorkas f T
         | _ =>
           let res := mergeOnIndSpe
                 (fun x y => x.foldl y (fun x y R => .cons x y R))
                 (fun x => .cons x .yes .nil )
-                .nil (listIndxSingleOut toList here)
+                .nil (listIndxSingleOut fold here)
           return ⟨res,l1,l2⟩
       if ← IsProof E l1 l2
       then

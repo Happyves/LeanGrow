@@ -36,7 +36,7 @@ private def compatible
             return .some (expM, lvlM)
 
 
-namespace PaIn
+namespace PaInG
 
 @[specialize, inline]
 private def merge1
@@ -147,13 +147,14 @@ partial def embedForwIncludeCore
   (thmData : CTrie (Array ThmFormat)) [Repr IndexColType]
   (intersect difference : IndexColType → IndexColType → IndexColType) (empty? : IndexColType → Bool)
   (l1 : LocalContext) (l2 : LocalInstances)
-  (Q l : PaIn IndexColType)
+  (Q l : PaInG IndexColType)
   : MetaM <| ListProd3 IndexColType IndexColType ((ListProd Nat Expr) × (ListProd Nat Level)) :=
     let traceHelp (st : ListProd3 IndexColType IndexColType ((ListProd Nat Expr) × (ListProd Nat Level))) : MetaM String := do
       let pre ← st.foldlM ListProd3.nil (fun x y z R => return .cons x y (← z.1.foldlM ListProd.nil (fun x y R => return ListProd.cons x s!"{(← ppExpr y)}" R), z.2) R)
       return s!"{repr pre}"
-    let rec @[specialize] go (Q l : PaIn IndexColType) : MetaM <| ListProd3 IndexColType IndexColType ((ListProd Nat Expr) × (ListProd Nat Level)) :=
+    let rec @[specialize] go (Q l : PaInG IndexColType) : MetaM <| ListProd3 IndexColType IndexColType ((ListProd Nat Expr) × (ListProd Nat Level)) :=
       do -- trace set Tracing.Flags.none in do
+      mtracing
       mtrace on .one with s!"[embedForwIncludeCore] Q : {← Q.pp l1 l2 [] 0 intersect empty?}"
       mtrace on .one with s!"[embedForwIncludeCore] l : {← l.pp l1 l2 [] 0 intersect empty?}"
       match Q, l with
@@ -173,7 +174,7 @@ partial def embedForwIncludeCore
           else
             let IT := merge2 (· == ·) .nil tnodes tnodes' -- we don't really expect any
             mtrace on .zero with s!"[embedForwIncludeCore] IT : {← traceHelp IT}"
-            let QB := Q.buildNoLoBvCore 0 id intersect empty?
+            let QB ← Q.buildNoLoBvCore l1 l2 0 id intersect empty?
             let IL : ListProd3 IndexColType IndexColType ((ListProd Nat Expr) × (ListProd Nat Level)) := ← do
               let R ← lnodes'.foldM IT (fun nb D R => do
                     match thmData.find? nb with
@@ -181,7 +182,7 @@ partial def embedForwIncludeCore
                     | .some moduleData =>
                         let R ← D.foldlM R (fun inds (thmIdx,pos) R => do
                           let thm := moduleData[thmIdx]!
-                          thm.mctx.load
+                          thm.mctx.loadNoCo
                           let mv := Expr.mvar ⟨lnode (String.fromUTF8! nb).toName thmIdx pos⟩
                           let R ← QB.foldlM R (fun e qinds R => do
                             mtrace on .zero with s!"[embedForwIncludeCore] defeq e {← ppExpr e} vs lnode {repr mv} of type {← ppExpr <| ← inferType mv}"

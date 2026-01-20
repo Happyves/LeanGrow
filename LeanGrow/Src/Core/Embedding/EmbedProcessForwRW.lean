@@ -6,9 +6,9 @@ Author: Yves Jäckle.
 -/
 
 
-import LeanGrowBeta.Core.Embedding.EmbedQueryForwRW
-import LeanGrowBeta.Core.Embedding.EmbedProcessForwAPI
-import LeanGrowBeta.Core.Rewriting.Main
+import LeanGrow.Src.Core.Embedding.EmbedQueryForwRW
+import LeanGrow.Src.Core.Embedding.EmbedProcessForwAPI
+import LeanGrow.Src.Core.Rewriting.Main
 
 
 open Lean Meta

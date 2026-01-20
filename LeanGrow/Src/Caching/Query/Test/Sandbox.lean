@@ -6,7 +6,7 @@ open Lean Meta
 
 def inSandboxS_rwBackPaIn_pp
   (thms : Array Name) : MetaM Unit :=
-    inSandboxS thms <| fun data => do
+    inSandboxS thms <| fun _ data => do
       let inds := data.rwBackPaIn.getIndicesS
       for i in inds do
         let thm := data.thm_data[i.toNat]!
@@ -18,7 +18,7 @@ def inSandboxS_rwBackPaIn_pp
 
 def inSandboxS_stdBackPaIn_pp
   (thms : Array Name) : MetaM Unit :=
-    inSandboxS thms <| fun data => do
+    inSandboxS thms <| fun _ data => do
       let inds := data.stdBackPaIn.getIndicesS
       for i in inds do
         let thm := data.thm_data[i.toNat]!

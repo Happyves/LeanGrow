@@ -227,7 +227,7 @@ partial def insertCoreUp
         | .br tnodes lnodes gnodes unodes bvars sorts consts lits apf apa api laf laa lai alf ala ali lef lea lez lei projs proofsOf proofs =>
             let projs := projs.upsert name ( fun
               | .none => .some <| .cons (singleton idx) (pidx,sofar) .nil
-              | .some L => .some <| L.modifyAdd' (fun (i,_) => i == pidx) (fun en => {en with snd := sofar}) (insert idx) (pidx,sofar) (singleton idx))
+              | .some L => .some <| L.modifyAddG'G (fun (i,_) => i == pidx) (fun en => {en with snd := sofar}) (insert idx) (pidx,sofar) (singleton idx))
             let res := PaInG.br tnodes lnodes gnodes unodes bvars sorts consts lits apf apa api laf laa lai alf ala ali lef lea lez lei projs proofsOf proofs
             insertCoreUp singleton insert emptyCol l1 l2 idx res nx
     | .atom depth e T nx =>
@@ -247,7 +247,7 @@ partial def insertCoreUp
                 let res := PaInG.br .nil .empty .nil .nil .nil (.cons (singleton idx) l .nil) .empty .nil .dead .dead emptyCol .dead .dead emptyCol .dead .dead emptyCol .dead .dead .dead emptyCol .empty .dead .dead
                 insertCoreUp singleton insert emptyCol l1 l2 idx res nx
             | .br tnodes lnodes gnodes unodes bvars sorts consts lits apf apa api laf laa lai alf ala ali lef lea lez lei projs proofsOf proofs =>
-                let sorts := sorts.modifyAdd (fun x => insert idx x) l (singleton idx)
+                let sorts := sorts.modifyAddG (fun x => insert idx x) l (singleton idx)
                 let res := PaInG.br tnodes lnodes gnodes unodes bvars sorts consts lits apf apa api laf laa lai alf ala ali lef lea lez lei projs proofsOf proofs
                 insertCoreUp singleton insert emptyCol l1 l2 idx res nx
         | .const n l =>
@@ -266,7 +266,7 @@ partial def insertCoreUp
                 let res := PaInG.br .nil .empty .nil .nil .nil .nil .empty (.cons (singleton idx) l .nil) .dead .dead emptyCol .dead .dead emptyCol .dead .dead emptyCol .dead .dead .dead emptyCol .empty .dead .dead
                 insertCoreUp singleton insert emptyCol l1 l2 idx res nx
             | .br tnodes lnodes gnodes unodes bvars sorts consts lits apf apa api laf laa lai alf ala ali lef lea lez lei projs proofsOf proofs =>
-                let lits := lits.modifyAdd (fun x => insert idx x) l (singleton idx)
+                let lits := lits.modifyAddG (fun x => insert idx x) l (singleton idx)
                 let res := PaInG.br tnodes lnodes gnodes unodes bvars sorts consts lits apf apa api laf laa lai alf ala ali lef lea lez lei projs proofsOf proofs
                 insertCoreUp singleton insert emptyCol l1 l2 idx res nx
         | .mvar mid =>
@@ -539,7 +539,7 @@ partial def insertMultiCoreUp
         | .br tnodes lnodes gnodes unodes bvars sorts consts lits apf apa api laf laa lai alf ala ali lef lea lez lei projs proofsOf proofs =>
             let projs := projs.upsert name ( fun
               | .none => .some <| .cons idx (pidx,sofar) .nil
-              | .some L => .some <| L.modifyAdd' (fun (i,_) => i == pidx) (fun en => {en with snd := sofar}) (insert idx) (pidx,sofar) idx)
+              | .some L => .some <| L.modifyAddG'G (fun (i,_) => i == pidx) (fun en => {en with snd := sofar}) (insert idx) (pidx,sofar) idx)
             let res := PaInG.br tnodes lnodes gnodes unodes bvars sorts consts lits apf apa api laf laa lai alf ala ali lef lea lez lei projs proofsOf proofs
             insertMultiCoreUp insert emptyCol l1 l2 idx res nx
     | .atom depth e T nx =>
@@ -559,7 +559,7 @@ partial def insertMultiCoreUp
                 let res := PaInG.br .nil .empty .nil .nil .nil (.cons idx l .nil) .empty .nil .dead .dead emptyCol .dead .dead emptyCol .dead .dead emptyCol .dead .dead .dead emptyCol .empty .dead .dead
                 insertMultiCoreUp insert emptyCol l1 l2 idx res nx
             | .br tnodes lnodes gnodes unodes bvars sorts consts lits apf apa api laf laa lai alf ala ali lef lea lez lei projs proofsOf proofs =>
-                let sorts := sorts.modifyAdd (fun x => insert idx x) l idx
+                let sorts := sorts.modifyAddG (fun x => insert idx x) l idx
                 let res := PaInG.br tnodes lnodes gnodes unodes bvars sorts consts lits apf apa api laf laa lai alf ala ali lef lea lez lei projs proofsOf proofs
                 insertMultiCoreUp insert emptyCol l1 l2 idx res nx
         | .const n l =>
@@ -578,7 +578,7 @@ partial def insertMultiCoreUp
                 let res := PaInG.br .nil .empty .nil .nil .nil .nil .empty (.cons idx l .nil) .dead .dead emptyCol .dead .dead emptyCol .dead .dead emptyCol .dead .dead .dead emptyCol .empty .dead .dead
                 insertMultiCoreUp insert emptyCol l1 l2 idx res nx
             | .br tnodes lnodes gnodes unodes bvars sorts consts lits apf apa api laf laa lai alf ala ali lef lea lez lei projs proofsOf proofs =>
-                let lits := lits.modifyAdd (fun x => insert idx x) l idx
+                let lits := lits.modifyAddG (fun x => insert idx x) l idx
                 let res := PaInG.br tnodes lnodes gnodes unodes bvars sorts consts lits apf apa api laf laa lai alf ala ali lef lea lez lei projs proofsOf proofs
                 insertMultiCoreUp insert emptyCol l1 l2 idx res nx
         | .mvar mid =>

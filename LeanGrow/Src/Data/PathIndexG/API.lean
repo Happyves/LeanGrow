@@ -12,8 +12,6 @@ import LeanGrow.Src.Utils.Std.List
 
 open Lean Meta
 
-namespace PaInG
-open PaInG
 
 variable {α : Type _} (r : α → α → Bool) {IdxCollType : Type _} [BEq α]
 
@@ -116,7 +114,7 @@ def ListProd.find_PaInG_lex :=
 
 
 @[specialize]
-def ListProd.modifyAdd {Val Key : Type _} [BEq Key] (mod : Val → Val) (newK : Key) (newV : Val)
+def ListProd.modifyAddG {Val Key : Type _} [BEq Key] (mod : Val → Val) (newK : Key) (newV : Val)
   (L : ListProd Val Key) : ListProd Val Key :=
   let rec @[specialize] go : ListProd Val Key → ListProd Val Key
     | .nil => .cons newV newK .nil
@@ -125,7 +123,7 @@ def ListProd.modifyAdd {Val Key : Type _} [BEq Key] (mod : Val → Val) (newK : 
   go L
 
 @[specialize, inline]
-def ListProd.modifyAdd' {Val Key : Type _} (atKey : Key → Bool) (modK : Key → Key) (modV : Val → Val) (newK : Key) (newV : Val)
+def ListProd.modifyAddG'G {Val Key : Type _} (atKey : Key → Bool) (modK : Key → Key) (modV : Val → Val) (newK : Key) (newV : Val)
   (L : ListProd Val Key) : ListProd Val Key :=
   let rec @[specialize] go : ListProd Val Key → ListProd Val Key
     | .nil => .cons newV newK .nil
@@ -141,7 +139,7 @@ def ListProd.insert_PaInG_const
   : CTrie (ListProd IdxCollType (List Level)) :=
   L.upsert newN.toString.toUTF8 (fun
     | .none => .some <| .cons (singleton idx) newL .nil
-    | .some E => .some <| E.modifyAdd (fun x => insert idx x) newL (singleton idx)
+    | .some E => .some <| E.modifyAddG (fun x => insert idx x) newL (singleton idx)
     )
 
 @[specialize]
@@ -151,7 +149,7 @@ def ListProd.insert_PaInG_const_multi
   : CTrie (ListProd IdxCollType (List Level)) :=
   L.upsert newN.toString.toUTF8 (fun
     | .none => .some <| .cons idx newL .nil
-    | .some E => .some <| E.modifyAdd (fun x => insert idx x) newL idx
+    | .some E => .some <| E.modifyAddG (fun x => insert idx x) newL idx
     )
 
 
@@ -194,7 +192,7 @@ def ListProd.find_PaInG_lnode
 
 
 @[specialize]
-def ListProd.modifyAddM
+def ListProd.modifyAddGMG
   (l1 : LocalContext) (l2 : LocalInstances)
   {Val Key : Type _} [BEq Key] (L : ListProd Val Key)
   (mod : Val → LocalContext → LocalInstances → MetaM (Prod3 Val LocalContext LocalInstances)) (newK : Key) (newV : Val)
@@ -216,7 +214,7 @@ def ListProd.modifyAddM
 
 
 @[specialize]
-def ListProd.modifyAddSpe
+def ListProd.modifyAddGSpeG
   (l1 : LocalContext) (l2 : LocalInstances)
   {Val Key : Type _} [BEq Key] (L : ListProd Val Key)
   (mod : Val → Key → LocalContext → LocalInstances → MetaM (Prod4 Val Key LocalContext LocalInstances))
@@ -252,7 +250,7 @@ def ListProd.insert_PaInG_proj
           let ⟨res,l1,l2⟩ ← pinsert skipP depth newE idx .dead l1 l2
           return ⟨.some (.cons (singleton idx) (newI, res) .nil),l1,l2⟩
       | .some E, l1, l2 => do
-          let ⟨res,l1,l2⟩  ← @ListProd.modifyAddSpe l1 l2 IdxCollType (Nat × PaInG IdxCollType)
+          let ⟨res,l1,l2⟩  ← @ListProd.modifyAddGSpeG l1 l2 IdxCollType (Nat × PaInG IdxCollType)
             ⟨fun x y => x.1 == y.1⟩ E
             (fun x y l1 l2 => do
               let ⟨res,l1,l2⟩ ← pinsert skipP depth newE idx y.2 l1 l2
@@ -278,7 +276,7 @@ def ListProd.insert_PaInG_proj_multi
           let ⟨res,l1,l2⟩ ← pinsert skipP depth newE idx .dead l1 l2
           return ⟨.some (.cons idx (newI, res) .nil),l1,l2⟩
       | .some E, l1, l2 => do
-          let ⟨res,l1,l2⟩  ← @ListProd.modifyAddSpe l1 l2 IdxCollType (Nat × PaInG IdxCollType)
+          let ⟨res,l1,l2⟩  ← @ListProd.modifyAddGSpeG l1 l2 IdxCollType (Nat × PaInG IdxCollType)
             ⟨fun x y => x.1 == y.1⟩ E
             (fun x y l1 l2 => do
               let ⟨res,l1,l2⟩ ← pinsert skipP depth newE idx y.2 l1 l2

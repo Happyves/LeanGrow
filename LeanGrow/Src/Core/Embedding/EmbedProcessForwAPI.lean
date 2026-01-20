@@ -6,10 +6,10 @@ Author: Yves Jäckle.
 -/
 
 
-import LeanGrowBeta.Core.Embedding.EmbedQueryForwInclude
-import LeanGrowBeta.Search.IntroTree.Types
-import LeanGrowBeta.Data.SetTrie.Operations
-import LeanGrowBeta.Data.PathIndex.Operations
+import LeanGrow.Src.Core.Embedding.EmbedQueryForwInclude
+import LeanGrow.Src.Search.IntroTree.Types
+import LeanGrow.Src.Data.SetTrie.Operations
+import LeanGrow.Src.Data.PathIndex.Operations
 
 
 open Lean Meta

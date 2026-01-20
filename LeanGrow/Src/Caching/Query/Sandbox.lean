@@ -24,7 +24,7 @@ def inSandbox [Repr IdxCollType]
   (emptyCol : IdxCollType) (empty? : IdxCollType → Bool) (size : IdxCollType → Nat)
   (singleton : Nat → IdxCollType) (insert : Nat → IdxCollType → IdxCollType)
   (thms : Array Name)
-  (act : ModuleCacheState IdxCollType → MetaM Unit)
+  (act : CTrie (Array ThmFormat) → ModuleCacheState IdxCollType → MetaM Unit)
   : MetaM Unit := do
   let env ← getEnv
   let cinfos? := thms.map (fun x => env.find? x)
@@ -45,13 +45,13 @@ def inSandbox [Repr IdxCollType]
   let res ← SetTriePGSpe.ofList thmData intersect union difference emptyCol empty? size x.stdForwSetTrie
   let final : ModuleCacheState IdxCollType :=
     ⟨x.thm_data, x.thmNameToIdx, x.thmNameToHypIdx, x.stdBackPaIn, res, x.stdForwSetTrie_idxToThmIdx, x.rwBackPaIn, x.rwForwPaIn⟩
-  act final
+  act thmData final
 
 
 @[specialize, inline]
 def inSandboxS
   (thms : Array Name)
-  (act : ModuleCacheState UInt32Array → MetaM Unit)
+  (act : CTrie (Array ThmFormat) → ModuleCacheState UInt32Array → MetaM Unit)
   : MetaM Unit :=
   inSandbox
     UInt32Array.inter UInt32Array.union UInt32Array.diff

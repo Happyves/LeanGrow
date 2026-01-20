@@ -175,6 +175,7 @@ LG:
 
 Djv Core:
 - generalise conveyorbelt
+- migrate repo, fix and consider local-instance-patching in generalise too ?
 - caching for generalise
 
 Djv Parse:

@@ -6,8 +6,8 @@ Author: Yves Jäckle.
 -/
 
 
-import LeanGrowBeta.Utils.Lean.Expr.Basic
-import LeanGrowBeta.Core.Rewriting.Directions
+import LeanGrow.Src.Utils.Lean.Expr.Basic
+import LeanGrow.Src.Core.Rewriting.Directions
 
 open Lean Meta
 

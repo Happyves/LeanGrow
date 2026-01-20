@@ -6,8 +6,8 @@ Author: Yves Jäckle.
 -/
 
 
-import LeanGrowBeta.Core.Embedding.EmbedQueryBackRW
-import LeanGrowBeta.Core.Rewriting.Main
+import LeanGrow.Src.Core.Embedding.EmbedQueryBackRW
+import LeanGrow.Src.Core.Rewriting.Main
 
 
 open Lean Meta

@@ -6,14 +6,14 @@ Author: Yves Jäckle.
 -/
 
 
-import LeanGrowBeta.Data.PathIndex.Query
-import LeanGrowBeta.Caching.Formating.Types
+import LeanGrow.Src.Data.PathIndexG.Query
+import LeanGrow.Src.Caching.Formating.Types
 
 open Lean Meta
 
 variable {IdxCollType : Type _}
 
-namespace PaIn
+namespace PaInG
 
 
 @[specialize, inline]
@@ -63,6 +63,7 @@ def embedFwSiUpdateWrtLevels [Repr IdxCollType]
   : MetaM <| ListProd3 IdxCollType (ListProd Nat Expr) (ListProd Nat Level) :=
     -- trace set Tracing.Flags.none in
     sofar.foldlM .nil (fun is tn ln S => do
+      mtracing
       let I := intersect asInds is
       if empty? I
       then
@@ -152,6 +153,7 @@ def embedFwSiUpdateWrtMvars [Repr IdxCollType]
   : MetaM (ListProd3 IdxCollType (ListProd Nat Expr) (ListProd Nat Level)) :=
     -- trace set Tracing.Flags.none in do
     do
+    mtracing
     mtrace on .zero with s!"[embedFwSiUpdateWrtMvars] call on asInds {repr asInds}"
     sofar.foldlM .nil (fun is tn ln S => do
       let I := intersect asInds is
@@ -236,16 +238,17 @@ def embedForwSimpleRevert
   (empty? : IdxCollType → Bool) (intersect union difference : IdxCollType → IdxCollType → IdxCollType)
   (empty : IdxCollType)
   (l1 : LocalContext) (l2 : LocalInstances)
-  (E : Expr) (T : PaIn IdxCollType) (workas : List FVarId)
+  (E : Expr) (T : PaInG IdxCollType) (workas : List FVarId)
   (constr : IdxCollType) (uni : ListProd3 IdxCollType (ListProd Nat Expr) (ListProd Nat Level))
   : MetaM (Prod5 Bool IdxCollType (ListProd3 IdxCollType (ListProd Nat Expr) (ListProd Nat Level)) LocalContext LocalInstances) :=
   -- trace set Tracing.Flags.none in do
   do
-  let built := T.buildCore workas 0
+  mtracing
+  let built ← T.buildCore l1 l2 workas 0
     (fun inds => intersect inds constr)
     intersect empty?
   mtrace on .zero with s!"[embedForwSimpleRevert] call on E {← ppExpr E}"
-  mtrace on .zero with s!"[embedForwSimpleRevert] with built {← ppPainHelp l1 l2 built}"
+  mtrace on .zero with s!"[embedForwSimpleRevert] with built {← ppPaInGHelp l1 l2 built}"
   mtrace on .zero with s!"[embedForwSimpleRevert] and constr {repr constr}"
   mtrace on .one with s!"[embedForwSimpleRevert] and uni {toString uni}"
   built.foldlMcps (empty, uni) (fun e inds (Sc,Su) cont => do
@@ -305,9 +308,11 @@ partial def embedForwSimpleCore
     (l1 : LocalContext) (l2 : LocalInstances)
     (constr : IdxCollType)
     (revCountMax : Nat)
-    (E : Expr) (T : PaIn IdxCollType)
+    (E : Expr) (T : PaInG IdxCollType)
     : MetaM (Prod5 UInt8 IdxCollType (ListProd3 IdxCollType (ListProd Nat Expr) (ListProd Nat Level)) LocalContext LocalInstances) :=
       -- trace set Tracing.Flags.none in
+      do
+      mtracing
       let inittodo := .cons E T [] .nil
       @queryCore IdxCollType expl l1 l2 (ListProd3 IdxCollType (ListProd Nat Expr) (ListProd Nat Level))
         (embedUnionFwSi empty? intersect difference)
@@ -395,7 +400,7 @@ partial def embedForwSimpleCore
                     return ⟨2,.some e pT,constr,uni,l1,l2⟩
           )
         (fun i bvs constr uni naive? l1 l2 =>
-          match bvs.find_pain_nat i with
+          match bvs.find_PaInG_nat i with
           | .none => if naive? then return ⟨0,constr,uni,l1,l2⟩ else return ⟨1,constr,uni,l1,l2⟩
           | .some inds _ =>
               let constr := intersect inds constr
@@ -411,7 +416,7 @@ partial def embedForwSimpleCore
                 return ⟨2,constr,uni,l1,l2⟩
           )
         (fun i bvs constr uni naive? l1 l2 =>
-          match bvs.find_pain_nat i with
+          match bvs.find_PaInG_nat i with
           | .none => if naive? then return ⟨0,constr,uni,l1,l2⟩ else return ⟨1,constr,uni,l1,l2⟩
           | .some inds _ =>
               let constr := intersect inds constr
@@ -427,7 +432,7 @@ partial def embedForwSimpleCore
                 return ⟨2,constr,uni,l1,l2⟩
           )
         (fun i bvs constr uni naive? l1 l2 =>
-          match bvs.find_pain_nat i with
+          match bvs.find_PaInG_nat i with
           | .none => if naive? then return ⟨0,constr,uni,l1,l2⟩ else return ⟨1,constr,uni,l1,l2⟩
           | .some inds _ =>
               let constr := intersect inds constr
@@ -450,7 +455,7 @@ partial def embedForwSimpleCore
             | .nil => if naive? then return ⟨0,constr,uni,l1,l2⟩ else return ⟨1,constr,uni,l1,l2⟩
             | _ =>
               let (constr, uni) ← bvs.foldlM (constr, uni) (fun inds lv (constr, uni) => do
-                match ← defEqNoMv (.sort i) (.sort lv) with
+                match ← defEqWiMv (.sort i) (.sort lv) l1 l2 with
                 | .none =>
                   let uni := uni.foldl ListProd3.nil (fun ds ts ls R =>
                     let ds := difference ds inds
@@ -508,7 +513,7 @@ partial def embedForwSimpleCore
         (fun n l bvs constr uni naive? l1 l2 =>
           if !(l.any Level.hasMVar)
           then
-            match ListProd.find_pain_const bvs n l with
+            match ListProd.find_PaInG_const bvs n l with
             | .none => if naive? then return ⟨0,constr,uni,l1,l2⟩ else return ⟨1,constr,uni,l1,l2⟩
             | .some inds _ =>
                 let constr := intersect inds constr
@@ -527,7 +532,7 @@ partial def embedForwSimpleCore
             | .none => if naive? then return ⟨0,constr,uni,l1,l2⟩ else return ⟨1,constr,uni,l1,l2⟩
             | .some D => do
                 let (constr, uni) ← D.foldlM (constr, uni) (fun inds lvls (constr, uni) => do
-                  match ← defEqNoMv (.const n l) (.const n lvls) with
+                  match ← defEqWiMv (.const n l) (.const n lvls) l1 l2 with
                   | .none =>
                     let uni := uni.foldl ListProd3.nil (fun ds ts ls R =>
                       let ds := difference ds inds
@@ -570,11 +575,11 @@ partial def embedForwSimpleMainWiLoad
     (l1 : LocalContext) (l2 : LocalInstances)
     (constr : IdxCollType)
     (revCountMax : Nat)
-    (E : Expr) (T : PaIn IdxCollType)
+    (E : Expr) (T : PaInG IdxCollType)
     : MetaM (Prod5 UInt8 IdxCollType (ListProd3 IdxCollType (ListProd Nat Expr) (ListProd Nat Level)) LocalContext LocalInstances) :=
     do
     clearMvarAssignments -- this is needed so that we may fold over assignement PHachMaps in ↓ and get new assignements only
-    thmData.mctx.load
+    thmData.mctx.loadNoCo
     embedForwSimpleCore empty? intersect union difference empty l1 l2 constr revCountMax E T
 
 @[specialize]
@@ -584,7 +589,7 @@ partial def embedForwSimpleMainNoLoad
     (l1 : LocalContext) (l2 : LocalInstances)
     (constr : IdxCollType)
     (revCountMax : Nat)
-    (E : Expr) (T : PaIn IdxCollType)
+    (E : Expr) (T : PaInG IdxCollType)
     : MetaM (Prod5 UInt8 IdxCollType (ListProd3 IdxCollType (ListProd Nat Expr) (ListProd Nat Level)) LocalContext LocalInstances) :=
     do
     clearMvarAssignments -- this is needed so that we may fold over assignement PHachMaps in ↓ and get new assignements only
