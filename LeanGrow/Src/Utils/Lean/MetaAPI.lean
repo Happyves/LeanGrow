@@ -90,12 +90,12 @@ mutual
     | Expr.mdata _ b       =>
       visit b s
     | Expr.mvar mvarId     =>
-      if s.visitedExpr.contains e
+      if s.result.contains mvarId
       then return s
       else
         let T ← mvarId.getType
         let s ← visit T s
-        return { s with result := s.result.push mvarId, visitedExpr := s.visitedExpr.insert e}
+        return { s with result := s.result.push mvarId}
     | _                    =>
       return s
 end
@@ -126,8 +126,6 @@ def defEqWiMv (a b : Expr) (l1 : LocalContext) (l2 : LocalInstances)
   withReader (fun ctx => {ctx with lctx := l1, localInstances := l2}) do
     let mva ← a.getMVarsRec
     let mvb ← b.getMVarsRec' mva
-    for mv in mva do
-      mv.modifyDecl (fun d => {d with lctx := l1, localInstances := l2})
     for mv in mvb do
       mv.modifyDecl (fun d => {d with lctx := l1, localInstances := l2})
     try
@@ -137,22 +135,16 @@ def defEqWiMv (a b : Expr) (l1 : LocalContext) (l2 : LocalInstances)
         let rl := mc.lAssignment
         let re := mc.eAssignment
         clearMvarAssignments
-        for mv in mva do
-          mv.modifyDecl (fun d => {d with lctx := {}, localInstances := {}})
         for mv in mvb do
           mv.modifyDecl (fun d => {d with lctx := {}, localInstances := {}})
         resetDefEqPermCaches
         return .some (rl,re)
       else
-        for mv in mva do
-          mv.modifyDecl (fun d => {d with lctx := {}, localInstances := {}})
         for mv in mvb do
           mv.modifyDecl (fun d => {d with lctx := {}, localInstances := {}})
         resetDefEqPermCaches
         return .none
     catch _ =>
-      for mv in mva do
-        mv.modifyDecl (fun d => {d with lctx := {}, localInstances := {}})
       for mv in mvb do
         mv.modifyDecl (fun d => {d with lctx := {}, localInstances := {}})
       return .none
@@ -163,8 +155,6 @@ def defEqWiMvNoClear (a b : Expr) (l1 : LocalContext) (l2 : LocalInstances)
   withReader (fun ctx => {ctx with lctx := l1, localInstances := l2}) do
     let mva ← a.getMVarsRec
     let mvb ← b.getMVarsRec' mva
-    for mv in mva do
-      mv.modifyDecl (fun d => {d with lctx := l1, localInstances := l2})
     for mv in mvb do
       mv.modifyDecl (fun d => {d with lctx := l1, localInstances := l2})
     try
@@ -180,15 +170,11 @@ def defEqWiMvNoClear (a b : Expr) (l1 : LocalContext) (l2 : LocalInstances)
         resetDefEqPermCaches
         return .some (rl,re)
       else
-        for mv in mva do
-          mv.modifyDecl (fun d => {d with lctx := {}, localInstances := {}})
         for mv in mvb do
           mv.modifyDecl (fun d => {d with lctx := {}, localInstances := {}})
         resetDefEqPermCaches
         return .none
     catch _ =>
-      for mv in mva do
-        mv.modifyDecl (fun d => {d with lctx := {}, localInstances := {}})
       for mv in mvb do
         mv.modifyDecl (fun d => {d with lctx := {}, localInstances := {}})
       return .none

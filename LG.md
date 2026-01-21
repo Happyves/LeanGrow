@@ -82,13 +82,6 @@ LG:
     subexpressions if encountered again ; maybe even maintain a cache accross queries !
   - Make version that doesn't make rewrites of binding types.
   - refer to revert tests : we should add deps for reverts at rw/induction
-- Induction:
-  - Try to speed up ?
-  - detect ite and dite and allow for case disjunction on their condition
-  - prohibit reco on eq ?
-  - Elab-elim inductions should detect constroturs of recursed type (ex: Fin.mk) ?
-  - refer to revert tests : we should add deps for reverts at rw/induction
-  - caching ... (don't forget realizeGlobalConsts)
 
 
 
@@ -108,6 +101,28 @@ Djv Parse:
 
 
 # W5 (26-1) Search & Frontend ; Generalize & Denoise ; Delab Calc
+
+LG:
+- finish rewriting
+- Induction:
+  - Try to speed up ?
+  - detect ite and dite and allow for case disjunction on their condition
+  - prohibit reco on eq ?
+  - Elab-elim inductions should detect constroturs of recursed type (ex: Fin.mk) ?
+  - refer to revert tests : we should add deps for reverts at rw/induction
+  - caching ... (don't forget realizeGlobalConsts)
+
+
+Djv Core:
+- generalise conveyorbelt
+- migrate repo, fix and consider local-instance-patching in generalise too ?
+- caching for generalise
+
+Djv Parse:
+- Delab Calc & Congr
+
+
+# W6 (2-8) Search & CallLLM ; Conveyorbelt & Query ; Delab Congr
 
 LG:
 - Eq.efl and Iff.refl being patlogical, add them to tactic support or add them as defaults to caches, but in apply format
@@ -174,19 +189,6 @@ LG:
     maybe also generalise function applicaitons that are Type-typed ? (We can do both, one after the other)
 - Save search state to some tracing env extention, and write a small DSL to explore its branches
 
-Djv Core:
-- generalise conveyorbelt
-- migrate repo, fix and consider local-instance-patching in generalise too ?
-- caching for generalise
-
-Djv Parse:
-- Delab Calc & Congr
-
-
-# W6 (2-8) Search & CallLLM ; Conveyorbelt & Query ; Delab Congr
-
-LG:
-- Add support and special score for declarations from the same file as the query
 
 Djv Core:
 - Forward, Backward, Subexpressions
@@ -200,7 +202,8 @@ Djv Parse:
 # W7 (9-15) Search & Heuristic ; Conveyorbelt & Query ; Delab Misc
 
 LG:
-- Hang in there!
+- Add support and special score for declarations from the same file as the query
+
 
 Djv Core:
 - DéjàVue Codes
