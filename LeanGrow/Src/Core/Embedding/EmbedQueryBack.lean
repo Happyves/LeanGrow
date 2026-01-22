@@ -328,6 +328,13 @@ def embedTnodes [ToString IdxCollType]
             break
         if broke?
         then
+          let uni := uni.foldl ListProd.nil (fun ds ef R =>
+            let ds := difference ds inds
+            if empty? ds
+            then R
+            else .cons ds ef R
+            )
+          let constr := difference constr inds
           k (constr,uni)
         else
           mtrace on .zero with s!"[embedTnodes] positive defeq, proceeding"
@@ -340,7 +347,7 @@ def embedTnodes [ToString IdxCollType]
               | .none =>
                   mtrace on .zero with s!"[embedTnodes] tnode propa failed"
                   let constr := difference constr I
-                  let D := difference ds inds
+                  let D := difference ds I
                   if empty? D
                   then q (constr, R)
                   else q (constr, .cons D ef R)
@@ -522,6 +529,14 @@ partial def embedBackCore (thmData : CTrie (Array ThmFormat))
           match bvs with
           | .nil => if naive? then return ⟨0,constr,uni,l1,l2⟩ else return ⟨1,constr,uni,l1,l2⟩
           | _ =>
+              let fix := bvs.foldl empty (fun x _ y => union x y)
+              let constr := intersect constr fix
+              let uni := uni.foldl ListProd.nil (fun ds ef R =>
+                let I := intersect ds fix
+                if empty? I
+                then R
+                else .cons I ef R
+                )
               let .mk constr uni l1 l2 ← bvs.foldlM (.mk constr uni l1 l2 : Prod4 _ _ _ _) (fun inds lv (.mk constr uni l1 l2) => do
                 let lcase := lv.hasLnodes
                 mtrace on .zero with s!"[embedBackCore] comparing to {lv} "
@@ -605,6 +620,14 @@ partial def embedBackCore (thmData : CTrie (Array ThmFormat))
             match bvs.find? na with
             | .none => if naive? then return ⟨0,constr,uni,l1,l2⟩ else return ⟨1,constr,uni,l1,l2⟩
             | .some D => do
+                let fix := D.foldl empty (fun x _ y => union x y)
+                let constr := intersect constr fix
+                let uni := uni.foldl ListProd.nil (fun ds ef R =>
+                  let I := intersect ds fix
+                  if empty? I
+                  then R
+                  else .cons I ef R
+                  )
                 let (.mk constr uni l1 l2) ← D.foldlM (.mk constr uni l1 l2 : Prod4 _ _ _ _) (fun inds lvs (.mk constr uni l1 l2) => do
                   mtrace on .zero with s!"[embedBackCore] comparing to {lvs}"
                   let load : MetaM Unit :=

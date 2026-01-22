@@ -55,25 +55,54 @@ unsafe def test_3_2 := testLoad_embedForwInterCoreS #[`Init.Data.List.Basic, `In
 
 -- With context g(l : List Int) g(h : l.getLast? = .some 5) and objects run test_3_2
 
+-- With context g(l : List Int) u(a : Option Int : Option.some 5) g(h : l.getLast? = a) and objects run test_3_2
+-- buuuuugs
+
+#check List.mem_of_getLast?
+#check List.mem_of_mem_getLast?
+
+
+-- With context g(l : List Int) g(l' : List Int) g(h : l ++ l' ≠ []) and objects run test_3_2
+-- bug
+
+
+#check List.eq_nil_or_concat
+#check List.filter_sublist
+#check List.append_ne_nil_of_left_ne_nil
+#check List.append_ne_nil_of_right_ne_nil
+#check List.eq_replicate_or_eq_replicate_append_cons
+#check List.length_filterMap_le
+#check List.exists_mem_of_ne_nil
+#check List.head_mem
+#check List.getLast_mem
+#check List.exists_cons_of_ne_nil
+
 
 unsafe def test_4 := testLoad_embedBackMainS #[`Init.Data.List.Basic, `Init.Data.List.Lemmas]
 
 
 -- With context g(as : List Int) g(bs : List Int) g(cs : List Int) and objects (as ++ bs ++ cs = as ++ (bs ++ cs)) run test_4
 
-With context g(l : List Int) and objects ((l.filter (42 == ·)).length ≤ l.length) run test_4
-
-
 #check List.append_assoc
+
+
+-- tracing_mode .std
+-- tracing_flags [(`PaInG.embedBackCore, TracingFlags.all)]
+
+-- With context g(l : List Int) and objects ((l.filter (42 == ·)).length ≤ l.length) run test_4
+
+-- With context g(α : Type) g(i : BEq α) g(l : List α) and objects ((l.filter (fun x => x == x)).length ≤ l.length) run test_4
+
+
 #check List.length_filter_le
-#check List.foldl_filter
-#check List.foldr_filter
-#check List.length_eq_of_beq
 
-#check List.mem_of_getLast?
-#check List.mem_of_mem_getLast?
+-- With context g(l : List Int) g(l' : List Int) and objects (l = l') run test_4
+-- buuuuuuug
 
-#check List.Pairwise (· < ·)
+
+#check List.beq_cons_nil
+#check List.findSome?_cons
+#check List.set.eq_def
 
 /-
 Fix notes
@@ -81,7 +110,8 @@ Fix notes
 - defEqNoMv → defEqWiMv
 
 TODO:
-- bizare matches in last test
+- bugs
+- test embedBackMainS with tnodes and unodes
 - worry about instances : what if thm for abstract instance, and query with
   concrete one ?
 - add uni tests
@@ -92,3 +122,26 @@ TODO:
 - test embedProcess
 
 -/
+
+theorem testI (α : Type) [Add α] (a : α) : a + a = a := by
+  sorry
+
+#check processForCache
+
+def miniTest : MetaM Unit := do
+  let .some info := (← getEnv).find? `testI | pure ()
+  let .mk _ res _ _ ← processForCache `dum 0 info
+  res.foldlM () (fun _ thm _ => do
+    IO.println s!"{← Meta.ppExpr thm.goal}"
+    IO.println s!"{thm.goal}"
+    )
+
+#eval miniTest
+
+#check 1
+
+-- yep, Nat.add would fail match ..
+-- maybe just switch to .reducible ?
+
+#check Meta.TransparencyMode
+#check Meta.withTransparency

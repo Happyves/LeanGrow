@@ -75,6 +75,22 @@ LG:
   - Skip proofs and instances in rewrite query
   - Optimize forward queries ?
   - Don't attempt forward rewrites ; too time consuming for too little impact
+
+
+
+Djv Core:
+- test-tools
+ 
+ 
+
+
+Djv Parse:
+- Delab Simp
+
+
+# W5 (26-1) Core pt. 2 ; Generalize ; Delab Calc
+
+LG:
 - Rewriting:
   - All binders should be fvars in subgoals ; this should imply no skipping binders in the proofterm, 
     unless there are no subgoals to begin with, in which case the current version is efficient.
@@ -82,28 +98,7 @@ LG:
     subexpressions if encountered again ; maybe even maintain a cache accross queries !
   - Make version that doesn't make rewrites of binding types.
   - refer to revert tests : we should add deps for reverts at rw/induction
-
-
-
-Djv Core:
-- Generalize : 
- - Generalize proofs by defaut, but not in the top branch
- - Version where ratios may change depending on the depth the brach/subexpressions
- - For score add different generalisations (corresponding to different ratios, for example) from same sample
-   to scoring-structures, possibly with different scores 
- - somehow disallow mvar-apps as result of generalised patterns,
-   since it's bad for uni ... Should be ok when queried as
-   proper sub-pattern though ...
-
-
-Djv Parse:
-- Delab Simp
-
-
-# W5 (26-1) Search & Frontend ; Generalize & Denoise ; Delab Calc
-
-LG:
-- finish rewriting
+- Embed and RW processing
 - Induction:
   - Try to speed up ?
   - detect ite and dite and allow for case disjunction on their condition
@@ -114,15 +109,18 @@ LG:
 
 
 Djv Core:
-- generalise conveyorbelt
-- migrate repo, fix and consider local-instance-patching in generalise too ?
-- caching for generalise
+- Query Forward, Backward, Subpatterns
+- somehow disallow mvar-apps as result of generalised patterns,
+  since it's bad for uni ... Should be ok when queried as
+  proper sub-pattern though ...
+- Idea for Or.rec &co
+
 
 Djv Parse:
-- Delab Calc & Congr
+- Brec Induction, WF induction and termination by, split & split ifs ?
 
 
-# W6 (2-8) Search & CallLLM ; Conveyorbelt & Query ; Delab Congr
+# W6 (2-8) Search  ; Conveyorbelt & Query ; Delab Congr
 
 LG:
 - Eq.efl and Iff.refl being patlogical, add them to tactic support or add them as defaults to caches, but in apply format
@@ -179,7 +177,7 @@ LG:
   but only workers
 - Add initial phase for normalisation, unfolding and generalisation:
   Note wrt \d, maybe don't make different branches, but different searches entirely, that we launsh
-  wwhen the initial one has failed ? Avoids falsification of backtree based scores
+  when the initial one has failed ? Avoids falsification of backtree based scores
   - Normalising: whnf everything in the initial search state ? Maybe induct on all non-recusive-structure-typed
     fvars, only if we implemented detecting ctors in elab-elim-induction ?
   - Unfolding : make branches from initial goal in backstate in which we unfold constants,
@@ -191,25 +189,29 @@ LG:
 
 
 Djv Core:
-- Forward, Backward, Subexpressions
-- Expr as keys & Thms as keys
-- Idea for Or.rec &co
+- migrate repo, fix and consider local-instance-patching in generalise too ?
+- caching for generalise
+- Generalize proofs by defaut, but not in the top branch
+- For score add different generalisations (corresponding to different ratios, for example) from same sample
+to scoring-structures, possibly with different scores
 
 
 Djv Parse:
-- Brec Induction, WF induction and termination by, split & split ifs ?
+- Delab Calc & Congr
 
-# W7 (9-15) Search & Heuristic ; Conveyorbelt & Query ; Delab Misc
+
+# W7 (9-15) Search & Heuristic & CallLLM ; Conveyorbelt & Query ; Delab Misc
 
 LG:
 - Add support and special score for declarations from the same file as the query
+  Probably best to do ad hoc by looking up moduleIdx at query ?
 
 
 Djv Core:
 - DéjàVue Codes
 
 Djv Parse:
-- Term style proofs: transform Eq.rec Eq.ndrecand congrarg etc...
+- Term style proofs: transform Eq.rec Eq.ndrec and congrarg etc...
 - Prohibiters for linarith, ring, grind, etc.
 
 # W8 (16-22) Debug

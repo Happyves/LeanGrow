@@ -382,6 +382,14 @@ partial def embedForwRWCore [Inhabited IdxCollType] (thmData : CTrie (Array ThmF
           match bvs with
           | .nil => if naive? then return ⟨0,constr,uni,l1,l2⟩ else return ⟨1,constr,uni,l1,l2⟩
           | _ =>
+            let fix := bvs.foldl empty (fun x _ y => union x y)
+            let constr := intersect constr fix
+            let uni := uni.foldl ListProd.nil (fun ds ef R =>
+              let I := intersect ds fix
+              if empty? I
+              then R
+              else .cons I ef R
+              )
             let (constr, uni) ← bvs.foldlM (constr, uni) (fun inds lv (constr, uni) => do
               let lcase := lv.hasLnodes
               mtrace on .zero with s!"[embedForwRWCore] comparing to {lv} "
@@ -440,6 +448,14 @@ partial def embedForwRWCore [Inhabited IdxCollType] (thmData : CTrie (Array ThmF
             match bvs.find? na with
             | .none => if naive? then return ⟨0,constr,uni,l1,l2⟩ else return ⟨1,constr,uni,l1,l2⟩
             | .some D => do
+                let fix := D.foldl empty (fun x _ y => union x y)
+                let constr := intersect constr fix
+                let uni := uni.foldl ListProd.nil (fun ds ef R =>
+                  let I := intersect ds fix
+                  if empty? I
+                  then R
+                  else .cons I ef R
+                  )
                 let (constr, uni) ← D.foldlM (constr, uni) (fun inds lvs (constr, uni) => do
                   mtrace on .zero with s!"[embedForwRWCore] comparing to {lvs}"
                   let mut uni := uni

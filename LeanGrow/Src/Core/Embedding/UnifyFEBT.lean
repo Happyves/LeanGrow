@@ -346,6 +346,14 @@ partial def uniFEwBTCore
           match bvs with
           | .nil => if naive? then return ⟨0,constr, uni, l1,l2⟩ else return ⟨1,constr, uni, l1,l2⟩
           | _ =>
+            let fix := bvs.foldl empty (fun x _ y => union x y)
+              let constr := intersect constr fix
+              let uni := uni.foldl ListProd3.nil (fun ds ef lu R =>
+                let I := intersect ds fix
+                if empty? I
+                then R
+                else .cons I ef lu R
+                )
             let (constr, uni) ← bvs.foldlM (constr, uni) (fun inds lv (constr, uni) => do
               let ⟨lv,l1,l2⟩ ← mvarifyLTnodesIn lv l1 l2
               match ← defEqWiMv (.sort i) (.sort lv) l1 l2  with
@@ -428,6 +436,14 @@ partial def uniFEwBTCore
             match bvs.find? na with
             | .none => if naive? then return ⟨0,constr, uni, l1,l2⟩ else return ⟨1,constr, uni, l1,l2⟩
             | .some D => do
+                let fix := D.foldl empty (fun x _ y => union x y)
+                let constr := intersect constr fix
+                let uni := uni.foldl ListProd3.nil (fun ds ef lu R =>
+                  let I := intersect ds fix
+                  if empty? I
+                  then R
+                  else .cons I ef lu R
+                  )
                 let (constr, uni) ← D.foldlM (constr, uni) (fun inds lvI (constr, uni) => do
                   let mut l1 := l1
                   let mut l2 := l2
