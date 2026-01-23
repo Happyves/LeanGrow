@@ -85,7 +85,7 @@ partial def processForMain (l1 : LocalContext) (l2 : LocalInstances)
     | .letE _ _ V B _ => do
         go l1 l2 hyps decls userNames (Expr.instantiate1 B V) pos sinkCand
     | .forallE _ T nx bi => do
-        let T ← withTransparency .instances <| reduce (skipTypes := false) T
+        let T ← withTransparency .reducible <| reduce (skipTypes := false) T
         let lid := lnode module thmIdx pos
         let T := T.cleanupAnnotations
         let mv ← mkMvarStdNoCoE lid T
@@ -104,7 +104,7 @@ partial def processForMain (l1 : LocalContext) (l2 : LocalInstances)
           | _ => (pos, affected.length) :: (sinkCand.filter (fun (x,_) => !(affected.contains x)))
         go l1 l2 hyps decls userNames nx (pos + 1) sinkCand
     | goal =>
-        let goal ← withTransparency .instances <| reduce (skipTypes := false) goal -- no need for ltx
+        let goal ← withTransparency .reducible <| reduce (skipTypes := false) goal -- no need for ltx
         match goal with
         | .forallE .. | .letE .. =>
           go l1 l2 hyps decls userNames goal pos sinkCand
@@ -138,8 +138,8 @@ partial def processForMain (l1 : LocalContext) (l2 : LocalInstances)
                 .std thmName lvlN pred? hyps ⟨lvlC, decls, userNames⟩ hyps.size goal sinks bf bb
               let goalDeps := goal.getLnodePos
               let sinksNotInGoal? := sinks.any (fun x => !(goalDeps.contains x))
-              let left ← withTransparency .instances <| reduce (skipTypes := false) left
-              let right ← withTransparency .instances <| reduce (skipTypes := false) right
+              let left ← withTransparency .reducible <| reduce (skipTypes := false) left
+              let right ← withTransparency .reducible <| reduce (skipTypes := false) right
               if left == right
               then
                 return .mk sinksNotInGoal? .nil l1 l2
@@ -226,7 +226,7 @@ partial def processForMainSpe (l1 : LocalContext) (l2 : LocalInstances)
     | .letE _ _ V B _ => do
         go l1 l2 hyps decls userNames (Expr.instantiate1 B V) pos sinkCand
     | .forallE _ T nx bi => do
-        let T ← withTransparency .instances <| reduce (skipTypes := false) T
+        let T ← withTransparency .reducible <| reduce (skipTypes := false) T
         let lid := lnode module thmIdx pos
         let T := T.cleanupAnnotations
         let mv ← mkMvarStdNoCoE lid T
@@ -245,7 +245,7 @@ partial def processForMainSpe (l1 : LocalContext) (l2 : LocalInstances)
           | _ => (pos, affected.length) :: (sinkCand.filter (fun (x,_) => !(affected.contains x)))
         go l1 l2 hyps decls userNames nx (pos + 1) sinkCand
     | goal =>
-        let goal ← withTransparency .instances <| reduce (skipTypes := false) goal -- no need for ltx
+        let goal ← withTransparency .reducible <| reduce (skipTypes := false) goal -- no need for ltx
         match goal with
         | .forallE .. | .letE .. =>
           go l1 l2 hyps decls userNames goal pos sinkCand

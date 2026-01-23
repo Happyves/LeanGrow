@@ -117,7 +117,7 @@ Djv Core:
 
 
 Djv Parse:
-- Brec Induction, WF induction and termination by, split & split ifs ?
+- Delab Calc & Congr
 
 
 # W6 (2-8) Search  ; Conveyorbelt & Query ; Delab Congr
@@ -197,7 +197,8 @@ to scoring-structures, possibly with different scores
 
 
 Djv Parse:
-- Delab Calc & Congr
+- Brec Induction, WF induction and termination by, split & split ifs ?
+
 
 
 # W7 (9-15) Search & Heuristic & CallLLM ; Conveyorbelt & Query ; Delab Misc

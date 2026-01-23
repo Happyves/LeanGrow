@@ -132,6 +132,9 @@ open Lean Meta
 
 
 -- #eval exploreCaches_stdBackPaIn_pp #[`Init.Data.List.Perm, `Init.Data.List.Range, `Init.Data.List.Basic, `Init.Data.List.Lemmas]
+-- overflow XD probably due to printing ?
 
+-- #eval exploreCaches_stdBackPaIn_pp #[`Init.Data.List.Perm, `Init.Data.List.Range]
+-- buggy merge again: LLE at Init.Data.List.Range.41.2
 
 -- #eval exploreCaches_stdForwSetTrie_pp #[`Init.Data.List.Perm, `Init.Data.List.Range, `Init.Data.List.Basic, `Init.Data.List.Lemmas]

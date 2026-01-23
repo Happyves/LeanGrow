@@ -110,10 +110,9 @@ Fix notes
 - defEqNoMv → defEqWiMv
 
 TODO:
-- bugs
+- bug in CTrie.merge
+- bugs here
 - test embedBackMainS with tnodes and unodes
-- worry about instances : what if thm for abstract instance, and query with
-  concrete one ?
 - add uni tests
 - add rw tests
 - try cache load tests
@@ -122,26 +121,3 @@ TODO:
 - test embedProcess
 
 -/
-
-theorem testI (α : Type) [Add α] (a : α) : a + a = a := by
-  sorry
-
-#check processForCache
-
-def miniTest : MetaM Unit := do
-  let .some info := (← getEnv).find? `testI | pure ()
-  let .mk _ res _ _ ← processForCache `dum 0 info
-  res.foldlM () (fun _ thm _ => do
-    IO.println s!"{← Meta.ppExpr thm.goal}"
-    IO.println s!"{thm.goal}"
-    )
-
-#eval miniTest
-
-#check 1
-
--- yep, Nat.add would fail match ..
--- maybe just switch to .reducible ?
-
-#check Meta.TransparencyMode
-#check Meta.withTransparency

@@ -302,6 +302,8 @@ unsafe def buildCacheData [Repr IdxCollType]
           modules opts
           LeanGrow.mkCacheName
           (fun module => do
+            for thm in x.thm_data do
+              thm.mctx.loadNoCo
             let thmData : CTrie (Array ThmFormat) :=
               CTrie.insert .empty (module.toString.toUTF8) x.thm_data
             let res ← SetTriePGSpe.ofList thmData intersect union difference emptyCol empty? size x.stdForwSetTrie
