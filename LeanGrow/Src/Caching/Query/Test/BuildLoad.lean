@@ -126,13 +126,32 @@ open Lean Meta
 -- #eval buildCacheDataS `Init.Data.List.Lemmas
 
 
+-- # Stress test
+
+unsafe def loadCachesDoNothing
+  (moduleNames : Array Name)
+  : MetaM Unit := do
+    loadCacheDataS_forTest  moduleNames <| fun data => do
+      let test ← data.data.stdBackPaIn.buildAllS (← getLCtx) (← getLocalInstances) [] 0
+      return s!"Made it, test build empty : {test == .nil}"
+
+def bigInit := #[`Init.Prelude, `Init.SimpLemmas, `Init.PropLemmas,
+                 `Init.Internal.Order.Lemmas, `Init.Data.Nat.Dvd,
+                 `Init.Data.Nat.Div.Lemmas, `Init.Data.Subtype.Basic,
+                 `Init.Data.Subtype.Order, `Init.Data.List.Perm,
+                 `Init.Data.List.Range, `Init.Data.List.Basic, `Init.Data.List.Lemmas]
+
+-- #eval loadCachesDoNothing bigInit
+-- no overflow ; acceptably slow without build, and very slow with build
+
+
 
 
 -- # Test Loads
 
 
 -- #eval exploreCaches_stdBackPaIn_pp #[`Init.Data.List.Perm, `Init.Data.List.Range, `Init.Data.List.Basic, `Init.Data.List.Lemmas]
--- overflow XD probably due to printing ?
+-- overflow : probably due to build ...
 
 -- #eval exploreCaches_stdBackPaIn_pp #[`Init.Data.List.Perm, `Init.Data.List.Range]
 -- buggy merge again: LLE at Init.Data.List.Range.41.2
