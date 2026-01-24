@@ -268,13 +268,13 @@ deriving Inhabited, BEq, Repr
 def ByteArray.matchSingleHits_wOffset (s : ByteArray) (off : Nat) (A : Array ByteArray) : matType :=
   let rec go : Nat → matType
     | 0 => .ins 0
-    | n+1 =>
+    | N@(n+1) =>
         let c := A[n]!
         let com := ByteArray.getLongestMatch_wOffsets s c off 0
         if com == 0
         then
           if c.get! 0 < s.get! off
-          then .ins n
+          then .ins N
           else go n
         else
           .hit n com
