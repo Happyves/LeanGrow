@@ -213,6 +213,7 @@ Djv Core:
 
 Djv Parse:
 - Term style proofs: transform Eq.rec Eq.ndrec and congrarg etc...
+- At apply and term style proofs: thms like Eq.trans should be treated like by_cases
 - Prohibiters for linarith, ring, grind, etc.
 
 # W8 (16-22) Debug

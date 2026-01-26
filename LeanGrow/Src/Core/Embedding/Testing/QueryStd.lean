@@ -31,6 +31,10 @@ def test_1_2 := testSandbox_embedForwInterCoreS testSet_1
 def test_2 := testSandbox_embedBackMainS testSet_1
 
 
+-- tracing_mode .std
+-- tracing_flags [(`PaInG.embedBackCore, TracingFlags.all)]
+
+
 -- With context g(n : Int) g(m : Int) and objects (n ≤ (n + m)) run test_2
 
 -- With context g(n : Int) g(m : Int) and objects (n ≤ (m + n)) run test_2
@@ -42,24 +46,40 @@ def test_2 := testSandbox_embedBackMainS testSet_1
 
 unsafe def test_3_1 := testLoad_embedForwIncludeCoreS #[`Init.Data.List.Basic, `Init.Data.List.Lemmas]
 
+tracing_mode .std
+tracing_flags [(`PaInG.embedForwIncludeCore.go, TracingFlags.all)]
 
--- With context g(a : List Int) u(b : List Int : [1,2,3]) and objects run test_3_1
--- no lists as sink hyps xox
+-- With context g(a : List Int) and objects run test_3_1
+-- nonsense test, as it queries l ⊆ Q, so testing with cache size l will never work
 
--- With context g(l : List Int) g(h : l.getLast? = .some 5) and objects run test_3_1
-
-unsafe def test_3_2 := testLoad_embedForwInterCoreS #[`Init.Data.List.Basic, `Init.Data.List.Lemmas]
-
--- With context g(a : List Int) u(b : List Int : [1,2,3]) and objects run test_3_2
-
-
--- With context g(l : List Int) g(h : l.getLast? = .some 5) and objects run test_3_2
-
--- With context g(l : List Int) u(a : Option Int : Option.some 5) g(h : l.getLast? = a) and objects run test_3_2
--- buuuuugs
 
 #check List.mem_of_getLast?
 #check List.mem_of_mem_getLast?
+
+
+/-- Remember that this is not a forward query, it is only a test.
+We load that cache settries just to have something big to test on.
+The return will not include all assignements requied by a forward step.
+-/
+unsafe def test_3_2 := testLoad_embedForwInterCoreS #[`Init.Data.List.Basic, `Init.Data.List.Lemmas]
+
+
+tracing_mode .std
+tracing_flags [(`PaInG.embedForwInterCore.go, TracingFlags.all)]
+
+
+With context g(a : List Int) u(b : List Int : [1,2,3]) and objects run test_3_2
+
+#check List.mem_append_right
+#check List.mem_append_left
+#check List.Mem.below.head
+
+-- With context g(l : List Int) g(h : l.getLast? = .some 5) and objects run test_3_2
+
+#check List.mem_of_getLast?
+
+-- With context g(l : List Int) u(a : Option Int : Option.some 5) g(h : l.getLast? = a) and objects run test_3_2
+-- buuuuugs
 
 
 -- With context g(l : List Int) g(l' : List Int) g(h : l ++ l' ≠ []) and objects run test_3_2

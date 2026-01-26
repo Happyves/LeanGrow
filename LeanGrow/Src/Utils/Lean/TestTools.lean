@@ -6,6 +6,7 @@ Author: Yves Jäckle.
 -/
 
 import Lean.Elab
+import LeanGrow.Src.Utils.Lean.MetaAPI
 
 
 open Lean Meta Elab Term Command
@@ -85,4 +86,5 @@ elab "With" "context" cs:lg_lam_let* "and" "objects" ts:term,* "run" metam:ident
         let term ← elabTermAndSynthesize t .none
         Ts := Ts.push term
       let action ← evalConst (Array Expr → Array Expr → MetaM Unit) (metam.getId)
+      clearMvarAssignments
       action fv Ts

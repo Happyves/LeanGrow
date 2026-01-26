@@ -151,7 +151,7 @@ def bigInit := #[`Init.Prelude, `Init.SimpLemmas, `Init.PropLemmas,
 
 
 -- #eval exploreCaches_stdBackPaIn_pp #[`Init.Data.List.Perm, `Init.Data.List.Range, `Init.Data.List.Basic, `Init.Data.List.Lemmas]
--- overflow : probably due to build ...
+-- overflow : ue to printing since ↑ stress test passes
 
 -- #eval exploreCaches_stdBackPaIn_pp #[`Init.Data.List.Perm, `Init.Data.List.Range]
 

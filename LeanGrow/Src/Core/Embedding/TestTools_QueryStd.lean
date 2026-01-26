@@ -65,7 +65,7 @@ def testSandbox_embedForwIncludeCoreS (thms : Array Name)  : Array Expr → Arra
         IO.println s!"\nLooking at {thmD.name}"
         for s in thmD.sinks do
           let h := thmD.hyps[s]!
-          let htype ← withTransparency .instances <| reduce (skipTypes := false) h.type
+          let htype ← withTransparency .reducible <| reduce (skipTypes := false) h.type
           IO.println s!"Adding with idx {idx} hyp {← ppExpr htype}"
           let .mk res l1 l2 ← L.insert (← getLCtx) (← getLocalInstances) htype idx
             UInt32Array.empty (fun x => UInt32Array.single x.toUInt32) (fun x y => y.oInsert x.toUInt32)
@@ -75,7 +75,7 @@ def testSandbox_embedForwIncludeCoreS (thms : Array Name)  : Array Expr → Arra
       idx := 0
       IO.println s!"\nBuilding ltx"
       for T in guT do
-        let T ← withTransparency .instances <| reduce (skipTypes := false) T
+        let T ← withTransparency .reducible <| reduce (skipTypes := false) T
         IO.println s!"Adding with idx {idx} type {← ppExpr T}"
         let .mk res l1 l2 ← Q.insert (← getLCtx) (← getLocalInstances) T idx
           UInt32Array.empty (fun x => UInt32Array.single x.toUInt32) (fun x y => y.oInsert x.toUInt32)
@@ -108,7 +108,7 @@ def testSandbox_embedForwInterCoreS (thms : Array Name)  : Array Expr → Array 
         IO.println s!"\nLooking at {thmD.name}"
         for s in thmD.sinks do
           let h := thmD.hyps[s]!
-          let htype ← withTransparency .instances <| reduce (skipTypes := false) h.type
+          let htype ← withTransparency .reducible <| reduce (skipTypes := false) h.type
           IO.println s!"Adding with idx {idx} hyp {← ppExpr htype}"
           let .mk res l1 l2 ← L.insert (← getLCtx) (← getLocalInstances) htype idx
             UInt32Array.empty (fun x => UInt32Array.single x.toUInt32) (fun x y => y.oInsert x.toUInt32)
@@ -118,7 +118,7 @@ def testSandbox_embedForwInterCoreS (thms : Array Name)  : Array Expr → Array 
       idx := 0
       IO.println s!"\nBuilding ltx"
       for T in guT do
-        let T ← withTransparency .instances <| reduce (skipTypes := false) T
+        let T ← withTransparency .reducible <| reduce (skipTypes := false) T
         IO.println s!"Adding with idx {idx} type {← ppExpr T}"
         let .mk res l1 l2 ← Q.insert (← getLCtx) (← getLocalInstances) T idx
           UInt32Array.empty (fun x => UInt32Array.single x.toUInt32) (fun x y => y.oInsert x.toUInt32)
@@ -140,7 +140,7 @@ def testSandbox_embedForwInterCoreS (thms : Array Name)  : Array Expr → Array 
 def testSandbox_embedBackMainS (thms : Array Name)  : Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array DepCache → Array (FVarId × List FVarId) → MetaM Unit
   | guT, gu, tT, t, lT, l, wsT, ws, ewsT, ews, Ts, deps, wdeps =>
     inSandboxS thms <| fun thmData data => do
-      let que ← withTransparency .instances <| reduce (skipTypes := false) Ts[0]!
+      let que ← withTransparency .reducible <| reduce (skipTypes := false) Ts[0]!
       IO.println s!"Query : {← ppExpr que}"
       IO.println s!"Searching:\n{← data.stdBackPaIn.ppS (← getLCtx) (← getLocalInstances) [] 0}\n"
       let .mk status inds res _ _ ← PaInG.embedBackMainS (← getLCtx) (← getLocalInstances) thmData
@@ -170,7 +170,7 @@ unsafe def testLoad_embedForwIncludeCoreS (moduleNames : Array Name) : Array Exp
       let mut idx := 0
       out := out ++ s!"\nBuilding ltx"
       for T in guT do
-        let T ← withTransparency .instances <| reduce (skipTypes := false) T
+        let T ← withTransparency .reducible <| reduce (skipTypes := false) T
         out := out ++ s!"Adding with idx {idx} type {← ppExpr T}"
         let .mk res l1 l2 ← Q.insert (← getLCtx) (← getLocalInstances) T idx
           UInt32Array.empty (fun x => UInt32Array.single x.toUInt32) (fun x y => y.oInsert x.toUInt32)
@@ -201,8 +201,10 @@ unsafe def testLoad_embedForwInterCoreS (moduleNames : Array Name) : Array Expr 
       let mut Q := PaInG.dead
       let mut idx := 0
       out := out ++ s!"\nBuilding ltx"
+      let mctx ← getMCtx
       for T in guT do
-        let T ← withTransparency .instances <| reduce (skipTypes := false) T
+        let T ← withTransparency .reducible <| reduce (skipTypes := false) T
+        let mctx ← getMCtx
         out := out ++ s!"Adding with idx {idx} type {← ppExpr T}"
         let .mk res l1 l2 ← Q.insert (← getLCtx) (← getLocalInstances) T idx
           UInt32Array.empty (fun x => UInt32Array.single x.toUInt32) (fun x y => y.oInsert x.toUInt32)
@@ -230,7 +232,7 @@ unsafe def testLoad_embedBackMainS (moduleNames : Array Name)  : Array Expr → 
   | guT, gu, tT, t, lT, l, wsT, ws, ewsT, ews, Ts, deps, wdeps =>
     loadCacheDataS_forTest moduleNames <| fun data => do
       let mut out := ""
-      let que ← withTransparency .instances <| reduce (skipTypes := false) Ts[0]!
+      let que ← withTransparency .reducible <| reduce (skipTypes := false) Ts[0]!
       out := out ++  s!"Query : {← ppExpr que}"
       let .mk status inds res _ _ ← PaInG.embedBackMainS (← getLCtx) (← getLocalInstances) data.thmData
         (data.data.stdBackPaIn.getIndicesS) 2 [] que data.data.stdBackPaIn

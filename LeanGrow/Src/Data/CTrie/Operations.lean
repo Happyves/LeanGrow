@@ -15,6 +15,8 @@ set_option autoImplicit true
 
 namespace CTrie
 
+-- debug !!!
+#exit
 
 partial def find_max (T : CTrie Nat) : OptionProd ByteArray Nat :=
   let rec go (sofar : OptionProd ByteArray Nat) : ListProd ByteArray (CTrie Nat) → OptionProd ByteArray Nat
@@ -330,7 +332,11 @@ partial def foldOnCommon (init : β) (f : α → α → β → β) (todo : ListP
   | .cons l r ol or nx =>
   match l, r with
   | .leaf, _ | _, .leaf => foldOnCommon init f nx
-  | .fruit v,  .fruit u | .fruit v,  .fnode1 u .. | .fruit v,  .fnode u .. | .fnode1 v ..,  .fruit u | .fnode v ..,  .fruit u => foldOnCommon (f v u init) f nx
+  | .fruit v,  .fruit u | .fruit v,  .fnode u ..  | .fnode v ..,  .fruit u => foldOnCommon (f v u init) f nx
+  | .fruit v,  .fnode1 u .. =>
+    if or == 0 then foldOnCommon (f v u init) f nx else foldOnCommon init f nx
+  | .fnode1 v ..,  .fruit u =>
+    if ol == 0 then foldOnCommon (f v u init) f nx else foldOnCommon init f nx
   | .fruit .., _ | _, .fruit .. => foldOnCommon init f nx
   | .lnode1 ax cx, .lnode1 ay cy | .lnode1 ax cx, .fnode1 _ ay cy | .fnode1 _ ax cx, .lnode1 ay cy =>
       let com := ByteArray.getLongestMatch_wOffsets ax ay ol or
@@ -384,7 +390,8 @@ partial def foldOnCommon (init : β) (f : α → α → β → β) (todo : ListP
               foldOnCommon init f nx
   | .fnode1 v ax cx, .fnode w ay cy =>
       match ByteArray.matchSingle_wOffset ax ol ay with
-      | .none => foldOnCommon (f v w init) f nx
+      | .none =>
+        if ol == 0 then foldOnCommon (f v w init) f nx else foldOnCommon init f nx
       | .some idx =>
           let ay' := ay[idx]!
           let cy' := cy[idx]!
@@ -424,7 +431,8 @@ partial def foldOnCommon (init : β) (f : α → α → β → β) (todo : ListP
               foldOnCommon init f nx
   | .fnode v ax cx, .fnode1 w ay cy =>
       match ByteArray.matchSingle_wOffset ay or ax with
-      | .none => foldOnCommon (f v w init) f nx
+      | .none =>
+        if or == 0 then foldOnCommon (f v w init) f nx else foldOnCommon init f nx
       | .some idx =>
           let ax' := ax[idx]!
           let cx' := cx[idx]!
@@ -484,7 +492,6 @@ partial def foldOnCommon (init : β) (f : α → α → β → β) (todo : ListP
                 L
           ) nx
       foldOnCommon (f v w init) f gone
-
 
 
 @[inline]

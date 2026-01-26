@@ -383,4 +383,5 @@ elab "With" "context" cs:lg_test* "and" "objects" ts:term,* "run" metam:ident : 
           )
         Ts := Ts.push tterm
       let action ← evalConst ( Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array DepCache → Array (FVarId × List FVarId) → MetaM Unit) (metam.getId)
+      clearMvarAssignments
       action guT gu tT t lT l wsT ws ewsT ews Ts deps wdeps

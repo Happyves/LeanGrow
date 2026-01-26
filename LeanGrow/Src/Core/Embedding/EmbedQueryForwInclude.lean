@@ -399,13 +399,16 @@ partial def embedForwInterCore
             mtrace on .zero with s!"[embedForwIncludeCore] IS : {← traceHelp IS}"
             let IC : ListProd3 IndexColType IndexColType ((ListProd Nat Expr) × (ListProd Nat Level)) := ← do
               (CTrie.intersect_val_pairs' consts consts').foldlM IS (fun cs cs' R => do
+                mtrace on .zero with s!"[embedForwIncludeCore] intersection\ncs: {cs.toListOfProd.map (fun (x,y) => (repr x, y))}\ncs': {cs'.toListOfProd.map (fun (x,y) => (repr x, y))}"
                 merge3' R cs cs' (fun lv lv' => do
                   -- ugly but can't be bothered to get clean version
                   let mut Ls := .nil
                   for u in lv, u' in lv' do
+                    mtrace on .zero with s!"[embedForwIncludeCore] defeqing u {u} vs u' {u'}"
                     match ← defEqWiMv (.sort u) (.sort u') l1 l2 with
                     | .none => return .none
                     | .some (La,_) =>
+                        mtrace on .zero with s!"[embedForwIncludeCore] positive {La.toArray.map (fun (x,y) => (repr x, y))}"
                         for (lid,la) in La do
                           match lid.name with
                           | .num _ p => Ls := .cons p la Ls
