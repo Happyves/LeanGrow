@@ -844,10 +844,7 @@ partial def cleanUp (t : CTrie α) : CTrieZipU α → CTrie α
       match t with
       | .leaf => cleanUp (.fruit v) nx
       | .lnode1 c' k => cleanUp (.fnode1 v (c ++ c') k) nx
-      | _ =>
-        if c.isEmpty
-        then cleanUp t nx
-        else cleanUp (.fnode1 v c t) nx
+      | _ => cleanUp (.fnode1 v c t) nx
   | .lnode cs ts idx nx =>
       if idx == ts.size - 1
       then

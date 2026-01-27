@@ -285,10 +285,7 @@ partial def intersectImplUp (merge : α → α → α) (t : CTrie α)  : CTrieZi
       match t with
       | .leaf => intersectImplUp merge (.fruit v) nx
       | .lnode1 c' k => intersectImplUp merge (.fnode1 v (c ++ c') k) nx
-      | _ =>
-        if c.isEmpty
-        then intersectImplUp merge t nx
-        else intersectImplUp merge (.fnode1 v c t) nx
+      | _ => intersectImplUp merge (.fnode1 v c t) nx
   | .lnode cs todos ts idx nx =>
       if idx == ts.size - 1
       then
@@ -1459,10 +1456,7 @@ partial def differenceImplUp [BEq α] (t : CTrie α)  : CTrieZipD α → CTrie �
           match t with
           | .leaf => differenceImplUp (.fruit v) nx
           | .lnode1 c' k => differenceImplUp (.fnode1 v (c ++ c') k) nx
-          | _ =>
-            if c.isEmpty
-            then differenceImplUp t nx
-            else differenceImplUp (.fnode1 v c t) nx
+          | _ => differenceImplUp (.fnode1 v c t) nx
       | _ => panic! "[differenceImplUp] 1"
   | .multi T idx nx =>
       match T with
