@@ -836,12 +836,18 @@ partial def cleanUp (t : CTrie α) : CTrieZipU α → CTrie α
       match t with
       | .leaf => cleanUp t nx
       | .lnode1 c' k => cleanUp (.lnode1 (c ++ c') k) nx
-      | _ => cleanUp (.lnode1 c t) nx
+      | _ =>
+        if c.isEmpty
+        then cleanUp t nx
+        else cleanUp (.lnode1 c t) nx
   | .fnode1 v c nx =>
       match t with
       | .leaf => cleanUp (.fruit v) nx
       | .lnode1 c' k => cleanUp (.fnode1 v (c ++ c') k) nx
-      | _ => cleanUp (.fnode1 v c t) nx
+      | _ =>
+        if c.isEmpty
+        then cleanUp t nx
+        else cleanUp (.fnode1 v c t) nx
   | .lnode cs ts idx nx =>
       if idx == ts.size - 1
       then
@@ -893,6 +899,14 @@ def delete (t : CTrie α) (s : ByteArray)  : CTrie α :=
 def ofList : ListProd String α → CTrie α
   | .nil => CTrie.empty
   | .cons s v more => CTrie.insert (CTrie.ofList more) s.toUTF8 v
+
+def ofListMulti (merge : α → α → α) : ListProd String α → CTrie α
+  | .nil => CTrie.empty
+  | .cons s v more => CTrie.upsert s.toUTF8
+      (fun | .none => .some v | .some w => .some (merge w v))
+      (CTrie.ofListMulti merge more)
+
+
 
 def ofListKeys : List Name → CTrie Unit
   | .nil => CTrie.empty

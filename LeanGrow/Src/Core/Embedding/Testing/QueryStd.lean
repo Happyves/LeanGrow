@@ -46,8 +46,8 @@ def test_2 := testSandbox_embedBackMainS testSet_1
 
 unsafe def test_3_1 := testLoad_embedForwIncludeCoreS #[`Init.Data.List.Basic, `Init.Data.List.Lemmas]
 
-tracing_mode .std
-tracing_flags [(`PaInG.embedForwIncludeCore.go, TracingFlags.all)]
+-- tracing_mode .std
+-- tracing_flags [(`PaInG.embedForwIncludeCore.go, TracingFlags.all)]
 
 -- With context g(a : List Int) and objects run test_3_1
 -- nonsense test, as it queries l ⊆ Q, so testing with cache size l will never work
@@ -64,8 +64,8 @@ The return will not include all assignements requied by a forward step.
 unsafe def test_3_2 := testLoad_embedForwInterCoreS #[`Init.Data.List.Basic, `Init.Data.List.Lemmas]
 
 
-tracing_mode .std
-tracing_flags [(`PaInG.embedForwInterCore.go, TracingFlags.all)]
+-- tracing_mode .std
+-- tracing_flags [(`PaInG.embedForwInterCore.go, TracingFlags.all)]
 
 
 With context g(a : List Int) u(b : List Int : [1,2,3]) and objects run test_3_2

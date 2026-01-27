@@ -15,8 +15,7 @@ set_option autoImplicit true
 
 namespace CTrie
 
--- debug !!!
-#exit
+
 
 partial def find_max (T : CTrie Nat) : OptionProd ByteArray Nat :=
   let rec go (sofar : OptionProd ByteArray Nat) : ListProd ByteArray (CTrie Nat) → OptionProd ByteArray Nat
@@ -102,7 +101,9 @@ deriving Inhabited, Repr, BEq
 partial def intersectImplDown (merge : α → α → α) (done : CTrieZipI α) (l r : CTrie α) (ol or : Nat) : CTrieZipI α :=
   match l, r with
   | .leaf, _ | _, .leaf => (.leaf done)
-  | .fruit v,  .fruit u | .fruit v,  .fnode1 u .. | .fruit v,  .fnode u .. | .fnode1 v ..,  .fruit u | .fnode v ..,  .fruit u => (.fruit (merge v u) done)
+  | .fruit v,  .fruit u | .fruit v,  .fnode u .. | .fnode v ..,  .fruit u => (.fruit (merge v u) done)
+  | .fruit v,  .fnode1 u .. => if or == 0 then (.fruit (merge v u) done) else (.leaf done)
+  | .fnode1 v ..,  .fruit u => if ol == 0 then (.fruit (merge v u) done) else (.leaf done)
   | .fruit .., _ | _, .fruit .. => (.leaf done)
   | .lnode1 ax cx, .lnode1 ay cy | .lnode1 ax cx, .fnode1 _ ay cy | .fnode1 _ ax cx, .lnode1 ay cy =>
       let com := ByteArray.getLongestMatch_wOffsets ax ay ol or
@@ -133,7 +134,7 @@ partial def intersectImplDown (merge : α → α → α) (done : CTrieZipI α) (
         then
           intersectImplDown merge (.fnode1 (merge v w) (ay.drop or) done) l cy (ol + com) 0
         else
-          (.fruit (merge v w) done)
+          if or == 0 && ol == 0 then (.fruit (merge v w) done) else (.leaf done)
   | .lnode1 ax cx, .fnode _ ay cy | .fnode1 _ ax cx, .lnode ay cy | .lnode1 ax cx, .lnode ay cy =>
       match ByteArray.matchSingle_wOffset ax ol ay with
       | .none => (.leaf done)
@@ -147,7 +148,7 @@ partial def intersectImplDown (merge : α → α → α) (done : CTrieZipI α) (
             then
               intersectImplDown merge (.lnode1 (ax.drop ol) done) cx cy' 0 0
             else
-              intersectImplDown merge (.lnode1 (ax.drop ol) done) cx (.lnode1 ay' cy') 0 0
+              intersectImplDown merge (.lnode1 (ax.drop ol) done) cx (.lnode1 ay' cy') 0 com
           else
             if com == ay.size
             then
@@ -156,7 +157,7 @@ partial def intersectImplDown (merge : α → α → α) (done : CTrieZipI α) (
               (.leaf done)
   | .fnode1 v ax cx, .fnode w ay cy =>
       match ByteArray.matchSingle_wOffset ax ol ay with
-      | .none => (.fruit (merge v w) done)
+      | .none => if ol == 0 then (.fruit (merge v w) done) else (.leaf done)
       | .some idx =>
           let ay' := ay[idx]!
           let cy' := cy[idx]!
@@ -167,13 +168,13 @@ partial def intersectImplDown (merge : α → α → α) (done : CTrieZipI α) (
             then
               intersectImplDown merge (.fnode1 (merge v w) (ax.drop ol) done) cx cy' 0 0
             else
-              intersectImplDown merge (.fnode1 (merge v w) (ax.drop ol) done) cx (.lnode1 ay' cy') 0 0
+              intersectImplDown merge (.fnode1 (merge v w) (ax.drop ol) done) cx (.lnode1 ay' cy') 0 com
           else
             if com == ay.size
             then
               intersectImplDown merge (.fnode1 (merge v w) ay' done) l cy' (ol+com) 0
             else
-              (.fruit (merge v w) done)
+              if ol == 0 then (.fruit (merge v w) done) else (.leaf done)
   | .lnode ax cx, .fnode1 _ ay cy | .fnode _ ax cx, .lnode1 ay cy | .lnode ax cx, .lnode1 ay cy =>
       match ByteArray.matchSingle_wOffset ay or ax with
       | .none => (.leaf done)
@@ -196,7 +197,7 @@ partial def intersectImplDown (merge : α → α → α) (done : CTrieZipI α) (
               (.leaf done)
   | .fnode v ax cx, .fnode1 w ay cy =>
       match ByteArray.matchSingle_wOffset ay or ax with
-      | .none => (.fruit (merge v w) done)
+      | .none => if or == 0 then (.fruit (merge v w) done) else (.leaf done)
       | .some idx =>
           let ax' := ax[idx]!
           let cx' := cx[idx]!
@@ -213,7 +214,7 @@ partial def intersectImplDown (merge : α → α → α) (done : CTrieZipI α) (
             then
               intersectImplDown merge (.fnode1 (merge v w) (ay.drop or) done) (.lnode1 ax' cx') cy com 0
             else
-              (.fruit (merge v w) done)
+              if or == 0 then (.fruit (merge v w) done) else (.leaf done)
   | .lnode ax cx, .lnode ay cy | .fnode _ ax cx, .lnode ay cy | .lnode ax cx, .fnode _ ay cy =>
       let hits := (ByteArray.matchMulti ax ay)
       let gone : List ByteArray × List (Prod4 (CTrie α) (CTrie α) Nat Nat) := hits.foldl
@@ -265,6 +266,8 @@ partial def intersectImplDown (merge : α → α → α) (done : CTrieZipI α) (
       let here := todos[0]!
       intersectImplDown merge (.fnode (merge v w) cs todos ts 0 done) here.1 here.2 here.3 here.4
 
+
+
 @[specialize]
 partial def intersectImplUp (merge : α → α → α) (t : CTrie α)  : CTrieZipI α → CTrie α
   | .nil => t
@@ -274,12 +277,18 @@ partial def intersectImplUp (merge : α → α → α) (t : CTrie α)  : CTrieZi
       match t with
       | .leaf => intersectImplUp merge t nx
       | .lnode1 c' k => intersectImplUp merge (.lnode1 (c ++ c') k) nx
-      | _ => intersectImplUp merge (.lnode1 c t) nx
+      | _ =>
+        if c.isEmpty
+        then intersectImplUp merge t nx
+        else intersectImplUp merge (.lnode1 c t) nx
   | .fnode1 v c nx =>
       match t with
       | .leaf => intersectImplUp merge (.fruit v) nx
       | .lnode1 c' k => intersectImplUp merge (.fnode1 v (c ++ c') k) nx
-      | _ => intersectImplUp merge (.fnode1 v c t) nx
+      | _ =>
+        if c.isEmpty
+        then intersectImplUp merge t nx
+        else intersectImplUp merge (.fnode1 v c t) nx
   | .lnode cs todos ts idx nx =>
       if idx == ts.size - 1
       then
@@ -326,7 +335,8 @@ def intersect (merge : α → α → α) (l r : CTrie α) : CTrie α :=
 
 
 @[specialize]
-partial def foldOnCommon (init : β) (f : α → α → β → β) (todo : ListProd4 (CTrie α) (CTrie α) Nat Nat) : β :=
+partial def foldOnCommon
+  (init : β) (f : α → α → β → β) (todo : ListProd4 (CTrie α) (CTrie α) Nat Nat) : β :=
   match todo with
   | .nil => init
   | .cons l r ol or nx =>
@@ -359,15 +369,15 @@ partial def foldOnCommon (init : β) (f : α → α → β → β) (todo : ListP
       then
         if or + com == ay.size
         then
-          foldOnCommon (f v w init) f <| .cons cx cy 0 0 nx
+          foldOnCommon (if ol == 0 && or == 0 then f v w init else init) f <| .cons cx cy 0 0 nx
         else
-          foldOnCommon (f v w init) f <| .cons cx r 0 (or + com) nx
+          foldOnCommon (if ol == 0 && or == 0 then f v w init else init) f <| .cons cx r 0 (or + com) nx
       else
         if or + com == ay.size
         then
-          foldOnCommon (f v w init) f <| .cons l cy (ol + com) 0 nx
+          foldOnCommon (if ol == 0 && or == 0 then f v w init else init) f <| .cons l cy (ol + com) 0 nx
         else
-          foldOnCommon (f v w init) f nx
+          if ol == 0 && or == 0 then foldOnCommon (f v w init) f nx else foldOnCommon init f nx
   | .lnode1 ax cx, .fnode _ ay cy | .fnode1 _ ax cx, .lnode ay cy | .lnode1 ax cx, .lnode ay cy =>
       match ByteArray.matchSingle_wOffset ax ol ay with
       | .none => foldOnCommon init f nx
@@ -381,9 +391,9 @@ partial def foldOnCommon (init : β) (f : α → α → β → β) (todo : ListP
             then
               foldOnCommon init f <| .cons cx cy' 0 0 nx
             else
-              foldOnCommon init f <| .cons cx (.lnode1 ay' cy') 0 0 nx
+              foldOnCommon init f <| .cons cx (.lnode1 ay' cy') 0 com nx
           else
-            if com == ay.size
+            if com == ay'.size
             then
               foldOnCommon init f <| .cons l cy' (ol+com) 0 nx
             else
@@ -400,15 +410,15 @@ partial def foldOnCommon (init : β) (f : α → α → β → β) (todo : ListP
           then
             if com == ay'.size
             then
-              foldOnCommon (f v w init) f <| .cons cx cy' 0 0 nx
+              foldOnCommon (if ol == 0 then f v w init else init) f <| .cons cx cy' 0 0 nx
             else
-              foldOnCommon (f v w init) f <| .cons cx (.lnode1 ay' cy') 0 0 nx
+              foldOnCommon (if ol == 0 then f v w init else init) f <| .cons cx (.lnode1 ay' cy') 0 com nx
           else
-            if com == ay.size
+            if com == ay'.size
             then
-              foldOnCommon (f v w init) f <| .cons l cy' (ol+com) 0 nx
+              foldOnCommon (if ol == 0 then f v w init else init) f <| .cons l cy' (ol+com) 0 nx
             else
-              foldOnCommon (f v w init) f nx
+              if ol == 0 then foldOnCommon (f v w init) f nx else foldOnCommon init f nx
   | .lnode ax cx, .fnode1 _ ay cy | .fnode _ ax cx, .lnode1 ay cy | .lnode ax cx, .lnode1 ay cy =>
       match ByteArray.matchSingle_wOffset ay or ax with
       | .none => foldOnCommon init f nx
@@ -418,7 +428,7 @@ partial def foldOnCommon (init : β) (f : α → α → β → β) (todo : ListP
           let com := ByteArray.getLongestMatch_wOffsets ax' ay 0 or
           if com == ax'.size
           then
-            if ax'.size == ay.size
+            if or + com == ay.size
             then
               foldOnCommon init f <| .cons cx' cy 0 0 nx
             else
@@ -439,17 +449,17 @@ partial def foldOnCommon (init : β) (f : α → α → β → β) (todo : ListP
           let com := ByteArray.getLongestMatch_wOffsets ax' ay 0 or
           if com == ax'.size
           then
-            if ax'.size == ay.size
+            if or + com == ay.size
             then
-              foldOnCommon (f v w init) f <| .cons cx' cy 0 0 nx
+              foldOnCommon (if or == 0 then f v w init else init) f <| .cons cx' cy 0 0 nx
             else
-              foldOnCommon (f v w init) f <| .cons cx' r 0 (or + com) nx
+              foldOnCommon (if or == 0 then f v w init else init) f <| .cons cx' r 0 (or + com) nx
           else
             if or + com == ay.size
             then
-              foldOnCommon (f v w init) f <| .cons (.lnode1 ax' cx') cy com 0 nx
+              foldOnCommon (if or == 0 then f v w init else init) f <| .cons (.lnode1 ax' cx') cy com 0 nx
             else
-              foldOnCommon (f v w init) f nx
+              if or == 0 then foldOnCommon (f v w init) f nx else foldOnCommon init f nx
   | .lnode ax cx, .lnode ay cy | .fnode _ ax cx, .lnode ay cy | .lnode ax cx, .fnode _ ay cy =>
       let hits := (ByteArray.matchMulti ax ay)
       let gone : ListProd4 (CTrie α) (CTrie α) Nat Nat := hits.foldl
@@ -494,22 +504,203 @@ partial def foldOnCommon (init : β) (f : α → α → β → β) (todo : ListP
       foldOnCommon (f v w init) f gone
 
 
+
+@[specialize]
+partial def foldOnCommon_dbg
+  [Repr α] [Repr β]
+  (init : β) (f : α → α → β → β) (todo : ListProd4 (CTrie α) (CTrie α) Nat Nat) : β :=
+  match todo with
+  | .nil => init
+  | .cons l r ol or nx =>
+  dbg_trace s!"State:\ninit : {repr init}\nol or : {ol} {or}\nl : {repr l}\nr : {repr r}"
+  match l, r with
+  | .leaf, _ | _, .leaf => foldOnCommon_dbg init f nx
+  | .fruit v,  .fruit u | .fruit v,  .fnode u ..  | .fnode v ..,  .fruit u => foldOnCommon_dbg (f v u init) f nx
+  | .fruit v,  .fnode1 u .. =>
+    if or == 0 then foldOnCommon_dbg (f v u init) f nx else foldOnCommon_dbg init f nx
+  | .fnode1 v ..,  .fruit u =>
+    if ol == 0 then foldOnCommon_dbg (f v u init) f nx else foldOnCommon_dbg init f nx
+  | .fruit .., _ | _, .fruit .. => foldOnCommon_dbg init f nx
+  | .lnode1 ax cx, .lnode1 ay cy | .lnode1 ax cx, .fnode1 _ ay cy | .fnode1 _ ax cx, .lnode1 ay cy =>
+      let com := ByteArray.getLongestMatch_wOffsets ax ay ol or
+      if ol + com == ax.size
+      then
+        if or + com == ay.size
+        then
+          foldOnCommon_dbg init f (.cons cx cy 0 0 nx)
+        else
+          foldOnCommon_dbg init f (.cons cx r 0 (or + com) nx)
+      else
+        if or + com == ay.size
+        then
+          foldOnCommon_dbg init f <| .cons l cy (ol + com) 0 nx
+        else
+          foldOnCommon_dbg init f nx
+  | .fnode1 v ax cx, .fnode1 w ay cy =>
+      let com := ByteArray.getLongestMatch_wOffsets ax ay ol or
+      if ol + com == ax.size
+      then
+        if or + com == ay.size
+        then
+          foldOnCommon_dbg (if ol == 0 && or == 0 then f v w init else init) f <| .cons cx cy 0 0 nx
+        else
+          foldOnCommon_dbg (if ol == 0 && or == 0 then f v w init else init) f <| .cons cx r 0 (or + com) nx
+      else
+        if or + com == ay.size
+        then
+          foldOnCommon_dbg (if ol == 0 && or == 0 then f v w init else init) f <| .cons l cy (ol + com) 0 nx
+        else
+          if ol == 0 && or == 0 then foldOnCommon_dbg (f v w init) f nx else foldOnCommon_dbg init f nx
+  | .lnode1 ax cx, .fnode _ ay cy | .fnode1 _ ax cx, .lnode ay cy | .lnode1 ax cx, .lnode ay cy =>
+      match ByteArray.matchSingle_wOffset ax ol ay with
+      | .none => foldOnCommon_dbg init f nx
+      | .some idx =>
+          let ay' := ay[idx]!
+          let cy' := cy[idx]!
+          let com := ByteArray.getLongestMatch_wOffsets ax ay' ol 0
+          if ol + com == ax.size
+          then
+            if com == ay'.size
+            then
+              foldOnCommon_dbg init f <| .cons cx cy' 0 0 nx
+            else
+              foldOnCommon_dbg init f <| .cons cx (.lnode1 ay' cy') 0 com nx
+          else
+            if com == ay'.size
+            then
+              foldOnCommon_dbg init f <| .cons l cy' (ol+com) 0 nx
+            else
+              foldOnCommon_dbg init f nx
+  | .fnode1 v ax cx, .fnode w ay cy =>
+      match ByteArray.matchSingle_wOffset ax ol ay with
+      | .none =>
+        if ol == 0 then foldOnCommon_dbg (f v w init) f nx else foldOnCommon_dbg init f nx
+      | .some idx =>
+          let ay' := ay[idx]!
+          let cy' := cy[idx]!
+          let com := ByteArray.getLongestMatch_wOffsets ax ay' ol 0
+          if ol + com == ax.size
+          then
+            if com == ay'.size
+            then
+              foldOnCommon_dbg (if ol == 0 then f v w init else init) f <| .cons cx cy' 0 0 nx
+            else
+              foldOnCommon_dbg (if ol == 0 then f v w init else init) f <| .cons cx (.lnode1 ay' cy') 0 com nx
+          else
+            if com == ay'.size
+            then
+              foldOnCommon_dbg (if ol == 0 then f v w init else init) f <| .cons l cy' (ol+com) 0 nx
+            else
+              if ol == 0 then foldOnCommon_dbg (f v w init) f nx else foldOnCommon_dbg init f nx
+  | .lnode ax cx, .fnode1 _ ay cy | .fnode _ ax cx, .lnode1 ay cy | .lnode ax cx, .lnode1 ay cy =>
+      match ByteArray.matchSingle_wOffset ay or ax with
+      | .none => foldOnCommon_dbg init f nx
+      | .some idx =>
+          let ax' := ax[idx]!
+          let cx' := cx[idx]!
+          let com := ByteArray.getLongestMatch_wOffsets ax' ay 0 or
+          if com == ax'.size
+          then
+            if or + com == ay.size
+            then
+              foldOnCommon_dbg init f <| .cons cx' cy 0 0 nx
+            else
+              foldOnCommon_dbg init f <| .cons cx' r 0 (or + com) nx
+          else
+            if or + com == ay.size
+            then
+              foldOnCommon_dbg init f <| .cons (.lnode1 ax' cx') cy com 0 nx
+            else
+              foldOnCommon_dbg init f nx
+  | .fnode v ax cx, .fnode1 w ay cy =>
+      match ByteArray.matchSingle_wOffset ay or ax with
+      | .none =>
+        if or == 0 then foldOnCommon_dbg (f v w init) f nx else foldOnCommon_dbg init f nx
+      | .some idx =>
+          let ax' := ax[idx]!
+          let cx' := cx[idx]!
+          let com := ByteArray.getLongestMatch_wOffsets ax' ay 0 or
+          if com == ax'.size
+          then
+            if or + com == ay.size
+            then
+              foldOnCommon_dbg (if or == 0 then f v w init else init) f <| .cons cx' cy 0 0 nx
+            else
+              foldOnCommon_dbg (if or == 0 then f v w init else init) f <| .cons cx' r 0 (or + com) nx
+          else
+            if or + com == ay.size
+            then
+              foldOnCommon_dbg (if or == 0 then f v w init else init) f <| .cons (.lnode1 ax' cx') cy com 0 nx
+            else
+              if or == 0 then foldOnCommon_dbg (f v w init) f nx else foldOnCommon_dbg init f nx
+  | .lnode ax cx, .lnode ay cy | .fnode _ ax cx, .lnode ay cy | .lnode ax cx, .fnode _ ay cy =>
+      let hits := (ByteArray.matchMulti ax ay)
+      let gone : ListProd4 (CTrie α) (CTrie α) Nat Nat := hits.foldl
+        (fun L ⟨ai,bi,com⟩ =>
+          let A := ax[ai]!
+          let B := ay[bi]!
+            if com == A.size
+            then
+              if A.size == B.size
+              then
+                .cons (cx[ai]!) (cy[bi]!) 0 0 L
+              else
+                .cons (cx[ai]!) (.lnode1 B (cy[bi]!)) 0 com L
+            else
+              if com == B.size
+              then
+                .cons (.lnode1 A (cx[ai]!)) (cy[bi]!) com 0 L
+              else
+                L
+          ) nx
+      foldOnCommon_dbg init f gone
+  | .fnode v ax cx, .fnode w ay cy =>
+      let hits := (ByteArray.matchMulti ax ay)
+      let gone : ListProd4 (CTrie α) (CTrie α) Nat Nat := hits.foldl
+        (fun L ⟨ai,bi,com⟩ =>
+          let A := ax[ai]!
+          let B := ay[bi]!
+            if com == A.size
+            then
+              if A.size == B.size
+              then
+                .cons (cx[ai]!) (cy[bi]!) 0 0 L
+              else
+                .cons (cx[ai]!) (.lnode1 B (cy[bi]!)) 0 com L
+            else
+              if com == B.size
+              then
+                .cons (.lnode1 A (cx[ai]!)) (cy[bi]!) com 0 L
+              else
+                L
+          ) nx
+      foldOnCommon_dbg (f v w init) f gone
+
+
+-- #exit
+
 @[inline]
 def CountCommon  (l r : CTrie α) : Nat :=
   foldOnCommon 0 (fun _ _ n => n+1) (.cons l r 0 0 .nil)
 
 @[inline]
-def intersect_val (l r : CTrie α) : List α :=
+def intersect_val  (l r : CTrie α) : List α :=
   foldOnCommon [] (fun v _ L => v :: L) (.cons l r 0 0 .nil)
 
 @[inline]
-def intersect_val_pairs (l r : CTrie α) : List (α × α) :=
+def intersect_val_pairs  (l r : CTrie α) : List (α × α) :=
   foldOnCommon [] (fun v w L => (v,w) :: L) (.cons l r 0 0 .nil)
+
+@[inline]
+def intersect_val_pairs_dbg [Repr α] (l r : CTrie α) : ListProd α α :=
+  foldOnCommon_dbg .nil (fun v w L => .cons v w L) (.cons l r 0 0 .nil)
+
 
 @[inline]
 def intersect_val_pairs' (l r : CTrie α) : ListProd α α :=
   foldOnCommon .nil (fun v w L => .cons v w L) (.cons l r 0 0 .nil)
 
+-- #exit
 
 @[inline]
 def merge_count_initialise (t : CTrie α) : CTrie Nat :=
@@ -1048,8 +1239,10 @@ partial def differenceImplDown [BEq α] (done : CTrieZipD α) (l r : CTrie α) (
       (.atom l done)
   | .fruit v =>
       match r with
-      | .fruit u | .fnode1 u .. | .fnode u .. =>
+      | .fruit u | .fnode u .. =>
           if u == v then (.atom .leaf done) else (.atom l done)
+      | .fnode1 u .. =>
+          if or == 0 && u == v then (.atom .leaf done) else (.atom l done)
       | _ =>
           (.atom l done)
   | .lnode1 ax cx =>
@@ -1060,18 +1253,18 @@ partial def differenceImplDown [BEq α] (done : CTrieZipD α) (l r : CTrie α) (
           then
             if or + com == ay.size
             then
-              differenceImplDown (.single l done) cx cy 0 0
+              differenceImplDown (.single (.lnode1 (ax.drop ol) .leaf) done) cx cy 0 0
             else
-              differenceImplDown (.single l done) cx (.lnode1 ay cy) 0 (or + com)
+              differenceImplDown (.single (.lnode1 (ax.drop ol) .leaf) done) cx r 0 (or + com)
           else
             if or + com == ay.size
             then
-              differenceImplDown (.single r done) (.lnode1 ax cx) cy (ol + com) 0
+              differenceImplDown (.single (.lnode1 (ay.drop or) .leaf) done) l cy (ol + com) 0
             else
-              (.atom l done)
+              (.atom (.lnode1 (ax.drop ol) cx) done)
       | .lnode ay cy | .fnode _ ay cy =>
           match ByteArray.matchSingle_wOffset ax ol ay with
-          | .none => (.atom l done)
+          | .none => (.atom (.lnode1 (ax.drop ol) cx) done)
           | .some idx =>
               let ay' := ay[idx]!
               let cy' := cy[idx]!
@@ -1080,36 +1273,42 @@ partial def differenceImplDown [BEq α] (done : CTrieZipD α) (l r : CTrie α) (
               then
                 if com == ay'.size
                 then
-                  differenceImplDown (.single l done) cx cy' 0 0
+                  differenceImplDown (.single (.lnode1 (ax.drop ol) .leaf) done) cx cy' 0 0
                 else
-                  differenceImplDown (.single l done) cx (.lnode1 ay' cy') 0 com
+                  differenceImplDown (.single (.lnode1 (ax.drop ol) .leaf) done) cx r 0 com
               else
-                if or + com == ay.size
+                if com == ay'.size
                 then
-                  differenceImplDown (.single (.lnode1 ay' .leaf) done) (.lnode1 ax cx) cy' (ol + com) 0
+                  differenceImplDown (.single (.lnode1 ay' .leaf) done) l cy' (ol + com) 0
                 else
-                  (.atom l done)
+                  (.atom (.lnode1 (ax.drop ol) cx) done)
       | _ =>
-          (.atom l done)
+          (.atom (.lnode1 (ax.drop ol) cx) done)
   | .fnode1 v ax cx =>
-      let rec @[inline] S (ay : ByteArray) (cy : CTrie α) :=
+      let rec @[inline] S (ay : ByteArray) (cy : CTrie α) (e : Thunk Bool) :=
         let com := ByteArray.getLongestMatch_wOffsets ax ay ol or
         if ol + com == ax.size
         then
           if or + com == ay.size
           then
-            differenceImplDown (.single l done) cx cy 0 0
+            differenceImplDown
+              (.single (if ol == 0 && e.get then .fnode1 v (ax.drop ol) .leaf else .lnode1 (ax.drop ol) .leaf) done)
+              cx cy 0 0
           else
-            differenceImplDown (.single l done) cx (.lnode1 ay cy) 0 (or + com)
+            differenceImplDown
+              (.single (if ol == 0 && e.get then .fnode1 v (ax.drop ol) .leaf else .lnode1 (ax.drop ol) .leaf) done)
+              cx (.lnode1 ay cy) 0 (or + com)
         else
           if or + com == ay.size
           then
-            differenceImplDown (.single r done) (.lnode1 ax cx) cy (ol + com) 0
+            differenceImplDown
+              (.single (if ol == 0 && e.get then .fnode1 v (ay.drop or) .leaf else .lnode1 (ay.drop or) .leaf) done)
+              l cy (ol + com) 0
           else
-            (.atom l done)
-      let rec @[inline] M (ay : Array ByteArray) (cy : Array (CTrie α)):=
+            (.atom (if ol == 0 then l else .lnode1 (ax.drop ol) cx) done)
+      let rec @[inline] M (ay : Array ByteArray) (cy : Array (CTrie α)) (e : Thunk Bool) :=
         match ByteArray.matchSingle_wOffset ax ol ay with
-        | .none => (.atom l done)
+        | .none => (.atom (if ol == 0 then l else .lnode1 (ax.drop ol) cx) done)
         | .some idx =>
             let ay' := ay[idx]!
             let cy' := cy[idx]!
@@ -1118,65 +1317,30 @@ partial def differenceImplDown [BEq α] (done : CTrieZipD α) (l r : CTrie α) (
             then
               if com == ay'.size
               then
-                differenceImplDown (.single l done) cx cy' 0 0
+                differenceImplDown
+                  (.single (if ol == 0 && e.get then .fnode1 v (ax.drop ol) .leaf else .lnode1 (ax.drop ol) .leaf) done)
+                  cx cy' 0 0
               else
-                differenceImplDown (.single l done) cx (.lnode1 ay' cy') 0 com
+                differenceImplDown
+                  (.single (if ol == 0 && e.get then .fnode1 v (ax.drop ol) .leaf else .lnode1 (ax.drop ol) .leaf) done)
+                  cx (.lnode1 ay' cy') 0 com
             else
-              if or + com == ay.size
+              if com == ay'.size
               then
-                differenceImplDown (.single (.lnode1 ay' .leaf) done) (.lnode1 ax cx) cy' (ol + com) 0
+                differenceImplDown
+                  (.single ((if ol == 0 && e.get then .fnode1 v ay' .leaf else .lnode1 ay' .leaf)) done)
+                  l cy' (ol + com) 0
               else
-                (.atom l done)
+                (.atom (if ol == 0 then l else .lnode1 (ax.drop ol) cx) done)
       match r with
-      | .lnode1 ay cy => S ay cy
-      | .fnode1 u ay cy =>
-          if v == u
-          then
-            let com := ByteArray.getLongestMatch_wOffsets ax ay ol or
-            if ol + com == ax.size
-            then
-              if or + com == ay.size
-              then
-                differenceImplDown (.single (.lnode1 ax .leaf) done) cx cy 0 0
-              else
-                differenceImplDown (.single (.lnode1 ax .leaf) done) cx (.lnode1 ay cy) 0 (or + com)
-            else
-              if or + com == ay.size
-              then
-                differenceImplDown (.single (.lnode1 ay .leaf) done) (.lnode1 ax cx) cy (ol + com) 0
-              else
-                (.atom l done)
-          else
-            S ay cy
-      | .lnode ay cy => M ay cy
-      | .fnode u ay cy =>
-          if v == u
-          then
-            match ByteArray.matchSingle_wOffset ax ol ay with
-            | .none => (.atom l done)
-            | .some idx =>
-                let ay' := ay[idx]!
-                let cy' := cy[idx]!
-                let com := ByteArray.getLongestMatch_wOffsets ax ay' ol or
-                if ol + com == ax.size
-                then
-                  if com == ay'.size
-                  then
-                    differenceImplDown (.single (.lnode1 ax .leaf) done) cx cy' 0 0
-                  else
-                    differenceImplDown (.single (.lnode1 ax .leaf) done) cx (.lnode1 ay' cy') 0 com
-                else
-                  if or + com == ay.size
-                  then
-                    differenceImplDown (.single (.lnode1 ay' .leaf) done) (.lnode1 ax cx) cy' (ol + com) 0
-                  else
-                    (.atom l done)
-          else
-            M ay cy
+      | .lnode1 ay cy => S ay cy (.mk (fun _ => true))
+      | .fnode1 u ay cy => S ay cy (.mk (fun _ => u != v && or == 0))
+      | .lnode ay cy => M ay cy (.mk (fun _ => true))
+      | .fnode u ay cy => M ay cy (.mk (fun _ => u != v))
       | .leaf =>
-          (.atom l done)
+          (.atom (if ol == 0 then l else .lnode1 (ax.drop ol) cx) done)
       | .fruit u =>
-          if v == u then (.atom (.lnode1 ax cx) done)  else (.atom l done)
+          if ol == 0 then (if v == u then .atom (.lnode1 ax cx) done else .atom l done) else (.atom (.lnode1 (ax.drop ol) cx) done)
   | .lnode ax cx =>
       match r with
       | .lnode1 ay cy | .fnode1 _ ay cy =>
@@ -1185,7 +1349,7 @@ partial def differenceImplDown [BEq α] (done : CTrieZipD α) (l r : CTrie α) (
           | .some idx =>
                 let ax' := ax[idx]!
                 let cx' := cx[idx]!
-                let com := ByteArray.getLongestMatch_wOffsets ax' ay ol or
+                let com := ByteArray.getLongestMatch_wOffsets ax' ay 0 or
                 if com == ax'.size
                 then
                   if or + com == ay.size
@@ -1214,7 +1378,7 @@ partial def differenceImplDown [BEq α] (done : CTrieZipD α) (l r : CTrie α) (
         | .some idx =>
               let ax' := ax[idx]!
               let cx' := cx[idx]!
-              let com := ByteArray.getLongestMatch_wOffsets ax' ay ol or
+              let com := ByteArray.getLongestMatch_wOffsets ax' ay 0 or
               if com == ax'.size
               then
                 if or + com == ay.size
@@ -1237,14 +1401,14 @@ partial def differenceImplDown [BEq α] (done : CTrieZipD α) (l r : CTrie α) (
       match r with
       | .lnode1 ay cy => mS ay cy
       | .fnode1 u ay cy =>
-          if v == u
+          if v == u && or == 0
           then
             match ByteArray.matchSingle_wOffset ay or ax with
             | .none => (.atom (.lnode ax cx) done)
             | .some idx =>
                   let ax' := ax[idx]!
                   let cx' := cx[idx]!
-                  let com := ByteArray.getLongestMatch_wOffsets ax' ay ol or
+                  let com := ByteArray.getLongestMatch_wOffsets ax' ay 0 or
                   if com == ax'.size
                   then
                     if or + com == ay.size
@@ -1276,6 +1440,8 @@ partial def differenceImplDown [BEq α] (done : CTrieZipD α) (l r : CTrie α) (
       | .fruit u =>
           if v == u then (.atom (.lnode ax cx) done) else (.atom l done)
 
+
+
 partial def differenceImplUp [BEq α] (t : CTrie α)  : CTrieZipD α → CTrie α
   | .nil => t
   | .atom t nx => differenceImplUp t nx
@@ -1285,12 +1451,18 @@ partial def differenceImplUp [BEq α] (t : CTrie α)  : CTrieZipD α → CTrie �
           match t with
           | .leaf => differenceImplUp t nx
           | .lnode1 c' k => differenceImplUp (.lnode1 (c ++ c') k) nx
-          | _ => differenceImplUp (.lnode1 c t) nx
+          | _ =>
+            if c.isEmpty
+            then differenceImplUp t nx
+            else differenceImplUp (.lnode1 c t) nx
       | .fnode1 v c _ =>
           match t with
           | .leaf => differenceImplUp (.fruit v) nx
           | .lnode1 c' k => differenceImplUp (.fnode1 v (c ++ c') k) nx
-          | _ => differenceImplUp (.fnode1 v c t) nx
+          | _ =>
+            if c.isEmpty
+            then differenceImplUp t nx
+            else differenceImplUp (.fnode1 v c t) nx
       | _ => panic! "[differenceImplUp] 1"
   | .multi T idx nx =>
       match T with

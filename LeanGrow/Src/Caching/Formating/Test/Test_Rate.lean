@@ -161,3 +161,8 @@ theorem test_badUni_3 (P : Nat → Prop) (h1 : P 42) (h2: ¬ P 42) : [1].Pairwis
 
 
 #check 1
+
+-- To test:
+#check Classical.byCases
+#check Classical.byContradiction
+
