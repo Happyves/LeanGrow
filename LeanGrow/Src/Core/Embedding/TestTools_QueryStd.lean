@@ -162,10 +162,6 @@ unsafe def testLoad_embedForwIncludeCoreS (moduleNames : Array Name) : Array Exp
   | guT, gu, tT, t, lT, l, wsT, ws, ewsT, ews, Ts, deps, wdeps =>
     loadCacheDataS_forTest moduleNames <| fun data => do
       let mut out := ""
-      let L :=
-        match data.data.stdForwSetTrie with
-        | .root P _ => P
-        | _ => panic! "bad settrie"
       let mut Q := PaInG.dead
       let mut idx := 0
       out := out ++ s!"\nBuilding ltx"
@@ -176,19 +172,32 @@ unsafe def testLoad_embedForwIncludeCoreS (moduleNames : Array Name) : Array Exp
           UInt32Array.empty (fun x => UInt32Array.single x.toUInt32) (fun x y => y.oInsert x.toUInt32)
         Q := res
         idx := idx + 1
-      let res ← PaInG.embedForwIncludeCoreS data.thmData (← getLCtx) (← getLocalInstances) Q L
-      for (i1,i2,i3,i4) in res.toListOfProd do
-        out := out ++ s!"\nMatch (ltx) {i1} (hyps) {i2} with:\nLevels"
-        for (p,l) in i4.toListOfProd do
-          out := out ++ s!"\npos {p} : {l}"
-        out := out ++ s!"\nHyps"
-        for (p,e) in i3.toListOfProd do
-          out := out ++ s!"\npos {p} : {← ppExpr e}"
-      out := out ++ s!"\n\nSearched in L:\n{← L.ppS (← getLCtx) (← getLocalInstances) [] 0}"
+      for thm in data.thmData.toList.foldl #[] (fun _ x y => x ++ y) do
+        let mut L := PaInG.dead
+        idx := 0
+        for s in thm.sinks do
+          let .mk res l1 l2 ← L.insert (← getLCtx) (← getLocalInstances) (thm.hyps[s]!.type) idx
+            UInt32Array.empty (fun x => UInt32Array.single x.toUInt32) (fun x y => y.oInsert x.toUInt32)
+          L := res
+          idx := idx + 1
+        let res ← PaInG.embedForwIncludeCoreS data.thmData (← getLCtx) (← getLocalInstances) Q L
+        match res with
+        | .nil => continue
+        | _ =>
+          out := out ++ s!"\n\nThm: {thm.name}"
+          for (i1,i2,i3,i4) in res.toListOfProd do
+            out := out ++ s!"\nMatch (ltx) {i1} (hyps) {i2} with:\nLevels"
+            for (p,l) in i4.toListOfProd do
+              out := out ++ s!"\npos {p} : {l}"
+            out := out ++ s!"\nHyps"
+            for (p,e) in i3.toListOfProd do
+              out := out ++ s!"\npos {p} : {← ppExpr e}"
+          out := out ++ s!"\n\nSearched in L:\n{← L.ppS (← getLCtx) (← getLocalInstances) [] 0}"
       return out
 
 
 #check 1
+
 
 unsafe def testLoad_embedForwInterCoreS (moduleNames : Array Name) : Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array DepCache → Array (FVarId × List FVarId) → MetaM Unit
   | guT, gu, tT, t, lT, l, wsT, ws, ewsT, ews, Ts, deps, wdeps =>

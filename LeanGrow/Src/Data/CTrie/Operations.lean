@@ -126,13 +126,19 @@ partial def intersectImplDown (merge : α → α → α) (done : CTrieZipI α) (
       then
         if or + com == ay.size
         then
-          intersectImplDown merge (.fnode1 (merge v w) (ay.drop or) done) cx cy 0 0
+          intersectImplDown merge
+            (if or == 0 && ol == 0 then .fnode1 (merge v w) (ay.drop or) done else .lnode1 (ay.drop or) done)
+            cx cy 0 0
         else
-          intersectImplDown merge (.fnode1 (merge v w) (ax.drop ol) done) cx r 0 (or + com)
+          intersectImplDown merge
+            (if or == 0 && ol == 0 then .fnode1 (merge v w) (ax.drop ol) done else .lnode1 (ax.drop ol) done)
+            cx r 0 (or + com)
       else
         if or + com == ay.size
         then
-          intersectImplDown merge (.fnode1 (merge v w) (ay.drop or) done) l cy (ol + com) 0
+          intersectImplDown merge
+            (if or == 0 && ol == 0 then .fnode1 (merge v w) (ay.drop or) done else .lnode1 (ay.drop or) done)
+            l cy (ol + com) 0
         else
           if or == 0 && ol == 0 then (.fruit (merge v w) done) else (.leaf done)
   | .lnode1 ax cx, .fnode _ ay cy | .fnode1 _ ax cx, .lnode ay cy | .lnode1 ax cx, .lnode ay cy =>
@@ -166,13 +172,18 @@ partial def intersectImplDown (merge : α → α → α) (done : CTrieZipI α) (
           then
             if com == ay'.size
             then
-              intersectImplDown merge (.fnode1 (merge v w) (ax.drop ol) done) cx cy' 0 0
+              intersectImplDown merge
+                (if ol == 0 then .fnode1 (merge v w) (ax.drop ol) done else .lnode1 (ax.drop ol) done)
+                cx cy' 0 0
             else
-              intersectImplDown merge (.fnode1 (merge v w) (ax.drop ol) done) cx (.lnode1 ay' cy') 0 com
+              intersectImplDown merge
+                (if ol == 0 then .fnode1 (merge v w) (ax.drop ol) done else .lnode1 (ax.drop ol) done)
+                cx (.lnode1 ay' cy') 0 com
           else
             if com == ay.size
             then
-              intersectImplDown merge (.fnode1 (merge v w) ay' done) l cy' (ol+com) 0
+              intersectImplDown merge
+                (if ol == 0 then .fnode1 (merge v w) ay' done else .lnode1 ay' done) l cy' (ol+com) 0
             else
               if ol == 0 then (.fruit (merge v w) done) else (.leaf done)
   | .lnode ax cx, .fnode1 _ ay cy | .fnode _ ax cx, .lnode1 ay cy | .lnode ax cx, .lnode1 ay cy =>
@@ -206,13 +217,19 @@ partial def intersectImplDown (merge : α → α → α) (done : CTrieZipI α) (
           then
             if ax'.size == ay.size
             then
-              intersectImplDown merge (.fnode1 (merge v w) ax' done) cx' cy 0 0
+              intersectImplDown merge
+                (if or == 0 then .fnode1 (merge v w) ax' done else .lnode1 ax' done)
+                cx' cy 0 0
             else
-              intersectImplDown merge (.fnode1 (merge v w) ax' done) cx' r 0 (or + com)
+              intersectImplDown merge
+                (if or == 0 then .fnode1 (merge v w) ax' done else .lnode1  ax' done)
+                cx' r 0 (or + com)
           else
             if or + com == ay.size
             then
-              intersectImplDown merge (.fnode1 (merge v w) (ay.drop or) done) (.lnode1 ax' cx') cy com 0
+              intersectImplDown merge
+                (if or == 0 then .fnode1 (merge v w) (ay.drop or) done else .lnode1 (ay.drop or) done)
+                (.lnode1 ax' cx') cy com 0
             else
               if or == 0 then (.fruit (merge v w) done) else (.leaf done)
   | .lnode ax cx, .lnode ay cy | .fnode _ ax cx, .lnode ay cy | .lnode ax cx, .fnode _ ay cy =>
@@ -502,177 +519,6 @@ partial def foldOnCommon
 
 
 
-@[specialize]
-partial def foldOnCommon_dbg
-  [Repr α] [Repr β]
-  (init : β) (f : α → α → β → β) (todo : ListProd4 (CTrie α) (CTrie α) Nat Nat) : β :=
-  match todo with
-  | .nil => init
-  | .cons l r ol or nx =>
-  dbg_trace s!"State:\ninit : {repr init}\nol or : {ol} {or}\nl : {repr l}\nr : {repr r}"
-  match l, r with
-  | .leaf, _ | _, .leaf => foldOnCommon_dbg init f nx
-  | .fruit v,  .fruit u | .fruit v,  .fnode u ..  | .fnode v ..,  .fruit u => foldOnCommon_dbg (f v u init) f nx
-  | .fruit v,  .fnode1 u .. =>
-    if or == 0 then foldOnCommon_dbg (f v u init) f nx else foldOnCommon_dbg init f nx
-  | .fnode1 v ..,  .fruit u =>
-    if ol == 0 then foldOnCommon_dbg (f v u init) f nx else foldOnCommon_dbg init f nx
-  | .fruit .., _ | _, .fruit .. => foldOnCommon_dbg init f nx
-  | .lnode1 ax cx, .lnode1 ay cy | .lnode1 ax cx, .fnode1 _ ay cy | .fnode1 _ ax cx, .lnode1 ay cy =>
-      let com := ByteArray.getLongestMatch_wOffsets ax ay ol or
-      if ol + com == ax.size
-      then
-        if or + com == ay.size
-        then
-          foldOnCommon_dbg init f (.cons cx cy 0 0 nx)
-        else
-          foldOnCommon_dbg init f (.cons cx r 0 (or + com) nx)
-      else
-        if or + com == ay.size
-        then
-          foldOnCommon_dbg init f <| .cons l cy (ol + com) 0 nx
-        else
-          foldOnCommon_dbg init f nx
-  | .fnode1 v ax cx, .fnode1 w ay cy =>
-      let com := ByteArray.getLongestMatch_wOffsets ax ay ol or
-      if ol + com == ax.size
-      then
-        if or + com == ay.size
-        then
-          foldOnCommon_dbg (if ol == 0 && or == 0 then f v w init else init) f <| .cons cx cy 0 0 nx
-        else
-          foldOnCommon_dbg (if ol == 0 && or == 0 then f v w init else init) f <| .cons cx r 0 (or + com) nx
-      else
-        if or + com == ay.size
-        then
-          foldOnCommon_dbg (if ol == 0 && or == 0 then f v w init else init) f <| .cons l cy (ol + com) 0 nx
-        else
-          if ol == 0 && or == 0 then foldOnCommon_dbg (f v w init) f nx else foldOnCommon_dbg init f nx
-  | .lnode1 ax cx, .fnode _ ay cy | .fnode1 _ ax cx, .lnode ay cy | .lnode1 ax cx, .lnode ay cy =>
-      match ByteArray.matchSingle_wOffset ax ol ay with
-      | .none => foldOnCommon_dbg init f nx
-      | .some idx =>
-          let ay' := ay[idx]!
-          let cy' := cy[idx]!
-          let com := ByteArray.getLongestMatch_wOffsets ax ay' ol 0
-          if ol + com == ax.size
-          then
-            if com == ay'.size
-            then
-              foldOnCommon_dbg init f <| .cons cx cy' 0 0 nx
-            else
-              foldOnCommon_dbg init f <| .cons cx (.lnode1 ay' cy') 0 com nx
-          else
-            if com == ay'.size
-            then
-              foldOnCommon_dbg init f <| .cons l cy' (ol+com) 0 nx
-            else
-              foldOnCommon_dbg init f nx
-  | .fnode1 v ax cx, .fnode w ay cy =>
-      match ByteArray.matchSingle_wOffset ax ol ay with
-      | .none =>
-        if ol == 0 then foldOnCommon_dbg (f v w init) f nx else foldOnCommon_dbg init f nx
-      | .some idx =>
-          let ay' := ay[idx]!
-          let cy' := cy[idx]!
-          let com := ByteArray.getLongestMatch_wOffsets ax ay' ol 0
-          if ol + com == ax.size
-          then
-            if com == ay'.size
-            then
-              foldOnCommon_dbg (if ol == 0 then f v w init else init) f <| .cons cx cy' 0 0 nx
-            else
-              foldOnCommon_dbg (if ol == 0 then f v w init else init) f <| .cons cx (.lnode1 ay' cy') 0 com nx
-          else
-            if com == ay'.size
-            then
-              foldOnCommon_dbg (if ol == 0 then f v w init else init) f <| .cons l cy' (ol+com) 0 nx
-            else
-              if ol == 0 then foldOnCommon_dbg (f v w init) f nx else foldOnCommon_dbg init f nx
-  | .lnode ax cx, .fnode1 _ ay cy | .fnode _ ax cx, .lnode1 ay cy | .lnode ax cx, .lnode1 ay cy =>
-      match ByteArray.matchSingle_wOffset ay or ax with
-      | .none => foldOnCommon_dbg init f nx
-      | .some idx =>
-          let ax' := ax[idx]!
-          let cx' := cx[idx]!
-          let com := ByteArray.getLongestMatch_wOffsets ax' ay 0 or
-          if com == ax'.size
-          then
-            if or + com == ay.size
-            then
-              foldOnCommon_dbg init f <| .cons cx' cy 0 0 nx
-            else
-              foldOnCommon_dbg init f <| .cons cx' r 0 (or + com) nx
-          else
-            if or + com == ay.size
-            then
-              foldOnCommon_dbg init f <| .cons (.lnode1 ax' cx') cy com 0 nx
-            else
-              foldOnCommon_dbg init f nx
-  | .fnode v ax cx, .fnode1 w ay cy =>
-      match ByteArray.matchSingle_wOffset ay or ax with
-      | .none =>
-        if or == 0 then foldOnCommon_dbg (f v w init) f nx else foldOnCommon_dbg init f nx
-      | .some idx =>
-          let ax' := ax[idx]!
-          let cx' := cx[idx]!
-          let com := ByteArray.getLongestMatch_wOffsets ax' ay 0 or
-          if com == ax'.size
-          then
-            if or + com == ay.size
-            then
-              foldOnCommon_dbg (if or == 0 then f v w init else init) f <| .cons cx' cy 0 0 nx
-            else
-              foldOnCommon_dbg (if or == 0 then f v w init else init) f <| .cons cx' r 0 (or + com) nx
-          else
-            if or + com == ay.size
-            then
-              foldOnCommon_dbg (if or == 0 then f v w init else init) f <| .cons (.lnode1 ax' cx') cy com 0 nx
-            else
-              if or == 0 then foldOnCommon_dbg (f v w init) f nx else foldOnCommon_dbg init f nx
-  | .lnode ax cx, .lnode ay cy | .fnode _ ax cx, .lnode ay cy | .lnode ax cx, .fnode _ ay cy =>
-      let hits := (ByteArray.matchMulti ax ay)
-      let gone : ListProd4 (CTrie α) (CTrie α) Nat Nat := hits.foldl
-        (fun L ⟨ai,bi,com⟩ =>
-          let A := ax[ai]!
-          let B := ay[bi]!
-            if com == A.size
-            then
-              if A.size == B.size
-              then
-                .cons (cx[ai]!) (cy[bi]!) 0 0 L
-              else
-                .cons (cx[ai]!) (.lnode1 B (cy[bi]!)) 0 com L
-            else
-              if com == B.size
-              then
-                .cons (.lnode1 A (cx[ai]!)) (cy[bi]!) com 0 L
-              else
-                L
-          ) nx
-      foldOnCommon_dbg init f gone
-  | .fnode v ax cx, .fnode w ay cy =>
-      let hits := (ByteArray.matchMulti ax ay)
-      let gone : ListProd4 (CTrie α) (CTrie α) Nat Nat := hits.foldl
-        (fun L ⟨ai,bi,com⟩ =>
-          let A := ax[ai]!
-          let B := ay[bi]!
-            if com == A.size
-            then
-              if A.size == B.size
-              then
-                .cons (cx[ai]!) (cy[bi]!) 0 0 L
-              else
-                .cons (cx[ai]!) (.lnode1 B (cy[bi]!)) 0 com L
-            else
-              if com == B.size
-              then
-                .cons (.lnode1 A (cx[ai]!)) (cy[bi]!) com 0 L
-              else
-                L
-          ) nx
-      foldOnCommon_dbg (f v w init) f gone
-
 
 -- #exit
 
@@ -688,9 +534,6 @@ def intersect_val  (l r : CTrie α) : List α :=
 def intersect_val_pairs  (l r : CTrie α) : List (α × α) :=
   foldOnCommon [] (fun v w L => (v,w) :: L) (.cons l r 0 0 .nil)
 
-@[inline]
-def intersect_val_pairs_dbg [Repr α] (l r : CTrie α) : ListProd α α :=
-  foldOnCommon_dbg .nil (fun v w L => .cons v w L) (.cons l r 0 0 .nil)
 
 
 @[inline]
@@ -771,14 +614,22 @@ partial def mergeImplMultiInit  (L R : Array ByteArray) (TL TR : Array (CTrie α
       else
         .done doneB doneT
 
+-- #exit
 
 @[specialize]
 partial def mergeImplDown
   [Monad m]  (merge : α → α → m α) (done : CTrieZipMe α) (l r : CTrie α) (ol or : Nat) : m (CTrieZipMe α) :=
   match l, r with
-  | .fruit v,  .fruit u => do return (.atom (.fruit (← merge v u)) done)
-  | .fruit v,  .fnode1 u c t => do return (.atom (.fnode1 (← merge v u) (c.drop or) t) done)
-  | .fnode1 v c t,  .fruit u => do return (.atom (.fnode1 (← merge v u) (c.drop ol) t) done)
+  | .fruit v,  .fruit u => do
+    return (.atom (.fruit (← merge v u)) done)
+  | .fruit v,  .fnode1 u c t => do
+    if or == 0
+    then return (.atom (.fnode1 (← merge v u) c t) done)
+    else return (.atom (.fnode1 v (c.drop or) t) done)
+  | .fnode1 v c t,  .fruit u => do
+    if ol == 0
+    then return (.atom (.fnode1 (← merge v u) c t) done)
+    else return (.atom (.fnode1 v (c.drop ol) t) done)
   | .fruit v,  .fnode u c t => do return (.atom (.fnode (← merge v u) c t) done)
   | .fnode v c t,  .fruit u => do return (.atom (.fnode (← merge v u) c t) done)
   | .fruit v,  .lnode1 c t => return (.atom (.fnode1 v (c.drop or) t) done)
@@ -813,26 +664,36 @@ partial def mergeImplDown
           if ax.get! (ol + com) < ay.get! (or + com)
           then
             --dbg_trace s!"A join {join}"
-            return .atom ((.lnode1 join (.lnode #[ax',ay'] #[cx,cy]))) done
+            if join.isEmpty
+            then return .atom ((.lnode #[ax',ay'] #[cx,cy])) done
+            else return .atom ((.lnode1 join (.lnode #[ax',ay'] #[cx,cy]))) done
           else
             --dbg_trace s!"A join {join}"
-            return .atom (.lnode1 join (.lnode #[ay',ax'] #[cy,cx])) done
-  | .lnode1 ax cx, .fnode1 v ay cy | .fnode1 v ax cx, .lnode1 ay cy =>
+            if join.isEmpty
+            then return .atom (.lnode #[ay',ax'] #[cy,cx]) done
+            else return .atom (.lnode1 join (.lnode #[ay',ax'] #[cy,cx])) done
+  | .lnode1 ax cx, .fnode1 v ay cy =>
       let com := ByteArray.getLongestMatch_wOffsets ax ay ol or
       if ol + com == ax.size
       then
         if or + com == ay.size
         then
           --dbg_trace s!"sin {(ax.drop ol)}"
-          mergeImplDown merge (.single (.fnode1 v (ax.drop ol) .leaf) done) cx cy 0 0
+          mergeImplDown merge
+            (.single (if or == 0 then .fnode1 v (ax.drop ol) .leaf else .lnode1 (ax.drop ol) .leaf) done)
+            cx cy 0 0
         else
           --dbg_trace s!"sin {(ax.drop ol)}"
-          mergeImplDown merge (.single (.fnode1 v (ax.drop ol) .leaf) done) cx (.lnode1 ay cy) 0 (or + com)
+          mergeImplDown merge
+            (.single (if or == 0 then .fnode1 v (ax.drop ol) .leaf else .lnode1 (ax.drop ol) .leaf) done)
+            cx (.lnode1 ay cy) 0 (or + com)
       else
         if or + com == ay.size
         then
           --dbg_trace s!"sin {(ay.drop or)}"
-          mergeImplDown merge (.single (.fnode1 v (ay.drop or) .leaf) done) (.lnode1 ax cx) cy (ol + com) 0
+          mergeImplDown merge
+            (.single (if or == 0 then .fnode1 v (ay.drop or) .leaf else .lnode1 (ay.drop or) .leaf) done)
+            (.lnode1 ax cx) cy (ol + com) 0
         else
           let join := (ax.drop ol).take (com)
           let ax' := ax.drop (ol + com)
@@ -840,10 +701,51 @@ partial def mergeImplDown
           if ax.get! (ol + com) < ay.get! (or + com)
           then
             --dbg_trace s!"A join {join}"
-            return .atom (.fnode1 v join (.lnode #[ax',ay'] #[cx,cy])) done
+            if join.isEmpty
+            then return .atom (if or == 0 then .fnode v #[ax',ay'] #[cx,cy] else .lnode #[ax',ay'] #[cx,cy]) done
+            else return .atom (if or == 0 then .fnode1 v join (.lnode #[ax',ay'] #[cx,cy]) else .lnode1 join (.lnode #[ax',ay'] #[cx,cy])) done
           else
             --dbg_trace s!"A join {join}"
-            return .atom (.fnode1 v join (.lnode #[ay',ax'] #[cy,cx])) done
+            if join.isEmpty
+            then return .atom (if or == 0 then .fnode v #[ay',ax'] #[cy,cx] else .lnode #[ay',ax'] #[cy,cx]) done
+            else return .atom (if or == 0 then .fnode1 v join (.lnode #[ay',ax'] #[cy,cx]) else .lnode1 join (.lnode #[ay',ax'] #[cy,cx])) done
+  | .fnode1 v ax cx, .lnode1 ay cy =>
+      let com := ByteArray.getLongestMatch_wOffsets ax ay ol or
+      if ol + com == ax.size
+      then
+        if or + com == ay.size
+        then
+          --dbg_trace s!"sin {(ax.drop ol)}"
+          mergeImplDown merge
+            (.single (if ol == 0 then .fnode1 v (ax.drop ol) .leaf else .lnode1 (ax.drop ol) .leaf) done)
+            cx cy 0 0
+        else
+          --dbg_trace s!"sin {(ax.drop ol)}"
+          mergeImplDown merge
+            (.single (if ol == 0 then .fnode1 v (ax.drop ol) .leaf else .lnode1 (ax.drop ol) .leaf) done)
+            cx (.lnode1 ay cy) 0 (or + com)
+      else
+        if or + com == ay.size
+        then
+          --dbg_trace s!"sin {(ay.drop or)}"
+          mergeImplDown merge
+            (.single (if ol == 0 then .fnode1 v (ay.drop or) .leaf else .lnode1 (ay.drop or) .leaf) done)
+            (.lnode1 ax cx) cy (ol + com) 0
+        else
+          let join := (ax.drop ol).take (com)
+          let ax' := ax.drop (ol + com)
+          let ay' := ay.drop (or + com)
+          if ax.get! (ol + com) < ay.get! (or + com)
+          then
+            --dbg_trace s!"A join {join}"
+            if join.isEmpty
+            then return .atom (if ol == 0 then .fnode v #[ax',ay'] #[cx,cy] else .lnode #[ax',ay'] #[cx,cy]) done
+            else return .atom (if ol == 0 then .fnode1 v join (.lnode #[ax',ay'] #[cx,cy]) else .lnode1 join (.lnode #[ax',ay'] #[cx,cy])) done
+          else
+            --dbg_trace s!"A join {join}"
+            if join.isEmpty
+            then return .atom (if ol == 0 then .fnode v #[ay',ax'] #[cy,cx] else .lnode #[ay',ax'] #[cy,cx]) done
+            else return .atom (if ol == 0 then .fnode1 v join (.lnode #[ay',ax'] #[cy,cx]) else .lnode1 join (.lnode #[ay',ax'] #[cy,cx])) done
   | .fnode1 v ax cx, .fnode1 u ay cy => do
       let com := ByteArray.getLongestMatch_wOffsets ax ay ol or
       if ol + com == ax.size
@@ -851,15 +753,21 @@ partial def mergeImplDown
         if or + com == ay.size
         then
           --dbg_trace s!"sin {(ax.drop ol)}"
-          mergeImplDown merge (.single (.fnode1 (← merge v u) (ax.drop ol) .leaf) done) cx cy 0 0
+          mergeImplDown merge
+            (.single (← do if ol == 0 && or == 0 then return .fnode1 (← merge v u) (ax.drop ol) .leaf else return .lnode1 (ax.drop ol) .leaf) done)
+            cx cy 0 0
         else
           --dbg_trace s!"sin {(ax.drop ol)}"
-          mergeImplDown merge (.single (.fnode1 (← merge v u) (ax.drop ol) .leaf) done) cx (.lnode1 ay cy) 0 (or + com)
+          mergeImplDown merge
+            (.single (← do if ol == 0 && or == 0 then return .fnode1 (← merge v u) (ax.drop ol) .leaf else return .lnode1 (ax.drop ol) .leaf) done)
+            cx (.lnode1 ay cy) 0 (or + com)
       else
         if or + com == ay.size
         then
           --dbg_trace s!"sin {(ay.drop or)}"
-          mergeImplDown merge (.single (.fnode1 (← merge v u) (ay.drop or) .leaf) done) (.lnode1 ax cx) cy (ol + com) 0
+          mergeImplDown merge
+            (.single (← do if ol == 0 && or == 0 then return .fnode1 (← merge v u) (ay.drop or) .leaf else return .lnode1 (ay.drop or) .leaf) done)
+            (.lnode1 ax cx) cy (ol + com) 0
         else
           let join := (ax.drop ol).take (com)
           let ax' := ax.drop (ol + com)
@@ -867,10 +775,14 @@ partial def mergeImplDown
           if ax.get! (ol + com) < ay.get! (or + com)
           then
             --dbg_trace s!"A join {join}"
-            return .atom (.fnode1 (← merge v u) join (.lnode #[ax',ay'] #[cx,cy])) done
+            if join.isEmpty
+            then return .atom (← do if ol == 0 && or == 0 then return (.fnode (← merge v u) #[ax',ay'] #[cx,cy]) else return (.lnode #[ax',ay'] #[cx,cy])) done
+            else return .atom (← do if ol == 0 && or == 0 then return .fnode1 (← merge v u) join (.lnode #[ax',ay'] #[cx,cy]) else return .lnode1 join (.lnode #[ax',ay'] #[cx,cy])) done
           else
             --dbg_trace s!"A join {join}"
-            return .atom (.fnode1 (← merge v u) join (.lnode #[ay',ax'] #[cy,cx])) done
+            if join.isEmpty
+            then return .atom (← do if ol == 0 && or == 0 then return (.fnode (← merge v u) #[ay',ax'] #[cy,cx]) else return (.lnode #[ay',ax'] #[cy,cx])) done
+            else return .atom (← do if ol == 0 && or == 0 then return .fnode1 (← merge v u) join (.lnode #[ay',ax'] #[cy,cx]) else return .lnode1 join (.lnode #[ay',ax'] #[cy,cx])) done
   | .lnode1 ax cx, .lnode ay cy =>
       match ByteArray.matchSingleHits_wOffset ax ol ay with
       | .ins idx =>
@@ -943,7 +855,7 @@ partial def mergeImplDown
               else
                 --dbg_trace s!"A {(ay.set! idx join)}"
                 return .atom (.lnode  (ay.set! idx join) (cy.set! idx (.lnode #[ay'',ax'] #[cy',cx]))) done
-  | .lnode1 ax cx, .fnode v ay cy | .fnode1 v ax cx, .lnode ay cy =>
+  | .lnode1 ax cx, .fnode v ay cy =>
       match ByteArray.matchSingleHits_wOffset ax ol ay with
       | .ins idx =>
         --dbg_trace s!"ins 1 {(ay.insertIdx! idx (ax.drop ol))}"
@@ -979,7 +891,55 @@ partial def mergeImplDown
               else
                 --dbg_trace s!"A {(ay.set! idx join)}"
                 return .atom (.fnode v  (ay.set! idx join) (cy.set! idx (.lnode #[ay'',ax'] #[cy',cx]))) done
-  | .fnode v ay cy, .lnode1 ax cx | .lnode ay cy, .fnode1 v ax cx =>
+  | .fnode1 v ax cx, .lnode ay cy =>
+      match ByteArray.matchSingleHits_wOffset ax ol ay with
+      | .ins idx =>
+        --dbg_trace s!"ins 1 {(ay.insertIdx! idx (ax.drop ol))}"
+        if ol == 0
+        then return .atom (.fnode v (ay.insertIdx! idx (ax.drop ol)) (cy.insertIdx! idx cx)) done
+        else return .atom (.lnode (ay.insertIdx! idx (ax.drop ol)) (cy.insertIdx! idx cx)) done
+      | .hit idx com => do
+          let ay' := ay[idx]!
+          let cy' := cy[idx]!
+          if ol + com == ax.size
+          then
+            if com == ay'.size
+            then
+              --dbg_trace s!"mutli {ay}"
+              mergeImplDown merge
+                (.multi (if ol == 0 then .fnode v ay cy else .lnode ay cy) idx done)
+                cx cy' 0 0
+              -- return .node (← mini_merge x y) ay (cy.set! idx sofar)
+            else
+              --dbg_trace s!"multi 1 {(ay.set! idx (ax.drop ol))}"
+              mergeImplDown merge
+                (.multi (if ol == 0 then .fnode v (ay.set! idx (ax.drop ol)) cy else .lnode (ay.set! idx (ax.drop ol)) cy) idx done)
+                cx (.lnode1 ay' cy') 0 com
+              -- return .node (← mini_merge x y) (ay.set! idx (ax.drop ol)) (cy.set! idx sofar)
+          else
+            if com == ay'.size
+            then
+              --dbg_trace s!"mutli {ay}"
+              mergeImplDown merge
+                (.multi (if ol == 0 then .fnode v ay cy else .lnode ay cy) idx done)
+                l cy' (ol + com) 0
+              -- return .node (← mini_merge x y) ay (cy.set! idx sofar)
+            else
+              let join := (ax.drop ol).take (com)
+              let ax' := ax.drop (ol + com)
+              let ay'' := ay'.drop (com)
+              if ax.get! (ol + com) < ay'.get! (com)
+              then
+                --dbg_trace s!"A {(ay.set! idx join)}"
+                if ol == 0
+                then return .atom (.fnode v (ay.set! idx join) (cy.set! idx (.lnode #[ax',ay''] #[cx,cy']))) done
+                else return .atom (.lnode (ay.set! idx join) (cy.set! idx (.lnode #[ax',ay''] #[cx,cy']))) done
+              else
+                --dbg_trace s!"A {(ay.set! idx join)}"
+                if ol == 0
+                then return .atom (.fnode v  (ay.set! idx join) (cy.set! idx (.lnode #[ay'',ax'] #[cy',cx]))) done
+                else return .atom (.lnode (ay.set! idx join) (cy.set! idx (.lnode #[ay'',ax'] #[cy',cx]))) done
+  | .fnode v ay cy, .lnode1 ax cx =>
       match ByteArray.matchSingleHits_wOffset ax or ay with
       | .ins idx =>
         --dbg_trace s!"ins 1 {(ay.insertIdx! idx (ax.drop or))}"
@@ -1015,66 +975,38 @@ partial def mergeImplDown
               else
                 --dbg_trace s!"A {(ay.set! idx join)}"
                 return .atom (.fnode v  (ay.set! idx join) (cy.set! idx (.lnode #[ay'',ax'] #[cy',cx]))) done
-  | .fnode1 v ax cx, .fnode u ay cy => do
-      match ByteArray.matchSingleHits_wOffset ax ol ay with
-      | .ins idx =>
-        --dbg_trace s!"ins 1 {(ay.insertIdx! idx (ax.drop ol))}"
-        return .atom (.fnode (← merge v u) (ay.insertIdx! idx (ax.drop ol)) (cy.insertIdx! idx cx)) done
-      | .hit idx com => do
-          let ay' := ay[idx]!
-          let cy' := cy[idx]!
-          if ol + com == ax.size
-          then
-            if com == ay'.size
-            then
-              --dbg_trace s!"mutli {ay}"
-              mergeImplDown merge (.multi (.fnode (← merge v u) ay cy) idx done) cx cy' 0 0
-              -- return .node (← mini_merge x y) ay (cy.set! idx sofar)
-            else
-              --dbg_trace s!"multi 1 {(ay.set! idx (ax.drop ol))}"
-              mergeImplDown merge (.multi (.fnode (← merge v u) (ay.set! idx (ax.drop ol)) cy) idx done) cx (.lnode1 ay' cy') 0 com
-              -- return .node (← mini_merge x y) (ay.set! idx (ax.drop ol)) (cy.set! idx sofar)
-          else
-            if com == ay'.size
-            then
-              --dbg_trace s!"mutli {ay}"
-              mergeImplDown merge (.multi (.fnode (← merge v u) ay cy) idx done) l cy' (ol + com) 0
-              -- return .node (← mini_merge x y) ay (cy.set! idx sofar)
-            else
-              let join := (ax.drop ol).take (com)
-              let ax' := ax.drop (ol + com)
-              let ay'' := ay'.drop (com)
-              if ax.get! (ol + com) < ay'.get! (com)
-              then
-                --dbg_trace s!"A {(ay.set! idx join)}"
-                return .atom (.fnode (← merge v u) (ay.set! idx join) (cy.set! idx (.lnode #[ax',ay''] #[cx,cy']))) done
-              else
-                --dbg_trace s!"A {(ay.set! idx join)}"
-                return .atom (.fnode (← merge v u)  (ay.set! idx join) (cy.set! idx (.lnode #[ay'',ax'] #[cy',cx]))) done
-  | .fnode v ay cy, .fnode1 u ax cx => do
+  | .lnode ay cy, .fnode1 v ax cx =>
       match ByteArray.matchSingleHits_wOffset ax or ay with
       | .ins idx =>
         --dbg_trace s!"ins 1 {(ay.insertIdx! idx (ax.drop or))}"
-        return .atom (.fnode (← merge v u) (ay.insertIdx! idx (ax.drop or)) (cy.insertIdx! idx cx)) done
+        if or == 0
+        then return .atom (.fnode v (ay.insertIdx! idx (ax.drop or)) (cy.insertIdx! idx cx)) done
+        else return .atom (.lnode (ay.insertIdx! idx (ax.drop or)) (cy.insertIdx! idx cx)) done
       | .hit idx com => do
           let ay' := ay[idx]!
           let cy' := cy[idx]!
-          if or + com == ax.size
+          if or+ com == ax.size
           then
             if com == ay'.size
             then
               --dbg_trace s!"mutli {ay}"
-              mergeImplDown merge (.multi (.fnode (← merge v u) ay cy) idx done) cx cy' 0 0
+              mergeImplDown merge
+                (.multi (if or == 0 then .fnode v ay cy else .lnode ay cy) idx done)
+                cx cy' 0 0
               -- return .node (← mini_merge x y) ay (cy.set! idx sofar)
             else
               --dbg_trace s!"multi 1 {(ay.set! idx (ax.drop or))}"
-              mergeImplDown merge (.multi (.fnode (← merge v u) (ay.set! idx (ax.drop or)) cy) idx done) cx (.lnode1 ay' cy') 0 com
+              mergeImplDown merge
+                (.multi (if or == 0 then .fnode v (ay.set! idx (ax.drop or)) cy else .lnode (ay.set! idx (ax.drop or)) cy) idx done)
+                cx (.lnode1 ay' cy') 0 com
               -- return .node (← mini_merge x y) (ay.set! idx (ax.drop ol)) (cy.set! idx sofar)
           else
             if com == ay'.size
             then
               --dbg_trace s!"mutli {ay}"
-              mergeImplDown merge (.multi (.fnode (← merge v u) ay cy) idx done) r cy' (or + com) 0
+              mergeImplDown merge
+                (.multi (if or == 0 then .fnode v ay cy else .lnode ay cy) idx done)
+                r cy' (or + com) 0
               -- return .node (← mini_merge x y) ay (cy.set! idx sofar)
             else
               let join := (ax.drop or).take (com)
@@ -1083,10 +1015,111 @@ partial def mergeImplDown
               if ax.get! (or + com) < ay'.get! (com)
               then
                 --dbg_trace s!"A {(ay.set! idx join)}"
-                return .atom (.fnode (← merge v u) (ay.set! idx join) (cy.set! idx (.lnode #[ax',ay''] #[cx,cy']))) done
+                if or == 0
+                then return .atom (.fnode v (ay.set! idx join) (cy.set! idx (.lnode #[ax',ay''] #[cx,cy']))) done
+                else return .atom (.lnode (ay.set! idx join) (cy.set! idx (.lnode #[ax',ay''] #[cx,cy']))) done
               else
                 --dbg_trace s!"A {(ay.set! idx join)}"
-                return .atom (.fnode (← merge v u)  (ay.set! idx join) (cy.set! idx (.lnode #[ay'',ax'] #[cy',cx]))) done
+                if or == 0
+                then return .atom (.fnode v  (ay.set! idx join) (cy.set! idx (.lnode #[ay'',ax'] #[cy',cx]))) done
+                else return .atom (.lnode (ay.set! idx join) (cy.set! idx (.lnode #[ay'',ax'] #[cy',cx]))) done
+  | .fnode1 v ax cx, .fnode u ay cy => do
+      match ByteArray.matchSingleHits_wOffset ax ol ay with
+      | .ins idx =>
+        --dbg_trace s!"ins 1 {(ay.insertIdx! idx (ax.drop ol))}"
+        if ol == 0
+        then return .atom (.fnode (← merge v u) (ay.insertIdx! idx (ax.drop ol)) (cy.insertIdx! idx cx)) done
+        else return .atom (.fnode u (ay.insertIdx! idx (ax.drop ol)) (cy.insertIdx! idx cx)) done
+      | .hit idx com => do
+          let ay' := ay[idx]!
+          let cy' := cy[idx]!
+          if ol + com == ax.size
+          then
+            if com == ay'.size
+            then
+              --dbg_trace s!"mutli {ay}"
+              mergeImplDown merge
+                -- hereio
+                (.multi (← do if ol == 0 then return .fnode (← merge v u) ay cy else return .fnode u ay cy) idx done)
+                cx cy' 0 0
+              -- return .node (← mini_merge x y) ay (cy.set! idx sofar)
+            else
+              --dbg_trace s!"multi 1 {(ay.set! idx (ax.drop ol))}"
+              mergeImplDown merge
+                (.multi (← do if ol == 0 then return .fnode (← merge v u) (ay.set! idx (ax.drop ol)) cy else return .fnode u (ay.set! idx (ax.drop ol)) cy) idx done)
+                cx (.lnode1 ay' cy') 0 com
+              -- return .node (← mini_merge x y) (ay.set! idx (ax.drop ol)) (cy.set! idx sofar)
+          else
+            if com == ay'.size
+            then
+              --dbg_trace s!"mutli {ay}"
+              mergeImplDown merge
+                (.multi (← do if ol == 0 then return .fnode (← merge v u) ay cy else return .fnode u ay cy) idx done)
+                l cy' (ol + com) 0
+              -- return .node (← mini_merge x y) ay (cy.set! idx sofar)
+            else
+              let join := (ax.drop ol).take (com)
+              let ax' := ax.drop (ol + com)
+              let ay'' := ay'.drop (com)
+              if ax.get! (ol + com) < ay'.get! (com)
+              then
+                --dbg_trace s!"A {(ay.set! idx join)}"
+                if ol == 0
+                then return .atom (.fnode (← merge v u) (ay.set! idx join) (cy.set! idx (.lnode #[ax',ay''] #[cx,cy']))) done
+                else return .atom (.fnode u (ay.set! idx join) (cy.set! idx (.lnode #[ax',ay''] #[cx,cy']))) done
+              else
+                --dbg_trace s!"A {(ay.set! idx join)}"
+                if ol == 0
+                then return .atom (.fnode (← merge v u) (ay.set! idx join) (cy.set! idx (.lnode #[ay'',ax'] #[cy',cx]))) done
+                else return .atom (.fnode u (ay.set! idx join) (cy.set! idx (.lnode #[ay'',ax'] #[cy',cx]))) done
+  | .fnode v ay cy, .fnode1 u ax cx => do
+      match ByteArray.matchSingleHits_wOffset ax or ay with
+      | .ins idx =>
+        --dbg_trace s!"ins 1 {(ay.insertIdx! idx (ax.drop or))}"
+        if ol == 0
+        then return .atom (.fnode (← merge v u) (ay.insertIdx! idx (ax.drop or)) (cy.insertIdx! idx cx)) done
+        else return .atom (.fnode v (ay.insertIdx! idx (ax.drop or)) (cy.insertIdx! idx cx)) done
+      | .hit idx com => do
+          let ay' := ay[idx]!
+          let cy' := cy[idx]!
+          if or + com == ax.size
+          then
+            if com == ay'.size
+            then
+              --dbg_trace s!"mutli {ay}"
+              mergeImplDown merge
+                (.multi (← do if ol == 0 then return .fnode (← merge v u) ay cy else return .fnode v ay cy) idx done)
+                cx cy' 0 0
+              -- return .node (← mini_merge x y) ay (cy.set! idx sofar)
+            else
+              --dbg_trace s!"multi 1 {(ay.set! idx (ax.drop or))}"
+              mergeImplDown merge
+                (.multi (← do if ol == 0 then return .fnode (← merge v u) (ay.set! idx (ax.drop or)) cy else return .fnode v (ay.set! idx (ax.drop or)) cy) idx done)
+                cx (.lnode1 ay' cy') 0 com
+              -- return .node (← mini_merge x y) (ay.set! idx (ax.drop ol)) (cy.set! idx sofar)
+          else
+            if com == ay'.size
+            then
+              --dbg_trace s!"mutli {ay}"
+              mergeImplDown merge
+                (.multi (← do if ol == 0 then return .fnode (← merge v u) ay cy else return .fnode v ay cy) idx done)
+                r cy' (or + com) 0
+              -- return .node (← mini_merge x y) ay (cy.set! idx sofar)
+            else
+              let join := (ax.drop or).take (com)
+              let ax' := ax.drop (or + com)
+              let ay'' := ay'.drop (com)
+              if ax.get! (or + com) < ay'.get! (com)
+              then
+                --dbg_trace s!"A {(ay.set! idx join)}"
+                if ol == 0
+                then return .atom (.fnode (← merge v u) (ay.set! idx join) (cy.set! idx (.lnode #[ax',ay''] #[cx,cy']))) done
+                else return .atom (.fnode v (ay.set! idx join) (cy.set! idx (.lnode #[ax',ay''] #[cx,cy']))) done
+              else
+                --dbg_trace s!"A {(ay.set! idx join)}"
+                if ol == 0
+                then return .atom (.fnode (← merge v u)  (ay.set! idx join) (cy.set! idx (.lnode #[ay'',ax'] #[cy',cx]))) done
+                else return .atom (.fnode v (ay.set! idx join) (cy.set! idx (.lnode #[ay'',ax'] #[cy',cx]))) done
   | .lnode ax cx, .lnode ay cy =>
       match mergeImplMultiInit ax ay cx cy 0 0 [] [] with
       | .done as ts =>
@@ -1112,7 +1145,7 @@ partial def mergeImplDown
           --dbg_trace s!"up D {doneB}"
           mergeImplDown merge (.fnode ax ay cx cy l r doneB doneT (← merge v u) done) TL TR 0 0
 
--- #exit
+
 
 @[specialize]
 partial def mergeImplUp

@@ -74,34 +74,27 @@ def dbg6 := CTrie.ofList <| .cons "banjo" 2 <| .cons "else" 2 .nil
 open Lean
 
 
--- def largeMerge : MetaM (ListProd String Nat) := do
---   let env ← getEnv
---   let .some fst := env.getModuleIdx? `Init.Data.List.Lemmas | throwError "hmmm 1"
---   let .some snd := env.getModuleIdx? `Init.Data.List.Basic  | throwError "hmmm 2"
---   let fst_d := (env.header.moduleData[fst]!).constants
---   let snd_d := (env.header.moduleData[snd]!).constants
---   let Fst := fst_d.foldl (fun T d =>
---     let csts := d.type.getUsedConstants
---     csts.foldl (fun T n => T.upsert n.toString.toUTF8 (fun | .none => .some 1 | .some x => .some x.succ)) T
---     ) CTrie.empty
---   let Snd := snd_d.foldl (fun T d =>
---     let csts := d.type.getUsedConstants
---     csts.foldl (fun T n => T.upsert n.toString.toUTF8 (fun | .none => .some 1 | .some x => .some x.succ)) T
---     ) CTrie.empty
---   let res := (CTrie.merge (fun x y => x + y) Fst Snd)
---   let res := clean res
---   return res.toList
+def largeMerge : MetaM (ListProd String Nat) := do
+  let env ← getEnv
+  let .some fst := env.getModuleIdx? `Init.Data.List.Lemmas | throwError "hmmm 1"
+  let .some snd := env.getModuleIdx? `Init.Data.List.Basic  | throwError "hmmm 2"
+  let fst_d := (env.header.moduleData[fst]!).constants
+  let snd_d := (env.header.moduleData[snd]!).constants
+  let Fst := fst_d.foldl (fun T d =>
+    let csts := d.type.getUsedConstants
+    csts.foldl (fun T n => T.upsert n.toString.toUTF8 (fun | .none => .some 1 | .some x => .some x.succ)) T
+    ) CTrie.empty
+  let Snd := snd_d.foldl (fun T d =>
+    let csts := d.type.getUsedConstants
+    csts.foldl (fun T n => T.upsert n.toString.toUTF8 (fun | .none => .some 1 | .some x => .some x.succ)) T
+    ) CTrie.empty
+  let res := (CTrie.merge (fun x y => x + y) Fst Snd)
+  let res := clean res
+  return res.toList
 
 
 -- #eval largeMerge
 
-
-/-
-
-[PaInG.embedForwInterCore.go] [embedForwIncludeCore] Q : (List ::: #[0, 1])
-l (List ::: #[32]) ;;; (List ::: #[56]) ;;;
-
--/
 
 def dbg7 := CTrie.ofList <| .cons "List" [#[0,1]] .nil
 def dbg8 := CTrie.ofListMulti List.append <|
@@ -139,5 +132,8 @@ def dbg10 := CTrie.ofListMulti List.append <|
   <| .cons "List" [#[32]]
   <| .cons "List" [#[56]] .nil
 
+-- #eval dbg9
+-- #eval dbg10
 
-#eval (CTrie.merge (fun x y => x ++ y) dbg9 dbg10).toList
+
+-- #eval (CTrie.merge (fun x y => x ++ y) dbg9 dbg10)--.toList

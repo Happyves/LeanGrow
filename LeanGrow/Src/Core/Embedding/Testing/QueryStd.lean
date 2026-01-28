@@ -49,12 +49,16 @@ unsafe def test_3_1 := testLoad_embedForwIncludeCoreS #[`Init.Data.List.Basic, `
 -- tracing_mode .std
 -- tracing_flags [(`PaInG.embedForwIncludeCore.go, TracingFlags.all)]
 
--- With context g(a : List Int) and objects run test_3_1
--- nonsense test, as it queries l ⊆ Q, so testing with cache size l will never work
+-- With context g(l : List Int) g(h : l.getLast? = .some 5)  and objects run test_3_1
 
-
+-- Get interesting ones from ↑, ie. ↓, by ctrl+F `g.0`
 #check List.mem_of_getLast?
-#check List.mem_of_mem_getLast?
+#check List.Lex.rel
+#check List.filterMap_cons_some
+#check List.getLast_of_getLast?_eq_some
+#check List.getLast!_of_getLast?
+#check List.filterMap_replicate_of_some
+
 
 
 /-- Remember that this is not a forward query, it is only a test.
@@ -68,11 +72,17 @@ unsafe def test_3_2 := testLoad_embedForwInterCoreS #[`Init.Data.List.Basic, `In
 -- tracing_flags [(`PaInG.embedForwInterCore.go, TracingFlags.all)]
 
 
-With context g(a : List Int) u(b : List Int : [1,2,3]) and objects run test_3_2
+-- With context g(a : List Int) u(b : List Int : [1,2,3]) and objects run test_3_2
 
 #check List.mem_append_right
 #check List.mem_append_left
 #check List.Mem.below.head
+#check List.eq_replicate_or_eq_replicate_append_cons
+#check List.length_filterMap_le
+#check List.length_filter_le
+#check List.eq_nil_or_concat
+#check List.filter_sublist
+
 
 -- With context g(l : List Int) g(h : l.getLast? = .some 5) and objects run test_3_2
 
@@ -86,12 +96,8 @@ With context g(a : List Int) u(b : List Int : [1,2,3]) and objects run test_3_2
 -- bug
 
 
-#check List.eq_nil_or_concat
-#check List.filter_sublist
 #check List.append_ne_nil_of_left_ne_nil
 #check List.append_ne_nil_of_right_ne_nil
-#check List.eq_replicate_or_eq_replicate_append_cons
-#check List.length_filterMap_le
 #check List.exists_mem_of_ne_nil
 #check List.head_mem
 #check List.getLast_mem
@@ -130,7 +136,7 @@ Fix notes
 - defEqNoMv → defEqWiMv
 
 TODO:
-- bug in CTrie.merge
+- duplication in embedForwIncludeCore
 - bugs here
 - test embedBackMainS with tnodes and unodes
 - add uni tests

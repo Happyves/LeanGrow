@@ -140,16 +140,27 @@ private partial def upsertMimp [Monad m] (s : ByteArray)(mod : Option α → m (
                 let final := .lnode1 (c.take j) (.fnode1 new (c.drop j) t)
                 return ZipIt final zip
               else
-                let nc := c.drop j
-                let add := s.drop sum
-                let join := c.take j
-                if c.get! j < s.get! sum
+                if j == 0
                 then
-                  let final := .lnode1 join (.lnode #[nc,add] #[t,(.fruit new)])
-                  return ZipIt final zip
+                  let add := s.drop sum
+                  if c.get! j < s.get! sum
+                  then
+                    let final := .lnode #[c,add] #[t,(.fruit new)]
+                    return ZipIt final zip
+                  else
+                    let final := .lnode #[add,c] #[(.fruit new),t]
+                    return ZipIt final zip
                 else
-                  let final := .lnode1 join (.lnode #[add,nc] #[(.fruit new),t])
-                  return ZipIt final zip
+                  let nc := c.drop j
+                  let add := s.drop sum
+                  let join := c.take j
+                  if c.get! j < s.get! sum
+                  then
+                    let final := .lnode1 join (.lnode #[nc,add] #[t,(.fruit new)])
+                    return ZipIt final zip
+                  else
+                    let final := .lnode1 join (.lnode #[add,nc] #[(.fruit new),t])
+                    return ZipIt final zip
           | .none =>
               let final := b
               return ZipIt final zip
@@ -177,16 +188,27 @@ private partial def upsertMimp [Monad m] (s : ByteArray)(mod : Option α → m (
                 let final := .fnode1 v (c.take j) (.fnode1 new (c.drop j) t)
                 return ZipIt final zip
               else
-                let nc := c.drop j
-                let add := s.drop sum
-                let join := c.take j
-                if c.get! j < s.get! sum
+                if j == 0
                 then
-                  let final := .fnode1 v join (.lnode #[nc,add] #[t,(.fruit new)])
-                  return ZipIt final zip
+                  let add := s.drop sum
+                  if c.get! j < s.get! sum
+                  then
+                    let final := .fnode v #[c,add] #[t,(.fruit new)]
+                    return ZipIt final zip
+                  else
+                    let final := .fnode v #[add,c] #[(.fruit new),t]
+                    return ZipIt final zip
                 else
-                  let final := .fnode1 v join (.lnode #[add,nc] #[(.fruit new),t])
-                  return ZipIt final zip
+                  let nc := c.drop j
+                  let add := s.drop sum
+                  let join := c.take j
+                  if c.get! j < s.get! sum
+                  then
+                    let final := .fnode1 v join (.lnode #[nc,add] #[t,(.fruit new)])
+                    return ZipIt final zip
+                  else
+                    let final := .fnode1 v join (.lnode #[add,nc] #[(.fruit new),t])
+                    return ZipIt final zip
           | .none =>
               let final := b
               return ZipIt final zip
@@ -368,16 +390,27 @@ private partial def upsertLimp (l1 : LocalContext) (l2 : LocalInstances) (s : By
                 let final := .lnode1 (c.take j) (.fnode1 new (c.drop j) t)
                 return ⟨ZipIt final zip,l1,l2⟩
               else
-                let nc := c.drop j
-                let add := s.drop sum
-                let join := c.take j
-                if c.get! j < s.get! sum
+                if j == 0
                 then
-                  let final := .lnode1 join (.lnode #[nc,add] #[t,(.fruit new)])
-                  return ⟨ZipIt final zip,l1,l2⟩
+                  let add := s.drop sum
+                  if c.get! j < s.get! sum
+                  then
+                    let final := .lnode #[c,add] #[t,(.fruit new)]
+                    return ⟨ZipIt final zip,l1,l2⟩
+                  else
+                    let final := .lnode #[add,c] #[(.fruit new),t]
+                    return ⟨ZipIt final zip,l1,l2⟩
                 else
-                  let final := .lnode1 join (.lnode #[add,nc] #[(.fruit new),t])
-                  return ⟨ZipIt final zip,l1,l2⟩
+                  let nc := c.drop j
+                  let add := s.drop sum
+                  let join := c.take j
+                  if c.get! j < s.get! sum
+                  then
+                    let final := .lnode1 join (.lnode #[nc,add] #[t,(.fruit new)])
+                    return ⟨ZipIt final zip,l1,l2⟩
+                  else
+                    let final := .lnode1 join (.lnode #[add,nc] #[(.fruit new),t])
+                    return ⟨ZipIt final zip,l1,l2⟩
           | .none =>
               let final := b
               return ⟨ZipIt final zip,l1,l2⟩
@@ -407,16 +440,27 @@ private partial def upsertLimp (l1 : LocalContext) (l2 : LocalInstances) (s : By
                 let final := .fnode1 v (c.take j) (.fnode1 new (c.drop j) t)
                 return ⟨ZipIt final zip,l1,l2⟩
               else
-                let nc := c.drop j
-                let add := s.drop sum
-                let join := c.take j
-                if c.get! j < s.get! sum
+                if j == 0
                 then
-                  let final := .fnode1 v join (.lnode #[nc,add] #[t,(.fruit new)])
-                  return ⟨ZipIt final zip,l1,l2⟩
+                  let add := s.drop sum
+                  if c.get! j < s.get! sum
+                  then
+                    let final := .fnode v #[c,add] #[t,(.fruit new)]
+                    return ⟨ZipIt final zip,l1,l2⟩
+                  else
+                    let final := .fnode v #[add,c] #[(.fruit new),t]
+                    return ⟨ZipIt final zip,l1,l2⟩
                 else
-                  let final := .fnode1 v join (.lnode #[add,nc] #[(.fruit new),t])
-                  return ⟨ZipIt final zip,l1,l2⟩
+                  let nc := c.drop j
+                  let add := s.drop sum
+                  let join := c.take j
+                  if c.get! j < s.get! sum
+                  then
+                    let final := .fnode1 v join (.lnode #[nc,add] #[t,(.fruit new)])
+                    return ⟨ZipIt final zip,l1,l2⟩
+                  else
+                    let final := .fnode1 v join (.lnode #[add,nc] #[(.fruit new),t])
+                    return ⟨ZipIt final zip,l1,l2⟩
           | .none =>
               let final := b
               return ⟨ZipIt final zip,l1,l2⟩
@@ -609,26 +653,47 @@ private partial def upsertMcpsImp [Monad m] (s : ByteArray)
                   let final := b
                   k <| ZipIt final zip
           else
-            let nc := c.drop j
-            let add := s.drop sum
-            let join := c.take j
-            if c.get! j < s.get! sum
+            if j == 0
             then
-              f .none <| fun
-                | .some new => do
-                    let final := .lnode1 join (.lnode #[nc,add] #[t,(.fruit new)])
-                    k <| ZipIt final zip
-                | .none => do
-                    let final := b
-                    k <| ZipIt final zip
+              let add := s.drop sum
+              if c.get! j < s.get! sum
+              then
+                f .none <| fun
+                  | .some new => do
+                      let final := .lnode #[c,add] #[t,(.fruit new)]
+                      k <| ZipIt final zip
+                  | .none => do
+                      let final := b
+                      k <| ZipIt final zip
+              else
+                f .none <| fun
+                  | .some new => do
+                      let final := .lnode #[add,c] #[(.fruit new),t]
+                      k <| ZipIt final zip
+                  | .none => do
+                      let final := b
+                      k <| ZipIt final zip
             else
-              f .none <| fun
-                | .some new => do
-                    let final := .lnode1 join (.lnode #[add,nc] #[(.fruit new),t])
-                    k <| ZipIt final zip
-                | .none => do
-                    let final := b
-                    k <| ZipIt final zip
+              let nc := c.drop j
+              let add := s.drop sum
+              let join := c.take j
+              if c.get! j < s.get! sum
+              then
+                f .none <| fun
+                  | .some new => do
+                      let final := .lnode1 join (.lnode #[nc,add] #[t,(.fruit new)])
+                      k <| ZipIt final zip
+                  | .none => do
+                      let final := b
+                      k <| ZipIt final zip
+              else
+                f .none <| fun
+                  | .some new => do
+                      let final := .lnode1 join (.lnode #[add,nc] #[(.fruit new),t])
+                      k <| ZipIt final zip
+                  | .none => do
+                      let final := b
+                      k <| ZipIt final zip
       else
         f .none <| fun
           | .some new => do
@@ -656,26 +721,47 @@ private partial def upsertMcpsImp [Monad m] (s : ByteArray)
                   let final := b
                   k <| ZipIt final zip
           else
-            let nc := c.drop j
-            let add := s.drop sum
-            let join := c.take j
-            if c.get! j < s.get! sum
+            if j == 0
             then
-              f .none <| fun
-                | .some new => do
-                    let final := .fnode1 v join (.lnode #[nc,add] #[t,(.fruit new)])
-                    k <| ZipIt final zip
-                | .none => do
-                    let final := b
-                    k <| ZipIt final zip
+              let add := s.drop sum
+              if c.get! j < s.get! sum
+              then
+                f .none <| fun
+                  | .some new => do
+                      let final := .fnode v #[c,add] #[t,(.fruit new)]
+                      k <| ZipIt final zip
+                  | .none => do
+                      let final := b
+                      k <| ZipIt final zip
+              else
+                f .none <| fun
+                  | .some new => do
+                      let final := .fnode v #[add,c] #[(.fruit new),t]
+                      k <| ZipIt final zip
+                  | .none => do
+                      let final := b
+                      k <| ZipIt final zip
             else
-              f .none <| fun
-                | .some new => do
-                    let final := .fnode1 v join (.lnode #[add,nc] #[(.fruit new),t])
-                    k <| ZipIt final zip
-                | .none => do
-                    let final := b
-                    k <| ZipIt final zip
+              let nc := c.drop j
+              let add := s.drop sum
+              let join := c.take j
+              if c.get! j < s.get! sum
+              then
+                f .none <| fun
+                  | .some new => do
+                      let final := .fnode1 v join (.lnode #[nc,add] #[t,(.fruit new)])
+                      k <| ZipIt final zip
+                  | .none => do
+                      let final := b
+                      k <| ZipIt final zip
+              else
+                f .none <| fun
+                  | .some new => do
+                      let final := .fnode1 v join (.lnode #[add,nc] #[(.fruit new),t])
+                      k <| ZipIt final zip
+                  | .none => do
+                      let final := b
+                      k <| ZipIt final zip
       else
         f (.some v) <| fun
           | .some new => do
@@ -802,6 +888,7 @@ private partial def upsertMcpsImp [Monad m] (s : ByteArray)
             k <| ZipIt final zip
 
 
+
 @[specialize, inline]
 def upsertMcps [Monad m] (s : ByteArray) (t : CTrie α) {β : Type u_2}
   [Inhabited β] (f : Option α → (Option α → m β) → m β) (k : CTrie α → m β) : m β :=
@@ -893,22 +980,26 @@ def insert (t : CTrie α) (s : ByteArray) (val : α) : CTrie α :=
 def delete (t : CTrie α) (s : ByteArray)  : CTrie α :=
   clean <| t.upsert s (fun _ => .none)
 
-def ofList : ListProd String α → CTrie α
-  | .nil => CTrie.empty
-  | .cons s v more => CTrie.insert (CTrie.ofList more) s.toUTF8 v
+@[inline]
+def ofList (l : ListProd String α) : CTrie α :=
+  let rec go (done : CTrie α) : ListProd String α → CTrie α
+    | .nil => done
+    | .cons s v more => go (CTrie.insert done s.toUTF8 v) more
+  go .empty l
 
-def ofListMulti (merge : α → α → α) : ListProd String α → CTrie α
-  | .nil => CTrie.empty
-  | .cons s v more => CTrie.upsert s.toUTF8
-      (fun | .none => .some v | .some w => .some (merge w v))
-      (CTrie.ofListMulti merge more)
+@[inline]
+def ofListMulti (merge : α → α → α) (l : ListProd String α) : CTrie α :=
+  let rec go (done : CTrie α) : ListProd String α → CTrie α
+    | .nil => done
+    | .cons s v more => go (CTrie.upsert s.toUTF8 (fun | .none => .some v | .some w => .some (merge w v)) done) more
+  go .empty l
 
-
-
-def ofListKeys : List Name → CTrie Unit
-  | .nil => CTrie.empty
-  | .cons s more => CTrie.insert (CTrie.ofListKeys more) s.toString.toUTF8 ()
-
+@[inline]
+def ofListKeys (l : List Name) : CTrie Unit :=
+  let rec go (done : CTrie Unit) : List Name → CTrie Unit
+    | .nil => done
+    | .cons s more => go (CTrie.insert done s.toString.toUTF8 ()) more
+  go .empty l
 
 
 -- # Find, toList
