@@ -87,6 +87,21 @@ structure Prod10 (α β γ δ ι t1 t2 t3 t4 t5 : Type _) where
 deriving BEq, Inhabited, Repr
 
 
+structure Prod11 (α β γ δ ι t1 t2 t3 t4 t5 t6 : Type _) where
+  fst : α
+  snd : β
+  thd : γ
+  frd : δ
+  fth : ι
+  six : t1
+  svn : t2
+  eig : t3
+  nin : t4
+  ten : t5
+  ele : t6
+deriving BEq, Inhabited, Repr
+
+
 
 -- # OptionProd
 

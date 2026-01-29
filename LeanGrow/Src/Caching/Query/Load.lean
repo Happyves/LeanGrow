@@ -51,6 +51,10 @@ def ModuleCacheState.mergeCore [Repr IdxCollType]
       let NstdForwSetTrie_idxToThmIdx :=
         main.stdForwSetTrie_idxToThmIdx ++ (toAdd.stdForwSetTrie_idxToThmIdx.map (fun x => x + thmIdxOff))
       NstdForwSetTrie_idxToThmIdx}
+    let main := {main with stdForwSetTrie_idxToSinkIdx :=
+      let NstdForwSetTrie_idxToSinkIdx :=
+        main.stdForwSetTrie_idxToSinkIdx ++ toAdd.stdForwSetTrie_idxToSinkIdx
+      NstdForwSetTrie_idxToSinkIdx}
     let NthmData := thmData.insert (toAddModuleName.toString.toUTF8) toAdd.thm_data
     let NstdForwSetTrie := SetTriePG.mergeNoJoin union emptyCol
       main.stdForwSetTrie
@@ -73,7 +77,7 @@ def ModuleCacheState.mergeMain [Repr IdxCollType]
   (shift : Nat → IdxCollType → IdxCollType)
   (toAdd : ListProd Name (ModuleCacheState IdxCollType))
   : MetaM (mergeCoreData IdxCollType) :=
-    toAdd.foldlM (⟨0,0,⟨#[], .empty, .empty, .dead, .root .dead #[], #[], .dead, .dead⟩, .empty⟩ : mergeCoreData IdxCollType)
+    toAdd.foldlM (⟨0,0,⟨#[], .empty, .empty, .dead, .root .dead #[], #[], #[], .dead, .dead⟩, .empty⟩ : mergeCoreData IdxCollType)
       (fun module toAdd Main => do
         ModuleCacheState.mergeCore
           union emptyCol shift

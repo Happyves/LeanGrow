@@ -153,6 +153,12 @@ def testSandbox_embedBackMainS (thms : Array Name)  : Array Expr → Array Expr 
         IO.println s!"\nHyps"
         for (p,e) in da.ln.toListOfProd do
           IO.println s!"\npos {p} : {← ppExpr e}"
+        IO.println s!"\nT-Levels"
+        for (i,p,l) in da.tlv.toListOfProd do
+          IO.println s!"\nidx {i} pos {p} : {l}"
+        IO.println s!"\nTnodes"
+        for (i,p,e) in da.tn.toListOfProd do
+          IO.println s!"\nidx {i} pos {p} : {← ppExpr e}"
 
 
 #check 1
@@ -173,26 +179,29 @@ unsafe def testLoad_embedForwIncludeCoreS (moduleNames : Array Name) : Array Exp
         Q := res
         idx := idx + 1
       for thm in data.thmData.toList.foldl #[] (fun _ x y => x ++ y) do
-        let mut L := PaInG.dead
-        idx := 0
-        for s in thm.sinks do
-          let .mk res l1 l2 ← L.insert (← getLCtx) (← getLocalInstances) (thm.hyps[s]!.type) idx
-            UInt32Array.empty (fun x => UInt32Array.single x.toUInt32) (fun x y => y.oInsert x.toUInt32)
-          L := res
-          idx := idx + 1
-        let res ← PaInG.embedForwIncludeCoreS data.thmData (← getLCtx) (← getLocalInstances) Q L
-        match res with
-        | .nil => continue
+        match thm with
+        | .rw .. => continue --avoid duplicates
         | _ =>
-          out := out ++ s!"\n\nThm: {thm.name}"
-          for (i1,i2,i3,i4) in res.toListOfProd do
-            out := out ++ s!"\nMatch (ltx) {i1} (hyps) {i2} with:\nLevels"
-            for (p,l) in i4.toListOfProd do
-              out := out ++ s!"\npos {p} : {l}"
-            out := out ++ s!"\nHyps"
-            for (p,e) in i3.toListOfProd do
-              out := out ++ s!"\npos {p} : {← ppExpr e}"
-          out := out ++ s!"\n\nSearched in L:\n{← L.ppS (← getLCtx) (← getLocalInstances) [] 0}"
+          let mut L := PaInG.dead
+          idx := 0
+          for s in thm.sinks do
+            let .mk res l1 l2 ← L.insert (← getLCtx) (← getLocalInstances) (thm.hyps[s]!.type) idx
+              UInt32Array.empty (fun x => UInt32Array.single x.toUInt32) (fun x y => y.oInsert x.toUInt32)
+            L := res
+            idx := idx + 1
+          let res ← PaInG.embedForwIncludeCoreS data.thmData (← getLCtx) (← getLocalInstances) Q L
+          match res with
+          | .nil => continue
+          | _ =>
+            out := out ++ s!"\n\nThm: {thm.name}"
+            for (i1,i2,i3,i4) in res.toListOfProd do
+              out := out ++ s!"\nMatch (ltx) {i1} (hyps) {i2} with:\nLevels"
+              for (p,l) in i4.toListOfProd do
+                out := out ++ s!"\npos {p} : {l}"
+              out := out ++ s!"\nHyps"
+              for (p,e) in i3.toListOfProd do
+                out := out ++ s!"\npos {p} : {← ppExpr e}"
+            out := out ++ s!"\n\nSearched in L:\n{← L.ppS (← getLCtx) (← getLocalInstances) [] 0}"
       return out
 
 
@@ -210,10 +219,8 @@ unsafe def testLoad_embedForwInterCoreS (moduleNames : Array Name) : Array Expr 
       let mut Q := PaInG.dead
       let mut idx := 0
       out := out ++ s!"\nBuilding ltx"
-      let mctx ← getMCtx
       for T in guT do
         let T ← withTransparency .reducible <| reduce (skipTypes := false) T
-        let mctx ← getMCtx
         out := out ++ s!"Adding with idx {idx} type {← ppExpr T}"
         let .mk res l1 l2 ← Q.insert (← getLCtx) (← getLocalInstances) T idx
           UInt32Array.empty (fun x => UInt32Array.single x.toUInt32) (fun x y => y.oInsert x.toUInt32)
@@ -224,7 +231,10 @@ unsafe def testLoad_embedForwInterCoreS (moduleNames : Array Name) : Array Expr 
         let thmN := i2.foldl [] (fun i Ts =>
           let thmI := data.data.stdForwSetTrie_idxToThmIdx[i.toNat]!
           data.data.thm_data[thmI]!.name :: Ts)
-        out := out ++ s!"\nMatch (ltx) {i1} (hyps) {i2} with:\nThms: {thmN}\nLevels"
+        let sinkIds := i2.foldl [] (fun i Ts =>
+          let thmI := data.data.stdForwSetTrie_idxToSinkIdx[i.toNat]!
+          (i.toNat, thmI) :: Ts)
+        out := out ++ s!"\nMatch (ltx) {i1} (hyps) {i2} with:\nThms: {thmN}\nIndex to sink pairs:{sinkIds}\nLevels"
         for (p,l) in i4.toListOfProd do
           out := out ++ s!"\npos {p} : {l}"
         out := out ++ s!"\nHyps"
@@ -235,7 +245,7 @@ unsafe def testLoad_embedForwInterCoreS (moduleNames : Array Name) : Array Expr 
 
 
 #check 1
-
+-- #exit
 
 unsafe def testLoad_embedBackMainS (moduleNames : Array Name)  : Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array DepCache → Array (FVarId × List FVarId) → MetaM Unit
   | guT, gu, tT, t, lT, l, wsT, ws, ewsT, ews, Ts, deps, wdeps =>
@@ -245,7 +255,7 @@ unsafe def testLoad_embedBackMainS (moduleNames : Array Name)  : Array Expr → 
       out := out ++  s!"Query : {← ppExpr que}"
       let .mk status inds res _ _ ← PaInG.embedBackMainS (← getLCtx) (← getLocalInstances) data.thmData
         (data.data.stdBackPaIn.getIndicesS) 2 [] que data.data.stdBackPaIn
-      out := out ++  s!"Status {status}\nInds {inds}"
+      out := out ++  s!"\nStatus {status}\nInds {inds}"
       for (is,da) in res.toListOfProd do
         let thmN := is.foldl [] (fun i L => data.data.thm_data[i.toNat]!.name :: L)
         out := out ++  s!"\nMatch {is}:\nCorresponding: {thmN}\nLevels"
@@ -254,4 +264,12 @@ unsafe def testLoad_embedBackMainS (moduleNames : Array Name)  : Array Expr → 
         out := out ++  s!"\nHyps"
         for (p,e) in da.ln.toListOfProd do
           out := out ++  s!"\npos {p} : {← ppExpr e}"
+        out := out ++ s!"\nT-Levels"
+        for (i,p,l) in da.tlv.toListOfProd do
+          out := out ++ s!"\nidx {i} pos {p} : {l}"
+        out := out ++ s!"\nTnodes"
+        for (i,p,e) in da.tn.toListOfProd do
+          out := out ++ s!"\nidx {i} pos {p} : {← ppExpr e}"
+
+
       return out

@@ -39,12 +39,12 @@ def inSandbox [Repr IdxCollType]
   let x ← buildCachDataForCore  emptyCol singleton insert
               `Sandbox cinfos
               0 cinfos.size
-              .dead #[] .dead 0 .nil #[] .dead 0 .empty .empty
+              .dead #[] .dead 0 .nil #[] #[] .dead 0 .empty .empty
   let thmData : CTrie (Array ThmFormat) :=
     CTrie.insert .empty ((`Sandbox  : Name).toString.toUTF8) x.thm_data
   let res ← SetTriePGSpe.ofList thmData intersect union difference emptyCol empty? size x.stdForwSetTrie
   let final : ModuleCacheState IdxCollType :=
-    ⟨x.thm_data, x.thmNameToIdx, x.thmNameToHypIdx, x.stdBackPaIn, res, x.stdForwSetTrie_idxToThmIdx, x.rwBackPaIn, x.rwForwPaIn⟩
+    ⟨x.thm_data, x.thmNameToIdx, x.thmNameToHypIdx, x.stdBackPaIn, res, x.stdForwSetTrie_idxToThmIdx, x.stdForwSetTrie_idxToSinkIdx, x.rwBackPaIn, x.rwForwPaIn⟩
   act thmData final
 
 

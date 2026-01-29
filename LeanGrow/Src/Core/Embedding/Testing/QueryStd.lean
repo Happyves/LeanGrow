@@ -59,6 +59,8 @@ unsafe def test_3_1 := testLoad_embedForwIncludeCoreS #[`Init.Data.List.Basic, `
 #check List.getLast!_of_getLast?
 #check List.filterMap_replicate_of_some
 
+-- With context g(l : List Int) u(a : Option Int : Option.some 5) g(h : l.getLast? = a) and objects run test_3_1
+-- u not unfolded
 
 
 /-- Remember that this is not a forward query, it is only a test.
@@ -89,11 +91,10 @@ unsafe def test_3_2 := testLoad_embedForwInterCoreS #[`Init.Data.List.Basic, `In
 #check List.mem_of_getLast?
 
 -- With context g(l : List Int) u(a : Option Int : Option.some 5) g(h : l.getLast? = a) and objects run test_3_2
--- buuuuugs
+-- u not unfolded
 
 
 -- With context g(l : List Int) g(l' : List Int) g(h : l ++ l' ≠ []) and objects run test_3_2
--- bug
 
 
 #check List.append_ne_nil_of_left_ne_nil
@@ -102,6 +103,9 @@ unsafe def test_3_2 := testLoad_embedForwInterCoreS #[`Init.Data.List.Basic, `In
 #check List.head_mem
 #check List.getLast_mem
 #check List.exists_cons_of_ne_nil
+#check List.mem_of_ne_of_mem
+#check List.getLast_mem_getLast?
+#check List.head_mem_head?
 
 
 unsafe def test_4 := testLoad_embedBackMainS #[`Init.Data.List.Basic, `Init.Data.List.Lemmas]
@@ -111,24 +115,61 @@ unsafe def test_4 := testLoad_embedBackMainS #[`Init.Data.List.Basic, `Init.Data
 
 #check List.append_assoc
 
+-- With context g(l : List Int) g(h : l ≠ []) t(0 : 1 : m : List Int) and objects (l.head h ∈ m) run test_4
+
+#check List.head_mem
+#check List.mem_of_elem_eq_true
+#check List.mem_of_mem_head?
+#check List.mem_of_getLast?
+-- and many more ; great sucess
+
+-- With context g(p : Int → Bool) g(l : List Int) t(2 : 3 : α : Type) t(0 : 1 : m : List α) and objects ((List.filter p l).length ≤ m.length) run test_4
+
+#check List.length_filter_le
+
+tracing_mode .std
+tracing_flags [(`PaInG.embedBackCore, TracingFlags.all),
+               (`PaInG.embedBackDefEqCore.load, TracingFlags.all),
+               (`PaInG.embedLnodes, TracingFlags.all)]
+
+-- With context g(p : Int → Bool) g(l : List Int) t(0 : 1 : m : List Int) and objects ((List.filter p m).length ≤ l.length) run test_4
+
+-- With context t(0 : 1 : m : Int → Bool) g(l : List Int) and objects ((List.filter m l).length ≤ l.length) run test_4
+
+-- With context g(p : Int → Bool) g(l : List Int) t(2 : 3 : α : Type) t(0 : 1 : m : (Int → Bool) → List Int → List Int) and objects ((m p l).length ≤ l.length) run test_4
+-- failure ; expected ? List.filter is a const with a lnode-universe, so tnode match prohibited ?
+
+-- With context g(p : Int → Bool) g(l : List Int) t(2 : 3 : α : Type) t(0 : 1 : m : (Int → Bool) → List Int → List α) and objects ((m p l).length ≤ l.length) run test_4
+-- index out of bounds and failure
+
+-- With context g(l : List Int) t(2 : 3 : α : Type) t(0 : 1 : m : List α) and objects (m.length ≤ l.length ) run test_4
+-- fails to unify ; expected ? As would assign tnode lnodes ?
+
+
+#check 1
 
 -- tracing_mode .std
 -- tracing_flags [(`PaInG.embedBackCore, TracingFlags.all)]
 
 -- With context g(l : List Int) and objects ((l.filter (42 == ·)).length ≤ l.length) run test_4
 
--- With context g(α : Type) g(i : BEq α) g(l : List α) and objects ((l.filter (fun x => x == x)).length ≤ l.length) run test_4
-
-
 #check List.length_filter_le
 
+
+-- With context g(α : Type) g(i : BEq α) g(l : List α) and objects ((l.filter (fun x => x == x)).length ≤ l.length) run test_4
+
+-- With context g(l : List Int) u(n : Nat : l.length) and objects ((l.filter (42 == ·)).length ≤ n) run test_4
+-- yay ; unode unfolded
+
+-- With context g(l : List Int) u(n : Nat : l.length) t(0 : 1 : m : List Int) and objects ((m.filter (42 == ·)).length ≤ n) run test_4
+
+
 -- With context g(l : List Int) g(l' : List Int) and objects (l = l') run test_4
--- buuuuuuug
+-- status 0, ie expected fail ; no matching thm in modules ??
 
+#check List.unzip_cons
+#check List.mem_partition
 
-#check List.beq_cons_nil
-#check List.findSome?_cons
-#check List.set.eq_def
 
 /-
 Fix notes
@@ -136,12 +177,8 @@ Fix notes
 - defEqNoMv → defEqWiMv
 
 TODO:
-- duplication in embedForwIncludeCore
-- bugs here
-- test embedBackMainS with tnodes and unodes
 - add uni tests
 - add rw tests
-- try cache load tests
 - rewriting
 - embedProcess
 - test embedProcess

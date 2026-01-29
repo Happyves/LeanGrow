@@ -165,6 +165,7 @@ partial def embedForwIncludeCore
           mtrace on .zero with s!"[embedForwIncludeCore] Q is dead"
           return .nil
       | .br tnodes _ gnodes unodes bvars sorts consts lits apf apa api laf laa lai alf ala ali lef lea lez lei projs proofsOf proofs,
+        -- **Debt** : unodes of Q should be built and merged with the current branch ; also, we don't expect unodes in l ...
         .br tnodes' lnodes' gnodes' unodes' bvars' sorts' consts' lits' apf' apa' api' laf' laa' lai' alf' ala' ali' lef' lea' lez' lei' projs' proofsOf' proofs' =>
           do
           if (empty? api && !(empty? api')) || (empty? lai && !(empty? lai')) || (empty? ali && !(empty? ali')) || (empty? lei && !(empty? lei'))
@@ -335,6 +336,7 @@ partial def embedForwInterCore
           mtrace on .zero with s!"[embedForwIncludeCore] Q is dead"
           return .nil
       | .br tnodes _ gnodes unodes bvars sorts consts lits apf apa api laf laa lai alf ala ali lef lea lez lei projs proofsOf proofs,
+        -- **Debt** : unodes of Q should be built and merged with the current branch ; also, we don't expect unodes in l ...
         .br tnodes' lnodes' gnodes' unodes' bvars' sorts' consts' lits' apf' apa' api' laf' laa' lai' alf' ala' ali' lef' lea' lez' lei' projs' proofsOf' proofs' =>
             do
             let IT := merge2' (· == ·) .nil tnodes tnodes' -- we don't really expect any
