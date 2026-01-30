@@ -110,9 +110,6 @@ LG:
 
 Djv Core:
 - Query Forward, Backward, Subpatterns
-- somehow disallow mvar-apps as result of generalised patterns,
-  since it's bad for uni ... Should be ok when queried as
-  proper sub-pattern though ...
 - Idea for Or.rec &co
 
 
@@ -192,6 +189,9 @@ Djv Core:
 - migrate repo, fix and consider local-instance-patching in generalise too ?
 - caching for generalise
 - Generalize proofs by defaut, but not in the top branch
+- somehow disallow mvar-apps as result of generalised patterns,
+  since it's bad for uni ... Should be ok when queried as
+  proper sub-pattern though ...
 - For score add different generalisations (corresponding to different ratios, for example) from same sample
 to scoring-structures, possibly with different scores
 

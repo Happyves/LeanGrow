@@ -1,75 +1,178 @@
 
-Building ltxAdding with idx 0 type List IntAdding with idx 1 type g.0.getLast? = some 5
-Match (ltx) #[1] (hyps) #[16] with:
-Thms: [List.mem_of_getLast?]
-Index to sink pairs:[(16, 3)]
-Levels
+
+Thm : List.filter_eq_filterTR
+Goal : @List.filter
+Replacement : @List.filterTR
+Embeddings
+Dirs rwDirs.ap
+  (rwDirs.ap (rwDirs.no) (rwDirs.ap (rwDirs.ap (rwDirs.ap (rwDirs.yes) (rwDirs.no)) (rwDirs.no)) (rwDirs.no)))
+  (rwDirs.ap (rwDirs.ap (rwDirs.ap (rwDirs.yes) (rwDirs.no)) (rwDirs.no)) (rwDirs.no))
+Levels:
+pos 0 : 0
+Hyps
+
+Thm : List.filterMap_eq_filter
+Goal : List.filter ?Init.Data.List.Lemmas.372.1
+Replacement : List.filterMap (Option.guard fun x => ?Init.Data.List.Lemmas.372.1 x)
+Embeddings
+Dirs rwDirs.ap (rwDirs.ap (rwDirs.no) (rwDirs.ap (rwDirs.yes) (rwDirs.no))) (rwDirs.no)
+Levels:
 pos 0 : 0
 Hyps
 pos 1 : g.0
-pos 0 : Int
-pos 2 : 5
-Match (ltx) #[0] (hyps) #[86] with:
-Thms: [List.Mem.below.head]
-Index to sink pairs:[(86, 3)]
-Levels
+pos 0 : Nat
+Dirs rwDirs.ap (rwDirs.no) (rwDirs.ap (rwDirs.yes) (rwDirs.no))
+Levels:
 pos 0 : 0
 Hyps
-pos 0 : Int
-Match (ltx) #[0] (hyps) #[56] with:
-Thms: [List.eq_replicate_or_eq_replicate_append_cons]
-Index to sink pairs:[(56, 1)]
-Levels
-pos 0 : 0
-Hyps
-pos 0 : Int
-Match (ltx) #[0] (hyps) #[32] with:
-Thms: [List.length_filterMap_le]
-Index to sink pairs:[(32, 3)]
-Levels
-pos 0 : 0
-Hyps
-pos 0 : Int
-Match (ltx) #[0] (hyps) #[24] with:
-Thms: [List.length_filter_le]
-Index to sink pairs:[(24, 2)]
-Levels
-pos 0 : 0
-Hyps
-pos 0 : Int
-Match (ltx) #[0] (hyps) #[29] with:
-Thms: [List.eq_nil_or_concat]
-Index to sink pairs:[(29, 1)]
-Levels
-pos 0 : 0
-Hyps
-pos 0 : Int
-Match (ltx) #[0] (hyps) #[53] with:
-Thms: [List.filter_sublist]
-Index to sink pairs:[(53, 2)]
-Levels
-pos 0 : 0
-Hyps
-pos 0 : Int
-Match (ltx) #[0] (hyps) #[79] with:
-Thms: [List.mem_append_left]
-Index to sink pairs:[(79, 3)]
-Levels
-pos 0 : 0
-Hyps
-pos 0 : Int
-Match (ltx) #[0] (hyps) #[84] with:
-Thms: [List.mem_append_right]
-Index to sink pairs:[(84, 2)]
-Levels
-pos 0 : 0
-Hyps
-pos 0 : Int
+pos 1 : g.1
+pos 0 : Nat
 
-Searched in L:
-(Type Init.Data.List.Basic.494.0 ::: #[90]) ;;; (Type Init.Data.List.Basic.136.0 ::: #[76]) ;;; (Type Init.Data.List.Basic.250.0 ::: #[78]) ;;; (Type Init.Data.List.Basic.433.0 ::: #[89]) ;;; (Type Init.Data.List.Basic.2.0 ::: #[72]) ;;; (Type Init.Data.List.Basic.257.0 ::: #[83]) ;;; (0 < List.length ?Init.Data.List.Lemmas.209.1 ::: #[8]) ;;; (0 < List.length ?Init.Data.List.Lemmas.203.1 ::: #[7]) ;;; (0 < List.length ?Init.Data.List.Lemmas.1785.1 ::: #[67]) ;;; (?Init.Data.List.Lemmas.1357.2 ∈ ?Init.Data.List.Lemmas.1357.3 ::: #[50]) ;;; (?Init.Data.List.Lemmas.1188.3 ∈ ?Init.Data.List.Lemmas.1188.2 ::: #[37]) ;;; (?Init.Data.List.Lemmas.309.1 ∈ ?Init.Data.List.Lemmas.309.2 ::: #[14]) ;;; (?Init.Data.List.Lemmas.222.5 ∈ ?Init.Data.List.Lemmas.222.3 ::: #[10]) ;;; (?Init.Data.List.Lemmas.1234.1 ∈ ?Init.Data.List.Lemmas.1234.2 ::: #[42]) ;;; (?Init.Data.List.Lemmas.1831.1 ∈ ?Init.Data.List.Lemmas.1831.2 ::: #[69]) ;;; (?Init.Data.List.Lemmas.247.1 ∈ ?Init.Data.List.Lemmas.247.2 :: ?Init.Data.List.Lemmas.247.3 ::: #[12]) ;;; (?Init.Data.List.Lemmas.1332.2 ∈ List.flatten ?Init.Data.List.Lemmas.1332.1 ::: #[48]) ;;; (?Init.Data.List.Lemmas.1199.2 ∈ List.getLast? ?Init.Data.List.Lemmas.1199.1 ::: #[40]) ;;; (?Init.Data.List.Lemmas.840.4 ∈ List.map ?Init.Data.List.Lemmas.840.2 ?Init.Data.List.Lemmas.840.3 ::: #[27]) ;;; (?Init.Data.List.Lemmas.186.3 ∈
-  List.set ?Init.Data.List.Lemmas.186.1 ?Init.Data.List.Lemmas.186.2 ?Init.Data.List.Lemmas.186.4 ::: #[6]) ;;; (?Init.Data.List.Lemmas.74.2 ∈ List.head? ?Init.Data.List.Lemmas.74.1 ::: #[1]) ;;; (?Init.Data.List.Lemmas.617.2 ∈ List.flatMap ?Init.Data.List.Lemmas.617.4 ?Init.Data.List.Lemmas.617.3 ::: #[21]) ;;; (?Init.Data.List.Lemmas.1088.4 ∈ List.insert ?Init.Data.List.Lemmas.1088.3 ?Init.Data.List.Lemmas.1088.5 ::: #[34]) ;;; (?Init.Data.List.Lemmas.1233.1 ∈ List.tail ?Init.Data.List.Lemmas.1233.2 ::: #[41]) ;;; (?Init.Data.List.Lemmas.1691.1 ∈ ?Init.Data.List.Lemmas.1691.2 :: ?Init.Data.List.Lemmas.1691.3 ::: #[65]) ;;; (?Init.Data.List.Lemmas.101.1 ∈ ?Init.Data.List.Lemmas.101.2 :: ?Init.Data.List.Lemmas.101.3 ::: #[2]) ;;; (?Init.Data.List.Lemmas.1542.1 ∈ ?Init.Data.List.Lemmas.1542.2 ::: #[58]) ;;; (?Init.Data.List.Lemmas.366.1 ∈ ?Init.Data.List.Lemmas.366.2 ::: #[15]) ;;; (?Init.Data.List.Lemmas.219.1 ∈ ?Init.Data.List.Lemmas.219.2 ::: #[9]) ;;; (?Init.Data.List.Lemmas.1044.1 ∈ ?Init.Data.List.Lemmas.1044.2 ::: #[31]) ;;; (?Init.Data.List.Lemmas.1307.3 ∈ ?Init.Data.List.Lemmas.1307.2 ::: #[44]) ;;; (?Init.Data.List.Lemmas.1447.1[?Init.Data.List.Lemmas.1447.2]? = some ?Init.Data.List.Lemmas.1447.3 ::: #[55]) ;;; (?Init.Data.List.Lemmas.774.1 ++ ?Init.Data.List.Lemmas.774.2 =
-  ?Init.Data.List.Lemmas.774.3 ++ ?Init.Data.List.Lemmas.774.4 ::: #[26]) ;;; (List.getLast? ?Init.Data.List.Lemmas.425.1 = some ?Init.Data.List.Lemmas.425.2 ::: #[16]) ;;; (?Init.Data.List.Lemmas.1815.1 ++ ?Init.Data.List.Lemmas.1815.2 = [] ::: #[68]) ;;; (?Init.Data.List.Lemmas.251.3[?Init.Data.List.Lemmas.251.1]? = some ?Init.Data.List.Lemmas.251.2 ::: #[13]) ;;; (List.elem ?Init.Data.List.Basic.101.3 ?Init.Data.List.Basic.101.4 = true ::: #[74]) ;;; (List.length ?Init.Data.List.Lemmas.1040.1 = ?Init.Data.List.Lemmas.1040.2 + 1 ::: #[30]) ;;; (List.length ?Init.Data.List.Lemmas.1637.1 = List.length ?Init.Data.List.Lemmas.1637.2 ::: #[61]) ;;; (List.length ?Init.Data.List.Lemmas.774.2 = List.length ?Init.Data.List.Lemmas.774.4 ::: #[25]) ;;; (List.length ?Init.Data.List.Lemmas.1191.2 = ?Init.Data.List.Lemmas.1191.1 + 1 ::: #[38]) ;;; (List.length ?Init.Data.List.Lemmas.1326.2 = ?Init.Data.List.Lemmas.1326.1 + 1 ::: #[45]) ;;; (List.concat ?Init.Data.List.Basic.429.1 ?Init.Data.List.Basic.429.3 =
-  List.concat ?Init.Data.List.Basic.429.2 ?Init.Data.List.Basic.429.4 ::: #[88]) ;;; (?Init.Data.List.Lemmas.1136.1[?Init.Data.List.Lemmas.1136.2] = ?Init.Data.List.Lemmas.1136.4 ::: #[35]) ;;; (List.head? ?Init.Data.List.Lemmas.1338.1 = some ?Init.Data.List.Lemmas.1338.2 ::: #[49]) ;;; (?Init.Data.List.Lemmas.1637.1 ++ ?Init.Data.List.Lemmas.1637.3 =
-  ?Init.Data.List.Lemmas.1637.2 ++ ?Init.Data.List.Lemmas.1637.4 ::: #[62]) ;;; (List.Pairwise ?Init.Data.List.Basic.256.1 ?Init.Data.List.Basic.256.3 ::: #[81]) ;;; (List.Perm ?Init.Data.List.Basic.551.2 ?Init.Data.List.Basic.551.3 ::: #[92]) ;;; (List.Perm ?Init.Data.List.Basic.551.1 ?Init.Data.List.Basic.551.2 ::: #[91]) ;;; (Fin (List.length ?Init.Data.List.Lemmas.1425.1) ::: #[54]) ;;; (List ?Init.Data.List.Basic.339.0 ::: #[84]) ;;; (List ?Init.Data.List.Basic.255.0 ::: #[79]) ;;; (List ?Init.Data.List.Lemmas.1388.0 ::: #[53]) ;;; (List ?Init.Data.List.Lemmas.888.0 ::: #[29]) ;;; (List ?Init.Data.List.Lemmas.770.0 ::: #[24]) ;;; (List ?Init.Data.List.Lemmas.1045.0 ::: #[32]) ;;; (List ?Init.Data.List.Lemmas.1453.0 ::: #[56]) ;;; (List ?Init.Data.List.Basic.406.0 ::: #[86]) ;;; (¬?Init.Data.List.Lemmas.1674.1 = [] ::: #[63]) ;;; (¬?Init.Data.List.Lemmas.1549.1 = [] ::: #[60]) ;;; (¬?Init.Data.List.Lemmas.703.1 = [] ::: #[22]) ;;; (¬?Init.Data.List.Lemmas.27.1 = [] ::: #[0]) ;;; (¬List.tail ?Init.Data.List.Lemmas.872.1 = [] ::: #[28]) ;;; (¬?Init.Data.List.Lemmas.1691.1 = ?Init.Data.List.Lemmas.1691.2 ::: #[64]) ;;; (¬List.tail ?Init.Data.List.Lemmas.1330.1 = [] ::: #[46]) ;;; (¬?Init.Data.List.Lemmas.450.1 = [] ::: #[19]) ;;; (¬?Init.Data.List.Lemmas.1198.1 = [] ::: #[39]) ;;; (¬?Init.Data.List.Lemmas.1840.1 = [] ::: #[71]) ;;; (¬?Init.Data.List.Lemmas.517.1 = [] ::: #[20]) ;;; (¬?Init.Data.List.Lemmas.449.1 ∈ ?Init.Data.List.Lemmas.449.3 ::: #[18]) ;;; (¬?Init.Data.List.Lemmas.1331.1 ∈ ?Init.Data.List.Lemmas.1331.2 :: ?Init.Data.List.Lemmas.1331.3 ::: #[47]) ;;; (¬?Init.Data.List.Lemmas.122.1 ∈ ?Init.Data.List.Lemmas.122.2 :: ?Init.Data.List.Lemmas.122.3 ::: #[3]) ;;; (¬?Init.Data.List.Lemmas.1532.1 ∈ ?Init.Data.List.Lemmas.1532.2 :: ?Init.Data.List.Lemmas.1532.3 ::: #[57]) ;;; (¬?Init.Data.List.Lemmas.135.1 ∈ ?Init.Data.List.Lemmas.135.2 ::: #[4]) ;;; (¬?Init.Data.List.Lemmas.135.1 ∈ ?Init.Data.List.Lemmas.135.3 ::: #[5]) ;;; ((buildCore : List ?Init.Data.List.Basic.243.0) → List.Pairwise ?Init.Data.List.Basic.243.1 buildCore → Prop ::: #[77]) ;;; ((buildCore buildCore_1 : List ?Init.Data.List.Basic.33.0) → buildCore.Perm buildCore_1 → Prop ::: #[73]) ;;; ((buildCore buildCore_1 : List ?Init.Data.List.Basic.666.0) → buildCore.Sublist buildCore_1 → Prop ::: #[93]) ;;; (∀ (buildCore : ?Init.Data.List.Basic.256.0),
-  buildCore ∈ ?Init.Data.List.Basic.256.3 → ?Init.Data.List.Basic.256.1 ?Init.Data.List.Basic.256.2 buildCore ::: #[82]) ;;; (?Init.Data.List.Basic.117.0 → ?Init.Data.List.Basic.117.0 → Prop ::: #[75]) ;;; (?Init.Data.List.Lemmas.1718.0 → Prop ::: #[66])
+Thm : List.filter.eq_def
+Goal : List.filter ?Init.Data.List.Basic.124.1 ?Init.Data.List.Basic.124.2
+Replacement : match ?Init.Data.List.Basic.124.2 with
+| [] => []
+| a :: as =>
+  match ?Init.Data.List.Basic.124.1 a with
+  | true => a :: List.filter ?Init.Data.List.Basic.124.1 as
+  | false => List.filter ?Init.Data.List.Basic.124.1 as
+Embeddings
+Dirs rwDirs.ap (rwDirs.ap (rwDirs.no) (rwDirs.yes)) (rwDirs.no)
+Levels:
+pos 0 : 0
+Hyps
+pos 2 : g.2
+pos 1 : g.0
+pos 0 : Nat
+Dirs rwDirs.ap (rwDirs.no) (rwDirs.yes)
+Levels:
+pos 0 : 0
+Hyps
+pos 2 : g.2
+pos 1 : g.1
+pos 0 : Nat
+
+Thm : List.append_left_inj
+Goal : ?Init.Data.List.Lemmas.1163.1 = ?Init.Data.List.Lemmas.1163.2
+Replacement : ?Init.Data.List.Lemmas.1163.1 ++ ?Init.Data.List.Lemmas.1163.3 =
+  ?Init.Data.List.Lemmas.1163.2 ++ ?Init.Data.List.Lemmas.1163.3
+Embeddings
+Dirs rwDirs.yes
+Levels:
+pos 0 : 0
+Hyps
+pos 2 : List.filter g.1 g.2
+pos 1 : List.filter g.0 g.2
+pos 0 : Nat
+
+Thm : List.ext_getElem?_iff
+Goal : ?Init.Data.List.Lemmas.936.1 = ?Init.Data.List.Lemmas.936.2
+Replacement : ∀ (i : Nat), ?Init.Data.List.Lemmas.936.1[i]? = ?Init.Data.List.Lemmas.936.2[i]?
+Embeddings
+Dirs rwDirs.yes
+Levels:
+pos 0 : 0
+Hyps
+pos 2 : List.filter g.1 g.2
+pos 1 : List.filter g.0 g.2
+pos 0 : Nat
+
+Thm : List.concat_inj_right
+Goal : ?Init.Data.List.Lemmas.894.2 = ?Init.Data.List.Lemmas.894.3
+Replacement : List.concat ?Init.Data.List.Lemmas.894.1 ?Init.Data.List.Lemmas.894.2 =
+  List.concat ?Init.Data.List.Lemmas.894.1 ?Init.Data.List.Lemmas.894.3
+Embeddings
+Dirs rwDirs.yes
+Levels:
+pos 0 : 0
+Hyps
+pos 3 : List.filter g.1 g.2
+pos 2 : List.filter g.0 g.2
+pos 0 : List Nat
+
+Thm : List.concat_inj_left
+Goal : ?Init.Data.List.Lemmas.869.1 = ?Init.Data.List.Lemmas.869.2
+Replacement : List.concat ?Init.Data.List.Lemmas.869.1 ?Init.Data.List.Lemmas.869.3 =
+  List.concat ?Init.Data.List.Lemmas.869.2 ?Init.Data.List.Lemmas.869.3
+Embeddings
+Dirs rwDirs.yes
+Levels:
+pos 0 : 0
+Hyps
+pos 2 : List.filter g.1 g.2
+pos 1 : List.filter g.0 g.2
+pos 0 : Nat
+
+Thm : List.singleton_inj
+Goal : ?Init.Data.List.Lemmas.781.1 = ?Init.Data.List.Lemmas.781.2
+Replacement : [?Init.Data.List.Lemmas.781.1] = [?Init.Data.List.Lemmas.781.2]
+Embeddings
+Dirs rwDirs.yes
+Levels:
+pos 0 : 0
+Hyps
+pos 2 : List.filter g.1 g.2
+pos 1 : List.filter g.0 g.2
+pos 0 : List Nat
+
+Thm : List.append_right_inj
+Goal : ?Init.Data.List.Lemmas.682.1 = ?Init.Data.List.Lemmas.682.2
+Replacement : ?Init.Data.List.Lemmas.682.3 ++ ?Init.Data.List.Lemmas.682.1 =
+  ?Init.Data.List.Lemmas.682.3 ++ ?Init.Data.List.Lemmas.682.2
+Embeddings
+Dirs rwDirs.yes
+Levels:
+pos 0 : 0
+Hyps
+pos 2 : List.filter g.1 g.2
+pos 1 : List.filter g.0 g.2
+pos 0 : Nat
+
+Thm : List.mem_singleton
+Goal : ?Init.Data.List.Lemmas.671.1 = ?Init.Data.List.Lemmas.671.2
+Replacement : ?Init.Data.List.Lemmas.671.1 ∈ [?Init.Data.List.Lemmas.671.2]
+Embeddings
+Dirs rwDirs.yes
+Levels:
+pos 0 : 0
+Hyps
+pos 2 : List.filter g.1 g.2
+pos 1 : List.filter g.0 g.2
+pos 0 : List Nat
+
+Thm : List.reverse_inj
+Goal : ?Init.Data.List.Lemmas.614.1 = ?Init.Data.List.Lemmas.614.2
+Replacement : List.reverse ?Init.Data.List.Lemmas.614.1 = List.reverse ?Init.Data.List.Lemmas.614.2
+Embeddings
+Dirs rwDirs.yes
+Levels:
+pos 0 : 0
+Hyps
+pos 2 : List.filter g.1 g.2
+pos 1 : List.filter g.0 g.2
+pos 0 : Nat
+
+Thm : List.cons_inj_right
+Goal : ?Init.Data.List.Lemmas.602.2 = ?Init.Data.List.Lemmas.602.3
+Replacement : ?Init.Data.List.Lemmas.602.1 :: ?Init.Data.List.Lemmas.602.2 =
+  ?Init.Data.List.Lemmas.602.1 :: ?Init.Data.List.Lemmas.602.3
+Embeddings
+Dirs rwDirs.yes
+Levels:
+pos 0 : 0
+Hyps
+pos 3 : List.filter g.1 g.2
+pos 2 : List.filter g.0 g.2
+pos 0 : Nat
+
+Thm : List.isEqv_eq
+Goal : ?Init.Data.List.Lemmas.244.3 = ?Init.Data.List.Lemmas.244.4
+Replacement : (List.isEqv ?Init.Data.List.Lemmas.244.3 ?Init.Data.List.Lemmas.244.4 fun x1 x2 => x1 == x2) = true
+Embeddings
+Dirs rwDirs.yes
+Levels:
+pos 0 : 0
+Hyps
+pos 4 : List.filter g.1 g.2
+pos 3 : List.filter g.0 g.2
+pos 0 : Nat
