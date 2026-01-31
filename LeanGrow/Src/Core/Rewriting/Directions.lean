@@ -8,15 +8,14 @@ Author: Yves Jäckle.
 import LeanGrow.Src.Utils.Lean.Expr.Basic
 import LeanGrow.Src.Utils.LeanGrow.Nodes
 
-
 open Lean
 
 inductive rwDirs where
 | no | yes
 | ap (_ : rwDirs) (_ : rwDirs)
-| la (_ : rwDirs)
-| al (_ : rwDirs)
-| le (_ : rwDirs)
+| la (_ : rwDirs) (_ : rwDirs)
+| al (_ : rwDirs) (_ : rwDirs)
+| le (_ : rwDirs) (_ : rwDirs) (_ : rwDirs)
 | pro (_ : rwDirs)
 deriving BEq, Inhabited, Repr
 
@@ -83,12 +82,12 @@ partial def lambdaLetAllBoundedTelescopeWorkerDirsDeps
   if d < D
   then
     match type, dirs with
-    | .lam _ t b _, .la r | .forallE _ t b _, .al r =>
+    | .lam _ t b _, .la _ r | .forallE _ t b _, .al _ r =>
         let w ← worker d
         let ⟨wfv,b,l1,l2⟩ ← withFreeing w t b l1 l2
         let fvst ←  t.getFVarIds.mapM (FVarId.GetDecl · l1 l2)
         lambdaLetAllBoundedTelescopeWorkerDirsDeps l1 l2 b (sofarFvs.push (.fvar wfv)) (workerDeps.push (wfv,fvst)) (d+1) D r
-    | .letE _ t v b _, .le z =>
+    | .letE _ t v b _, .le _ _ z =>
         let w ← worker d
         let ⟨wfv,b,l1,l2⟩ ← withFreeingLet w t v b l1 l2
         let fvst ←  v.getFVarIds.mapM (FVarId.GetDecl · l1 l2)

@@ -56,6 +56,87 @@ def mergeOccsTwo {α : Type _} [ToString α]
   mtrace  on .zero with s!"[mergeOccsTwo] returning {repr <| res.map (fun x y => (x, y.map (fun x y => (toString x, y))))}"
   return res
 
+@[specialize]
+def mergeOccsThree {α : Type _} [ToString α]
+  (eq? : α → α → MetaM Bool)
+  (F A Z : ListProd Nat (ListProd α rwDirs)) :
+  MetaM <| ListProd Nat (ListProd α rwDirs) :=
+  let rec @[specialize] inner_fst (sofar a z : ListProd α rwDirs) : (ListProd α rwDirs) → MetaM (ListProd α rwDirs)
+    | .nil => return sofar
+    | .cons as ds more => do
+      match ← a.findM? (fun x _ => eq? x as) with
+      | .none =>
+        match ← z.findM? (fun x _ => eq? x as) with
+        | .none => inner_fst (.cons as (.le ds .no .no) sofar) a z more
+        | .some _ zds => inner_fst (.cons as (.le ds .no zds) sofar) a z more
+      | .some _ ads =>
+        match ← z.findM? (fun x _ => eq? x as) with
+        | .none => inner_fst (.cons as (.le ds ads .no) sofar) a z more
+        | .some _ zds => inner_fst (.cons as (.le ds ads zds) sofar) a z more
+  let rec @[specialize] inner_snd (sofar z : ListProd α rwDirs) : (ListProd α rwDirs) → MetaM (ListProd α rwDirs)
+    | .nil => return sofar
+    | .cons as ds more => do
+      match ← sofar.findM? (fun x _ => eq? x as) with
+      | .none =>
+        match ← z.findM? (fun x _ => eq? x as) with
+        | .none => inner_snd (.cons as (.le .no ds .no) sofar) z more
+        | .some _ zds => inner_snd (.cons as (.le .no ds zds) sofar) z more
+      | .some ..=> inner_snd (sofar) z more
+  let rec @[specialize] inner_thd (sofar : ListProd α rwDirs) : ListProd α rwDirs → MetaM (ListProd α rwDirs)
+    | .nil => return sofar
+    | .cons as ds more => do
+      match ← sofar.findM? (fun x _ => eq? x as) with
+      | .none => inner_thd (.cons as (.le .no .no ds) sofar) more
+      | .some .. => inner_thd (sofar) more
+  let inner := fun l r w => do inner_thd (← inner_snd (← inner_fst .nil r w l) l r) w
+  let rec @[specialize] main_fst (res : ListProd Nat (ListProd α rwDirs)) : ListProd Nat (ListProd α rwDirs) → MetaM (ListProd Nat (ListProd α rwDirs))
+    | .nil => return res
+    | .cons idx data more => do
+      match A.find? (fun x _ => x == idx) with
+      | .none =>
+        match Z.find? (fun x _ => x == idx) with
+        | .none =>
+          let newdata := data.map (fun x y => (x, rwDirs.le y .no .no))
+          main_fst (.cons idx newdata  res) more
+        | .some _ zd =>
+          let newdata ←  inner data .nil zd
+          main_fst (.cons idx newdata  res) more
+      | .some _ ad =>
+        match Z.find? (fun x _ => x == idx) with
+        | .none =>
+          let newdata ← inner data ad .nil
+          main_fst (.cons idx newdata  res) more
+        | .some _ zd =>
+          let newdata ← inner data ad zd
+          main_fst (.cons idx newdata  res) more
+  let rec @[specialize] main_snd (res : ListProd Nat (ListProd α rwDirs)) : ListProd Nat (ListProd α rwDirs) → MetaM (ListProd Nat (ListProd α rwDirs))
+    | .nil  => return res
+    | .cons idx data more => do
+      match res.find? (fun x _ => x == idx) with
+      | .none =>
+        match Z.find? (fun x _ => x == idx) with
+        | .none =>
+          let newdata := data.map (fun x y => (x, .le .no y .no))
+          main_fst (.cons idx newdata  res) more
+        | .some _ zd =>
+          let newdata ← inner .nil data zd
+          main_fst (.cons idx newdata  res) more
+      | .some .. => main_snd res more
+  let rec @[specialize] main_thd (res : ListProd Nat (ListProd α rwDirs)) : ListProd Nat (ListProd α rwDirs) → MetaM (ListProd Nat (ListProd α rwDirs))
+    | .nil => return res
+    | .cons idx data more => do
+      match res.find? (fun x _ => x == idx) with
+      | .none =>
+        let newdata := data.map (fun x y => (x, .le .no .no y))
+        main_thd (.cons idx newdata  res) more
+      | _ => main_thd res more
+  do
+  mtracing
+  mtrace  on .zero with s!"[mergeOccsTwo] Call on F {repr <| F.map (fun x y => (x, y.map (fun x y => (toString x, y))))} A {repr <| A.map (fun x y => (x, y.map (fun x y => (toString x, y))))} Z {repr <| Z.map (fun x y => (x, y.map (fun x y => (toString x, y))))}"
+  let res ← main_thd (← main_snd (← main_fst .nil F) A) Z
+  mtrace  on .zero with s!"[mergeOccsTwo] returning {repr <| res.map (fun x y => (x, y.map (fun x y => (toString x, y))))}"
+  return res
+
 
 
 @[specialize]
@@ -110,3 +191,21 @@ def listIndxSingleOut {α : Type _} (fold : ∀ {β : Type _}, IdxCollType → (
   (l : ListProd IdxCollType α) : ListProd Nat α :=
     l.foldl .nil (fun ids val R =>
       fold ids R (fun i R => .cons i val R))
+
+
+def mkProjFn!
+  (l1 : LocalContext) (l2 : LocalInstances)
+  (strucName : Name) (i : Nat) (major : Expr) : MetaM Expr := do
+  let env ← getEnv
+  let info := getStructureInfo? env strucName
+  match info with
+  | none => return mkProj strucName i major
+  | some info => match info.getProjFn? i with
+    | none => return mkProj strucName i major
+    | some projFn =>
+      let T ← InferType major l1 l2
+      match T.getAppFn' with
+      | .const _ us =>
+        return mkApp (mkAppN (mkConst projFn us) T.getAppArgs) major
+      | _ =>
+        return mkProj strucName i major

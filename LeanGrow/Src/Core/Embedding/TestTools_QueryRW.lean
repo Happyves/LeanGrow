@@ -50,8 +50,8 @@ def testSandbox_embedForwRWMainS (thms : Array Name)  : Array Expr → Array Exp
   | guT, gu, tT, t, lT, l, wsT, ws, ewsT, ews, Ts, deps, wdeps =>
     inSandboxS thms <| fun thmData data => do
       let que ← withTransparency .reducible <| reduce (skipTypes := false) Ts[0]!
-      let .mk res l1 l2 ← data.rwForwPaIn.embedForwRWMainS thmData (← getLCtx) (← getLocalInstances)
-        (data.rwForwPaIn.getIndicesS) 2 [] que
+      let .mk _ res l1 l2 ← data.rwForwPaIn.embedForwRWMainS thmData (← getLCtx) (← getLocalInstances)
+        (data.rwForwPaIn.getIndicesS) UInt32Array.empty 2 [] que
       withLCtx l1 l2 <| do
         match res with
         | .nil => IO.println "Found nothing"
@@ -78,8 +78,8 @@ def testSandbox_embedBackRWMainnS (thms : Array Name)  : Array Expr → Array Ex
   | guT, gu, tT, t, lT, l, wsT, ws, ewsT, ews, Ts, deps, wdeps =>
     inSandboxS thms <| fun thmData data => do
       let que ← withTransparency .reducible <| reduce (skipTypes := false) Ts[0]!
-      let .mk res l1 l2 ← embedBackRWMainnS (← getLCtx) (← getLocalInstances)
-        thmData (data.rwBackPaIn.getIndicesS) 2 [] que data.rwBackPaIn
+      let .mk _ res l1 l2 ← embedBackRWMainnS (← getLCtx) (← getLocalInstances)
+        thmData (data.rwBackPaIn.getIndicesS) UInt32Array.empty 2 [] que data.rwBackPaIn
       withLCtx l1 l2 <| do
         match res with
         | .nil => IO.println "Found nothing"
@@ -90,7 +90,7 @@ def testSandbox_embedBackRWMainnS (thms : Array Name)  : Array Expr → Array Ex
             | .std .. => continue
             | .rw tname _ _ goal rep .. =>
               IO.println s!"\nThm : {tname}\nGoal : {← ppExpr goal}\nReplacement : {← ppExpr rep}\nEmbeddings"
-              for (em,dirs) in emb.toListOfProd do
+              for (em,dirs,_) in emb.toListOfProd do
                 IO.println s!"Dirs {repr dirs}"
                 for (p,l) in em.llv.toListOfProd do
                   IO.println s!"pos {p} : {l}"
@@ -113,8 +113,8 @@ unsafe def testLoad_embedForwRWMainS (moduleNames : Array Name) : Array Expr →
   | guT, gu, tT, t, lT, l, wsT, ws, ewsT, ews, Ts, deps, wdeps =>
     loadCacheDataS_forTest moduleNames <| fun data => do
       let que ← withTransparency .reducible <| reduce (skipTypes := false) Ts[0]!
-      let .mk res l1 l2 ← data.data.rwForwPaIn.embedForwRWMainS data.thmData (← getLCtx) (← getLocalInstances)
-        (data.data.rwForwPaIn.getIndicesS) 2 [] que
+      let .mk _ res l1 l2 ← data.data.rwForwPaIn.embedForwRWMainS data.thmData (← getLCtx) (← getLocalInstances)
+        (data.data.rwForwPaIn.getIndicesS) UInt32Array.empty 2 [] que
       withLCtx l1 l2 <| do
         match res with
         | .nil => return "Found nothing"
@@ -143,8 +143,8 @@ unsafe def testLoad_embedBackRWMainnS (moduleNames : Array Name) : Array Expr �
   | guT, gu, tT, t, lT, l, wsT, ws, ewsT, ews, Ts, deps, wdeps =>
     loadCacheDataS_forTest moduleNames <| fun data => do
       let que ← withTransparency .reducible <| reduce (skipTypes := false) Ts[0]!
-      let .mk res l1 l2 ← embedBackRWMainnS (← getLCtx) (← getLocalInstances)
-        data.thmData (data.data.rwForwPaIn.getIndicesS) 2 [] que data.data.rwForwPaIn
+      let .mk _ res l1 l2 ← embedBackRWMainnS (← getLCtx) (← getLocalInstances)
+        data.thmData (data.data.rwForwPaIn.getIndicesS) UInt32Array.empty 2 [] que data.data.rwForwPaIn
       withLCtx l1 l2 <| do
         match res with
         | .nil => return "Found nothing"
@@ -156,7 +156,7 @@ unsafe def testLoad_embedBackRWMainnS (moduleNames : Array Name) : Array Expr �
             | .std .. => continue
             | .rw tname _ _ goal rep .. =>
               out := out ++ s!"\n\nThm : {tname}\nGoal : {← ppExpr goal}\nReplacement : {← ppExpr rep}\nEmbeddings"
-              for (em,dirs) in emb.toListOfProd do
+              for (em,dirs,_) in emb.toListOfProd do
                 out := out ++ s!"\nDirs {repr dirs}\nLevels:"
                 for (p,l) in em.llv.toListOfProd do
                   out := out ++ s!"\npos {p} : {l}"

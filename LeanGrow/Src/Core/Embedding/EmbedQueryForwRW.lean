@@ -564,70 +564,89 @@ partial def embedForwRWMain [Inhabited IdxCollType]  [Repr IdxCollType] [ToStrin
     (thmData : CTrie (Array ThmFormat))
     (empty? : IdxCollType → Bool) (intersect union difference : IdxCollType → IdxCollType → IdxCollType) (empty : IdxCollType)
     (fold : ∀ {β : Type _}, IdxCollType → (init : β) → (f : Nat → β → β) → β)
-    (l1 : LocalContext) (l2 : LocalInstances) (constr : IdxCollType)
+    (l1 : LocalContext) (l2 : LocalInstances) (sConstr locConstr: IdxCollType)
     (revCountMax : Nat) (extWorkas : List FVarId)
     (E : Expr) (T : PaInG IdxCollType)
-    : MetaM (Prod3 (ListProd Nat (ListProd embedForwRWData rwDirs)) LocalContext LocalInstances) :=
+    : MetaM (Prod4 IdxCollType (ListProd Nat (ListProd embedForwRWData rwDirs)) LocalContext LocalInstances) :=
     do --trace set Tracing.Flags.none in do
-      let core (l1 : LocalContext) (l2 : LocalInstances) (here : ListProd IdxCollType embedForwRWData) := do
+      let core (l1 : LocalContext) (l2 : LocalInstances)
+        (here : ListProd IdxCollType embedForwRWData) (conHere : IdxCollType) := do
         match E with
         | .app f a =>
-            let ⟨resf,l1,l2⟩ ← embedForwRWMain thmData empty? intersect union difference empty fold l1 l2 constr revCountMax extWorkas f T
-            let ⟨resa,l1,l2⟩ ← embedForwRWMain thmData empty? intersect union difference empty fold l1 l2 constr revCountMax extWorkas a T
+            let ⟨locConstr,resf,l1,l2⟩ ← embedForwRWMain thmData empty? intersect union difference empty fold l1 l2 sConstr locConstr revCountMax extWorkas f T
+            let ⟨locConstr',resa,l1,l2⟩ ← embedForwRWMain thmData empty? intersect union difference empty fold l1 l2 sConstr locConstr revCountMax extWorkas a T
             let res ← mergeOccsTwo (fun x y => withLCtx l1 l2 do embedForwRWData.eq l1 l2 x y) .ap resf resa
             let res := mergeOnIndSpe
               (fun x y => x.foldl y (fun x y R => .cons x y R))
               (fun x => .cons x .yes .nil )
               res (listIndxSingleOut fold here)
-            return ⟨res,l1,l2⟩
+            let locConstr := union conHere <| union locConstr locConstr'
+            return ⟨locConstr,res,l1,l2⟩
         | .lam _ f a _ =>
+              let ⟨conf,resf,l1,l2⟩ ← embedForwRWMain thmData empty? intersect union difference empty fold l1 l2 locConstr locConstr revCountMax extWorkas f T
               let w ← worker extWorkas.length
               let ⟨wfv,a,l1,l2⟩ ← withFreeing w f a l1 l2
-              let ⟨res,l1,l2⟩ ← embedForwRWMain thmData empty? intersect union difference empty fold l1 l2 constr revCountMax (wfv :: extWorkas) a T
+              let ⟨cona,resa,l1,l2⟩ ← embedForwRWMain thmData empty? intersect union difference empty fold l1 l2 sConstr locConstr revCountMax (wfv :: extWorkas) a T
+              let res ← mergeOccsTwo (fun x y => withReader (fun ctx => {ctx with lctx := l1, localInstances := l2}) do embedForwRWData.eq l1 l2 x y) .la resf resa
               let res := mergeOnIndSpe
                 (fun x y => x.foldl y (fun x y R => .cons x y R))
                 (fun x => .cons x .yes .nil )
                 res (listIndxSingleOut fold here)
-              return ⟨res,l1,l2⟩
+              let locConstr := union conHere <| union conf cona
+              return ⟨locConstr,res,l1,l2⟩
         | .forallE _ f a _ =>
+              let ⟨conf,resf,l1,l2⟩ ← embedForwRWMain thmData empty? intersect union difference empty fold l1 l2 locConstr locConstr revCountMax extWorkas f T
               let w ← worker extWorkas.length
               let ⟨wfv,a,l1,l2⟩ ← withFreeing w f a l1 l2
-              let ⟨res,l1,l2⟩ ← embedForwRWMain thmData empty? intersect union difference empty fold l1 l2 constr revCountMax (wfv :: extWorkas) a T
+              let ⟨cona,resa,l1,l2⟩ ← embedForwRWMain thmData empty? intersect union difference empty fold l1 l2 sConstr locConstr revCountMax (wfv :: extWorkas) a T
+               let res ← mergeOccsTwo (fun x y => withReader (fun ctx => {ctx with lctx := l1, localInstances := l2}) do embedForwRWData.eq l1 l2 x y) .al resf resa
               let res := mergeOnIndSpe
                 (fun x y => x.foldl y (fun x y R => .cons x y R))
                 (fun x => .cons x .yes .nil )
                 res (listIndxSingleOut fold here)
-              return ⟨res,l1,l2⟩
+              let locConstr := union conHere <| union conf cona
+              return ⟨locConstr,res,l1,l2⟩
         | .letE _ f a z _ =>
+              let ⟨conf,resf,l1,l2⟩ ← embedForwRWMain thmData empty? intersect union difference empty fold l1 l2 locConstr locConstr revCountMax extWorkas f T
+              let ⟨cona,resa,l1,l2⟩ ← embedForwRWMain thmData empty? intersect union difference empty fold l1 l2 locConstr locConstr revCountMax extWorkas a T
               let w ← worker extWorkas.length
               let ⟨wfv,z,l1,l2⟩ ← withFreeingLet w f a z l1 l2
-              let ⟨res,l1,l2⟩ ← embedForwRWMain thmData empty? intersect union difference empty fold l1 l2 constr revCountMax (wfv :: extWorkas) z T
+              let ⟨conz,resz,l1,l2⟩ ← embedForwRWMain thmData empty? intersect union difference empty fold l1 l2 sConstr locConstr revCountMax (wfv :: extWorkas) z T
+              let res ← mergeOccsThree (fun x y => withReader (fun ctx => {ctx with lctx := l1, localInstances := l2}) do embedForwRWData.eq l1 l2 x y) resf resa resz
               let res := mergeOnIndSpe
                 (fun x y => x.foldl y (fun x y R => .cons x y R))
                 (fun x => .cons x .yes .nil )
                 res (listIndxSingleOut fold here)
-              return ⟨res,l1,l2⟩
-        | .proj _ _ f =>
-              let ⟨resf,l1,l2⟩ ← embedForwRWMain thmData empty? intersect union difference empty fold l1 l2 constr revCountMax extWorkas f T
-              let res := resf.foldl .nil (fun n l R => let fix := l.foldl .nil (fun e d R => .cons e (.pro d) R) ; .cons n fix R)
-              let res := mergeOnIndSpe
-                (fun x y => x.foldl y (fun x y R => .cons x y R))
-                (fun x => .cons x .yes .nil )
-                res (listIndxSingleOut fold here)
-              return ⟨res,l1,l2⟩
+              let locConstr := union conHere <| union (union conf cona) conz
+              return ⟨locConstr,res,l1,l2⟩
+        | .proj stru i maj =>
+              let real ← mkProjFn! l1 l2 stru i maj
+              embedForwRWMain thmData empty? intersect union difference empty fold l1 l2 sConstr locConstr revCountMax extWorkas real T
+              -- let ⟨con, resf,l1,l2⟩ ← embedForwRWMain thmData empty? intersect union difference empty fold l1 l2 sConstr locConstr revCountMax extWorkas f T
+              -- let res := resf.foldl .nil (fun n l R => let fix := l.foldl .nil (fun e d R => .cons e (.pro d) R) ; .cons n fix R)
+              -- let res := mergeOnIndSpe
+              --   (fun x y => x.foldl y (fun x y R => .cons x y R))
+              --   (fun x => .cons x .yes .nil )
+              --   res (listIndxSingleOut fold here)
+              -- let locConstr := union con conHere
+              -- return ⟨locConstr,res,l1,l2⟩
         | .mdata _ f =>
-            embedForwRWMain thmData empty? intersect union difference empty fold l1 l2 constr revCountMax extWorkas f T
+            embedForwRWMain thmData empty? intersect union difference empty fold l1 l2 sConstr locConstr revCountMax extWorkas f T
         | _ =>
           let res := mergeOnIndSpe
                 (fun x y => x.foldl y (fun x y R => .cons x y R))
                 (fun x => .cons x .yes .nil )
                 .nil (listIndxSingleOut fold here)
-          return ⟨res,l1,l2⟩
+          return ⟨conHere,res,l1,l2⟩
+      mtracing
+      mtrace on .zero with s!" looking at {← PpExpr E l1 l2}"
       if ← IsProof E l1 l2
       then
-        return .mk .nil l1 l2
+        mtrace on .zero with s!" proof, skipping"
+        return .mk empty .nil l1 l2
       else
-        let ⟨yes?,_,here,l1,l2⟩ ← embedForwRWTop thmData empty? intersect union difference empty l1 l2 constr revCountMax extWorkas E T
+        let ⟨yes?,conHere,here,l1,l2⟩ ← embedForwRWTop thmData empty? intersect union difference empty l1 l2 sConstr revCountMax extWorkas E T
+        mtrace on .zero with s!" found : {yes? == 3}"
         if yes? == 3
-        then core l1 l2 here
-        else core l1 l2 .nil
+        then core l1 l2 here conHere
+        else core l1 l2 .nil empty
