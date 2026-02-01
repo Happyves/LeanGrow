@@ -144,7 +144,7 @@ unsafe def testLoad_embedBackRWMainnS (moduleNames : Array Name) : Array Expr �
     loadCacheDataS_forTest moduleNames <| fun data => do
       let que ← withTransparency .reducible <| reduce (skipTypes := false) Ts[0]!
       let .mk _ res l1 l2 ← embedBackRWMainnS (← getLCtx) (← getLocalInstances)
-        data.thmData (data.data.rwForwPaIn.getIndicesS) UInt32Array.empty 2 [] que data.data.rwForwPaIn
+        data.thmData (data.data.rwBackPaIn.getIndicesS) UInt32Array.empty 2 [] que data.data.rwBackPaIn
       withLCtx l1 l2 <| do
         match res with
         | .nil => return "Found nothing"

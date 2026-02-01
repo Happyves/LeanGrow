@@ -583,10 +583,11 @@ partial def embedForwRWMain [Inhabited IdxCollType]  [Repr IdxCollType] [ToStrin
             let locConstr := union conHere <| union locConstr locConstr'
             return ⟨locConstr,res,l1,l2⟩
         | .lam _ f a _ =>
-              let ⟨conf,resf,l1,l2⟩ ← embedForwRWMain thmData empty? intersect union difference empty fold l1 l2 locConstr locConstr revCountMax extWorkas f T
               let w ← worker extWorkas.length
               let ⟨wfv,a,l1,l2⟩ ← withFreeing w f a l1 l2
               let ⟨cona,resa,l1,l2⟩ ← embedForwRWMain thmData empty? intersect union difference empty fold l1 l2 sConstr locConstr revCountMax (wfv :: extWorkas) a T
+              let tmpConf := union locConstr cona
+              let ⟨conf,resf,l1,l2⟩ ← embedForwRWMain thmData empty? intersect union difference empty fold l1 l2 tmpConf tmpConf revCountMax extWorkas f T
               let res ← mergeOccsTwo (fun x y => withReader (fun ctx => {ctx with lctx := l1, localInstances := l2}) do embedForwRWData.eq l1 l2 x y) .la resf resa
               let res := mergeOnIndSpe
                 (fun x y => x.foldl y (fun x y R => .cons x y R))
@@ -595,11 +596,12 @@ partial def embedForwRWMain [Inhabited IdxCollType]  [Repr IdxCollType] [ToStrin
               let locConstr := union conHere <| union conf cona
               return ⟨locConstr,res,l1,l2⟩
         | .forallE _ f a _ =>
-              let ⟨conf,resf,l1,l2⟩ ← embedForwRWMain thmData empty? intersect union difference empty fold l1 l2 locConstr locConstr revCountMax extWorkas f T
               let w ← worker extWorkas.length
               let ⟨wfv,a,l1,l2⟩ ← withFreeing w f a l1 l2
               let ⟨cona,resa,l1,l2⟩ ← embedForwRWMain thmData empty? intersect union difference empty fold l1 l2 sConstr locConstr revCountMax (wfv :: extWorkas) a T
-               let res ← mergeOccsTwo (fun x y => withReader (fun ctx => {ctx with lctx := l1, localInstances := l2}) do embedForwRWData.eq l1 l2 x y) .al resf resa
+              let tmpConf := union locConstr cona
+              let ⟨conf,resf,l1,l2⟩ ← embedForwRWMain thmData empty? intersect union difference empty fold l1 l2 tmpConf tmpConf revCountMax extWorkas f T
+              let res ← mergeOccsTwo (fun x y => withReader (fun ctx => {ctx with lctx := l1, localInstances := l2}) do embedForwRWData.eq l1 l2 x y) .al resf resa
               let res := mergeOnIndSpe
                 (fun x y => x.foldl y (fun x y R => .cons x y R))
                 (fun x => .cons x .yes .nil )
@@ -607,11 +609,12 @@ partial def embedForwRWMain [Inhabited IdxCollType]  [Repr IdxCollType] [ToStrin
               let locConstr := union conHere <| union conf cona
               return ⟨locConstr,res,l1,l2⟩
         | .letE _ f a z _ =>
-              let ⟨conf,resf,l1,l2⟩ ← embedForwRWMain thmData empty? intersect union difference empty fold l1 l2 locConstr locConstr revCountMax extWorkas f T
-              let ⟨cona,resa,l1,l2⟩ ← embedForwRWMain thmData empty? intersect union difference empty fold l1 l2 locConstr locConstr revCountMax extWorkas a T
               let w ← worker extWorkas.length
               let ⟨wfv,z,l1,l2⟩ ← withFreeingLet w f a z l1 l2
               let ⟨conz,resz,l1,l2⟩ ← embedForwRWMain thmData empty? intersect union difference empty fold l1 l2 sConstr locConstr revCountMax (wfv :: extWorkas) z T
+              let tmpConf := union locConstr conz
+              let ⟨conf,resf,l1,l2⟩ ← embedForwRWMain thmData empty? intersect union difference empty fold l1 l2 tmpConf tmpConf revCountMax extWorkas f T
+              let ⟨cona,resa,l1,l2⟩ ← embedForwRWMain thmData empty? intersect union difference empty fold l1 l2 tmpConf tmpConf revCountMax extWorkas a T
               let res ← mergeOccsThree (fun x y => withReader (fun ctx => {ctx with lctx := l1, localInstances := l2}) do embedForwRWData.eq l1 l2 x y) resf resa resz
               let res := mergeOnIndSpe
                 (fun x y => x.foldl y (fun x y R => .cons x y R))
