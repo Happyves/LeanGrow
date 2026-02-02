@@ -8,6 +8,8 @@ Author: Yves Jäckle.
 import Lean.Data.Name
 import Lean.AuxRecursor
 
+import Lean.Meta.Tactic.FunInd
+
 open Lean Name
 
 
@@ -29,6 +31,7 @@ def blackListCachingCore : Name → Bool
       -- || matchPrefix s "proof_"
       || matchPrefix s "omega_"
       || p.isInternalOrNum
+      || s == "below"
   | .num _ _     => true
   | p            => p.isInternalOrNum
 where
@@ -44,3 +47,33 @@ where
 
 def blackListCaching (env : Environment) (n : Name) : Bool :=
   (noConfusionExt.isTagged env n) || blackListCachingCore n
+
+
+def blackListSampleDelta : Name → Bool
+  | .str p s     =>
+    s.startsWith "_"
+      || matchPrefix s "eq_"
+      || matchPrefix s "match_" -- blacklist, since we'll use functional induction instead
+      || matchPrefix s "proof_"
+      || s == "noConfusion"
+      || s == "induct_unfolding"
+      || s == "induct"
+      || s == "fun_cases_unfolding"
+      || s == "fun_cases"
+      || s == "mutual_induct_unfolding"
+      || s == "mutual_induct"
+      || s == recSuffix
+      || s == casesOnSuffix
+      || s == recOnSuffix
+      || s == brecOnSuffix
+      || p.blackListSampleDelta -- we have to recurse to avoid wierd decls like `_private.0.List.permutationsAux2.match_2.splitter`
+
+  | .num _ _     => true
+  | p            => p.isInternalOrNum
+where
+  /-- Check that a string begins with the given prefix, and then is only digit characters. -/
+  matchPrefix (s : String) (pre : String) :=
+    s.startsWith pre && (s |>.drop pre.length |>.all Char.isDigit)
+
+-- compare to
+#check Meta.getFunIndInfo?

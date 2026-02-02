@@ -231,7 +231,17 @@ def test10 : CoreM Unit := do
 
 #eval test10
 
+/-- below's are among constants-/
+def test11 : CoreM Unit := do
+  let cs := (← getEnv).constants
+  let has? := cs.contains `Nat.below
+  if !has?
+    then throwError "will need fixing"
+
+#eval test11
+
 end ImportExport
+
 
 
 

@@ -130,6 +130,11 @@ inductive OptionProd5 (α β γ δ ι : Type _) where
 | none | some (_ : α) (_ : β) (_ : γ) (_ : δ) (_ : ι)
 deriving BEq, Inhabited, Repr
 
+inductive OptionProd6 (α β γ δ ι κ: Type _) where
+| none | some (_ : α) (_ : β) (_ : γ) (_ : δ) (_ : ι) (_ : κ)
+deriving BEq, Inhabited, Repr
+
+
 
 
 -- # ListProd
