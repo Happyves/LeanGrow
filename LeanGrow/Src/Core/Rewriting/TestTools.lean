@@ -6,9 +6,9 @@ Author: Yves Jäckle.
 -/
 
 
-import LeanGrowBeta.Core.Rewriting.Main
-import LeanGrowBeta.Utils.LeanGrow.TestTools
-import LeanGrowBeta.Utils.Lean.MetaAPI
+import LeanGrow.Src.Core.Rewriting.Main
+import LeanGrow.Src.Utils.LeanGrow.TestTools
+import LeanGrow.Src.Utils.Lean.MetaAPI
 
 
 open Lean Meta
@@ -17,23 +17,25 @@ open Lean Meta
 def findFirstAppli
   (l1 : LocalContext) (l2 : LocalInstances)
   (thm : Name) (within : Expr)
-  : MetaM (Prod4 Expr Expr LocalContext LocalInstances) := do
+  : MetaM (Prod5 Nat Expr Expr LocalContext LocalInstances) := do
   withReader (fun ctx => {ctx with lctx := l1, localInstances := l2}) do
     let Thm ← mkConstWithFreshMVarLevels thm
     let TT ← inferType Thm
     let (args, _, head) ← forallMetaTelescope TT
     let .some (_,pat,_) := head.eq? | throwError "Not an rw theorem ?!?"
-    let ⟨res,l1,l2⟩ ← within.onAllSubtermsCheckExistsMTR l1 l2 (fun e _ l1 l2 => do
+    let ⟨res,l1,l2⟩ ← within.onAllSubtermsFoldMTR l1 l2 (false,0) (fun e d _ l1 l2 st@(f?,_) => do
       -- dbg_trace s!"[findFirstAppli] pat {← ppExpr pat} vs. e {← ppExpr e}"
+      if f?
+      then return ⟨st,l1,l2⟩
       if (← defEqWiMvNoClear pat e l1 l2).isSome
       then
         -- dbg_trace "yes !"
-        return ⟨true,l1,l2⟩
+        return ⟨(true,d),l1,l2⟩
       else
         clearMvarAssignments
-        return ⟨false,l1,l2⟩
+        return ⟨st,l1,l2⟩
       )
-    if !res
+    if !res.1
     then throwError "Pattern not found ..."
     else
       withReader (fun ctx => {ctx with lctx := l1, localInstances := l2}) do
@@ -41,7 +43,8 @@ def findFirstAppli
         let Thm ← instantiateMVars Thm
         let args ← args.mapM instantiateMVars
         -- we don't even check if there are remaining goals &levels cause this is testing and we're lazy
-        return ⟨pat,(mkAppN Thm args),l1,l2⟩
+        return ⟨res.2,pat,(mkAppN Thm args),l1,l2⟩
+
 
 
 def fixWorker (pat : Expr) (d : Nat) (w : Name) : Expr :=
@@ -112,18 +115,16 @@ partial def findDirs
 
 
 
-
-def testBackRW (thm : Name) : Array Expr → Array Expr → Array Expr → Array Expr → MetaM Unit
-  | Gnodes, Unodes, Tnodes, Objs => do
-      let depCache ← mkFakeDepCache Gnodes Unodes
-      IO.println s!"[testBackRW] built depCache : {repr <| depCache.map (fun l => l.map LocalDecl.fvarId)}"
-      let initGoal := Objs[0]!
-      let ⟨pat,eqProof,l1,l2⟩ ← findFirstAppli (← getLCtx) (← getLocalInstances) thm initGoal
+def testBackRW_sandBox_noSub (thm : Name) : Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array DepCache → Array (FVarId × List FVarId) → MetaM Unit
+  | guT, gu, tT, t, lT, l, wsT, ws, ewsT, ews, Ts, deps, wdeps => do
+      IO.println s!"[testBackRW] built depCache : {repr <| deps.mapIdx Prod.mk}"
+      let initGoal := Ts[0]!
+      let ⟨_,pat,eqProof,l1,l2⟩ ← findFirstAppli (← getLCtx) (← getLocalInstances) thm initGoal
       IO.println s!"[testBackRW] pat {← ppExpr pat}"
       IO.println s!"[testBackRW] eqProof {← ppExpr eqProof}"
       IO.println s!"[testBackRW] eqProof type {← ppExpr <| ← inferType eqProof}"
       findDirs l1 l2 pat initGoal 0 <| fun dirs l1 l2 => do
-        let ⟨proof,l1,l2⟩ ← mainBackRWData (fun _ => true) depCache l1 l2 dirs 42 7 initGoal pat eqProof
+        let ⟨proof,l1,l2⟩ ← mainBackRW (fun _ => true) deps 10 l1 l2 dirs 42 7 initGoal pat eqProof .none
         withReader (fun ctx => {ctx with lctx := l1, localInstances := l2}) do
           IO.println s!"[testBackRW] succeeded with proof:\n(Type) {← ppExpr (← inferType proof)}\n(Value) {← ppExpr proof}\n(Correct) {← isTypeCorrect proof}\n(NewGoal) {← ppExpr <| ← (⟨.num (.num `t 42) 7⟩ : FVarId).getType}"
           let hmm := Kernel.check (← getEnv) l1 proof
@@ -133,4 +134,45 @@ def testBackRW (thm : Name) : Array Expr → Array Expr → Array Expr → Array
 
 
 #check 1
-#check Kernel.Exception.toMessageData
+
+def testBackRW_sandBox_wiSub (thm : Name) : Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array DepCache → Array (FVarId × List FVarId) → MetaM Unit
+  | guT, gu, tT, t, lT, l, wsT, ws, ewsT, ews, Ts, deps, wdeps => do
+      IO.println s!"[testBackRW] built depCache : {repr <| deps.mapIdx Prod.mk}"
+      let initGoal := Ts[0]!
+      let ⟨D,pat,eqProof,l1,l2⟩ ← findFirstAppli (← getLCtx) (← getLocalInstances) thm initGoal
+      IO.println s!"[testBackRW] pat {← ppExpr pat}"
+      IO.println s!"[testBackRW] eqProof {← ppExpr eqProof}"
+      IO.println s!"[testBackRW] eqProof type {← ppExpr <| ← inferType eqProof}"
+      findDirs l1 l2 pat initGoal 0 <| fun dirs l1 l2 => do
+        let ⟨proof,l1,l2⟩ ← mainBackRW (fun _ => true) deps 10 l1 l2 dirs 42 7 initGoal pat eqProof (.some D)
+        withReader (fun ctx => {ctx with lctx := l1, localInstances := l2}) do
+          IO.println s!"[testBackRW] succeeded with proof:\n(Type) {← ppExpr (← inferType proof)}\n(Value) {← ppExpr proof}\n(Correct) {← isTypeCorrect proof}\n(NewGoal) {← ppExpr <| ← (⟨.num (.num `t 42) 7⟩ : FVarId).getType}"
+          let hmm := Kernel.check (← getEnv) l1 proof
+          match hmm with
+          | .ok _ => IO.println "Correct: yes"
+          | .error e => IO.println s!"Correct: no\n{proof}" ; logInfo <| e.toMessageData {}
+
+
+#check 1
+
+
+def testForwRW_sandBox (thm : Name) : Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array DepCache → Array (FVarId × List FVarId) → MetaM Unit
+  | guT, gu, tT, t, lT, l, wsT, ws, ewsT, ews, Ts, deps, wdeps => do
+      IO.println s!"[testBackRW] built depCache : {repr <| deps.mapIdx Prod.mk}"
+      let initGoal := Ts[0]!
+      withLocalDecl `testing .default initGoal <| fun fv => do
+        let ⟨_,pat,eqProof,l1,l2⟩ ← findFirstAppli (← getLCtx) (← getLocalInstances) thm initGoal
+        IO.println s!"[testBackRW] pat {← ppExpr pat}"
+        IO.println s!"[testBackRW] eqProof {← ppExpr eqProof}"
+        IO.println s!"[testBackRW] eqProof type {← ppExpr <| ← inferType eqProof}"
+        findDirs l1 l2 pat initGoal 0 <| fun dirs l1 l2 => do
+          let ⟨proof,l1,l2⟩ ← mainForwRW (fun _ => true) deps 10 l1 l2 dirs fv initGoal pat eqProof
+          withReader (fun ctx => {ctx with lctx := l1, localInstances := l2}) do
+            IO.println s!"[testBackRW] succeeded with proof:\n(Type) {← ppExpr (← inferType proof)}\n(Value) {← ppExpr proof}\n(Correct) {← isTypeCorrect proof}\n(NewGoal) {← ppExpr <| ← (⟨.num (.num `t 42) 7⟩ : FVarId).getType}"
+            let hmm := Kernel.check (← getEnv) l1 proof
+            match hmm with
+            | .ok _ => IO.println "Correct: yes"
+            | .error e => IO.println s!"Correct: no\n{proof}" ; logInfo <| e.toMessageData {}
+
+
+#check 1

@@ -77,20 +77,20 @@ partial def rwDirs.getBinders (dirs : rwDirs) (e : Expr) : ListProd rwDirs Expr 
 @[specialize]
 partial def lambdaLetAllBoundedTelescopeWorkerDirsDeps
   (l1 : LocalContext) (l2 : LocalInstances)
-  (type : Expr) (sofarFvs : Array Expr) (workerDeps : Array (FVarId × (List LocalDecl)))  (d D : Nat) (dirs : rwDirs)
-  : MetaM (Prod6 Expr rwDirs (Array Expr) (Array (FVarId × (List LocalDecl))) LocalContext LocalInstances) := do
+  (type : Expr) (sofarFvs : Array Expr) (workerDeps : Array (FVarId × (List FVarId)))  (d D : Nat) (dirs : rwDirs)
+  : MetaM (Prod6 Expr rwDirs (Array Expr) (Array (FVarId × (List FVarId))) LocalContext LocalInstances) := do
   if d < D
   then
     match type, dirs with
     | .lam _ t b _, .la _ r | .forallE _ t b _, .al _ r =>
         let w ← worker d
         let ⟨wfv,b,l1,l2⟩ ← withFreeing w t b l1 l2
-        let fvst ←  t.getFVarIds.mapM (FVarId.GetDecl · l1 l2)
+        let fvst := t.getFVarIds--.mapM (FVarId.GetDecl · l1 l2)
         lambdaLetAllBoundedTelescopeWorkerDirsDeps l1 l2 b (sofarFvs.push (.fvar wfv)) (workerDeps.push (wfv,fvst)) (d+1) D r
     | .letE _ t v b _, .le _ _ z =>
         let w ← worker d
         let ⟨wfv,b,l1,l2⟩ ← withFreeingLet w t v b l1 l2
-        let fvst ←  v.getFVarIds.mapM (FVarId.GetDecl · l1 l2)
+        let fvst := v.getFVarIds--.mapM (FVarId.GetDecl · l1 l2)
         lambdaLetAllBoundedTelescopeWorkerDirsDeps l1 l2 b (sofarFvs.push (.fvar wfv)) (workerDeps.push (wfv,fvst)) (d+1) D z
     | _, _ => return ⟨type, dirs, sofarFvs, workerDeps, l1,l2⟩
   else

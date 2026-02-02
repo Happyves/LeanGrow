@@ -205,25 +205,25 @@ where
   process (D : Nat) (initD : LocalContext) (initI : LocalInstances) (fvars : Array Expr) (e : Expr)
     : MetaM (Prod4 Expr (Array Expr) LocalContext LocalInstances) := do
       match e with
-      | .lam _ d b bi =>
-          let n ← worker D
+      | .lam n d b bi =>
+          --let n ← worker D
           let d := d.instantiateRevRange 0 fvars.size fvars
           let d := d.cleanupAnnotations
           match bi with
           | .instImplicit =>
-              let ⟨fvarId, initD,initI⟩ ← WithLocalDecl n d initD initI
+              let ⟨fvarId, initD,initI⟩ ← WithLocalDeclU n d initD initI
               let fvar := mkFVar fvarId
               process (D+1) initD initI (fvars.push fvar) b
           | _ =>
               let (fvarId, initD) := withNonInstLocalDecl n d initD
               let fvar := mkFVar fvarId
               process (D+1) initD initI (fvars.push fvar) b
-      | .letE _ t v b _ =>
-          let n ← worker D
+      | .letE n t v b _ =>
+          --let n ← worker D
           let t := t.instantiateRevRange 0 fvars.size fvars
           let t := t.cleanupAnnotations
           let v := v.instantiateRevRange 0 fvars.size fvars
-          let ⟨fvarId, initD,initI⟩ ← WithLetDecl n t v initD initI
+          let ⟨fvarId, initD,initI⟩ ← WithLetDeclU n t v initD initI
           let fvar := mkFVar fvarId
           process (D+1) initD initI (fvars.push fvar) b
       | _ =>
@@ -241,25 +241,25 @@ where
     if (Nat.blt fvars.size maxFVars)
     then
       match e with
-      | .lam _ d b bi =>
-          let n ← worker D
+      | .lam n d b bi =>
+          --let n ← worker D
           let d := d.instantiateRevRange 0 fvars.size fvars
           let d := d.cleanupAnnotations
           match bi with
           | .instImplicit =>
-              let ⟨fvarId, initD,initI⟩ ← WithLocalDecl n d initD initI
+              let ⟨fvarId, initD,initI⟩ ← WithLocalDeclU n d initD initI
               let fvar := mkFVar fvarId
               process (D+1) initD initI (fvars.push fvar) b
           | _ =>
               let (fvarId, initD) := withNonInstLocalDecl n d initD
               let fvar := mkFVar fvarId
               process (D+1) initD initI (fvars.push fvar) b
-      | .letE _ t v b _ =>
-          let n ← worker D
+      | .letE n t v b _ =>
+          --let n ← worker D
           let t := t.instantiateRevRange 0 fvars.size fvars
           let t := t.cleanupAnnotations
           let v := v.instantiateRevRange 0 fvars.size fvars
-          let ⟨fvarId, initD,initI⟩ ← WithLetDecl n t v initD initI
+          let ⟨fvarId, initD,initI⟩ ← WithLetDeclU n t v initD initI
           let fvar := mkFVar fvarId
           process (D+1) initD initI (fvars.push fvar) b
       | _ =>
@@ -278,25 +278,25 @@ where
   process (D : Nat) (initD : LocalContext) (initI : LocalInstances) (fvars : Array Expr) (e : Expr)
     : MetaM (Prod4 Expr (Array Expr) LocalContext LocalInstances) := do
       match e with
-      | .forallE _ d b bi =>
-          let n ← worker D
+      | .forallE n d b bi =>
+          --let n ← worker D
           let d := d.instantiateRevRange 0 fvars.size fvars
           let d := d.cleanupAnnotations
           match bi with
           | .instImplicit =>
-              let ⟨fvarId, initD,initI⟩ ← WithLocalDecl n d initD initI
+              let ⟨fvarId, initD,initI⟩ ← WithLocalDeclU n d initD initI
               let fvar := mkFVar fvarId
               process (D+1) initD initI (fvars.push fvar) b
           | _ =>
               let (fvarId, initD) := withNonInstLocalDecl n d initD
               let fvar := mkFVar fvarId
               process (D+1) initD initI (fvars.push fvar) b
-      | .letE _ t v b _ =>
-          let n ← worker D
+      | .letE n t v b _ =>
+          --let n ← worker D
           let t := t.instantiateRevRange 0 fvars.size fvars
           let t := t.cleanupAnnotations
           let v := v.instantiateRevRange 0 fvars.size fvars
-          let ⟨fvarId, initD,initI⟩ ← WithLetDecl n t v initD initI
+          let ⟨fvarId, initD,initI⟩ ← WithLetDeclU n t v initD initI
           let fvar := mkFVar fvarId
           process (D+1) initD initI (fvars.push fvar) b
       | _ =>
@@ -314,25 +314,25 @@ where
     if (Nat.blt fvars.size maxFVars)
     then
       match e with
-      | .forallE _ d b bi =>
-          let n ← worker D
+      | .forallE n d b bi =>
+          --let n ← worker D
           let d := d.instantiateRevRange 0 fvars.size fvars
           let d := d.cleanupAnnotations
           match bi with
           | .instImplicit =>
-              let ⟨fvarId, initD,initI⟩ ← WithLocalDecl n d initD initI
+              let ⟨fvarId, initD,initI⟩ ← WithLocalDeclU n d initD initI
               let fvar := mkFVar fvarId
               process (D+1) initD initI (fvars.push fvar) b
           | _ =>
               let (fvarId, initD) := withNonInstLocalDecl n d initD
               let fvar := mkFVar fvarId
               process (D+1) initD initI (fvars.push fvar) b
-      | .letE _ t v b _ =>
-          let n ← worker D
+      | .letE n t v b _ =>
+          --let n ← worker D
           let t := t.instantiateRevRange 0 fvars.size fvars
           let t := t.cleanupAnnotations
           let v := v.instantiateRevRange 0 fvars.size fvars
-          let ⟨fvarId, initD,initI⟩ ← WithLetDecl n t v initD initI
+          let ⟨fvarId, initD,initI⟩ ← WithLetDeclU n t v initD initI
           let fvar := mkFVar fvarId
           process (D+1) initD initI (fvars.push fvar) b
       | _ =>

@@ -16,8 +16,7 @@ open Lean Meta
 def test (n : Array Name) (cutoff : Nat) (_ _ _ _ _ _ _ _ _ _ objs : Array Expr) (deps : Array DepCache) (wdeps : Array (FVarId × List FVarId)) : MetaM Unit := do
   let ficticousGoal := objs[0]!
   let ficticousRevert := n.map FVarId.mk
-  let ⟨mv,res,_,l1,l2⟩ ← revert_NoTn_cutOff_wDepsCache (fun _ => true) (← getLCtx) (← getLocalInstances) ficticousGoal ficticousRevert deps wdeps cutoff
-  let new ← mv.getType
+  let ⟨new,res,_,l1,l2⟩ ← revert_NoTn_cutOff_wDepsCache (fun _ => true) (← getLCtx) (← getLocalInstances) ficticousGoal ficticousRevert deps wdeps cutoff
   IO.println s!"Reverted to {← ppExpr new}\nWith term {← ppExpr res}\nOf type {← ppExpr (← InferType res l1 l2)}"
 
 

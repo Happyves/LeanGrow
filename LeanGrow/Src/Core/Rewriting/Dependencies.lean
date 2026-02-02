@@ -51,7 +51,7 @@ partial def getNextBoundedTerm
               go l1 l2 more
   go l1 l2 <| .cons currentDepth dirs ref .nil
 
-
+#check 1
 
 /-- Replaces the dirs corresponding to occurences of `suppat` with .yes-/
 @[inline]
@@ -91,7 +91,7 @@ def replaceDirsAtSupPattern (dirs : rwDirs) (ref suppat : Expr) : rwDirs :=
     | _, _ => .no
   go dirs ref
 
-
+#check 1
 
 /-- We expect transitive dependencies to be found by revert !-/
 partial def Lean.Expr.getGUFVarsIdsWithDirectDeps
@@ -132,12 +132,14 @@ partial def Lean.Expr.getGUFVarsIdsWithDirectDeps
         | _ => return ⟨s,l1,l2⟩
         ) --<| fun res => k res.1 res.2
 
-
+#check 1
 
 partial def getDeps
   (l1 : LocalContext) (l2 : LocalInstances)
   (dirs : rwDirs) (ref : Expr) (pat : Expr) (d : Nat)
   : MetaM (Prod3 (List FVarId) LocalContext LocalInstances) :=
+  do
+  mtracing
   let rec inner
     (l1 : LocalContext) (l2 : LocalInstances)
     (hdep : Array ParamInfo) (asd : Array rwDirs) (as : Array Expr)
@@ -223,21 +225,3 @@ partial def getDeps
                 go l1 l2 rev skip todo
           | _ => throwError s!"[getDeps] dirs and expr mismatch: {repr dirs} vs. {← ppExpr ref}"
   go l1 l2 [] [] <| .cons d dirs ref .nil
-
-
-/-
-**Notes**
-- we call a split a phenomenon like the following. Suppose we have in the env `split : (n m : Nat) → Fin (n+m)`
-  and `top : (x : Nat) → Fin x → Prop` and we want to use `add_comm` at `top (n+m) (split n m)` The rewrite is
-  impossible without casting.
-- With our approach, we can rewrit under binders, but the pattern - with binders included - must be the same
-  at all occurences. For example an `add_comm` at `fun x y => x+y` should not also be present as
-  `fun x => id <| fun y => x+y`. Can't think of a usefull case where this isn't the case ...
-  Same is true for any pattern actually ...
-- For rewrites inside binding types : it is technically possible that the body don't contain the rewriten
-  type,(example : env with `thm : Fin 2 = Bool` and we want to rewrite `fun x : Bool => x && x` with `and_comm`)
-  but this is unlikly. Most likely secenario is that binding type is a prop, in whic case proof-irrel does the job.
-  As typical case we expect a subytpe that has its prop rewritten: it the subtype projects, the pattern will also
-  be so we're fine.
-
--/

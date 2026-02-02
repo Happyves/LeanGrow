@@ -162,7 +162,8 @@ partial def Lean.Expr.abstractLetFvarAll_proofLet
 
 /--
 - workerDepsCache should increase in depth and have no duplicates !
-- the returned fvars contain all reverts, not those in the term, where Type.typed lets are missing
+- the returned fvars don't contain all reverts, not those in the term, where Type.typed lets are missing
+- first expr is type, snd is (fun x => x revs)
 -/
 @[specialize]
 partial def revert_NoTn_cutOff_wDepsCache (introAdmissible? : Nat → Bool)
@@ -170,7 +171,7 @@ partial def revert_NoTn_cutOff_wDepsCache (introAdmissible? : Nat → Bool)
   (goal : Expr) (guFvs : Array FVarId)
   (depsCache : Array DepCache)
   (workerDepsCache : Array (FVarId × (List FVarId))) (RevCutOff : Nat)
-  : MetaM (Prod5 MVarId Expr (Array FVarId) LocalContext LocalInstances) :=
+  : MetaM (Prod5 Expr Expr (Array FVarId) LocalContext LocalInstances) :=
   let spread := RevCutOff / guFvs.size
   let rec @[specialize] augment (track : UInt32Array) (final : Array FVarId) (pass : List FVarId) (next : List (List FVarId)) : UInt32Array × Array FVarId :=
     -- dbg_trace (s!"[augment]\n track {repr track}\n final {repr final} \n pass {repr pass}\n next {repr next}")
@@ -306,7 +307,7 @@ partial def revert_NoTn_cutOff_wDepsCache (introAdmissible? : Nat → Bool)
   mtracing
   let ⟨revGoalT,finalRevsPass,l1,l2⟩ ← goal.abstractLetFvarAll_proofLet l1 l2 depsCache finalRevs
   mtrace on .zero with s!"\n revGoalT {← PpExpr revGoalT l1 l2}\n finalRevsPass {repr finalRevsPass}"
-  let mv ← mkFreshExprMVarAt l1 l2 revGoalT
+  -- let mv ← mkFreshExprMVarAt l1 l2 revGoalT
   let apFv ← withLCtx l1 l2 <| do finalRevsPass.filterM (fun fvd => do
     match ← fvd.getDecl with
     | .cdecl .. => return true
@@ -314,5 +315,5 @@ partial def revert_NoTn_cutOff_wDepsCache (introAdmissible? : Nat → Bool)
         match fvd.name with
         | .num k i => if (k == `g || k == `u) then return depsCache[i]!.proof else isProof T -- case of workers
         | n => panic! s!"[revert_NoTn_cutOff_wDepsCache] unexpected {n}")
-  let term := mkAppN mv (apFv.map Expr.fvar)
-  return ⟨mv.mvarId!,term,finalRevsPass,l1,l2⟩
+  let term := .lam `revertHelp revGoalT (mkAppN (.bvar 0) (apFv.map Expr.fvar)) .default
+  return ⟨revGoalT,term,apFv,l1,l2⟩
