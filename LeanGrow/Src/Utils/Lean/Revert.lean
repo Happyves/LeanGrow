@@ -95,9 +95,11 @@ partial def Lean.Expr.abstractLetFvarAll_proofLet
   (initD : LocalContext) (initI : LocalInstances)
   (depsCache : Array DepCache)
   (fvs : Array FVarId) (e : Expr)
-  : MetaM (Prod4 Expr (Array FVarId) LocalContext LocalInstances) :=
+  : MetaM (Prod4 Expr (Array FVarId) LocalContext LocalInstances) := do
+    mtracing
     let rec bind (term : Expr) (i : Nat) (initD : LocalContext) (initI : LocalInstances) : MetaM (Prod3 Expr LocalContext LocalInstances) := do
       let fvd := (fvs[i]!)
+      mtrace on .zero with s!" abstracted to {← PpExpr (.fvar fvd) initD initI}"
       match ← fvd.GetDecl initD initI with
       | .cdecl _ _ _ T .. =>
           let ⟨T,initD,initI⟩ ← T.onAllSubtermsM initD initI (fun x d initD initI =>
@@ -147,8 +149,11 @@ partial def Lean.Expr.abstractLetFvarAll_proofLet
     do
     let fvS := fvs.size
     if fvS == 0
-    then return ⟨e,fvs,initD,initI⟩
+    then
+      mtrace on .zero with s!" base case, retuning {fvs.map Expr.fvar} and {← PpExpr e initD initI}"
+      return ⟨e,fvs,initD,initI⟩
     else
+      mtrace on .zero with s!" call on {fvs.map Expr.fvar} and {← PpExpr e initD initI}"
       let ⟨absd,initD,initI⟩ ← e.onAllSubtermsM initD initI (fun x d initD initI =>
         match x with
         | .fvar id =>
@@ -156,6 +161,7 @@ partial def Lean.Expr.abstractLetFvarAll_proofLet
           | .none => return ⟨x,initD,initI⟩
           | .some i => return ⟨(.bvar (d + fvS - 1 - i)),initD,initI⟩
         | _ => return ⟨x,initD,initI⟩ )
+      mtrace on .zero with s!" abstracted to {← PpExpr absd initD initI}"
       let ⟨r,l1,l2⟩ ← bind absd (fvs.size - 1) initD initI
       return ⟨r,fvs,l1,l2⟩
 
@@ -164,6 +170,7 @@ partial def Lean.Expr.abstractLetFvarAll_proofLet
 - workerDepsCache should increase in depth and have no duplicates !
 - the returned fvars don't contain all reverts, not those in the term, where Type.typed lets are missing
 - first expr is type, snd is (fun x => x revs)
+- Will panic if guFvs is empty (caused by `let ini := res[0]!` in `mkRevs`)
 -/
 @[specialize]
 partial def revert_NoTn_cutOff_wDepsCache (introAdmissible? : Nat → Bool)
@@ -172,148 +179,160 @@ partial def revert_NoTn_cutOff_wDepsCache (introAdmissible? : Nat → Bool)
   (depsCache : Array DepCache)
   (workerDepsCache : Array (FVarId × (List FVarId))) (RevCutOff : Nat)
   : MetaM (Prod5 Expr Expr (Array FVarId) LocalContext LocalInstances) :=
-  let spread := RevCutOff / guFvs.size
-  let rec @[specialize] augment (track : UInt32Array) (final : Array FVarId) (pass : List FVarId) (next : List (List FVarId)) : UInt32Array × Array FVarId :=
-    -- dbg_trace (s!"[augment]\n track {repr track}\n final {repr final} \n pass {repr pass}\n next {repr next}")
-    if final.size < RevCutOff
-    then
-      match pass with
-      | [] =>
-        match next with
+  if guFvs.isEmpty
+  then
+    return .mk goal (.lam `revHelp goal (.bvar 0) .default) guFvs l1 l2
+  else
+    let spread := RevCutOff / guFvs.size
+    let rec @[specialize] augment (track : UInt32Array) (final : Array FVarId) (pass : List FVarId) (next : List (List FVarId)) : UInt32Array × Array FVarId :=
+      --dbg_trace (s!"[augment]\n track {repr track}\n final {repr final} \n pass {repr pass}\n next {repr next}")
+      if final.size < RevCutOff
+      then
+        match pass with
         | [] =>
-            let res := final.qsort (fun x y =>
-              match x.name, y.name with
-              | .num _ i, .num _ j => i < j -- increase in dependence ; qsort expects strict order
-              | _, _ => panic s!"[revert_NoTn_cutOff_wDepsCache][augment] unexpected formats {x.name} {y.name}")
-            (track, res)
-        | f :: fs => augment track final f fs
-      | nx :: more =>
-        match nx.name with
-        | .num _ i =>
-            let I := i.toUInt32
-            if track.oContains I
-            then augment track final more next
-            else
-              let lD := depsCache[i]!.forw.takeWhileCounting (fun x =>
-                match x.name with
-                | .num _ i => introAdmissible? i
-                | _ => panic s!"[revert_NoTn_cutOff_wDepsCache][augment] unexpected formats {x.name}"
-                ) 0 spread []
-              -- dbg_trace s!"before {repr track}"
-              let track := track.oInsert I
-              -- dbg_trace s!"after {repr track}"
-              augment track (final.push nx) more (next ++ [lD]) -- add to back
-        | _ =>
-             panic s!"[revert_NoTn_cutOff_wDepsCache][augment] unexpected formats {nx.name}"
-    else
-      let res := final.qsort (fun x y =>
-        match x.name, y.name with
-        | .num _ i, .num _ j => i < j -- increase in dependence ; qsort expects strict order
-        | _, _ => panic s!"[revert_NoTn_cutOff_wDepsCache][augment] unexpected formats {x.name} {y.name}")
-      (track, res)
-  let allFwdDeps : UInt32Array := guFvs.foldl (fun D fv =>
-    match fv.name with
-    | .num _ i =>
-        let d := depsCache[i]!
-        D.union d.fTrans
-    | _ =>
-        panic s!"[allFwdDeps] unexpected formats {fv.name}"
-    ) .empty
-  -- dbg_trace (s!"[allFwdDeps]\n allFwdDeps {repr allFwdDeps}")
-  let rec filterBD (bd done : List FVarId) : List FVarId :=
-    match bd with
-    | fv@⟨.num _ i⟩ :: more  => if allFwdDeps.oContains i.toUInt32 then filterBD more (fv :: done) else filterBD more done
-    | [] => done
-    | _ => panic s!"[filterBD] unexpected format"
-  let rec close (track : UInt32Array) (final : Array FVarId) (idx : Nat) (pass : List FVarId) : Array FVarId :=
-    -- dbg_trace (s!"[close]\n track {repr track}\n final {repr final} \n pass {repr pass}\n idx {repr idx}")
-    match pass with
-    | [] =>
-      let idx := idx+1
-      if idx >= final.size
-      then final
-      else
-        let nx := final[idx]!
-        match nx.name with
-        | .num _ i =>
-            let D := filterBD depsCache[i]!.back []
-            close track final idx D
-        | _ =>
-            panic s!"[revert_NoTn_cutOff_wDepsCache][close] unexpected formats {nx.name}"
-    | nx :: more =>
-      let seen := final.binSearchContains nx (fun x y =>
-        match x.name, y.name with
-        | .num _ i, .num _ j => i < j -- expects strict order
-        | _, _ => panic s!"[revert_NoTn_cutOff_wDepsCache][close] unexpected formats {x.name} {y.name}"
-        ) 0 idx
-      if seen -- backward dependence must have smaller index, so it suffices to search in [0,idx]
-      then close track final idx more
-      else
-        match nx.name with
-        | .num _ i =>
-            let D := filterBD depsCache[i]!.back []
-            let final := final.binInsert (fun x y =>
+          match next with
+          | [] =>
+              let res := final.qsort (fun x y =>
                 match x.name, y.name with
-                | .num _ i, .num _ j => i < j -- expects strict order
-                | _, _ => panic s!"[revert_NoTn_cutOff_wDepsCache][close] unexpected formats {x.name} {y.name}"
-              ) nx
-            close track final (idx+1) (D ++ more)
-        | _ =>
-            panic s!"[revert_NoTn_cutOff_wDepsCache][close] unexpected formats {nx.name}"
-  let rec @[specialize] mkRevs : Array FVarId :=
-    if spread == 0
-    then
-      let res := guFvs.qsort (fun x y =>
-        match x.name, y.name with
-        | .num _ i, .num _ j => i < j -- increase in dependence ; qsort expects strict order
-        | _, _ => panic s!"[revert_NoTn_cutOff_wDepsCache][mkRevs] unexpected formats {x.name} {y.name}")
-      let track : UInt32Array :=
-        res.foldl (fun A nx =>
+                | .num _ i, .num _ j => i < j -- increase in dependence ; qsort expects strict order
+                | _, _ => panic s!"[revert_NoTn_cutOff_wDepsCache][augment] unexpected formats {x.name} {y.name}")
+              (track, res)
+          | f :: fs => augment track final f fs
+        | nx :: more =>
           match nx.name with
           | .num _ i =>
-              A.push i.toUInt32
+              --dbg_trace (s!"[augment] nx.name {nx.name}")
+              let I := i.toUInt32
+              if track.oContains I
+              then
+                --dbg_trace (s!"[augment] seen")
+                augment track final more next
+              else
+                let lD := depsCache[i]!.forw.takeWhileCounting (fun x =>
+                  match x.name with
+                  | .num _ i => introAdmissible? i
+                  | _ => panic s!"[revert_NoTn_cutOff_wDepsCache][augment] unexpected formats {x.name}"
+                  ) 0 spread []
+                --dbg_trace s!"before {repr track}"
+                let track := track.oInsert I
+                --dbg_trace s!"after {repr track}"
+                augment track (final.push nx) more (next ++ [lD]) -- add to back
           | _ =>
-              panic s!"[revert_NoTn_cutOff_wDepsCache][mkRevs] unexpected formats {nx.name}"
-          ) (.emptyWithCapacity res.size)
-      let ini := res[0]!
-      match ini.name with
+              panic s!"[revert_NoTn_cutOff_wDepsCache][augment] unexpected formats {nx.name}"
+      else
+        let res := final.qsort (fun x y =>
+          match x.name, y.name with
+          | .num _ i, .num _ j => i < j -- increase in dependence ; qsort expects strict order
+          | _, _ => panic s!"[revert_NoTn_cutOff_wDepsCache][augment] unexpected formats {x.name} {y.name}")
+        (track, res)
+    let allFwdDeps : UInt32Array := guFvs.foldl (fun D fv =>
+      --dbg_trace (s!"[allFwdDeps] fv.name {fv.name}, D {D}")
+      match fv.name with
       | .num _ i =>
-          let pass := filterBD depsCache[i]!.back []
-          close track res 0 pass
+          let d := depsCache[i]!
+          D.union d.fTrans
       | _ =>
-          panic s!"[revert_NoTn_cutOff_wDepsCache][mkRevs] unexpected formats {ini.name}"
-    else
-      let (track,res) := augment (UInt32Array.emptyWithCapacity RevCutOff) (.emptyWithCapacity RevCutOff) guFvs.toList []
-      let ini := res[0]!
-      match ini.name with
+          panic s!"[allFwdDeps] unexpected formats {fv.name}"
+      ) .empty
+    --dbg_trace (s!"[allFwdDeps]\n allFwdDeps {repr allFwdDeps}")
+    let rec filterBD (bd done : List FVarId) : List FVarId :=
+      match bd with
+      | fv@⟨.num _ i⟩ :: more  => if allFwdDeps.oContains i.toUInt32 then filterBD more (fv :: done) else filterBD more done
+      | [] => done
+      | _ => panic s!"[filterBD] unexpected format"
+    let rec close (track : UInt32Array) (final : Array FVarId) (idx : Nat) (pass : List FVarId) : Array FVarId :=
+      --dbg_trace (s!"[close]\n track {repr track}\n final {repr final} \n pass {repr pass}\n idx {repr idx}")
+      match pass with
+      | [] =>
+        let idx := idx+1
+        if idx >= final.size
+        then final
+        else
+          let nx := final[idx]!
+          match nx.name with
+          | .num _ i =>
+              let D := filterBD depsCache[i]!.back []
+              --dbg_trace (s!"[close] filterBD result for {i} {D.map FVarId.name}")
+              close track final idx D
+          | _ =>
+              panic s!"[revert_NoTn_cutOff_wDepsCache][close] unexpected formats {nx.name}"
+      | nx :: more =>
+        let seen := final.binSearchContains nx (fun x y =>
+          match x.name, y.name with
+          | .num _ i, .num _ j => i < j -- expects strict order
+          | _, _ => panic s!"[revert_NoTn_cutOff_wDepsCache][close] unexpected formats {x.name} {y.name}"
+          ) 0 idx
+        if seen -- backward dependence must have smaller index, so it suffices to search in [0,idx]
+        then close track final idx more
+        else
+          match nx.name with
+          | .num _ i =>
+              let D := filterBD depsCache[i]!.back []
+              --dbg_trace (s!"[close] filterBD result for {i} {D.map FVarId.name}")
+              let final := final.binInsert (fun x y =>
+                  match x.name, y.name with
+                  | .num _ i, .num _ j => i < j -- expects strict order
+                  | _, _ => panic s!"[revert_NoTn_cutOff_wDepsCache][close] unexpected formats {x.name} {y.name}"
+                ) nx
+              close track final (idx+1) (D ++ more)
+          | _ =>
+              panic s!"[revert_NoTn_cutOff_wDepsCache][close] unexpected formats {nx.name}"
+    let rec @[specialize] mkRevs : Array FVarId :=
+      if spread == 0
+      then
+        let res := guFvs.qsort (fun x y =>
+          match x.name, y.name with
+          | .num _ i, .num _ j => i < j -- increase in dependence ; qsort expects strict order
+          | _, _ => panic s!"[revert_NoTn_cutOff_wDepsCache][mkRevs] unexpected formats {x.name} {y.name}")
+        let track : UInt32Array :=
+          res.foldl (fun A nx =>
+            match nx.name with
+            | .num _ i =>
+                A.push i.toUInt32
+            | _ =>
+                panic s!"[revert_NoTn_cutOff_wDepsCache][mkRevs] unexpected formats {nx.name}"
+            ) (.emptyWithCapacity res.size)
+        let ini := res[0]!
+        match ini.name with
         | .num _ i =>
             let pass := filterBD depsCache[i]!.back []
             close track res 0 pass
         | _ =>
             panic s!"[revert_NoTn_cutOff_wDepsCache][mkRevs] unexpected formats {ini.name}"
-  let mkRevs := mkRevs
-  -- dbg_trace s!"[mkRevs] {repr mkRevs}"
-  let rec @[specialize] finalRevs : Array FVarId :=
-    (workerDepsCache.foldl ( fun (final, aw) (wfid,wd) =>
-      if wd.any (fun w =>
-        (aw.contains w) ||
-        (match w.name with
-         | .num k i => if (k == `g || k == `u) then (if (allFwdDeps.oContains i.toUInt32) then true else guFvs.contains w) else false
-         | _ => false ))
-      then (final.push wfid, aw.push wfid)
-      else (final, aw)
-    ) (mkRevs,#[])).1
-  do
-  mtracing
-  let ⟨revGoalT,finalRevsPass,l1,l2⟩ ← goal.abstractLetFvarAll_proofLet l1 l2 depsCache finalRevs
-  mtrace on .zero with s!"\n revGoalT {← PpExpr revGoalT l1 l2}\n finalRevsPass {repr finalRevsPass}"
-  -- let mv ← mkFreshExprMVarAt l1 l2 revGoalT
-  let apFv ← withLCtx l1 l2 <| do finalRevsPass.filterM (fun fvd => do
-    match ← fvd.getDecl with
-    | .cdecl .. => return true
-    | .ldecl _ _ _ T .. =>
-        match fvd.name with
-        | .num k i => if (k == `g || k == `u) then return depsCache[i]!.proof else isProof T -- case of workers
-        | n => panic! s!"[revert_NoTn_cutOff_wDepsCache] unexpected {n}")
-  let term := .lam `revertHelp revGoalT (mkAppN (.bvar 0) (apFv.map Expr.fvar)) .default
-  return ⟨revGoalT,term,apFv,l1,l2⟩
+      else
+        let (track,res) := augment (UInt32Array.emptyWithCapacity RevCutOff) (.emptyWithCapacity RevCutOff) guFvs.toList []
+        --dbg_trace (s!"[mkRevs] result of augement: track {track}, res {res.map FVarId.name}")
+        let ini := res[0]!
+        match ini.name with
+          | .num _ i =>
+              let pass := filterBD depsCache[i]!.back []
+              --dbg_trace (s!"[mkRevs] filterBD result for {i} {pass.map FVarId.name}")
+              close track res 0 pass
+          | _ =>
+              panic s!"[revert_NoTn_cutOff_wDepsCache][mkRevs] unexpected formats {ini.name}"
+    let mkRevs := mkRevs
+    --dbg_trace s!"[mkRevs] {repr mkRevs}"
+    let rec @[specialize] finalRevs : Array FVarId :=
+      (workerDepsCache.foldl ( fun (final, aw) (wfid,wd) =>
+        if wd.any (fun w =>
+          (aw.contains w) ||
+          (match w.name with
+          | .num k i => if (k == `g || k == `u) then (if (allFwdDeps.oContains i.toUInt32) then true else guFvs.contains w) else false
+          | _ => false ))
+        then (final.push wfid, aw.push wfid)
+        else (final, aw)
+      ) (mkRevs,#[])).1
+    do
+    mtracing
+    let ⟨revGoalT,finalRevsPass,l1,l2⟩ ← goal.abstractLetFvarAll_proofLet l1 l2 depsCache finalRevs
+    mtrace on .zero with s!"\n revGoalT {← PpExpr revGoalT l1 l2}\n finalRevsPass {repr finalRevsPass}"
+    -- let mv ← mkFreshExprMVarAt l1 l2 revGoalT
+    let apFv ← withLCtx l1 l2 <| do finalRevsPass.filterM (fun fvd => do
+      match ← fvd.getDecl with
+      | .cdecl .. => return true
+      | .ldecl _ _ _ T .. =>
+          match fvd.name with
+          | .num k i => if (k == `g || k == `u) then return depsCache[i]!.proof else isProof T -- case of workers
+          | n => panic! s!"[revert_NoTn_cutOff_wDepsCache] unexpected {n}")
+    let term := .lam `revertHelp revGoalT (mkAppN (.bvar 0) (apFv.map Expr.fvar)) .default
+    return ⟨revGoalT,term,apFv,l1,l2⟩

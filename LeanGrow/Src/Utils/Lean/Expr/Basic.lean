@@ -115,10 +115,11 @@ def Lean.Expr.zetaFvs (within : Expr)
 
 @[inline]
 def Lean.Expr.abstractPat (pat within : Expr) : Expr :=
-  within.onAllSubtermsWiDepth (fun x d =>
+  within.onAllSubtermsWiDepthTR (fun x d =>
     if x == pat
     then
-      .bvar d
+      .bvar d -- `d` in TR version, then go to ↓ in next iter and get the bump
+      -- debug stuff if witching to non-TR X__X
     else
       match x with
       | .bvar i => if i ≥ d then .bvar (i+1) else x

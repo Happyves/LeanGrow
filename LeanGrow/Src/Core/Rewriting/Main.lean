@@ -16,7 +16,7 @@ import LeanGrow.Src.Core.Rewriting.Dependencies
 open Lean Meta
 
 
-
+-- #exit
 
 /-- Note: on 4.25 with new tracing system,
 uncommeting --mtrace leads to massive compile time-/
@@ -27,28 +27,38 @@ def topBackRW
   (RevCutOff : Nat)
   (l1 : LocalContext) (l2 : LocalInstances)
   (dirs : rwDirs) (backIdx pos : Nat) (within pat eqProof : Expr)
-  : MetaM (Prod3 Expr LocalContext LocalInstances) := do
+  : MetaM (Prod3 (Option Expr) LocalContext LocalInstances) := do
   mtracing
+  -- let coreDeps := pat.getGUFVarsIds
   let ⟨depFvs,l1,l2⟩ ← getDeps l1 l2 dirs within pat 0
-  dbg_trace s!"[topBackRW] depFvs {repr depFvs}"
+  dbg_trace s!"[topBackRW] depFvs {depFvs.map Expr.fvar}"
   let .mk tmp tnodes l1 l2 ← generalizeTnodesSafeIgnoring l1 l2 within #[]
     (fun x _ _ => return x == pat )
   match tmp with
   | .none =>
-      (throwError s!"[topBackRW] generalisation  of tnodes failed in 'within' {← ppExpr within}")
+      dbg_trace s!"[topBackRW] generalisation  of tnodes failed in 'within' {← ppExpr within}"
+      return .mk .none l1 l2
   | .some within => do
       dbg_trace s!"[topBackRW] within {← ppExpr within}"
       dbg_trace s!"[topBackRW] tnodes {← tnodes.mapM ppExpr}"
       let .mk within _ allRev l1 l2 ← revert_NoTn_cutOff_wDepsCache
-        introAdmissible? l1 l2 within depFvs.toArray
+        introAdmissible? l1 l2 within depFvs.toArray --(coreDeps ++ depFvs).toArray
         depsCache #[] RevCutOff
       dbg_trace s!"[topBackRW] allRev {repr allRev}"
       dbg_trace s!"[topBackRW] within {← ppExpr within}"
       let .mk within proofs l1 l2 ← generalizeProofsIgnoring l1 l2 within #[]
         (fun x _ _ => return x == pat)
         (fun x l1 l2 => do
-          let T ← InferType x l1 l2
-          return Expr.hasPatternTR pat T)
+          let w? :=
+            match x.fvarId? with
+            | .some i => i.isWorker
+            | _ => false
+          if w?
+          then return false
+          else
+            let T ← InferType x l1 l2
+            return Expr.hasPatternTR pat T
+          )
       dbg_trace s!"[topBackRW] within {← ppExpr within}"
       dbg_trace s!"[topBackRW] proofs {← proofs.mapM ppExpr}"
       let patType ← InferType pat l1 l2
@@ -75,6 +85,21 @@ def topBackRW
       return ⟨withRevs,l1,l2⟩
 
 #check 1
+#check FVarId.isWorker
+
+
+partial def bindTypsOfNoAbs (l1 : LocalContext) (l2 : LocalInstances)
+  (terms : Array Expr) (head : Expr) : MetaM Expr :=
+  let rec go (i : Nat) (e : Expr) : MetaM Expr := do
+    if i == 0
+    then return e
+    else
+      let i := i-1
+      let T ← InferType terms[i]! l1 l2
+      go i (.lam `bindTypsOfNoAbs T e .default) --instances not properly handled
+  go terms.size head
+
+
 
 @[inline]
 def castProofForRW (l1 : LocalContext) (l2 : LocalInstances)
@@ -91,7 +116,7 @@ def castProofForRW (l1 : LocalContext) (l2 : LocalInstances)
     dbg_trace s!"[castProofForRW] eqRfl {← ppExpr eqRfl}, of type {← ppExpr (← inferType eqRfl)}"
     let eqP := mkAppN (.const `Eq.ndrec [0,patTypeLevel]) #[patType,pat,eqMot,eqRfl,rep,eqProof]
     dbg_trace s!"[castProofForRW] eqP {← ppExpr eqP}, of type {← ppExpr (← inferType eqP)}"
-    let castMain := mkAppN (.const `cast [0]) #[xT,rT,eqP,x]
+    let castMain := mkAppN (.const ``cast [0]) #[xT,rT,eqP,x]
     dbg_trace s!"[castProofForRW] castMain {← ppExpr castMain}, of type {← ppExpr (← inferType castMain)}"
     return castMain
     -- assumes `pat` has no abstracted dependecies in the reverted types
@@ -109,47 +134,60 @@ def topForwRW
   (RevCutOff : Nat)
   (l1 : LocalContext) (l2 : LocalInstances)
   (dirs : rwDirs) (rwableFvar : Expr) (within pat eqProof : Expr)
-  : MetaM (Prod3 Expr LocalContext LocalInstances) := do
+  : MetaM (Prod3 (Option Expr) LocalContext LocalInstances) := do
   -- trace set Tracing.Flags.none in do
+  -- let coreDeps := pat.getGUFVarsIds
   let ⟨depFvs,l1,l2⟩ ←  getDeps l1 l2 dirs within pat 0
   dbg_trace s!"[topBackRW] depFvs {repr depFvs}"
   let .mk within _ allRev l1 l2 ← revert_NoTn_cutOff_wDepsCache
-    introAdmissible? l1 l2 within depFvs.toArray
+    introAdmissible? l1 l2 within depFvs.toArray --(coreDeps ++ depFvs).toArray
     depsCache #[] RevCutOff
   dbg_trace s!"[topForwRW] allRev {repr allRev}"
-  -- if ← allRev.anyM (fun x => return !(← isProp (← x.getType)))
-  -- then
-  --   throwError s!"[topForwRW] 'within' contains dependent non-prop fvars: {← ppExpr within}"
-  -- else
-  dbg_trace s!"[topForwRW] within {← ppExpr within}"
-  let .mk within proofs l1 l2 ← generalizeProofsIgnoring l1 l2 within #[]
-      (fun x _ _ => return x == pat)
-      (fun x l1 l2 => do
-        let T ← InferType x l1 l2
-        return Expr.hasPatternTR pat T)
-  dbg_trace s!"[topForwRW] within {← ppExpr within}"
-  dbg_trace s!"[topForwRW] proofs {← proofs.mapM ppExpr}"
-  let patType ← InferType pat l1 l2
-  dbg_trace s!"[topForwRW] patType {← ppExpr patType}"
-  let patTypeLevel ←  withLCtx l1 l2 <| do getLevel patType
-  let motive := Expr.abstractPatBind pat patType within .default
-  dbg_trace s!"[topForwRW] motive {← ppExpr motive}"
-  let motT ← InferType motive l1 l2
-  dbg_trace s!"[topForwRW] motT {← ppExpr motT}"
-  let .sort motL := ← Whnf motT.getForallBody l1 l2 | throwError "[topForwRW] motive's type isn't sort headed, it's {← ppExpr motT}"
-  let .some (_,_,rep) := (← InferType eqProof l1 l2).eq? | throwError "[topForwRW] eq proof insn't ... it's {← ppExpr eqProof}"
-  dbg_trace s!"[topForwRW] rep {← ppExpr rep}"
-  let mainProof := mkAppN (.const `Eq.ndrec [motL,patTypeLevel]) #[patType, pat, motive, rwableFvar , rep, eqProof]
-  dbg_trace s!"[topForwRW] mainProof {← ppExpr mainProof}, of type {← ppExpr (← inferType mainProof)}"
-  let castedArgs ← (proofs ++ (allRev.map Expr.fvar)).mapM
-    (fun x => castProofForRW l1 l2 pat rep patType eqProof x patTypeLevel)
-  let withRevs := mkAppN mainProof castedArgs
-  dbg_trace s!"[topForwRW] withRevs {← ppExpr withRevs}, of type {← ppExpr (← inferType withRevs)}"
-  return ⟨withRevs,l1,l2⟩
+  if ← allRev.anyM (fun x => return !(← IsProp (← x.GetType l1 l2) l1 l2))
+  then
+    dbg_trace s!"[topForwRW] 'within' contains dependent non-prop fvars: {← ppExpr within}"
+    return .mk .none l1 l2
+  else
+    dbg_trace s!"[topForwRW] within {← ppExpr within}"
+    let .mk within proofs l1 l2 ← generalizeProofsIgnoring l1 l2 within #[]
+        (fun x _ _ => return x == pat)
+        (fun x l1 l2 => do
+            let w? :=
+              match x.fvarId? with
+              | .some i => i.isWorker
+              | _ => false
+            if w?
+            then return false
+            else
+              let T ← InferType x l1 l2
+              return Expr.hasPatternTR pat T
+            )
+    dbg_trace s!"[topForwRW] within {← ppExpr within}"
+    dbg_trace s!"[topForwRW] proofs {← proofs.mapM ppExpr}"
+    let patType ← InferType pat l1 l2
+    dbg_trace s!"[topForwRW] patType {← ppExpr patType}"
+    let patTypeLevel ←  withLCtx l1 l2 <| do getLevel patType
+    let motive := Expr.abstractPatBind pat patType within .default
+    dbg_trace s!"[topForwRW] motive {← ppExpr motive}"
+    let motT ← InferType motive l1 l2
+    dbg_trace s!"[topForwRW] motT {← ppExpr motT}"
+    let .sort motL := ← Whnf motT.getForallBody l1 l2 | throwError "[topForwRW] motive's type isn't sort headed, it's {← ppExpr motT}"
+    let .some (_,_,rep) := (← InferType eqProof l1 l2).eq? | throwError "[topForwRW] eq proof insn't ... it's {← ppExpr eqProof}"
+    dbg_trace s!"[topForwRW] rep {← ppExpr rep}"
+    let allRev := allRev.map Expr.fvar
+    let here ← bindTypsOfNoAbs l1 l2 (proofs ++ allRev) rwableFvar -- crutially relies on proof irrelevance
+    dbg_trace s!"[topForwRW] here {← ppExpr here}"
+    let mainProof := mkAppN (.const `Eq.ndrec [motL,patTypeLevel]) #[patType, pat, motive, here , rep, eqProof]
+    dbg_trace s!"[topForwRW] mainProof {← ppExpr mainProof}, of type {← ppExpr (← inferType mainProof)}"
+    let castedArgs ← (allRev ++ proofs).reverse.mapM
+      (fun x => castProofForRW l1 l2 pat rep patType eqProof x patTypeLevel)
+    let withRevs := mkAppN mainProof castedArgs
+    dbg_trace s!"[topForwRW] withRevs {← ppExpr withRevs}, of type {← ppExpr (← inferType withRevs)}"
+    return ⟨withRevs,l1,l2⟩
 
 
 #check funext
--- #exit
+
 
 #check mkFunExt
 /-- We prefer this over `mkFunExt` because the defeq with standard config that i relies on
@@ -243,8 +281,8 @@ partial def handleBinders
   (l1 : LocalContext) (l2 : LocalInstances)
   (currentDepth : Nat) (nextDepths : List Nat) (workerDeps : Array (FVarId × (List FVarId)))
   (dirs : rwDirs) (within pat eqProof : Expr)
-  : MetaM (Prod3 Expr LocalContext LocalInstances) := do
-  let rec @[inline] mainAct (k : rwDirs → Expr → Expr → Expr → Expr → Expr → LocalContext → LocalInstances → MetaM (Prod3 Expr LocalContext LocalInstances)) : MetaM (Prod3 Expr LocalContext LocalInstances) := do
+  : MetaM (Prod3 (Option Expr) LocalContext LocalInstances) := do
+  let rec @[inline] mainAct (k : rwDirs → Expr → Expr → Expr → Expr → Expr → LocalContext → LocalInstances → MetaM (Prod3 (Option Expr) LocalContext LocalInstances)) : MetaM (Prod3 (Option Expr) LocalContext LocalInstances) := do
     match nextDepths with
     | nextDepth :: furtherDepths =>
         dbg_trace s!"[handleBinders] call on within {← ppExpr within}, pat {← ppExpr pat}, dirs {repr dirs}"
@@ -254,29 +292,32 @@ partial def handleBinders
         let ⟨introTerm, introTermDirs, passWorker, workerDeps,l1,l2⟩ ← lambdaLetAllBoundedTelescopeWorkerDirsDeps l1 l2 boundedTerm #[] workerDeps nextDepth (nextDepth+1) boundedTermDirs
         dbg_trace s!"[handleBinders] introTerm {← ppExpr introTerm}, passWorker {← passWorker.mapM ppExpr}"
         --mtrace on .one with s!"[handleBinders] workerDeps {repr <| workerDeps.map (fun x => (x.1, x.2.map LocalDecl.fvarId))}"
-        let ⟨res,l1,l2⟩ ← handleBinders introAdmissible? depsCache RevCutOff back? l1 l2 (nextDepth+1) furtherDepths workerDeps introTermDirs introTerm pat eqProof
-        dbg_trace s!"[handleBinders] local return {← ppExpr res}"
-        let extHyp ← withLCtx l1 l2 <| mkLambdaFVars passWorker res false false false false .default
-        dbg_trace s!"[handleBinders] abstracted worker to {← ppExpr extHyp}"
-        let ⟨extProof,l1,l2⟩ : (Prod3 Expr LocalContext LocalInstances) := ← do
-          match boundedTermDirs with
-          | .la .. => mkFunExt! l1 l2 extHyp
-          | .al .. => mkPiCongr! l1 l2 extHyp
-          | .le .. =>
-              match boundedTerm with
-              | .letE _ _ V _ _ => mkLetBodyCongr! l1 l2 extHyp V
-              | _ => throwError s!"[handleBinders] expected letE, got {← ppExpr boundedTerm}"
-          | _ => throwError s!"[handleBinders] expected binder, got {repr boundedTermDirs}"
-        if currentDepth == 0
-        then
-          return ⟨extProof,l1,l2⟩
-        else
-          let .some (boundedType,_,boundedRep) := (← InferType extProof l1 l2).eq? | throwError s!"[handleBinders] expected eq, got {← ppExpr (← inferType extProof)}"
-          dbg_trace s!"[handleBinders] boundedType {← ppExpr boundedType}"
-          dbg_trace s!"[handleBinders] boundedRep {← ppExpr boundedRep}"
-          let supTermDirs := replaceDirsAtSupPattern dirs within boundedTerm
-          dbg_trace s!"[handleBinders] supTermDirs {repr supTermDirs}"
-          k supTermDirs within boundedTerm boundedType boundedRep extProof l1 l2
+        let R@⟨res,l1,l2⟩ ← handleBinders introAdmissible? depsCache RevCutOff back? l1 l2 (nextDepth+1) furtherDepths workerDeps introTermDirs introTerm pat eqProof
+        dbg_trace s!"[handleBinders] local return {← res.mapM  ppExpr}"
+        match res with
+        | .none => return R
+        | .some res =>
+          let extHyp ← withLCtx l1 l2 <| mkLambdaFVars passWorker res false false false false .default
+          dbg_trace s!"[handleBinders] abstracted worker to {← ppExpr extHyp}"
+          let ⟨extProof,l1,l2⟩ : (Prod3 Expr LocalContext LocalInstances) := ← do
+            match boundedTermDirs with
+            | .la .. => mkFunExt! l1 l2 extHyp
+            | .al .. => mkPiCongr! l1 l2 extHyp
+            | .le .. =>
+                match boundedTerm with
+                | .letE _ _ V _ _ => mkLetBodyCongr! l1 l2 extHyp V
+                | _ => throwError s!"[handleBinders] expected letE, got {← ppExpr boundedTerm}"
+            | _ => throwError s!"[handleBinders] expected binder, got {repr boundedTermDirs}"
+          if currentDepth == 0
+          then
+            return ⟨extProof,l1,l2⟩
+          else
+            let .some (boundedType,_,boundedRep) := (← InferType extProof l1 l2).eq? | throwError s!"[handleBinders] expected eq, got {← ppExpr (← inferType extProof)}"
+            dbg_trace s!"[handleBinders] boundedType {← ppExpr boundedType}"
+            dbg_trace s!"[handleBinders] boundedRep {← ppExpr boundedRep}"
+            let supTermDirs := replaceDirsAtSupPattern dirs within boundedTerm
+            dbg_trace s!"[handleBinders] supTermDirs {repr supTermDirs}"
+            k supTermDirs within boundedTerm boundedType boundedRep extProof l1 l2
       | [] =>
         if currentDepth == 0
         then
@@ -302,12 +343,13 @@ partial def handleBinders
       let instaL ← withLCtx l1 l2 <| getLevel instaT
       let ⟨depFvs,l1,l2⟩ ← getDeps l1 l2 supTermDirs within boundedTerm currentDepth
       dbg_trace s!"[handleBinders] depFvs {repr depFvs}"
-      if ← depFvs.anyM (fun fv => return !(← IsProp (← fv.getType) l1 l2))
+      if ← depFvs.anyM (fun fv => return !(← IsProp (← fv.GetType l1 l2) l1 l2))
       then
-        throwError s!"[handleBinders] we reject non-prop fvars ; there is one in 'within': {← ppExpr within}"
+        dbg_trace s!"[handleBinders] we reject non-prop fvars ; there is one in 'within': {← ppExpr within}"
+        return .mk .none l1 l2
       else
         dbg_trace s!"[handleBinders] depFvs {repr depFvs}"
-        let rec @[inline] act (k : Expr → Array Expr → LocalContext → LocalInstances → MetaM (Prod3 Expr LocalContext LocalInstances)) : MetaM (Prod3 Expr LocalContext LocalInstances) := do
+        let rec @[inline] act (k : Expr → Array Expr → LocalContext → LocalInstances → MetaM (Prod3 (Option Expr) LocalContext LocalInstances)) : MetaM (Prod3 (Option Expr) LocalContext LocalInstances) := do
           if back?
           then
             let .mk tmp y l1 l2 ← generalizeTnodesSafeIgnoring l1 l2 within
@@ -315,7 +357,8 @@ partial def handleBinders
               (fun x _ _ => return x == boundedTerm )
             match tmp with
             | .none =>
-                (throwError s!"[handleBinders] failed to generalize tnodes (non-prop one ?) in within {← ppExpr within}")
+                dbg_trace s!"[handleBinders] failed to generalize tnodes (non-prop one ?) in within {← ppExpr within}"
+                return .mk .none l1 l2
             | .some x => k x y l1 l2
           else
             k within #[] l1 l2
@@ -327,17 +370,26 @@ partial def handleBinders
             depsCache workerDeps RevCutOff
             --revert dummy.mvarId! depFvs.toArray l1 l2 workerDeps
           dbg_trace s!"[handleBinders] allRev {repr allRev}"
-          if ← allRev.anyM (fun x => return !(← IsProp (← x.getType) l1 l2))
+          if ← allRev.anyM (fun x => return !(← IsProp (← x.GetType l1 l2) l1 l2))
           then
-            throwError s!"[handleBinders] 'within' contains dependent non-prop fvars: {← ppExpr within}"
+            dbg_trace s!"[handleBinders] 'within' contains dependent non-prop fvars: {← ppExpr within}"
+            return .mk .none l1 l2
           else
             dbg_trace s!"[handleBinders] within {← ppExpr within}"
             let .mk within proofs l1 l2 ← generalizeProofsIgnoring l1 l2 within
               (workerDeps.map Prod.fst)
               (fun x _ _ => return x == boundedTerm)
               (fun x l1 l2 => do
-                let T ← InferType x l1 l2
-                return Expr.hasPatternTR boundedTerm T)
+                let w? :=
+                  match x.fvarId? with
+                  | .some i => i.isWorker
+                  | _ => false
+                if w?
+                then return false
+                else
+                  let T ← InferType x l1 l2
+                  return Expr.hasPatternTR boundedTerm T
+                )
             dbg_trace s!"[handleBinders] within {← ppExpr within}"
             dbg_trace s!"[handleBinders] proofs {← proofs.mapM ppExpr}"
             let boundedTypeLevel ← withLCtx l1 l2 <| getLevel boundedType
@@ -379,7 +431,7 @@ def mainBackRW
   (l1 : LocalContext) (l2 : LocalInstances)
   (dirs : rwDirs) (backIdx pos : Nat) (within pat eqProof : Expr)
   (ifSubgoalsThenAllWs : Option Nat)
-  : MetaM (Prod3 Expr LocalContext LocalInstances) := do
+  : MetaM (Prod3 (Option Expr) LocalContext LocalInstances) := do
   dbg_trace s!"[mainBackRW] within {← PpExpr within l1 l2}"
   dbg_trace s!"[mainBackRW] eqProof {← PpExpr eqProof l1 l2}"
   dbg_trace s!"[mainBackRW] pat {← PpExpr pat l1 l2}"
@@ -395,14 +447,17 @@ def mainBackRW
   dbg_trace s!"[mainBackRW] ws {ws}"
   match ws with
   | _ :: _ =>
-    let ⟨extProof,l1,l2⟩ ← handleBinders introAdmissible? depsCache RevCutOff true l1 l2 0 ws #[] dirs within pat eqProof
-    dbg_trace s!"[mainBackRW] extProof {← PpExpr extProof l1 l2}"
-    let .some (_,boundedTerm,_) := (← InferType extProof l1 l2).eq? | throwError s!"[mainBackRW] expected eq, got {← ppExpr (← inferType extProof)}"
-    dbg_trace s!"[mainBackRW] boundedTerm {← PpExpr boundedTerm l1 l2}"
-    let supTermDirs := replaceDirsAtSupPattern dirs within boundedTerm
-    dbg_trace s!"[mainBackRW] supTermDirs {repr supTermDirs}"
-    let ⟨term,l1,l2⟩ ← topBackRW introAdmissible? depsCache RevCutOff l1 l2 supTermDirs backIdx pos within boundedTerm extProof
-      return ⟨term,l1,l2⟩
+    let R@⟨extProof,l1,l2⟩ ← handleBinders introAdmissible? depsCache RevCutOff true l1 l2 0 ws #[] dirs within pat eqProof
+    match extProof with
+    | .none => return R
+    | .some extProof =>
+      dbg_trace s!"[mainBackRW] extProof {← PpExpr extProof l1 l2}"
+      let .some (_,boundedTerm,_) := (← InferType extProof l1 l2).eq? | throwError s!"[mainBackRW] expected eq, got {← ppExpr (← inferType extProof)}"
+      dbg_trace s!"[mainBackRW] boundedTerm {← PpExpr boundedTerm l1 l2}"
+      let supTermDirs := replaceDirsAtSupPattern dirs within boundedTerm
+      dbg_trace s!"[mainBackRW] supTermDirs {repr supTermDirs}"
+      let ⟨term,l1,l2⟩ ← topBackRW introAdmissible? depsCache RevCutOff l1 l2 supTermDirs backIdx pos within boundedTerm extProof
+        return ⟨term,l1,l2⟩
   | _ => do
     let ⟨term,l1,l2⟩ ← topBackRW introAdmissible? depsCache RevCutOff l1 l2 dirs backIdx pos within pat eqProof
     return ⟨term,l1,l2⟩
@@ -416,7 +471,7 @@ def mainForwRW
   (RevCutOff : Nat)
   (l1 : LocalContext) (l2 : LocalInstances)
   (dirs : rwDirs) (rwableFvar : Expr) (within pat eqProof : Expr)
-  : MetaM (Prod3 Expr LocalContext LocalInstances) := do
+  : MetaM (Prod3 (Option Expr) LocalContext LocalInstances) := do
   let .mk w1 l1 l2 ← eqProof.getWorkerIndsTrans l1 l2
   let .mk w2 l1 l2 ← pat.getWorkerIndsTrans l1 l2
   let ws := List.orderedUnion w1.toList w2.toList
@@ -425,11 +480,14 @@ def mainForwRW
   dbg_trace s!"[mainForwRW] ws {repr ws}"
   match ws with
   | _ :: _ =>
-    let ⟨extProof,l1,l2⟩ ← handleBinders introAdmissible? depsCache RevCutOff false l1 l2 0 ws #[] dirs within pat eqProof
-    let .some (_,boundedTerm,_) := (← InferType extProof l1 l2).eq? | throwError s!"[mainForwRW] expected eq, got {← ppExpr (← inferType extProof)}"
-    let supTermDirs := replaceDirsAtSupPattern dirs within boundedTerm
-    let ⟨term,l1,l2⟩ ← topForwRW introAdmissible? depsCache RevCutOff l1 l2 supTermDirs rwableFvar within boundedTerm extProof
-    return ⟨term,l1,l2⟩
+    let R@⟨extProof,l1,l2⟩ ← handleBinders introAdmissible? depsCache RevCutOff false l1 l2 0 ws #[] dirs within pat eqProof
+    match extProof with
+    | .none => return R
+    | .some extProof =>
+      let .some (_,boundedTerm,_) := (← InferType extProof l1 l2).eq? | throwError s!"[mainForwRW] expected eq, got {← ppExpr (← inferType extProof)}"
+      let supTermDirs := replaceDirsAtSupPattern dirs within boundedTerm
+      let ⟨term,l1,l2⟩ ← topForwRW introAdmissible? depsCache RevCutOff l1 l2 supTermDirs rwableFvar within boundedTerm extProof
+      return ⟨term,l1,l2⟩
   | _ =>
     let ⟨term,l1,l2⟩ ← topForwRW introAdmissible? depsCache RevCutOff l1 l2 dirs rwableFvar within pat eqProof
     return ⟨term,l1,l2⟩
