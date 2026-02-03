@@ -185,6 +185,7 @@ LG:
 - Save search state to some tracing env extention, and write a small DSL to explore its branches
 - Make alternative version where we don't query applicable theorems, but use goal-hyp scores to
   get theorems, then get their indices, and query applicability only among these indices 
+- processForQuery always uses gnodes for name : is this ok ?
 
 Djv Core:
 - migrate repo, fix and consider local-instance-patching in generalise too ?

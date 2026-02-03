@@ -50,6 +50,7 @@ inductive ThmFormat where
       (goal : Expr)
       (sinks : List Nat)
       (badFo badBa : Bool)
+      (conjable : List Nat)
 | rw  (name : Name ⊕ FVarId)
       (lvlParamsNum : Nat)
       (kind : RWkind)
@@ -61,10 +62,11 @@ inductive ThmFormat where
       (sinks : List Nat)
       (badFo badBa : Bool)
       (simpliFactor : Float)
+      (conjable : List Nat)
 
 instance : Inhabited ThmFormat where
   default :=
-    .std (.inl `defaultDummyThmFormat) 0 false #[] default 0 (failExpr "Inhabited ThmFormat") [] true true
+    .std (.inl `defaultDummyThmFormat) 0 false #[] default 0 (failExpr "Inhabited ThmFormat") [] true true []
 
 instance : ToString (Name ⊕ FVarId) where
   toString := fun
@@ -134,8 +136,13 @@ def ThmFormat.badFo : ThmFormat → Bool
 
 @[inline]
 def ThmFormat.badBa : ThmFormat → Bool
-  | .std _ _ _ _ _ _ _ _ _ bad => bad
+  | .std _ _ _ _ _ _ _ _ _ bad .. => bad
   | .rw _ _  _  _ _  _ _ _ _ _ bad .. => bad
+
+@[inline]
+def ThmFormat.conjable : ThmFormat → List Nat
+  | .std _ _ _ _ _ _ _ _ _ _ c => c
+  | .rw _ _  _  _ _  _ _ _ _ _ _ _ c => c
 
 
 instance : Repr ThmFormat where

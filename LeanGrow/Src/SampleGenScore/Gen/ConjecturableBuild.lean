@@ -10,6 +10,8 @@ Author: Yves Jäckle.
 import LeanGrow.Src.SampleGenScore.Gen.GeneraliseMulti
 import LeanGrow.Src.SampleGenScore.Gen.Conveyorbelts
 
+import LeanGrow.Src.Caching.Formating.Process
+
 open Lean Meta
 
 /-
@@ -37,7 +39,7 @@ Todos:
 
 -/
 
-#exit
+
 
 def Lean.Level.getLevelTranlsation
   (e : Level) (sampleName : Name) (st : Prod3 Nat Nat (NameMap Name))
@@ -63,7 +65,7 @@ def Lean.Expr.getLevelTranlsation (l1 : LocalContext) (l2 : LocalInstances)
     l1 l2 (Prod4.mk 0 lvlNum iniTr iniSeen) (fun e d w l1 l2 st@(.mk i lvlNum trans seen) => do
       match e with
       | .fvar fv@(.mk fvid) =>
-        if seen.contains fvid || (w.find? fvid.toString.toUTF8).isSome
+        if seen.contains fvid || (w.contains e)
         then return .mk (.std st) l1 l2
         else
           let T ← fv.GetType l1 l2
@@ -97,6 +99,7 @@ partial def Lean.Expr.translateToLnodesMulti (l1 : LocalContext) (l2 : LocalInst
   (sampleName : Name) (types : Array Expr) (dict : NameMap MVarId) (lvlTrans : NameMap Name)
   : MetaM (Prod4 Expr (Prod (Array Expr) (NameMap MVarId)) LocalContext LocalInstances) :=
   do
+  mtracing
   mtrace on .one with s!"call on {← ppExpr e}"
   e.onAllSubtermsWiWorkerCpsSkipTravState l1 l2 (⟨types, dict⟩ : Prod (Array Expr) (NameMap MVarId))
     (fun e _ s@⟨types, dict⟩ l1 l2 => do
@@ -253,6 +256,7 @@ partial def cvb_thmConj_genConj [Repr IdxCollType]
   (samIdx : Nat) (conjPain : PaIn IdxCollType)
   (sampleName : Name) (types : Array Expr)
   : MetaM (Prod (ListProd ThmFormat Nat) (Array Expr)) := do
+    mtracing
     let weights := Array.replicate samIdx (1 : Nat)
     mtrace on .zero with s!" generalising"
     let .mk freqInd T types l1 l2 ← generalizePaInCore
@@ -260,20 +264,25 @@ partial def cvb_thmConj_genConj [Repr IdxCollType]
       conjPain weights types
     mtrace on .one with s!" generalised PaIn {← T.pp l1 l2 [] 0 intersect empty?}"
     mtrace on .zero with s!" found freqInd {repr freqInd}, deduplicating"
-    let .mk T weights trans ← T.dedup insert union empty size contains fold weights freqInd
+    let .mk T weights _ ← T.dedup insert union empty size contains fold weights freqInd
     mtrace on .zero with s!" running lnode garbadge collection"
     let (T,types,_) := lnodeGarbageCollection T types
-    let total := weights.foldl (fun x y => x+y) 0
-    let build := T.buildAllTop intersect empty?
-    let res ← build.foldlM ListProd.nil (fun e is R => do
+    let build ← T.buildAllTop l1 l2 intersect empty?
+    let (res,_) ← build.foldlM ((ListProd.nil : ListProd ThmFormat Nat),0) (fun e is (R,i) => do
       let w := getCPIweights fold weights is
       let r ← e.bindLnodes_makeLevelPara l1 l2
-      let f := (sorry : Expr → ThmFormat) r.1
-      return .cons f w R
+      let .mk _ f _ _ ← processForMainSpe l1 l2 (.num sampleName i) i (.inl <| (.num sampleName i)) #[] 0 r.1 .both
+      -- ↑↓ make this more tailored
+      let f :=
+        match f with
+        | .cons _ f _ => f
+        | _ => panic! "[cvb_thmConj_genConj] failed process ??"
+      return (ListProd.cons f w R,i+1)
       )
     return .mk res types
 
 #check 1
+
 
 @[specialize, inline]
 partial def cvb_thmConj_genMain [Repr IdxCollType]

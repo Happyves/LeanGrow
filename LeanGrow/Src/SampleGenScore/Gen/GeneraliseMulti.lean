@@ -30,6 +30,7 @@ def generaliseToLnodesCoreMulti [Repr IdxCollType]
   (drdepth : Nat)
   : MetaM (Prod5 (List IdxCollType) (PaIn IdxCollType) (Array Expr) LocalContext LocalInstances) :=
     do
+    mtracing
     let Res ← todo.foldlM ((.mk ListProd4.nil 0 #[]) : Prod3 (ListProd4 Expr Expr IdxCollType Nat) Nat (Array Nat)) (fun e is Res => do
       let T ← InferType e l1 l2
       let W := getCPIweights fold weights is
@@ -69,7 +70,7 @@ def generaliseToLnodesCoreMulti [Repr IdxCollType]
           then return (.mk T l1 l2 : Prod3 ..)
           else
             mtrace on .zero with s!"[generaliseToLnodesCoreMulti] abstracted loose bvars (workers) to {← ppExpr T}"
-            T.abstractLetFvarWrt l1 l2 ws)
+            T.abstractLetFvarAll l1 l2 ws)
         if T.hasExprMVar || T.hasLevelMVar
         then
           mtrace on .zero with s!"[generaliseToLnodesCore] type not found adding it as new type of index {types.size}"
@@ -122,6 +123,8 @@ partial def generalizePaInCoreMulti [Repr IdxCollType]
   (sampleName : Name)
   (T : PaIn IdxCollType) (weights : Array Nat) (types : Array Expr)
   : MetaM (Prod5 (List IdxCollType) (PaIn IdxCollType) (Array Expr) LocalContext LocalInstances) :=
+  do
+  mtracing
   let rec @[specialize] go (l1 : LocalContext) (l2 : LocalInstances)
     (stack : ListProd IdxCollType (List FVarId)) (T : PaIn IdxCollType) (types : Array Expr) (drdepth : Nat)
     : MetaM (Prod5 (List IdxCollType) (PaIn IdxCollType) (Array Expr) LocalContext LocalInstances) :=
@@ -140,18 +143,19 @@ partial def generalizePaInCoreMulti [Repr IdxCollType]
         let .mk Papa apa types l1 l2 ← go l1 l2 stack apa types (drdepth + 1)
         let Pap := getFreqPatInds2 fold intersect weights freqCondition Papf Papa normalize distrib drdepth PLi
         let .mk Plaf laf types l1 l2 ← go l1 l2 stack laf types (drdepth + 1)
-        let bindas := laf.buildMultiCore stack 0 id intersect empty?
+        let bindas ← laf.buildMultiCore l1 l2 stack 0 id intersect empty?
         let .mk stackLA l1 l2 ← painBuildExtendStack intersect difference empty? l1 l2 stack bindas
         -- todo ↑ debug stack wrt sus ... ↓ don't forget to increase depths in calls to go under binders as in ↓
         let .mk Plaa laa types l1 l2 ← go l1 l2 stackLA laa types (drdepth + 1)
         let Pla := getFreqPatInds2 fold intersect weights freqCondition Plaf Plaa normalize distrib drdepth Pap
         let .mk Palf alf types l1 l2 ← go l1 l2 stack alf types (drdepth + 1)
+        let bindas ← alf.buildMultiCore l1 l2 stack 0 id intersect empty?
         let .mk stackAL l1 l2 ← painBuildExtendStack intersect difference empty? l1 l2 stack bindas
         let .mk Pala ala types l1 l2 ← go l1 l2 stackAL ala types (drdepth + 1)
         let Pal := getFreqPatInds2 fold intersect weights freqCondition Palf Pala normalize distrib drdepth Pla
         let .mk Plef lef types l1 l2 ← go l1 l2 stack lef types (drdepth + 1)
         let .mk Plea lea types l1 l2 ← go l1 l2 stack lea types (drdepth + 1)
-        let bindas := lea.buildMultiCore stack 0 id intersect empty?
+        let bindas ← lef.buildMultiCore l1 l2 stack 0 id intersect empty?
         let .mk stackLe l1 l2 ← painBuildExtendStack intersect difference empty? l1 l2 stack bindas
         let .mk Plez lez types l1 l2 ← go l1 l2 stackLe lez types (drdepth + 1)
         let Ple := getFreqPatInds3 fold intersect empty? weights freqCondition Plef Plea Plez normalize distrib drdepth Pal
@@ -167,18 +171,18 @@ partial def generalizePaInCoreMulti [Repr IdxCollType]
         let recBr :=
           PaIn.br poiT mvars bvars sorts consts lits apf apa api laf laa lai alf ala ali lef lea lez lei projs proofsOf proofs
         -- mtrace on .one with s!"[generaliseToLnodesCoreMulti] at branch:\n {repr <| ← (T.buildMultiCore stack 0 id intersect empty?).foldlM ListProd.nil (fun e is R => return .cons s!"{(← ppExpr e)}" is R)}"
-        mtrace on .one with s!"[generaliseToLnodesCoreMulti] recuresion yielded:\n {repr <| ← (recBr.buildMultiCore stack 0 id intersect empty?).foldlM ListProd.nil (fun e is R => return .cons s!"{(← ppExpr e)}" is R)}"
-        let toGenVals := recBr.buildMultiCore stack 0 (fun x => intersect x toGenInds) intersect empty?
+        mtrace on .one with s!"[generaliseToLnodesCoreMulti] recuresion yielded:\n {repr <| ← (← recBr.buildMultiCore l1 l2 stack 0 id intersect empty?).foldlM ListProd.nil (fun e is R => return .cons s!"{(← ppExpr e)}" is R)}"
+        let toGenVals ← recBr.buildMultiCore l1 l2 stack 0 (fun x => intersect x toGenInds) intersect empty?
         mtrace on .zero with s!"[generaliseToLnodesCoreMulti] terms to generalize:\n {repr <| ← toGenVals.foldlM ListProd.nil (fun e is R => return .cons s!"{(← ppExpr e)}" is R)}"
         let .mk genIds genP types l1 l2 ← generaliseToLnodesCoreMulti
           fold empty insert union l1 l2 sampleName genCondition
           weights toGenVals types .dead drdepth
         mtrace on .zero with s!"[generaliseToLnodesCoreMulti] genIds {repr genIds}"
-        mtrace on .one with s!"[generaliseToLnodesCoreMulti] genP:\n {repr <| ← (genP.buildMultiCore stack 0 id intersect empty?).foldlM ListProd.nil (fun e is R => return .cons s!"{(← ppExpr e)}" is R)}"
+        mtrace on .one with s!"[generaliseToLnodesCoreMulti] genP:\n {repr <| ← (← genP.buildMultiCore l1 l2 stack 0 id intersect empty?).foldlM ListProd.nil (fun e is R => return .cons s!"{(← ppExpr e)}" is R)}"
         let freqP := recBr.deleteOfInds toGenInds difference empty empty?
-        mtrace on .one with s!"[generaliseToLnodesCoreMulti] freqP:\n {repr <| ← (freqP.buildMultiCore stack 0 id intersect empty?).foldlM ListProd.nil (fun e is R => return .cons s!"{(← ppExpr e)}" is R)}"
+        mtrace on .one with s!"[generaliseToLnodesCoreMulti] freqP:\n {repr <| ← (← freqP.buildMultiCore l1 l2 stack 0 id intersect empty?).foldlM ListProd.nil (fun e is R => return .cons s!"{(← ppExpr e)}" is R)}"
         let newP := PaIn.merge union empty freqP genP
-        mtrace on .one with s!"[generaliseToLnodesCoreMulti] merged to:\n {repr <| ← (newP.buildMultiCore stack 0 id intersect empty?).foldlM ListProd.nil (fun e is R => return .cons s!"{(← ppExpr e)}" is R)}"
+        mtrace on .one with s!"[generaliseToLnodesCoreMulti] merged to:\n {repr <| ← (← newP.buildMultiCore l1 l2 stack 0 id intersect empty?).foldlM ListProd.nil (fun e is R => return .cons s!"{(← ppExpr e)}" is R)}"
         let definiteFreqPatInds := genIds.foldl (fun R is =>
             let W := getCPIweights fold weights is
             if freqCondition W normalize distrib drdepth
@@ -205,6 +209,7 @@ def generalizePaInMainMulti [Repr IdxCollType]
   (T : PaIn IdxCollType) (weights : Array Nat) (types : Array Expr) (lvlNum : Nat)
   : MetaM (Prod7 (PaIn IdxCollType) (Array Expr) Nat (Array Nat) (RBMap Nat Nat instOrdNat.compare) LocalContext LocalInstances) :=
     do
+    mtracing
     mtrace on .zero with s!"[generalizePaInMain] loading lnodes"
     for j in [:lvlNum] do
       let _ ← mkLevelMVarOfName (.num sampleName j)
@@ -225,5 +230,4 @@ def generalizePaInMainMulti [Repr IdxCollType]
     let (T,types,lvlNum) := lnodeGarbageCollection T types
     return .mk T types lvlNum weights trans l1 l2
 
-#check mkMvarStdWiCoI
 #check PaIn.dedup

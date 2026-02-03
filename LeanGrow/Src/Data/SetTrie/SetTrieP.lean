@@ -166,3 +166,28 @@ partial def SetTrieP.pp [Monad m] [Repr IdxCollType] (ind : Nat) (key : PaIn Idx
         return (Blank ind) ++ s!".node {repr inds} {← key k}\n" ++ (← BlankJumpM (ind +3) kids.toList (fun x => go (ind + 3) x))
     | .leaf v => return (Blank ind) ++ (← val v)
   go ind T
+
+
+-- # misc
+
+/-- Won't preserve order-/
+@[specialize]
+partial def SetTrieP.mergeLeaves {γ : Sort _}
+  [Inhabited α] (fold : α → γ → γ) (ini : γ)
+  (T : SetTrieP α IdxCollType PaIn) : SetTrieP γ IdxCollType PaIn :=
+    let rec @[specialize] inner (toL : γ) (leaf? : Bool) (done ref: Array (SetTrieP α IdxCollType PaIn)) : Nat → Prod3 Bool γ (Array (SetTrieP α IdxCollType PaIn))
+      | 0 => .mk leaf? toL done
+      | i+1 =>
+        match ref[i]! with
+        | .leaf v  => inner (fold v toL) true done ref i
+        | nx => inner toL leaf? (done.push nx) ref i
+    match T with
+    | .root t c =>
+        let .mk leaf? toL c := inner ini false (.emptyWithCapacity c.size) c c.size
+        let c := c.map (mergeLeaves fold ini)
+        if leaf? then .root t (c.push (.leaf toL)) else .root t c
+    | .node is t c =>
+        let .mk leaf? toL c := inner ini false (.emptyWithCapacity c.size) c c.size
+        let c := c.map (mergeLeaves fold ini)
+        if leaf? then .node is t (c.push (.leaf toL)) else .node is t c
+    | .leaf a => .leaf (fold a ini)

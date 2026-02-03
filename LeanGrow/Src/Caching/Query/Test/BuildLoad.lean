@@ -143,7 +143,7 @@ def bigInit := #[`Init.Prelude, `Init.SimpLemmas, `Init.PropLemmas,
 
 -- #eval loadCachesDoNothing bigInit
 -- no overflow ; acceptably slow without build, and very slow with build
-
+-- heads up : make sure all caches for modules in ↑ were built
 
 
 

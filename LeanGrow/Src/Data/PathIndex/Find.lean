@@ -21,7 +21,7 @@ def findRevert
   : Expr → PaIn IdxCollType → List FVarId → IdxCollType → Unit → LocalContext → LocalInstances → MetaM (Prod5 Bool IdxCollType Unit LocalContext LocalInstances) :=
     fun E T workas constr uni l1 l2 => do
       mtracing
-      let built := T.buildCore workas 0
+      let built ← T.buildCore l1 l2 workas 0
         (fun inds => intersect inds constr)
         intersect empty?
       let pruned ← built.foldlM ListProd.nil (fun e inds S => do

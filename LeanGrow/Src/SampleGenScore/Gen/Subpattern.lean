@@ -160,6 +160,7 @@ partial def cvb_goal_hyp_genMain_subPat [Repr IdxCollType]
   (sampleName : Name) (types : Array Expr)
   (state : Prod3 Nat (PaIn IdxCollType) (Array ByteArray))
   : MetaM (Prod4 (PaIn IdxCollType) (Array (CTrie Nat)) Nat (Array Expr)) := do
+  mtracing
   let .mk samIdx goalPain thms := state
   let weights := Array.replicate samIdx 1
   mtrace on .zero with s!" generalising"
@@ -202,7 +203,7 @@ partial def genQueryBackSubpatWiLoadMain
     let _ ← mkLevelMVarOfName (.num sampleName 0)
     let mut i := 0
     for T in types do
-      let _ ← mkMvarStdWiCoI (.num sampleName i) T l1 l2
+      let _ ← mkMvarStdNoCoI (.num sampleName i) T
       i := i+1
     let .mk subp l1 l2 ← E.getSubPat l1 l2 []
     subp.foldlM (fun (.mk I l1 l2) E => do

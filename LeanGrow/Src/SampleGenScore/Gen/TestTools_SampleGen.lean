@@ -31,8 +31,8 @@ def test_backSample_cvbThm
   let mut samples : ListProd4 SampleData (List FVarId) Expr (List Expr) := .nil
   for thmName in thmNames do
     let .some (.thmInfo I) := env.find? thmName | throwError "Bad name"
-    let .mk p fvs l1 l2 ← LambdaLetTelescopeWW I.value 0 L1 L2
-    let .mk res l1 l2 ← sampleCoreBack preS l1 l2 depthDig depthStart depthStop deltaFuzz zetaFuzz (.cons (.raw p) (fvs.map Expr.fvarId!).toList .nil) samples
+    let .mk p fvs l1 l2 ← LambdaLetTelescope I.value 0 L1 L2
+    let .mk res _ l1 l2 ← sampleCoreBack preS .empty l1 l2 depthDig depthStart depthStop deltaFuzz zetaFuzz (.cons (.raw p) (fvs.map Expr.fvarId!).toList .nil) samples .nil
     samples := res
     L1 := l1
     L2 := l2
@@ -92,8 +92,8 @@ def test_backSample_cvbGoalHyp
   let mut samples : ListProd4 SampleData (List FVarId) Expr (List Expr) := .nil
   for thmName in thmNames do
     let .some (.thmInfo I) := env.find? thmName | throwError "Bad name"
-    let .mk p fvs l1 l2 ← LambdaLetTelescopeWW I.value 0 L1 L2
-    let .mk res l1 l2 ← sampleCoreBack preS l1 l2 depthDig depthStart depthStop deltaFuzz zetaFuzz (.cons (.raw p) (fvs.map Expr.fvarId!).toList .nil) samples
+    let .mk p fvs l1 l2 ← LambdaLetTelescope I.value 0 L1 L2
+    let .mk res _ l1 l2 ← sampleCoreBack preS .empty l1 l2 depthDig depthStart depthStop deltaFuzz zetaFuzz (.cons (.raw p) (fvs.map Expr.fvarId!).toList .nil) samples .nil
     samples := res
     L1 := l1
     L2 := l2
@@ -135,7 +135,7 @@ def test_backSample_cvbGoalHyp
 #check 1
 
 
-#check_failure UInt32Array
+#check UInt32Array
 
 #exit
 

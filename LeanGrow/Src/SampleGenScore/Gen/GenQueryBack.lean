@@ -19,6 +19,7 @@ variable {IdxCollType : Type _}
 namespace PaIn
 
 
+
 /-- Expects lnodes to have been loaded-/
 @[specialize, inline]
 def genQueryBackDefEqCore
@@ -29,6 +30,7 @@ def genQueryBackDefEqCore
   (Sc : IdxCollType)
   : MetaM IdxCollType :=
   do
+  mtracing
   match ← defEqWiMv E e l1 l2 with
   | .none =>
       mtrace on .zero with s!"[genQueryBackDefEqCore] negative defeq of e {← ppExpr e} and E {← ppExpr E}"
@@ -48,7 +50,8 @@ def genQueryBackRevert
   (constr : IdxCollType)
   : MetaM (Bool × IdxCollType) :=
   do --trace set Tracing.Flags.none in do
-  let built := T.buildCore workas 0
+  mtracing
+  let built ← T.buildCore l1 l2 workas 0
     (fun inds => intersect inds constr)
     intersect empty?
   mtrace on .zero with s!"[genQueryBackRevert] call on E {← ppExpr E}"
@@ -73,6 +76,7 @@ def genQueryLnodes [Inhabited IdxCollType]
   (constr : IdxCollType)
   : MetaM (IdxCollType × Bool) :=
     do --trace set Tracing.Flags.none in do
+    mtracing
     mtrace on .zero with s!"[genQueryLnodes] call on e {← ppExpr e}"
     lnodes.foldMcps (empty, false) (fun mvname is (sI, match?) cont => do
           let I := intersect is constr
@@ -102,7 +106,8 @@ def genQueryTnodes [ToString IdxCollType]
   (naive? : Bool)
   : MetaM (Prod4 UInt8 IdxCollType LocalContext LocalInstances) :=
   do
-  let built := T.buildCore workas 0
+  mtracing
+  let built ← T.buildCore l1 l2 workas 0
     (fun inds => intersect inds constr)
     intersect empty?
   let tn := Expr.mvar mvn
@@ -139,6 +144,8 @@ partial def genQueryBackCore
     (E : Expr) (T : PaIn IdxCollType)
     : MetaM (Prod5 UInt8 IdxCollType IdxCollType LocalContext LocalInstances) :=
       -- trace set Tracing.Flags.none in
+      do
+      mtracing
       let inittodo := .cons E T [] .nil
       @queryLCore IdxCollType expl l1 l2 IdxCollType
         union
@@ -330,7 +337,7 @@ partial def genQueryBackWiLoadMain
     let _ ← mkLevelMVarOfName (.num sampleName 0)
     let mut i := 0
     for T in types do
-      let _ ← mkMvarStdWiCoI (.num sampleName i) T l1 l2
+      let _ ← mkMvarStdNoCoI (.num sampleName i) T
       i := i+1
     let .mk yes? _ inds l1 l2 ← genQueryBackCore empty? intersect union empty l1 l2 constr revCountMax E T
     if yes? == 3

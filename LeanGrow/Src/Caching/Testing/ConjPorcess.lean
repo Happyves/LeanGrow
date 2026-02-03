@@ -1,6 +1,6 @@
 
 
-import LeanGrow.Src.SampleGenScore.Gen.ConjecturableProcess
+import LeanGrow.Src.Caching.Score.ConjecturableProcess
 
 
 open Lean Meta

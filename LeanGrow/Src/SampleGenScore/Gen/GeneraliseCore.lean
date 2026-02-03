@@ -381,12 +381,13 @@ partial def generalizePaInCore [Repr IdxCollType]
         let .mk Plaa laa types l1 l2 ← go l1 l2 stackLA laa types (drdepth + 1)
         let Pla := getFreqPatInds2 fold intersect weights freqCondition Plaf Plaa normalize distrib drdepth Pap
         let .mk Palf alf types l1 l2 ← go l1 l2 stack alf types (drdepth + 1)
+        let bindas ← alf.buildMultiCore l1 l2 stack 0 id intersect empty?
         let .mk stackAL l1 l2 ← painBuildExtendStack intersect difference empty? l1 l2 stack bindas
         let .mk Pala ala types l1 l2 ← go l1 l2 stackAL ala types (drdepth + 1)
         let Pal := getFreqPatInds2 fold intersect weights freqCondition Palf Pala normalize distrib drdepth Pla
         let .mk Plef lef types l1 l2 ← go l1 l2 stack lef types (drdepth + 1)
         let .mk Plea lea types l1 l2 ← go l1 l2 stack lea types (drdepth + 1)
-        let bindas ← lea.buildMultiCore l1 l2 stack 0 id intersect empty?
+        let bindas ← lef.buildMultiCore l1 l2 stack 0 id intersect empty?
         let .mk stackLe l1 l2 ← painBuildExtendStack intersect difference empty? l1 l2 stack bindas
         let .mk Plez lez types l1 l2 ← go l1 l2 stackLe lez types (drdepth + 1)
         let Ple := getFreqPatInds3 fold intersect empty? weights freqCondition Plef Plea Plez normalize distrib drdepth Pal
