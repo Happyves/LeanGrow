@@ -346,24 +346,23 @@ partial def Lean.Expr.onAllSubtermsMTR (e : Expr) (initD : LocalContext) (initI 
         match ta with
         | x :: y :: L => do
           let X := x.abstract #[ fv]
-          let initI := initI.patch binfo 1
+          let initI := match i with | .instImplicit => initI.patch binfo 1 | _ => initI
           go initD initI ((.lam n y X i) :: L) ats up? last
         | _ => return ⟨failExpr "onAllSubterms",initD,initI⟩
       | .all n i fv binfo ats false =>
         match ta with
         | x :: y :: L =>  do
           let X := x.abstract #[ fv]
-          let initI := initI.patch binfo 1
+          let initI := match i with | .instImplicit => initI.patch binfo 1 | _ => initI
           go initD initI ((.forallE n y X i) :: L) ats up? last
         | _ => return ⟨failExpr "onAllSubterms",initD,initI⟩
       | .letE n i fv binfo ats _ =>
         match ta with
         | x :: y :: z :: L => do
           let X := x.abstract #[ fv]
-          let initI := initI.patch binfo 1
+          let initI := if (← withLCtx initD initI (isClass? z)).isSome then initI.patch binfo 1 else initI
           go initD initI ((.letE n z y X i) :: L) ats up? last
         | _ =>
-          let initI := initI.patch binfo 1
           return ⟨failExpr "onAllSubterms",initD,initI⟩
       | .nil =>
         match ta with
@@ -394,7 +393,7 @@ partial def Lean.Expr.onAllSubtermsMTR (e : Expr) (initD : LocalContext) (initI 
           match ta with
           | x :: y :: L => do
           let X := x.abstract #[ fv]
-          let initI := initI.patch binfo 1
+          let initI := match i with | .instImplicit => initI.patch binfo 1 | _ => initI
           go initD initI ((.lam n y X i) :: L) ats up? todo
           | _ => return ⟨failExpr "onAllSubterms",initD,initI⟩
         | .all n i fv binfo ats true => go initD initI ta (.all n i fv binfo ats false) false todo
@@ -402,7 +401,7 @@ partial def Lean.Expr.onAllSubtermsMTR (e : Expr) (initD : LocalContext) (initI 
           match ta with
           | x :: y :: L => do
           let X := x.abstract #[ fv]
-          let initI := initI.patch binfo 1
+          let initI := match i with | .instImplicit => initI.patch binfo 1 | _ => initI
           go initD initI ((.forallE n y X i) :: L) ats up? todo
           | _ => return ⟨failExpr "onAllSubterms",initD,initI⟩
         | .letE n i fv binfo ats pn =>
@@ -411,10 +410,9 @@ partial def Lean.Expr.onAllSubtermsMTR (e : Expr) (initD : LocalContext) (initI 
             match ta with
             | x :: y :: z :: L => do
               let X := x.abstract #[ fv]
-              let initI := initI.patch binfo 1
+              let initI := if (← withLCtx initD initI (isClass? z)).isSome then initI.patch binfo 1 else initI
               go initD initI ((.letE n z y X i) :: L) ats up? todo
-            | _ =>
-              let initI := initI.patch binfo 1
+            | _ => do
               return ⟨failExpr "onAllSubterms",initD,initI⟩
           else
             go initD initI ta (.letE n i fv binfo ats (pn-1)) false todo
@@ -543,24 +541,23 @@ partial def Lean.Expr.onAllSubtermsWiWorkerTrackedMTR (e : Expr) (initD : LocalC
         match ta with
         | x :: y :: L => do
           let X := x.abstract #[ fv]
-          let initI := initI.patch binfo 1
+          let initI := match i with | .instImplicit => initI.patch binfo 1 | _ => initI
           go workas initD initI ((.lam n y X i) :: L) ats up? last
         | _ => return ⟨failExpr "onAllSubterms",initD,initI⟩
       | .all n i fv binfo ats false =>
         match ta with
         | x :: y :: L =>  do
           let X := x.abstract #[ fv]
-          let initI := initI.patch binfo 1
+          let initI := match i with | .instImplicit => initI.patch binfo 1 | _ => initI
           go workas initD initI ((.forallE n y X i) :: L) ats up? last
         | _ => return ⟨failExpr "onAllSubterms",initD,initI⟩
       | .letE n i fv binfo ats _ =>
         match ta with
         | x :: y :: z :: L => do
           let X := x.abstract #[ fv]
-          let initI := initI.patch binfo 1
+          let initI := if (← withLCtx initD initI (isClass? z)).isSome then initI.patch binfo 1 else initI
           go workas initD initI ((.letE n z y X i) :: L) ats up? last
         | _ =>
-          let initI := initI.patch binfo 1
           return ⟨failExpr "onAllSubterms",initD,initI⟩
       | .nil =>
         match ta with
@@ -591,7 +588,7 @@ partial def Lean.Expr.onAllSubtermsWiWorkerTrackedMTR (e : Expr) (initD : LocalC
           match ta with
           | x :: y :: L => do
           let X := x.abstract #[ fv]
-          let initI := initI.patch binfo 1
+          let initI := match i with | .instImplicit => initI.patch binfo 1 | _ => initI
           go workas initD initI ((.lam n y X i) :: L) ats up? todo
           | _ => return ⟨failExpr "onAllSubterms",initD,initI⟩
         | .all n i fv binfo ats true => go workas initD initI ta (.all n i fv binfo ats false) false todo
@@ -599,7 +596,7 @@ partial def Lean.Expr.onAllSubtermsWiWorkerTrackedMTR (e : Expr) (initD : LocalC
           match ta with
           | x :: y :: L => do
           let X := x.abstract #[ fv]
-          let initI := initI.patch binfo 1
+          let initI := match i with | .instImplicit => initI.patch binfo 1 | _ => initI
           go workas initD initI ((.forallE n y X i) :: L) ats up? todo
           | _ => return ⟨failExpr "onAllSubterms",initD,initI⟩
         | .letE n i fv binfo ats pn =>
@@ -608,10 +605,9 @@ partial def Lean.Expr.onAllSubtermsWiWorkerTrackedMTR (e : Expr) (initD : LocalC
             match ta with
             | x :: y :: z :: L => do
               let X := x.abstract #[ fv]
-              let initI := initI.patch binfo 1
+              let initI := if (← withLCtx initD initI (isClass? z)).isSome then initI.patch binfo 1 else initI
               go workas initD initI ((.letE n z y X i) :: L) ats up? todo
             | _ =>
-              let initI := initI.patch binfo 1
               return ⟨failExpr "onAllSubterms",initD,initI⟩
           else
             go workas initD initI ta (.letE n i fv binfo ats (pn-1)) false todo
@@ -742,21 +738,21 @@ partial def Lean.Expr.onAllSubtermsWiWorkerCpsSkipTravStateTR (e : Expr) (initD 
         match ta with
         | x :: y :: L => do
           let X := x.abstract #[ fv]
-          let initI := initI.patch binfo 1
+          let initI := match i with | .instImplicit => initI.patch binfo 1 | _ => initI
           go state initD initI ((.lam n y X i) :: L) ats up? last
         | _ => return ⟨ (failExpr "onAllSubterms"),state,initD,initI⟩
       | .all n i fv binfo ats false =>
         match ta with
         | x :: y :: L =>  do
           let X := x.abstract #[ fv]
-          let initI := initI.patch binfo 1
+          let initI := match i with | .instImplicit => initI.patch binfo 1 | _ => initI
           go state initD initI ((.forallE n y X i) :: L) ats up? last
         | _ => return ⟨ (failExpr "onAllSubterms"),state,initD,initI⟩
       | .letE n i fv binfo ats _ =>
         match ta with
         | x :: y :: z :: L => do
           let X := x.abstract #[ fv]
-          let initI := initI.patch binfo 1
+          let initI := if (← withLCtx initD initI (isClass? z)).isSome then initI.patch binfo 1 else initI
           go state initD initI ((.letE n z y X i) :: L) ats up? last
         | _ => return ⟨ (failExpr "onAllSubterms"),state,initD,initI⟩
       | .nil =>
@@ -788,7 +784,7 @@ partial def Lean.Expr.onAllSubtermsWiWorkerCpsSkipTravStateTR (e : Expr) (initD 
           match ta with
           | x :: y :: L => do
           let X := x.abstract #[ fv]
-          let initI := initI.patch binfo 1
+          let initI := match i with | .instImplicit => initI.patch binfo 1 | _ => initI
           go state initD initI ((.lam n y X i) :: L) ats up? todo
           | _ => return ⟨ (failExpr "onAllSubterms"),state,initD,initI⟩
         | .all n i fv binfo ats true => go state initD initI ta (.all n i fv binfo ats false) false todo
@@ -796,7 +792,7 @@ partial def Lean.Expr.onAllSubtermsWiWorkerCpsSkipTravStateTR (e : Expr) (initD 
           match ta with
           | x :: y :: L => do
           let X := x.abstract #[ fv]
-          let initI := initI.patch binfo 1
+          let initI := match i with | .instImplicit => initI.patch binfo 1 | _ => initI
           go state initD initI ((.forallE n y X i) :: L) ats up? todo
           | _ => return ⟨ (failExpr "onAllSubterms"),state,initD,initI⟩
         | .letE n i fv binfo ats pn =>
@@ -805,7 +801,7 @@ partial def Lean.Expr.onAllSubtermsWiWorkerCpsSkipTravStateTR (e : Expr) (initD 
             match ta with
             | x :: y :: z :: L => do
               let X := x.abstract #[ fv]
-              let initI := initI.patch binfo 1
+              let initI := if (← withLCtx initD initI (isClass? z)).isSome then initI.patch binfo 1 else initI
               go state initD initI ((.letE n z y X i) :: L) ats up? todo
             | _ => return ⟨ (failExpr "onAllSubterms"),state,initD,initI⟩
           else
@@ -946,21 +942,21 @@ partial def Lean.Expr.onAllSubtermsWiWorkerTrackedCpsSkipTravStateTR (e : Expr) 
         match ta with
         | x :: y :: L => do
           let X := x.abstract #[ fv]
-          let initI := initI.patch binfo 1
+          let initI := match i with | .instImplicit => initI.patch binfo 1 | _ => initI
           go workas state initD initI ((.lam n y X i) :: L) ats up? last
         | _ => return ⟨(failExpr "onAllSubterms"),state,initD,initI⟩
       | .all n i fv binfo ats false =>
         match ta with
         | x :: y :: L =>  do
           let X := x.abstract #[ fv]
-          let initI := initI.patch binfo 1
+          let initI := match i with | .instImplicit => initI.patch binfo 1 | _ => initI
           go workas state initD initI ((.forallE n y X i) :: L) ats up? last
         | _ => return ⟨(failExpr "onAllSubterms"),state,initD,initI⟩
       | .letE n i fv binfo ats _ =>
         match ta with
         | x :: y :: z :: L => do
           let X := x.abstract #[ fv]
-          let initI := initI.patch binfo 1
+          let initI := if (← withLCtx initD initI (isClass? z)).isSome then initI.patch binfo 1 else initI
           go workas state initD initI ((.letE n z y X i) :: L) ats up? last
         | _ => return ⟨(failExpr "onAllSubterms"),state,initD,initI⟩
       | .nil =>
@@ -992,7 +988,7 @@ partial def Lean.Expr.onAllSubtermsWiWorkerTrackedCpsSkipTravStateTR (e : Expr) 
           match ta with
           | x :: y :: L => do
           let X := x.abstract #[ fv]
-          let initI := initI.patch binfo 1
+          let initI := match i with | .instImplicit => initI.patch binfo 1 | _ => initI
           go workas state initD initI ((.lam n y X i) :: L) ats up? todo
           | _ => return ⟨(failExpr "onAllSubterms"),state,initD,initI⟩
         | .all n i fv binfo ats true => go workas state initD initI ta (.all n i fv binfo ats false) false todo
@@ -1000,7 +996,7 @@ partial def Lean.Expr.onAllSubtermsWiWorkerTrackedCpsSkipTravStateTR (e : Expr) 
           match ta with
           | x :: y :: L => do
           let X := x.abstract #[ fv]
-          let initI := initI.patch binfo 1
+          let initI := match i with | .instImplicit => initI.patch binfo 1 | _ => initI
           go workas state initD initI ((.forallE n y X i) :: L) ats up? todo
           | _ => return ⟨(failExpr "onAllSubterms"),state,initD,initI⟩
         | .letE n i fv binfo ats pn =>
@@ -1009,7 +1005,7 @@ partial def Lean.Expr.onAllSubtermsWiWorkerTrackedCpsSkipTravStateTR (e : Expr) 
             match ta with
             | x :: y :: z :: L => do
               let X := x.abstract #[ fv]
-              let initI := initI.patch binfo 1
+              let initI := if (← withLCtx initD initI (isClass? z)).isSome then initI.patch binfo 1 else initI
               go workas state initD initI ((.letE n z y X i) :: L) ats up? todo
             | _ => return ⟨(failExpr "onAllSubterms"),state,initD,initI⟩
           else

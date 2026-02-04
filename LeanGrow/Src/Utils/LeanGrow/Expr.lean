@@ -442,6 +442,17 @@ def Lean.Expr.abstractWorkers (e : Expr) (initD : LocalContext) (initI : LocalIn
 
 /-- Array has deepest vars last -/
 @[inline]
+def Lean.Expr.abstractWorkersAll (e : Expr) (initD : LocalContext) (initI : LocalInstances)
+  : MetaM (Prod4 Expr (Array FVarId) LocalContext LocalInstances) := do
+    let ws := (← e.getWorkerFVarIdsTrans initD initI).1.qsort (fun x y =>
+      match x.name, y.name with
+      | .num _ i, .num _ j => i < j -- sort deepest last ; qsort expects strict order
+      | _, _ => panic s!"[Expr.abstractWorkers] unexpected worker formats {x.name} {y.name}")
+    let ⟨e,l1,l2⟩  ← abstractLetFvarAll initD initI ws e
+    return ⟨e,ws,l1,l2⟩
+
+/-- Array has deepest vars last -/
+@[inline]
 def Lean.Expr.abstractInnerWorkers (e : Expr) (extWorkers : Array FVarId) (initD : LocalContext) (initI : LocalInstances)
   : MetaM (Prod4 Expr (Array FVarId) LocalContext LocalInstances) := do
     let ws := ((← e.getWorkerFVarIdsTrans initD initI).1.filter (fun fv => !(extWorkers.contains fv))).qsort (fun x y =>
@@ -462,6 +473,16 @@ def Lean.Expr.abstractInnerWorkersAll (e : Expr) (extWorkers : Array FVarId) (in
     let ⟨e,l1,l2⟩  ← abstractLetFvarAll initD initI ws e
     return ⟨e,ws,l1,l2⟩
 
+/-- Array has deepest vars last -/
+@[inline]
+def Lean.Expr.abstractInnerWorkersAll' (e : Expr) (extWorkers : List FVarId) (initD : LocalContext) (initI : LocalInstances)
+  : MetaM (Prod4 Expr (Array FVarId) LocalContext LocalInstances) := do
+    let ws := ((← e.getWorkerFVarIdsTrans initD initI).1.filter (fun fv => !(extWorkers.contains fv))).qsort (fun x y =>
+      match x.name, y.name with
+      | .num _ i, .num _ j => i < j -- sort deepest last ; qsort expects strict order
+      | _, _ => panic s!"[Expr.abstractWorkers] unexpected worker formats {x.name} {y.name}")
+    let ⟨e,l1,l2⟩  ← abstractLetFvarAll initD initI ws e
+    return ⟨e,ws,l1,l2⟩
 
 /--
 - uses ∀ bindings
