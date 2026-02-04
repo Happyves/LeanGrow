@@ -463,7 +463,7 @@ partial def getLiveLnodes (T : PaIn IdxCollType) : UInt32Array × UInt32Array :=
 
 
 partial def lnodeGarbageCollection (T : PaIn IdxCollType) (types : Array Expr) : ((PaIn IdxCollType) × Array Expr × Nat) :=
-  trace set TracingFlags.none in
+  trace set TracingFlags.all in
   let (liveE,liveL) := getLiveLnodes T
   trace on .zero with s!"[lnodeGarbageCollection] live {liveE}" in
   let rec extend (done : UInt32Array) : List Nat → UInt32Array

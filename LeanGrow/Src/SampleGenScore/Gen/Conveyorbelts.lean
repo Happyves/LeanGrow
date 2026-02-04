@@ -14,6 +14,7 @@ open Lean Meta
 
 variable {IdxCollType : Type _}
 
+
 @[inline]
 partial def Lean.Level.translateToLnodes (e : Level)
   (sampleName : Name) : Level :=
@@ -74,11 +75,14 @@ partial def Lean.Expr.translateToLnodes (l1 : LocalContext) (l2 : LocalInstances
 partial def cvb_thms_sampleClassify
   [Repr IdxCollType]
   (emptyCol : IdxCollType) (singleton : Nat → IdxCollType) (insert : Nat → IdxCollType → IdxCollType)
+  (intersect : IdxCollType → IdxCollType → IdxCollType) (empty? : IdxCollType → Bool)
   (l1 : LocalContext) (l2 : LocalInstances)
   (sampleThm : Name) (sampleGoal : Expr) (sampleHyps : List Expr) -- should contain lnodes ...
   (sorted : (CTrie (Prod5 Nat Nat (ListProd Nat (List Nat)) (PaIn IdxCollType) (PaIn IdxCollType))))
   : MetaM (CTrie (Prod5 Nat Nat (ListProd Nat (List Nat)) (PaIn IdxCollType) (PaIn IdxCollType))) := do
+    mtracing
     let sampleThm := sampleThm.toString.toUTF8
+    mtrace on .zero with s!" looking at {sampleThm}"
     sorted.upsertM sampleThm (fun
       | .none => do
           let .mk ngT _ _ ← PaIn.dead.insert l1 l2 sampleGoal 0 emptyCol singleton insert
@@ -86,13 +90,16 @@ partial def cvb_thms_sampleClassify
             let .mk iT _ _ ← nT.insert l1 l2 e nhi emptyCol singleton insert
             return .mk (nhi + 1) (nhi :: tshd) iT
             ) (.mk 0 [] PaIn.dead : Prod3 ..)
+          mtrace on .zero with s!" no prior entry, adding with nhi {nhi}\nngT {← ngT.pp l1 l2 [] 0 intersect empty?}\nnhT {← nhT.pp l1 l2 [] 0 intersect empty?}"
           return .some <| .mk 1 nhi (.cons 0 tshd .nil) ngT nhT
       | .some (Prod5.mk initSamIdx initHypIdx iD igT ihT) => do
+          mtrace on .zero with s!" prior entry, {initSamIdx} {initHypIdx}\nigT {← igT.pp l1 l2 [] 0 intersect empty?}\nihT {← ihT.pp l1 l2 [] 0 intersect empty?}"
           let .mk ngT _ _ ← igT.insert l1 l2 sampleGoal initSamIdx emptyCol singleton insert
           let .mk nhi tshd nhT ← sampleHyps.foldlM (fun (.mk nhi tshd nT) e => do
             let .mk iT _ _ ← nT.insert l1 l2 e nhi emptyCol singleton insert
             return .mk (nhi + 1) (nhi :: tshd) iT
             ) (.mk initHypIdx [] ihT : Prod3 ..)
+          mtrace on .zero with s!" new entry, adding with {(initSamIdx+1)} {nhi}\nngT {← ngT.pp l1 l2 [] 0 intersect empty?}\nnhT {← nhT.pp l1 l2 [] 0 intersect empty?}"
           return .some <| .mk (initSamIdx+1) nhi (.cons initSamIdx tshd iD) ngT nhT
       )
 
@@ -107,24 +114,31 @@ partial def cvb_goal_hyp_sampleClassify
   (sampleThm : Name) (sampleGoal : Expr) (sampleHyps : List Expr) -- should contain lnodes ...
   (state : Prod3 Nat (PaIn IdxCollType) (Array (Prod4 Nat Nat (ListProd ByteArray (List Nat)) (PaIn IdxCollType))))
   : MetaM (Prod3 Nat (PaIn IdxCollType) (Array (Prod4 Nat Nat (ListProd ByteArray (List Nat)) (PaIn IdxCollType)))) := do
+  mtracing
   let .mk initSamIdx goalPain sorted := state
   let sampleThm := sampleThm.toString.toUTF8
+  mtrace on .zero with s!" looking at {sampleThm}"
   let I := goalPain.getIndices emptyCol union
   let .mk stat res _ _ _ ← goalPain.findCore l1 l2 empty? intersect union emptyCol I 2 sampleGoal
   if stat == 3
   then
     let idx := head res
+    mtrace on .zero with s!" found with index {idx}"
     let sorted ← sorted.modifyM idx (fun (.mk initHypIdx w dic hs) => do
       let .mk nhi tshd nhT ← sampleHyps.foldlM (fun (.mk nhi tshd nT) e => do
         let .mk iT _ _ ← nT.insert l1 l2 e nhi emptyCol singleton insert
+        mtrace on .zero with s!" updated hyp tree {← iT.pp l1 l2 [] 0 intersect empty?}"
         return .mk (nhi + 1) (nhi :: tshd) iT
         ) (.mk initHypIdx [] PaIn.dead : Prod3 ..)
       return .mk nhi (w+1) (.cons sampleThm tshd dic) (PaIn.merge union emptyCol nhT hs))
     return .mk (initSamIdx+1) goalPain sorted
   else
+    mtrace on .zero with s!" not found"
     let .mk ngT _ _ ← goalPain.insert l1 l2 sampleGoal initSamIdx emptyCol singleton insert
+    mtrace on .zero with s!" updated ngT {← ngT.pp l1 l2 [] 0 intersect empty?}"
     let .mk nhi tshd nhT ← sampleHyps.foldlM (fun (.mk nhi tshd nT) e => do
       let .mk iT _ _ ← nT.insert l1 l2 e nhi emptyCol singleton insert
+      mtrace on .zero with s!" added iT {← iT.pp l1 l2 [] 0 intersect empty?}"
       return .mk (nhi + 1) (nhi :: tshd) iT
       ) (.mk 0 [] PaIn.dead : Prod3 ..)
     let sorted := sorted.push (.mk nhi 1 (.cons sampleThm tshd .nil) nhT)
@@ -132,7 +146,7 @@ partial def cvb_goal_hyp_sampleClassify
 
 
 #check 1
-
+-- #exit
 
 @[specialize, inline]
 partial def cvb_thms_genGoal [Repr IdxCollType]
@@ -148,15 +162,16 @@ partial def cvb_thms_genGoal [Repr IdxCollType]
   : MetaM (Prod5 (PaIn IdxCollType) (Array Nat) Nat (RBMap Nat Nat instOrdNat.compare) (Array Expr)) := do
     mtracing
     let weights := Array.replicate samIdx (1 : Nat)
-    mtrace on .zero with s!" generalising"
+    mtrace on .zero with s!" generalising initial goalPain {← goalPain.pp l1 l2 [] 0 intersect empty?}"
     let .mk freqInd T types l1 l2 ← generalizePaInCore
       fold empty insertMulti intersect union difference empty? l1 l2 genCondition freqCondition sampleName
       goalPain weights types
     mtrace on .one with s!" generalised PaIn {← T.pp l1 l2 [] 0 intersect empty?}"
     mtrace on .zero with s!" found freqInd {repr freqInd}, deduplicating"
     let .mk T weights trans ← T.dedup insert union empty size contains fold weights freqInd
-    mtrace on .zero with s!" running lnode garbadge collection"
+    mtrace on .zero with s!" running lnode garbadge collection on\nT : {← T.pp l1 l2 [] 0 intersect empty?}\ntypes : {← types.mapM ppExpr}"
     let (T,types,_) := lnodeGarbageCollection T types
+    mtrace on .zero with s!" done with lnode garbadge collection on\nT : {← T.pp l1 l2 [] 0 intersect empty?}\ntypes : {← types.mapM ppExpr}"
     let total := weights.foldl (fun x y => x+y) 0
     return .mk T weights total trans types
 
@@ -184,15 +199,16 @@ partial def cvb_thms_genHyps [Repr IdxCollType]
   : MetaM (Prod4 (SetTrieP (Nat × Nat) IdxCollType PaIn) Nat (RBMap Nat Nat instOrdNat.compare) (Array Expr)) := do
     mtracing
     let weights := Array.replicate hypIdx (1 : Nat)
-    mtrace on .zero with s!" generalising"
+    mtrace on .zero with s!" generalising hypsPain {← hypsPain.pp l1 l2 [] 0 intersect empty?}"
     let .mk freqInd T types l1 l2 ← generalizePaInCore
       fold empty insertMulti intersect union difference empty? l1 l2 genCondition freqCondition sampleName
       hypsPain weights types
     mtrace on .one with s!" generalised PaIn {← T.pp l1 l2 [] 0 intersect empty?}"
     mtrace on .zero with s!" found freqInd {repr freqInd}, deduplicating"
     let .mk T weights trans ← T.dedup insert union empty size contains fold weights freqInd
-    mtrace on .zero with s!" running lnode garbadge collection"
+    mtrace on .zero with s!" running lnode garbadge collection on\nT : {← T.pp l1 l2 [] 0 intersect empty?}\ntypes : {← types.mapM ppExpr}"
     let (T,types,_) := lnodeGarbageCollection T types
+    mtrace on .zero with s!" done with lnode garbadge collection on\nT : {← T.pp l1 l2 [] 0 intersect empty?}\ntypes : {← types.mapM ppExpr}"
     let total := weights.foldl (fun x y => x+y) 0
     let Tis := T.getIndices empty union
     let toST ← samHypDict.foldlM ListProd.nil (fun samIdx hs R => do
@@ -202,11 +218,13 @@ partial def cvb_thms_genHyps [Repr IdxCollType]
       let compl := difference Tis iths
       let P := T.deleteOfInds compl difference empty empty?
       return .cons P (samIdx, W) R
-      -- should we add samIdx to disambiguate leaves to avoid merge durring cleaning ??
+      -- add samIdx to disambiguate leaves and to index thms
       )
+    mtrace on .zero with s!" toST {← toST.foldlM [] (fun x y z => do return (← x.pp l1 l2 [] 0 intersect empty?, y) :: z)}"
     let st := SetTriePnG.ofList
       intersect union difference empty empty? size
       toST
+    mtrace on .zero with s!" st {← st.pp 0 (fun p => p.pp l1 l2 [] 0 intersect empty?) (fun t => return s!"{t}")}"
     return .mk st total trans types
 
 #check 1
@@ -230,15 +248,16 @@ partial def cvb_goal_hyp_genGoal [Repr IdxCollType]
   mtracing
   let .mk _ goalPain sorted := state
   let weights := sorted.map Prod4.snd
-  mtrace on .zero with s!" generalising"
+  mtrace on .zero with s!" generalising goalPain {← goalPain.pp l1 l2 [] 0 intersect empty?}"
   let .mk freqInd T types _ _ ← generalizePaInCore
     fold empty insertMulti intersect union difference empty? l1 l2 genCondition freqCondition sampleName
     goalPain weights types
   mtrace on .one with s!" generalised PaIn {← T.pp l1 l2 [] 0 intersect empty?}"
   mtrace on .zero with s!" found freqInd {repr freqInd}, deduplicating"
   let .mk T weights trans ← T.dedup insert union empty size contains fold weights freqInd
-  mtrace on .zero with s!" running lnode garbadge collection"
+  mtrace on .zero with s!" running lnode garbadge collection on\nT : {← T.pp l1 l2 [] 0 intersect empty?}\ntypes : {← types.mapM ppExpr}"
   let (T,types,_) := lnodeGarbageCollection T types
+  mtrace on .zero with s!" done with lnode garbadge collection on\nT : {← T.pp l1 l2 [] 0 intersect empty?}\ntypes : {← types.mapM ppExpr}"
   let total := weights.foldl (fun x y => x+y) 0
   let mut next := Array.replicate weights.size (Prod3.mk 0 (ListProd.nil : (ListProd ByteArray (List Nat))) PaIn.dead)
   for (ini,new) in trans do
@@ -271,15 +290,16 @@ partial def cvb_goal_hyp_genHyps [Repr IdxCollType]
     mtracing
     let .mk hypIdx dict hypsPain := entry
     let weights := Array.replicate hypIdx (1 : Nat)
-    mtrace on .zero with s!" generalising"
+    mtrace on .zero with s!" generalising hypsPain {← hypsPain.pp l1 l2 [] 0 intersect empty?}"
     let .mk freqInd T types l1 l2 ← generalizePaInCore
       fold empty insertMulti intersect union difference empty? l1 l2 genCondition freqCondition sampleName
       hypsPain weights types
     mtrace on .one with s!" generalised PaIn {← T.pp l1 l2 [] 0 intersect empty?}"
     mtrace on .zero with s!" found freqInd {repr freqInd}, deduplicating"
     let .mk T weights trans ← T.dedup insert union empty size contains fold weights freqInd
-    mtrace on .zero with s!" running lnode garbadge collection"
+    mtrace on .zero with s!" running lnode garbadge collection on\nT : {← T.pp l1 l2 [] 0 intersect empty?}\ntypes : {← types.mapM ppExpr}"
     let (T,types,_) := lnodeGarbageCollection T types
+    mtrace on .zero with s!" running lnode garbadge collection on\nT : {← T.pp l1 l2 [] 0 intersect empty?}\ntypes : {← types.mapM ppExpr}"
     let total := weights.foldl (fun x y => x+y) 0
     let Tis := T.getIndices empty union
     let toST ← dict.foldlM ListProd.nil (fun thm hs R => do
@@ -289,8 +309,8 @@ partial def cvb_goal_hyp_genHyps [Repr IdxCollType]
       let compl := difference Tis iths
       let P := T.deleteOfInds compl difference empty empty?
       return .cons P (thm, W) R
-      -- should we add samIdx to disambiguate leaves to avoid merge durring cleaning ??
       )
+    mtrace on .zero with s!" toST {← toST.foldlM [] (fun x y z => do return (← x.pp l1 l2 [] 0 intersect empty?, y) :: z)}"
     let st := SetTriePnG.ofList
       intersect union difference empty empty? size
       toST
@@ -298,6 +318,7 @@ partial def cvb_goal_hyp_genHyps [Repr IdxCollType]
         | .none => .some v
         | .some w => .some (w+v))
         ) CTrie.empty
+    mtrace on .zero with s!" st {← st.pp 0 (fun p => p.pp l1 l2 [] 0 intersect empty?) (fun t => return s!"{t.toList}")}"
     return .mk st weights total types
 
 #check 1
@@ -315,6 +336,7 @@ partial def cvb_thms_genMain [Repr IdxCollType]
   (sampleName : Name) (types : Array Expr)
   (sorted : CTrie (Prod5 Nat Nat (ListProd Nat (List Nat)) (PaIn IdxCollType) (PaIn IdxCollType)))
   : MetaM ((Array Expr) × (CTrie (thmGenDataEntry IdxCollType))) := do
+    mtracing
     sorted.foldMapM types (fun entry types => do
       let .mk gT gW gw _ types ← cvb_thms_genGoal
         fold empty insert insertMulti intersect union difference
@@ -343,6 +365,7 @@ partial def cvb_goal_hyp_genMain [Repr IdxCollType]
   (sampleName : Name) (types : Array Expr)
   (state : Prod3 Nat (PaIn IdxCollType) (Array (Prod4 Nat Nat (ListProd ByteArray (List Nat)) (PaIn IdxCollType))))
   : MetaM ((Array Expr) × (goalhypGenData IdxCollType)) := do
+  mtracing
   let .mk gT gW gw next types ← cvb_goal_hyp_genGoal
     fold empty shiftAdd insert insertMulti intersect union difference
     empty? size contains l1 l2 genCondition freqCondition

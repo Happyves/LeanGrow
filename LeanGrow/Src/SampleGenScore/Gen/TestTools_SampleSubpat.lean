@@ -116,3 +116,40 @@ def test_subSample_cvbGoalHyp
 
 
 #check 1
+
+
+#check UInt32Array
+
+
+def test_subSample_cvbThm_S
+  (thmNames : Array Name)
+  (depthDig depthStart depthStop : Nat) (deltaFuzz zetaFuzz : Option Nat)
+  (genCondition : (occWeight : Nat) → (branchWeight : Nat) → (branchDistrib : Array Nat) → (commonType : Expr) → (branchDepth : Nat) → Bool)
+  (freqCondition : (occWeight : Nat) → (branchWeight : Nat) → (branchDistrib : Array Nat) → (branchDepth : Nat) → Bool)
+  : MetaM Unit :=
+  @test_subSample_cvbThm
+    thmNames depthDig depthStart depthStop deltaFuzz zetaFuzz
+    UInt32Array _ (fun is i f => is.foldl i (fun i s => f i.toNat s)) UInt32Array.empty
+    (fun n => UInt32Array.single n.toUInt32) (fun x y => y.oInsert x.toUInt32)
+    UInt32Array.union UInt32Array.inter UInt32Array.union UInt32Array.diff UInt32Array.isEmpty
+    UInt32Array.size (fun x y => y.oContains x.toUInt32)
+    genCondition freqCondition
+
+
+#check 1
+
+def test_subSample_cvbGoalHyp_S
+  (thmNames : Array Name)
+  (depthDig depthStart depthStop : Nat) (deltaFuzz zetaFuzz : Option Nat)
+  (genCondition : (occWeight : Nat) → (branchWeight : Nat) → (branchDistrib : Array Nat) → (commonType : Expr) → (branchDepth : Nat) → Bool)
+  (freqCondition : (occWeight : Nat) → (branchWeight : Nat) → (branchDistrib : Array Nat) → (branchDepth : Nat) → Bool)
+  : MetaM Unit :=
+  @test_subSample_cvbGoalHyp
+    thmNames depthDig depthStart depthStop deltaFuzz zetaFuzz
+    UInt32Array _ (fun is i f => is.foldl i (fun i s => f i.toNat s)) UInt32Array.empty
+    (fun n => UInt32Array.single n.toUInt32) (fun x y => y.oInsert x.toUInt32)
+    UInt32Array.union UInt32Array.inter UInt32Array.union UInt32Array.diff UInt32Array.isEmpty
+    UInt32Array.size (fun x y => y.oContains x.toUInt32)
+    genCondition freqCondition
+
+#check 1

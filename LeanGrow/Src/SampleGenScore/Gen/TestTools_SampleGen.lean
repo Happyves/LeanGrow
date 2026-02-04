@@ -23,6 +23,7 @@ def test_backSample_cvbThm
   (genCondition : (occWeight : Nat) → (branchWeight : Nat) → (branchDistrib : Array Nat) → (commonType : Expr) → (branchDepth : Nat) → Bool)
   (freqCondition : (occWeight : Nat) → (branchWeight : Nat) → (branchDistrib : Array Nat) → (branchDepth : Nat) → Bool)
   : MetaM Unit := do
+  mtracing
   let sampleName := `testSam
   let env ← getEnv
   let preS ← mkPreProCongr
@@ -36,6 +37,7 @@ def test_backSample_cvbThm
     samples := res
     L1 := l1
     L2 := l2
+  mtrace on .zero with s!" done sampling"
   let sorted : CTrie (Prod5 Nat Nat (ListProd Nat (List Nat)) (PaIn IdxCollType) (PaIn IdxCollType)) := .empty
   let .mk sorted types l1 l2 ← samples.foldlM (Prod4.mk sorted (#[] : Array Expr) L1 L2)
     (fun sd _ goal hyps B@(.mk sorted types l1 l2) => do
@@ -47,15 +49,17 @@ def test_backSample_cvbThm
             return .mk (h :: L) (types, dict) l1 l2
             ) (Prod4.mk [] (types, dict) l1 l2)
           let sorted ← cvb_thms_sampleClassify
-            empty singleton insert l1 l2 n goal hyps sorted
+            empty singleton insert intersect empty? l1 l2 n goal hyps sorted
           return .mk sorted types l1 l2
       | _ =>
           return B
       )
+  mtrace on .zero with s!" done classifying"
   let .mk types res ← cvb_thms_genMain
     fold empty insert insertMulti intersect union difference
     empty? size contains l1 l2 genCondition freqCondition sampleName
     types sorted
+  mtrace on .zero with s!" generalised"
   withLCtx l1 l2 <| do
     let mut i := 0
     IO.println "Types:"
@@ -84,6 +88,7 @@ def test_backSample_cvbGoalHyp
   (genCondition : (occWeight : Nat) → (branchWeight : Nat) → (branchDistrib : Array Nat) → (commonType : Expr) → (branchDepth : Nat) → Bool)
   (freqCondition : (occWeight : Nat) → (branchWeight : Nat) → (branchDistrib : Array Nat) → (branchDepth : Nat) → Bool)
   : MetaM Unit := do
+  mtracing
   let sampleName := `testSam
   let env ← getEnv
   let preS ← mkPreProCongr
@@ -97,6 +102,7 @@ def test_backSample_cvbGoalHyp
     samples := res
     L1 := l1
     L2 := l2
+  mtrace on .zero with s!" done sampling"
   let state : Prod3 Nat (PaIn IdxCollType) (Array (Prod4 Nat Nat (ListProd ByteArray (List Nat)) (PaIn IdxCollType))) := .mk 0 .dead #[]
   let .mk sorted types l1 l2 ← samples.foldlM (Prod4.mk state (#[] : Array Expr) L1 L2)
     (fun sd _ goal hyps B@(.mk state types l1 l2) => do
@@ -114,10 +120,12 @@ def test_backSample_cvbGoalHyp
       | _ =>
           return B
       )
+  mtrace on .zero with s!" done classifying"
   let .mk types res ← cvb_goal_hyp_genMain
     fold empty shiftAdd insert insertMulti intersect union difference
     empty? size contains l1 l2 genCondition freqCondition sampleName
     types sorted
+  mtrace on .zero with s!" done generalising"
   withLCtx l1 l2 <| do
     let mut i := 0
     IO.println "Types:"
@@ -137,20 +145,40 @@ def test_backSample_cvbGoalHyp
 
 #check UInt32Array
 
-#exit
 
 def test_backSample_cvbThm_S
   (thmNames : Array Name)
   (depthDig depthStart depthStop : Nat) (deltaFuzz zetaFuzz : Option Nat)
-  {IdxCollType : Type} [Repr IdxCollType]
-  (fold : ∀ {β : Type _}, IdxCollType → (init : β) → (f : Nat → β → β) → β) (empty : IdxCollType)
-  (singleton : Nat → IdxCollType) (insert : Nat → IdxCollType → IdxCollType)
-  (insertMulti intersect union difference : IdxCollType → IdxCollType → IdxCollType) (empty? : IdxCollType → Bool)
-  (size : IdxCollType → Nat) (contains : Nat → IdxCollType → Bool)
   (genCondition : (occWeight : Nat) → (branchWeight : Nat) → (branchDistrib : Array Nat) → (commonType : Expr) → (branchDepth : Nat) → Bool)
   (freqCondition : (occWeight : Nat) → (branchWeight : Nat) → (branchDistrib : Array Nat) → (branchDepth : Nat) → Bool)
   : MetaM Unit :=
-  test_backSample_cvbThm
+  @test_backSample_cvbThm
     thmNames depthDig depthStart depthStop deltaFuzz zetaFuzz
+    UInt32Array _ (fun is i f => is.foldl i (fun i s => f i.toNat s)) UInt32Array.empty
+    (fun n => UInt32Array.single n.toUInt32) (fun x y => y.oInsert x.toUInt32)
+    UInt32Array.union UInt32Array.inter UInt32Array.union UInt32Array.diff UInt32Array.isEmpty
+    UInt32Array.size (fun x y => y.oContains x.toUInt32)
+    genCondition freqCondition
+
+
+#check 1
+#check UInt32Array.shiftAdd
+
+
+
+def test_backSample_cvbGoalHyp_S
+  (thmNames : Array Name)
+  (depthDig depthStart depthStop : Nat) (deltaFuzz zetaFuzz : Option Nat)
+  (genCondition : (occWeight : Nat) → (branchWeight : Nat) → (branchDistrib : Array Nat) → (commonType : Expr) → (branchDepth : Nat) → Bool)
+  (freqCondition : (occWeight : Nat) → (branchWeight : Nat) → (branchDistrib : Array Nat) → (branchDepth : Nat) → Bool)
+  : MetaM Unit :=
+  @test_backSample_cvbGoalHyp
+    thmNames depthDig depthStart depthStop deltaFuzz zetaFuzz
+    UInt32Array _ (fun is i f => is.foldl i (fun i s => f i.toNat s)) UInt32Array.empty
+    (fun n => UInt32Array.single n.toUInt32) (fun x y => y.oInsert x.toUInt32)
+    UInt32Array.union UInt32Array.inter UInt32Array.union UInt32Array.diff UInt32Array.isEmpty
+    UInt32Array.size (fun x y => y.oContains x.toUInt32) (fun is => if is.isEmpty then panic! "[test_backSample_cvbGoalHyp_S] head" else is[0]!.toNat)
+    (fun x y => x.shiftAdd y.toUInt32)
+    genCondition freqCondition
 
 #check 1
