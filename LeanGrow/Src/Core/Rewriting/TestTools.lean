@@ -120,7 +120,7 @@ partial def findDirs
 def testBackRW_sandBox_noSub (thm : Name) : Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array DepCache → Array (FVarId × List FVarId) → MetaM Unit
   | guT, gu, tT, t, lT, l, wsT, ws, ewsT, ews, Ts, deps, wdeps => do
       IO.println s!"[testBackRW] built depCache : {repr <| deps.mapIdx Prod.mk}"
-      let initGoal := Ts[0]!
+      let initGoal ← withTransparency .reducible <| reduce (skipTypes := false) Ts[0]!
       let ⟨_,pat,eqProof,l1,l2⟩ ← findFirstAppli (← getLCtx) (← getLocalInstances) thm initGoal
       IO.println s!"[testBackRW] pat {← ppExpr pat}"
       IO.println s!"[testBackRW] eqProof {← ppExpr eqProof}"

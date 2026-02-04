@@ -623,16 +623,17 @@ partial def embedForwRWMain [Inhabited IdxCollType]  [Repr IdxCollType] [ToStrin
               let locConstr := union conHere <| union (union conf cona) conz
               return ⟨locConstr,res,l1,l2⟩
         | .proj stru i maj =>
-              let real ← mkProjFn! l1 l2 stru i maj
-              embedForwRWMain thmData empty? intersect union difference empty fold l1 l2 sConstr locConstr revCountMax extWorkas real T
-              -- let ⟨con, resf,l1,l2⟩ ← embedForwRWMain thmData empty? intersect union difference empty fold l1 l2 sConstr locConstr revCountMax extWorkas f T
-              -- let res := resf.foldl .nil (fun n l R => let fix := l.foldl .nil (fun e d R => .cons e (.pro d) R) ; .cons n fix R)
-              -- let res := mergeOnIndSpe
-              --   (fun x y => x.foldl y (fun x y R => .cons x y R))
-              --   (fun x => .cons x .yes .nil )
-              --   res (listIndxSingleOut fold here)
-              -- let locConstr := union con conHere
-              -- return ⟨locConstr,res,l1,l2⟩
+              -- let real ← mkProjFn! l1 l2 stru i maj
+              -- embedForwRWMain thmData empty? intersect union difference empty fold l1 l2 sConstr locConstr revCountMax extWorkas real T
+              -- not needed for rw ?
+              let ⟨con, resf,l1,l2⟩ ← embedForwRWMain thmData empty? intersect union difference empty fold l1 l2 sConstr locConstr revCountMax extWorkas maj T
+              let res := resf.foldl .nil (fun n l R => let fix := l.foldl .nil (fun e d R => .cons e (.pro d) R) ; .cons n fix R)
+              let res := mergeOnIndSpe
+                (fun x y => x.foldl y (fun x y R => .cons x y R))
+                (fun x => .cons x .yes .nil )
+                res (listIndxSingleOut fold here)
+              let locConstr := union con conHere
+              return ⟨locConstr,res,l1,l2⟩
         | .mdata _ f =>
             embedForwRWMain thmData empty? intersect union difference empty fold l1 l2 sConstr locConstr revCountMax extWorkas f T
         | _ =>

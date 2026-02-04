@@ -82,7 +82,16 @@ With context g(l : List Nat) g(x : Nat) t(0 : 0 : h : ∀ l : List Nat, l.length
 
 With context g(l : List Nat) wg(true : 0 : x : Nat) and objects (((x :: l).reverse).get  ⟨l.length, (by rw [List.length_reverse] ; dsimp ; exact Nat.lt.base (List.length l)) ⟩ = x) run testT
 
-
+With context g(n : Nat) g(P : Nat → Type) and objects (P (⟨0, Nat.zero_lt_succ n⟩ : Fin (n+1)).val) run testT
 
 -- tracing_mode .std
--- tracing_flags [(`generalizeProofsIgnoringMain, [TracingFlags.zero, .two])]
+-- tracing_flags [(`generalizeProofsIgnoringMain, TracingFlags.all)]
+
+With context g(P : Nat → Type) and objects (fun n : Nat => P (⟨0, Nat.zero_lt_succ n⟩ : Fin (n+1)).val) run testT
+
+
+/-
+Todo:
+think about factored workers in term vs factored workers in type
+
+-/

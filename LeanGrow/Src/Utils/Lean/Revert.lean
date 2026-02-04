@@ -125,7 +125,7 @@ partial def Lean.Expr.abstractLetFvarAll_proofLet
               match fvs.findIdx? (fun y => y == id) with
               | .none => return ⟨x,initD,initI⟩
               | .some j => return ⟨(.bvar (d + i - 1 - j)),initD,initI⟩
-            | _ => return ⟨x,initD,initI⟩ )
+            | _ => return ⟨x,initD,initI⟩)
           let p? : Bool ← (do
             match fvd.name with
             | .num k i =>
@@ -138,14 +138,30 @@ partial def Lean.Expr.abstractLetFvarAll_proofLet
               match ← IsClass? T initD initI with
               | .none => return ⟨.forallE `abstractFvarWrt T term .default,initD,initI⟩
               | _ => return ⟨.forallE `abstractFvarWrt T term .instImplicit,initD,initI⟩
-            else return ⟨.letE `abstractFvarWrt T V term nonDep,initD,initI⟩
+            else
+              let ⟨V,initD,initI⟩ ← V.onAllSubtermsM initD initI (fun x d initD initI =>
+                match x with
+                | .fvar id =>
+                  match fvs.findIdx? (fun y => y == id) with
+                  | .none => return ⟨x,initD,initI⟩
+                  | .some j => return ⟨(.bvar (d + i - 1 - j)),initD,initI⟩
+                | _ => return ⟨x,initD,initI⟩ )
+              return ⟨.letE `abstractFvarWrt T V term nonDep,initD,initI⟩
           else
             if p?
             then
               match ← IsClass? T initD initI with
               | .none => bind (.forallE `abstractFvarWrt T term .default) (i-1) initD initI
               | _ => bind (.forallE `abstractFvarWrt T term .instImplicit) (i-1) initD initI
-            else bind (.letE `abstractFvarWrt T V term nonDep) (i-1) initD initI
+            else
+              let ⟨V,initD,initI⟩ ← V.onAllSubtermsM initD initI (fun x d initD initI =>
+                match x with
+                | .fvar id =>
+                  match fvs.findIdx? (fun y => y == id) with
+                  | .none => return ⟨x,initD,initI⟩
+                  | .some j => return ⟨(.bvar (d + i - 1 - j)),initD,initI⟩
+                | _ => return ⟨x,initD,initI⟩ )
+              bind (.letE `abstractFvarWrt T V term nonDep) (i-1) initD initI
     do
     let fvS := fvs.size
     if fvS == 0

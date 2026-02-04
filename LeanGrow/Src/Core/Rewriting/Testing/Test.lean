@@ -113,7 +113,6 @@ For beta: get this to work with HEq somehow ?
 -- no error thrown, but type incorrect
 
 
--- dbg here
 -- With context g(n : Nat) g(m : Nat) g(x : Fin (n+m)) g(P : (k : Nat) → Fin k → Prop) u(y : Fin (n+m) : x+x) and objects (P (n+m) y) run testBackRWA
 
 -- With context g(n : Nat) g(m : Nat) g(x : Fin (n+m)) g(P : (k : Nat) → Fin k → Prop) u(y : Fin (n+m) : x+x) and objects (P (n+m) y) run testBackRWB
@@ -135,12 +134,12 @@ For beta: get this to work with HEq somehow ?
 -- With context g(n : Nat) g(P : (k : Nat) → Fin k → Prop) u(y : Fin (n+1) : (⟨0, by apply Nat.zero_lt_of_ne_zero ; apply Nat.add_one_ne_zero⟩ : Fin (n+1))) and objects (P (n+1) y) run testBackRWC
 
 
---dbg here
 -- With context g(n : Nat) g(x : Fin (n+1)) g(P : (k : Nat) → Fin k → Prop) u(y : Fin (n+1) : x+x)  t(37 : 67 : t : y.val + 1 < n+1) and objects (P (n+1) ⟨y.val + 1, t⟩) run testBackRWA
 
 -- With context g(n : Nat) g(x : Fin (n+1)) g(P : (k : Nat) → Fin k → Prop) u(y : Fin (n+1) : x+x)  t(37 : 67 : t : y.val + 1 < n+1) and objects (P (n+1) ⟨y.val + 1, t⟩) run testBackRWB
 
--- With context g(n : Nat) g(x : Fin (n+1)) g(P : (k : Nat) → Fin k → Prop) u(y : Fin (n+1) : x+x)  t(37 : 67 : t : y.val + 1 < n+1) and objects (P (n+1) ⟨y.val + 1, t⟩) run testBackRWC
+-- With context g(n : Nat) g(x : Fin (n+1)) g(P : (k : Nat) → Fin k → Prop) u(y : Fin (n+1) : x+x)  t(37 : 67 : t : y.1 + 1 < n+1) and objects (P (n+1) ⟨y.1 + 1, t⟩) run testBackRWA
+
 
 
 -- With context u(y : Nat : 42) and objects ((fun x : Nat => x + y) = (fun x => y + x)) run testBackRWA
@@ -174,10 +173,29 @@ For beta: get this to work with HEq somehow ?
 
 
 
+-- With context g(n : Nat) g(P : Nat → Prop) and objects (P (⟨0, Nat.zero_lt_succ n⟩ : Fin (n+1)).val) run testBackRWA
+-- not found because reduce turns it to 0
+
+-- With context g(n : Nat) g(P : {k : Nat} → Fin k → Prop) and objects (P (⟨0, Nat.zero_lt_succ n⟩ : Fin (n+1))) run testBackRWA
+
+-- With context g(n : Nat) g(P : {k : Nat} → Fin k → Prop) and objects (P (⟨0, Nat.zero_lt_succ n⟩ : Fin (n+1))) run testBackRWB
+
+-- set_option pp.proofs true in
+-- With context g(n : Nat) g(P : {k : Nat} → Fin k → Prop) and objects (P (⟨0, Nat.zero_lt_succ n⟩ : Fin (n+1))) run testBackRWC
+-- Proof not recognized cause pattern not defeq
+
+#check Nat.zero_lt_succ
+#check Nat.succ_eq_add_one
+
+
+-- With context g(n : Nat) g(m : Nat) and objects (∀  x : Fin (n+m), x.val = 42) run testBackRWA
+
 
 /-
 TODO:
 - dbg
+- reduce query in test
+- fix generalize factor situation
 - test with lib query
 - test subtype projection issue
 - extern-export trick for rw ?

@@ -150,4 +150,23 @@ def test34 := test #[(Name.num `g 0)] 1
 With context g(n : Nat) g(hn1 : n = 42) g(hn2 : n = 37) wg(false : 0 : x : Fin n) wg(false : 1 : hx : x.val = 666) and objects (dummy n x) run test34
 
 def test35 := test #[(Name.num `g 0)] 0
-With context g(n : Nat) g(hn1 : n = 42) g(hn2 : n = 37) wg(false : 0 : x : Fin n) wg(false : 1 : hx : x.val = 666) and objects (dummy n x) run test35
+--With context g(n : Nat) g(hn1 : n = 42) g(hn2 : n = 37) wg(false : 0 : x : Fin n) wg(false : 1 : hx : x.val = 666) and objects (dummy n x) run test35
+
+
+def test36 := test #[(Name.num `u 2)] 10
+With context g(n : Nat) g(x : Fin n) u(y : Fin n : x+x) g(P : Fin n → Prop) and objects (P y) run test36
+
+
+def test37 := test #[(Name.num `g 1)] 10
+With context g(n : Nat) g(x : Fin n) u(y : Fin n : x+x) g(P : Fin n → Prop) and objects (P y) run test37
+
+def test38 := test #[(Name.num `u 2),(Name.num `g 1)] 10
+With context g(n : Nat) g(x : Fin n) u(y : Fin n : x+x) g(P : Fin n → Prop) and objects (P y) run test38
+
+-- tracing_mode .std
+-- tracing_flags [(`revert_NoTn_cutOff_wDepsCache, TracingFlags.all),
+--                 (`Lean.Expr.abstractLetFvarAll_proofLet, TracingFlags.all)]
+
+
+def test39 := test #[(Name.num `u 3),(Name.num `g 1)] 10
+With context g(n : Nat) g(x : Fin (n+1)) g(P : (k : Nat) → Fin k → Prop) u(y : Fin (n+1) : x+x) and objects (∀ t : y.val + 1 < n+1, P (n+1) ⟨y.val + 1, t⟩) run test39

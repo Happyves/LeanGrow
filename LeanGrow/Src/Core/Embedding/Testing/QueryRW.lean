@@ -53,7 +53,6 @@ def test_4 := testSandbox_embedBackRWMainnS #[`Nat.add_comm]
 
 
 -- With context g(n : Nat) g(m : Nat) and objects (∀  x : Fin (n+m), x.val = 42) run test_3
--- binder taken into account
 
 -- With context g(n : Nat) g(m : Nat) and objects (∀  x : Fin (n+m), x.val = 42) run test_4
 

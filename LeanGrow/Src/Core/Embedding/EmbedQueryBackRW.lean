@@ -276,16 +276,17 @@ partial def embedBackRWMain {IdxCollType : Type _}
                   let locConstr := union conHere <| union (union conf cona) conz
                   return ⟨locConstr,res,l1,l2⟩
             | .proj stru i maj =>
-                  let real ← mkProjFn! l1 l2 stru i maj
-                  embedBackRWMain l1 l2 thmData fold empty? intersect union difference empty sConstr locConstr revCountMax extWorkas real T
-                  -- let ⟨con,resf,l1,l2⟩ ← embedBackRWMain l1 l2 thmData fold empty? intersect union difference empty sConstr locConstr revCountMax extWorkas f T
-                  -- let res := resf.foldl .nil (fun n l R => let fix := l.foldl .nil (fun e d R => .cons e (.pro d) R) ; .cons n fix R)
-                  -- let res := mergeOnIndSpe
-                  --   (fun x y => x.foldl y (fun x y R => .cons x y R))
-                  --   (fun x => .cons x .yes extWorkas .nil )
-                  --   res (lISO here)
-                  -- let locConstr := union con conHere
-                  -- return ⟨locConstr,res,l1,l2⟩
+                  -- let real ← mkProjFn! l1 l2 stru i maj
+                  -- embedBackRWMain l1 l2 thmData fold empty? intersect union difference empty sConstr locConstr revCountMax extWorkas real T
+                  -- not actually needed for rw ↑
+                  let ⟨con,resf,l1,l2⟩ ← embedBackRWMain l1 l2 thmData fold empty? intersect union difference empty sConstr locConstr revCountMax extWorkas maj T
+                  let res := resf.foldl .nil (fun n l R => let fix := l.foldl .nil (fun e d R => .cons e (.pro d) R) ; .cons n fix R)
+                  let res := mergeOnIndSpe
+                    (fun x y => x.foldl y (fun x y R => .cons x y R))
+                    (fun x => .cons x .yes extWorkas .nil )
+                    res (lISO here)
+                  let locConstr := union con conHere
+                  return ⟨locConstr,res,l1,l2⟩
             | .mdata _ f =>
                   embedBackRWMain l1 l2 thmData fold empty? intersect union difference empty sConstr locConstr revCountMax extWorkas f T
             | _ =>

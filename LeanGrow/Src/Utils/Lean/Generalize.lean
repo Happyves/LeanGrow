@@ -13,6 +13,84 @@ open Lean Meta
 
 
 
+@[specialize,inline]
+partial def Lean.Expr.onAllSubtermsWiWorkerCpsSkipTravExpectingState (e : Expr) (l1 : LocalContext) (l2 : LocalInstances) {β: Sort _} (init : β)
+  (f : Expr → Expr → Nat → β → LocalContext → LocalInstances → MetaM (Prod4 (Except Expr Expr) β LocalContext LocalInstances))
+  : MetaM (Prod4 Expr β LocalContext LocalInstances) :=
+   let rec @[specialize f] go (state : β) (e ET : Expr) (d : Nat) (l1 : LocalContext) (l2 : LocalInstances)
+    : MetaM (Prod4 Expr β LocalContext LocalInstances) := do
+      let ⟨R,state,l1,l2⟩ ← f e ET d state l1 l2
+      match R with
+      | .ok R =>
+          match R with
+          | .app l r =>
+            let (etl,etr) ← (do
+              let lt ← InferType l l1 l2
+              match lt with
+              | .forallE _ T _ _ => return (lt,T)
+              | _ =>
+                let lt' ← Whnf lt l1 l2
+                match lt' with
+                | .forallE _ T _ _ => return (lt,T)
+                | _ => panic! s!"[onAllSubtermsWiWorkerCpsSkipTravExpectingState] not fn type ?"
+                )
+            let ⟨l,state,l1,l2⟩ ← go state l etl d l1 l2
+            let ⟨r,state,l1,l2⟩ ← go state r etr d l1 l2
+            let R := .app l r
+            return ⟨R,state,l1,l2⟩
+          | .lam n l r bi =>
+            let etr ← (do
+              match ET with
+              | .forallE _ _ V _ => return V
+              | _ =>
+                let lt ← Whnf ET l1 l2
+                match lt with
+                | .forallE _ _ V _ => return V
+                | _ => panic! s!"[onAllSubtermsWiWorkerCpsSkipTravExpectingState] not fn type ?"
+                )
+            let ⟨l,state,l1,l2⟩ ← go state l (← InferType l l1 l2) d l1 l2
+            let S := l2.size
+            let fv ←  worker d
+            let ⟨fv,r,l1,l2⟩ ← withFreeing fv l r l1 l2
+            let ⟨r,state,l1,l2⟩ ← go state r etr (d+1) l1 l2
+            let l2 := match bi with | .instImplicit => l2.patch S 1 | _ => l2
+            let r := r.abstract #[.fvar fv]
+            let R := .lam n l r bi
+            return ⟨R,state,l1,l2⟩
+          | .forallE n l r bi =>
+            let ⟨l,state,l1,l2⟩ ← go state l (← InferType l l1 l2) d l1 l2
+            let S := l2.size
+            let fv ←  worker d
+            let ⟨fv,r,l1,l2⟩ ← withFreeing fv l r l1 l2
+            let ⟨r,state,l1,l2⟩ ← go state r (← InferType r l1 l2) (d+1) l1 l2
+            let l2 := match bi with | .instImplicit => l2.patch S 1 | _ => l2
+            let r := r.abstract #[.fvar fv]
+            let R := .forallE n l r bi
+            return ⟨R,state,l1,l2⟩
+          | .letE n L r z bi =>
+            let ⟨l,state,l1,l2⟩ ← go state L (← InferType L l1 l2) d l1 l2
+            let ⟨r,state,l1,l2⟩ ← go state r L d l1 l2
+            let S := l2.size
+            let fv ←  worker d
+            let ⟨fv,z,l1,l2⟩ ← withFreeingLet fv l r z l1 l2
+            let ⟨z,state,l1,l2⟩ ← go state z (← InferType z l1 l2) (d+1) l1 l2
+            let l2 := if (← withLCtx l1 l2 (isClass? l)).isSome then l2.patch S 1 else l2
+            let z := z.abstract #[.fvar fv]
+            let R := .letE n l r z bi
+            return ⟨R,state,l1,l2⟩
+          | .proj n i L =>
+            let ⟨l,state,l1,l2⟩ ← go state L (← InferType L l1 l2) d l1 l2
+            let R := .proj n i l
+            return ⟨R,state,l1,l2⟩
+          | .mdata da l =>
+            let ⟨l,state,l1,l2⟩ ← go state l ET d l1 l2
+            let R := .mdata da l
+            return ⟨R,state,l1,l2⟩
+          | t => return ⟨t,state,l1,l2⟩
+      | .error R =>
+          return ⟨R,state,l1,l2⟩
+  do
+  go init e (← InferType e l1 l2) 0 l1 l2
 
 
 
@@ -22,17 +100,19 @@ partial def generalizeProofsIgnoringMain
   (type: Expr) (extWorkers : Array FVarId) (ignore prohibProof : Expr → LocalContext → LocalInstances → MetaM Bool)
   : MetaM (Prod4 Expr (Prod3 (Array Expr) (Array Expr) (Array Expr)) LocalContext LocalInstances) := do
   mtracing
-  Lean.Expr.onAllSubtermsWiWorkerCpsSkipTravState type initD initI ((.mk #[] #[] #[]) : Prod3 (Array Expr) (Array Expr) (Array Expr))
-    (fun e depth F@(.mk factors factypes facFvs) initD initI => do
-      mtrace on .one with s!" looking at {← ppExpr e}"
+  Lean.Expr.onAllSubtermsWiWorkerCpsSkipTravExpectingState type initD initI ((.mk #[] #[] #[]) : Prod3 (Array Expr) (Array Expr) (Array Expr))
+    (fun e ET _ F@(.mk factors factypes facFvs) initD initI => do
+      mtrace on .one with s!" looking at {← ppExpr e}\nET {← ppExpr ET}"
       if ← (IsProof e initD initI <&&> prohibProof e initD initI)
       then
         mtrace on .zero with s!" found proof {← ppExpr e}"
-        let .mk absd absdWs initD initI ← e.abstractInnerWorkers extWorkers initD initI
-        mtrace on .zero with s!" worker fvars in proof: {repr absdWs}"
+        let .mk absd forDbg initD initI ← e.abstractInnerWorkers extWorkers initD initI
+        mtrace on .zero with s!" worker fvars in proof: {repr forDbg}"
         mtrace on .zero with s!" abstracted proof to {← ppExpr absd}"
-        let absdT ← InferType absd initD initI
-        mtrace on .zero with s!" with type {← ppExpr absdT}"
+        -- let absdT ← InferType absd initD initI
+        let .mk absdT absdWs initD initI ← ET.abstractInnerWorkersAll extWorkers initD initI
+        mtrace on .zero with s!" worker fvars in expected type: {repr absdWs}"
+        mtrace on .zero with s!" abstracted expected type to {← ppExpr absdT}"
         let .mk genT (.mk genFac genFacT genFvs) initD initI ← generalizeProofsIgnoringMain initD initI absdT extWorkers ignore prohibProof -- for the case that the proof's type contains further proofs !
         let factors := factors ++ genFac
         let factors := factors.push absd
@@ -119,8 +199,15 @@ def generalizeTnodesSafeIgnoring
   mtracing
   let .mk res factors l1 l2 ← generalizeProofsIgnoring initD initI type extWorkers ignore
     (fun p l1 l2 => do
-      let tns := p.getTnodes
-      withLCtx l1 l2 <| tns.allM isProof
+      let w? :=
+        match p.fvarId? with
+        | .some i => i.isWorker
+        | _ => false
+      if w?
+      then return false
+      else
+        let tns := p.getTnodes
+        withLCtx l1 l2 <| tns.allM isProof
       )
   if res.hasTnodes
   then return .mk .none #[] l1 l2

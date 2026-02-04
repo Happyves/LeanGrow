@@ -262,48 +262,35 @@ partial def Lean.Expr.onAllSubtermsWiDepthTR (e : Expr) (f : Expr → Nat → Ex
 
 @[specialize f, inline]
 partial def Lean.Expr.onAllSubtermsWiDepth (e : Expr) (f : Expr → Nat → Expr) : Expr :=
-  let rec @[specialize f] go (e : Expr) (d : Nat) (C : ExprMap Expr) : Expr × ExprMap Expr :=
-    match C[e]? with
-    | .some res => (res,C)
-    | _ =>
-      match f e d with
-      | .app l r =>
-        let (l,C) := go l d C
-        let (r,C) := go r d C
-        let R := .app l r
-        let C := C.insert e R
-        (R, C)
-      | .lam n l r bi =>
-        let (l,C) := go l d C
-        let (r,C) := go r (d+1) C
-        let R := .lam n l r bi
-        let C := C.insert e R
-        (R, C)
-      | .forallE n l r bi =>
-        let (l,C) := go l d C
-        let (r,C) := go r (d+1) C
-        let R := .forallE n l r bi
-        let C := C.insert e R
-        (R, C)
-      | .letE n l r z bi =>
-        let (l,C) := go l d C
-        let (r,C) := go r d C
-        let (z,C) := go z (d+1) C
-        let R := .letE n l r z bi
-        let C := C.insert e R
-        (R, C)
-      | .proj n i l =>
-        let (l,C) := go l d C
-        let R := .proj n i l
-        let C := C.insert e R
-        (R, C)
-      | .mdata da l =>
-        let (l,C) := go l d C
-        let R := .mdata da l
-        let C := C.insert e R
-        (R, C)
-      | t => (t,C.insert e t)
-  (go e 0 {}).1
+  -- caching here is bad idea because cached term can appear in different depths,
+  -- and bvar indices will be wrong there. This happend.
+  let rec @[specialize f] go (e : Expr) (d : Nat) : Expr :=
+    match f e d with
+    | .app l r =>
+      let l := go l d
+      let r := go r d
+      .app l r
+    | .lam n l r bi =>
+      let l := go l d
+      let r := go r (d+1)
+      .lam n l r bi
+    | .forallE n l r bi =>
+      let l := go l d
+      let r := go r (d+1)
+      .forallE n l r bi
+    | .letE n l r z bi =>
+      let l := go l d
+      let r := go r d
+      let z := go z (d+1)
+      .letE n l r z bi
+    | .proj n i l =>
+      let l := go l d
+      .proj n i l
+    | .mdata da l =>
+      let l := go l d
+      .mdata da l
+    | t => t
+  go e 0
 
 
 
@@ -452,67 +439,56 @@ partial def Lean.Expr.onAllSubtermsMTR (e : Expr) (initD : LocalContext) (initI 
 partial def Lean.Expr.onAllSubtermsM (e : Expr) (l1 : LocalContext) (l2 : LocalInstances)
   (f : Expr → Nat → LocalContext → LocalInstances → MetaM (Prod3 Expr LocalContext LocalInstances))
   : MetaM (Prod3 Expr LocalContext LocalInstances) :=
-  let rec @[specialize f] go (e : Expr) (d : Nat) (l1 : LocalContext) (l2 : LocalInstances) (C : ExprMap Expr)
-    : MetaM (Prod4 Expr (ExprMap Expr) LocalContext LocalInstances) := do
-    match C[e]? with
-    | .some res => return ⟨res,C,l1,l2⟩
-    | _ =>
+  let rec @[specialize f] go (e : Expr) (d : Nat) (l1 : LocalContext) (l2 : LocalInstances)
+    : MetaM (Prod3 Expr LocalContext LocalInstances) := do
       let ⟨R,l1,l2⟩ ← f e d l1 l2
       match R with
       | .app l r =>
-        let ⟨l,C,l1,l2⟩ ← go l d l1 l2 C
-        let ⟨r,C,l1,l2⟩ ← go r d l1 l2 C
+        let ⟨l,l1,l2⟩ ← go l d l1 l2
+        let ⟨r,l1,l2⟩ ← go r d l1 l2
         let R := .app l r
-        let C := C.insert e R
-        return ⟨R,C,l1,l2⟩
+        return ⟨R,l1,l2⟩
       | .lam n l r bi =>
-        let ⟨l,C,l1,l2⟩ ← go l d l1 l2 C
+        let ⟨l,l1,l2⟩ ← go l d l1 l2
         let S := l2.size
         let fv ←  worker d
         let ⟨fv,r,l1,l2⟩ ← withFreeing fv l r l1 l2
-        let ⟨r,C,l1,l2⟩ ← go r (d+1) l1 l2 C
+        let ⟨r,l1,l2⟩ ← go r (d+1) l1 l2
         let l2 := match bi with | .instImplicit => l2.patch S 1 | _ => l2
         let r := r.abstract #[.fvar fv]
         let R := .lam n l r bi
-        let C := C.insert e R
-        return ⟨R,C,l1,l2⟩
+        return ⟨R,l1,l2⟩
       | .forallE n l r bi =>
-        let ⟨l,C,l1,l2⟩ ← go l d l1 l2 C
+        let ⟨l,l1,l2⟩ ← go l d l1 l2
         let S := l2.size
         let fv ←  worker d
         let ⟨fv,r,l1,l2⟩ ← withFreeing fv l r l1 l2
-        let ⟨r,C,l1,l2⟩ ← go r (d+1) l1 l2 C
+        let ⟨r,l1,l2⟩ ← go r (d+1) l1 l2
         let l2 := match bi with | .instImplicit => l2.patch S 1 | _ => l2
         let r := r.abstract #[.fvar fv]
         let R := .forallE n l r bi
-        let C := C.insert e R
-        return ⟨R,C,l1,l2⟩
+        return ⟨R,l1,l2⟩
       | .letE n l r z bi =>
-        let ⟨l,C,l1,l2⟩ ← go l d l1 l2 C
-        let ⟨r,C,l1,l2⟩ ← go r d l1 l2 C
+        let ⟨l,l1,l2⟩ ← go l d l1 l2
+        let ⟨r,l1,l2⟩ ← go r d l1 l2
         let S := l2.size
         let fv ←  worker d
         let ⟨fv,z,l1,l2⟩ ← withFreeingLet fv l r z l1 l2
-        let ⟨z,C,l1,l2⟩ ← go z (d+1) l1 l2 C
+        let ⟨z,l1,l2⟩ ← go z (d+1) l1 l2
         let l2 := if (← withLCtx l1 l2 (isClass? l)).isSome then l2.patch S 1 else l2
         let z := z.abstract #[.fvar fv]
         let R := .letE n l r z bi
-        let C := C.insert e R
-        return ⟨R,C,l1,l2⟩
+        return ⟨R,l1,l2⟩
       | .proj n i l =>
-        let ⟨l,C,l1,l2⟩ ← go l d l1 l2 C
+        let ⟨l,l1,l2⟩ ← go l d l1 l2
         let R := .proj n i l
-        let C := C.insert e R
-        return ⟨R,C,l1,l2⟩
+        return ⟨R,l1,l2⟩
       | .mdata da l =>
-        let ⟨l,C,l1,l2⟩ ← go l d l1 l2 C
+        let ⟨l,l1,l2⟩ ← go l d l1 l2
         let R := .mdata da l
-        let C := C.insert e R
-        return ⟨R,C,l1,l2⟩
-      | t => return ⟨t,C.insert e t,l1,l2⟩
-  do
-  let ⟨r,_,l1,l2⟩ ← go e 0 l1 l2 {}
-  return ⟨r,l1,l2⟩
+        return ⟨R,l1,l2⟩
+      | t => return ⟨t,l1,l2⟩
+  go e 0 l1 l2
 
 
 
@@ -647,66 +623,57 @@ partial def Lean.Expr.onAllSubtermsWiWorkerTrackedMTR (e : Expr) (initD : LocalC
 partial def Lean.Expr.onAllSubtermsWiWorkerTrackedM (e : Expr) (l1 : LocalContext) (l2 : LocalInstances)
   (f : Expr → Nat → Array Expr → LocalContext → LocalInstances → MetaM (Prod3 Expr LocalContext LocalInstances))
   : MetaM (Prod3 Expr LocalContext LocalInstances) :=
-  let rec @[specialize f] go (workas : Array Expr) (e : Expr) (d : Nat) (l1 : LocalContext) (l2 : LocalInstances) (C : ExprMap Expr)
-    : MetaM (Prod5 Expr (ExprMap Expr) (Array Expr) LocalContext LocalInstances) := do
-    match C[e]? with
-    | .some res => return ⟨res,C,workas,l1,l2⟩
-    | _ =>
+  let rec @[specialize f] go (workas : Array Expr) (e : Expr) (d : Nat) (l1 : LocalContext) (l2 : LocalInstances)
+    : MetaM (Prod4 Expr (Array Expr) LocalContext LocalInstances) := do
       let ⟨R,l1,l2⟩ ← f e d workas l1 l2
       match R with
       | .app l r =>
-        let ⟨l,C,workas,l1,l2⟩ ← go workas l d l1 l2 C
-        let ⟨r,C,workas,l1,l2⟩ ← go workas r d l1 l2 C
+        let ⟨l,workas,l1,l2⟩ ← go workas l d l1 l2
+        let ⟨r,workas,l1,l2⟩ ← go workas r d l1 l2
         let R := .app l r
-        let C := C.insert e R
-        return ⟨R,C,workas,l1,l2⟩
+        return ⟨R,workas,l1,l2⟩
       | .lam n l r bi =>
-        let ⟨l,C,workas,l1,l2⟩ ← go workas l d l1 l2 C
+        let ⟨l,workas,l1,l2⟩ ← go workas l d l1 l2
         let S := l2.size
         let fv ←  worker d
         let ⟨fv,r,l1,l2⟩ ← withFreeing fv l r l1 l2
-        let ⟨r,C,workas,l1,l2⟩ ← go (workas.push (.fvar fv)) r (d+1) l1 l2 C
+        let ⟨r,workas,l1,l2⟩ ← go (workas.push (.fvar fv)) r (d+1) l1 l2
         let l2 := match bi with | .instImplicit => l2.patch S 1 | _ => l2
         let r := r.abstract #[.fvar fv]
         let R := .lam n l r bi
-        let C := C.insert e R
-        return ⟨R,C,workas,l1,l2⟩
+        return ⟨R,workas,l1,l2⟩
       | .forallE n l r bi =>
-        let ⟨l,C,workas,l1,l2⟩ ← go workas l d l1 l2 C
+        let ⟨l,workas,l1,l2⟩ ← go workas l d l1 l2
         let S := l2.size
         let fv ←  worker d
         let ⟨fv,r,l1,l2⟩ ← withFreeing fv l r l1 l2
-        let ⟨r,C,workas,l1,l2⟩ ← go (workas.push (.fvar fv)) r (d+1) l1 l2 C
+        let ⟨r,workas,l1,l2⟩ ← go (workas.push (.fvar fv)) r (d+1) l1 l2
         let l2 := match bi with | .instImplicit => l2.patch S 1 | _ => l2
         let r := r.abstract #[.fvar fv]
         let R := .forallE n l r bi
-        let C := C.insert e R
-        return ⟨R,C,workas,l1,l2⟩
+        return ⟨R,workas,l1,l2⟩
       | .letE n l r z bi =>
-        let ⟨l,C,workas,l1,l2⟩ ← go workas l d l1 l2 C
-        let ⟨r,C,workas,l1,l2⟩ ← go workas r d l1 l2 C
+        let ⟨l,workas,l1,l2⟩ ← go workas l d l1 l2
+        let ⟨r,workas,l1,l2⟩ ← go workas r d l1 l2
         let S := l2.size
         let fv ←  worker d
         let ⟨fv,z,l1,l2⟩ ← withFreeingLet fv l r z l1 l2
-        let ⟨z,C,workas,l1,l2⟩ ← go (workas.push (.fvar fv)) z (d+1) l1 l2 C
+        let ⟨z,workas,l1,l2⟩ ← go (workas.push (.fvar fv)) z (d+1) l1 l2
         let l2 := if (← withLCtx l1 l2 (isClass? l)).isSome then l2.patch S 1 else l2
         let z := z.abstract #[.fvar fv]
         let R := .letE n l r z bi
-        let C := C.insert e R
-        return ⟨R,C,workas,l1,l2⟩
+        return ⟨R,workas,l1,l2⟩
       | .proj n i l =>
-        let ⟨l,C,workas,l1,l2⟩ ← go workas l d l1 l2 C
+        let ⟨l,workas,l1,l2⟩ ← go workas l d l1 l2
         let R := .proj n i l
-        let C := C.insert e R
-        return ⟨R,C,workas,l1,l2⟩
+        return ⟨R,workas,l1,l2⟩
       | .mdata da l =>
-        let ⟨l,C,workas,l1,l2⟩ ← go workas l d l1 l2 C
+        let ⟨l,workas,l1,l2⟩ ← go workas l d l1 l2
         let R := .mdata da l
-        let C := C.insert e R
-        return ⟨R,C,workas,l1,l2⟩
-      | t => return ⟨t,C.insert e t,workas,l1,l2⟩
+        return ⟨R,workas,l1,l2⟩
+      | t => return ⟨t,workas,l1,l2⟩
   do
-  let ⟨r,_,_,l1,l2⟩ ← go #[] e 0 l1 l2 {}
+  let ⟨r,_,l1,l2⟩ ← go #[] e 0 l1 l2
   return ⟨r,l1,l2⟩
 
 
@@ -847,71 +814,60 @@ partial def Lean.Expr.onAllSubtermsWiWorkerCpsSkipTravStateTR (e : Expr) (initD 
 partial def Lean.Expr.onAllSubtermsWiWorkerCpsSkipTravState (e : Expr) (l1 : LocalContext) (l2 : LocalInstances) {β: Sort _} (init : β)
   (f : Expr → Nat → β → LocalContext → LocalInstances → MetaM (Prod4 (Except Expr Expr) β LocalContext LocalInstances))
   : MetaM (Prod4 Expr β LocalContext LocalInstances) :=
-   let rec @[specialize f] go (state : β) (e : Expr) (d : Nat) (l1 : LocalContext) (l2 : LocalInstances) (C : ExprMap Expr)
-    : MetaM (Prod5 Expr (ExprMap Expr) β LocalContext LocalInstances) := do
-    match C[e]? with
-    | .some res => return ⟨res,C,state,l1,l2⟩
-    | _ =>
+   let rec @[specialize f] go (state : β) (e : Expr) (d : Nat) (l1 : LocalContext) (l2 : LocalInstances)
+    : MetaM (Prod4 Expr β LocalContext LocalInstances) := do
       let ⟨R,state,l1,l2⟩ ← f e d state l1 l2
       match R with
       | .ok R =>
           match R with
           | .app l r =>
-            let ⟨l,C,state,l1,l2⟩ ← go state l d l1 l2 C
-            let ⟨r,C,state,l1,l2⟩ ← go state r d l1 l2 C
+            let ⟨l,state,l1,l2⟩ ← go state l d l1 l2
+            let ⟨r,state,l1,l2⟩ ← go state r d l1 l2
             let R := .app l r
-            let C := C.insert e R
-            return ⟨R,C,state,l1,l2⟩
+            return ⟨R,state,l1,l2⟩
           | .lam n l r bi =>
-            let ⟨l,C,state,l1,l2⟩ ← go state l d l1 l2 C
+            let ⟨l,state,l1,l2⟩ ← go state l d l1 l2
             let S := l2.size
             let fv ←  worker d
             let ⟨fv,r,l1,l2⟩ ← withFreeing fv l r l1 l2
-            let ⟨r,C,state,l1,l2⟩ ← go state r (d+1) l1 l2 C
+            let ⟨r,state,l1,l2⟩ ← go state r (d+1) l1 l2
             let l2 := match bi with | .instImplicit => l2.patch S 1 | _ => l2
             let r := r.abstract #[.fvar fv]
             let R := .lam n l r bi
-            let C := C.insert e R
-            return ⟨R,C,state,l1,l2⟩
+            return ⟨R,state,l1,l2⟩
           | .forallE n l r bi =>
-            let ⟨l,C,state,l1,l2⟩ ← go state l d l1 l2 C
+            let ⟨l,state,l1,l2⟩ ← go state l d l1 l2
             let S := l2.size
             let fv ←  worker d
             let ⟨fv,r,l1,l2⟩ ← withFreeing fv l r l1 l2
-            let ⟨r,C,state,l1,l2⟩ ← go state r (d+1) l1 l2 C
+            let ⟨r,state,l1,l2⟩ ← go state r (d+1) l1 l2
             let l2 := match bi with | .instImplicit => l2.patch S 1 | _ => l2
             let r := r.abstract #[.fvar fv]
             let R := .forallE n l r bi
-            let C := C.insert e R
-            return ⟨R,C,state,l1,l2⟩
+            return ⟨R,state,l1,l2⟩
           | .letE n l r z bi =>
-            let ⟨l,C,state,l1,l2⟩ ← go state l d l1 l2 C
-            let ⟨r,C,state,l1,l2⟩ ← go state r d l1 l2 C
+            let ⟨l,state,l1,l2⟩ ← go state l d l1 l2
+            let ⟨r,state,l1,l2⟩ ← go state r d l1 l2
             let S := l2.size
             let fv ←  worker d
             let ⟨fv,z,l1,l2⟩ ← withFreeingLet fv l r z l1 l2
-            let ⟨z,C,state,l1,l2⟩ ← go state z (d+1) l1 l2 C
+            let ⟨z,state,l1,l2⟩ ← go state z (d+1) l1 l2
             let l2 := if (← withLCtx l1 l2 (isClass? l)).isSome then l2.patch S 1 else l2
             let z := z.abstract #[.fvar fv]
             let R := .letE n l r z bi
-            let C := C.insert e R
-            return ⟨R,C,state,l1,l2⟩
+            return ⟨R,state,l1,l2⟩
           | .proj n i l =>
-            let ⟨l,C,state,l1,l2⟩ ← go state l d l1 l2 C
+            let ⟨l,state,l1,l2⟩ ← go state l d l1 l2
             let R := .proj n i l
-            let C := C.insert e R
-            return ⟨R,C,state,l1,l2⟩
+            return ⟨R,state,l1,l2⟩
           | .mdata da l =>
-            let ⟨l,C,state,l1,l2⟩ ← go state l d l1 l2 C
+            let ⟨l,state,l1,l2⟩ ← go state l d l1 l2
             let R := .mdata da l
-            let C := C.insert e R
-            return ⟨R,C,state,l1,l2⟩
-          | t => return ⟨t,C.insert e t,state,l1,l2⟩
+            return ⟨R,state,l1,l2⟩
+          | t => return ⟨t,state,l1,l2⟩
       | .error R =>
-          return ⟨R,C,state,l1,l2⟩
-  do
-  let ⟨r,_,state,l1,l2⟩ ← go init e 0 l1 l2 {}
-  return ⟨r,state,l1,l2⟩
+          return ⟨R,state,l1,l2⟩
+  go init e 0 l1 l2
 
 
 
@@ -1054,68 +1010,59 @@ partial def Lean.Expr.onAllSubtermsWiWorkerTrackedCpsSkipTravStateTR (e : Expr) 
 partial def Lean.Expr.onAllSubtermsWiWorkerTrackedCpsSkipTravState (e : Expr) (l1 : LocalContext) (l2 : LocalInstances) {β: Sort _} (init : β)
   (f : Expr → Nat → Array Expr → β → LocalContext → LocalInstances → MetaM (Prod4 (Except Expr Expr) β LocalContext LocalInstances))
   : MetaM (Prod4 Expr β LocalContext LocalInstances) :=
-   let rec @[specialize f] go (state : β) (workas : Array Expr) (e : Expr) (d : Nat) (l1 : LocalContext) (l2 : LocalInstances) (C : ExprMap Expr)
-    : MetaM (Prod6 Expr (ExprMap Expr) (Array Expr) β LocalContext LocalInstances) := do
-    match C[e]? with
-    | .some res => return ⟨res,C,workas,state,l1,l2⟩
-    | _ =>
+   let rec @[specialize f] go (state : β) (workas : Array Expr) (e : Expr) (d : Nat) (l1 : LocalContext) (l2 : LocalInstances)
+    : MetaM (Prod5 Expr (Array Expr) β LocalContext LocalInstances) := do
       let ⟨R,state,l1,l2⟩ ← f e d workas state l1 l2
       match R with
       | .ok R =>
           match R with
           | .app l r =>
-            let ⟨l,C,workas,state,l1,l2⟩ ← go state workas l d l1 l2 C
-            let ⟨r,C,workas,state,l1,l2⟩ ← go state workas r d l1 l2 C
+            let ⟨l,workas,state,l1,l2⟩ ← go state workas l d l1 l2
+            let ⟨r,workas,state,l1,l2⟩ ← go state workas r d l1 l2
             let R := .app l r
-            let C := C.insert e R
-            return ⟨R,C,workas,state,l1,l2⟩
+            return ⟨R,workas,state,l1,l2⟩
           | .lam n l r bi =>
-            let ⟨l,C,workas,state,l1,l2⟩ ← go state workas l d l1 l2 C
+            let ⟨l,workas,state,l1,l2⟩ ← go state workas l d l1 l2
             let S := l2.size
             let fv ←  worker d
             let ⟨fv,r,l1,l2⟩ ← withFreeing fv l r l1 l2
-            let ⟨r,C,workas,state,l1,l2⟩ ← go state (workas.push (.fvar fv)) r (d+1) l1 l2 C
+            let ⟨r,workas,state,l1,l2⟩ ← go state (workas.push (.fvar fv)) r (d+1) l1 l2
             let l2 := match bi with | .instImplicit => l2.patch S 1 | _ => l2
             let r := r.abstract #[.fvar fv]
             let R := .lam n l r bi
-            let C := C.insert e R
-            return ⟨R,C,workas,state,l1,l2⟩
+            return ⟨R,workas,state,l1,l2⟩
           | .forallE n l r bi =>
-            let ⟨l,C,workas,state,l1,l2⟩ ← go state workas l d l1 l2 C
+            let ⟨l,workas,state,l1,l2⟩ ← go state workas l d l1 l2
             let S := l2.size
             let fv ←  worker d
             let ⟨fv,r,l1,l2⟩ ← withFreeing fv l r l1 l2
-            let ⟨r,C,workas,state,l1,l2⟩ ← go state (workas.push (.fvar fv)) r (d+1) l1 l2 C
+            let ⟨r,workas,state,l1,l2⟩ ← go state (workas.push (.fvar fv)) r (d+1) l1 l2
             let l2 := match bi with | .instImplicit => l2.patch S 1 | _ => l2
             let r := r.abstract #[.fvar fv]
             let R := .forallE n l r bi
-            let C := C.insert e R
-            return ⟨R,C,workas,state,l1,l2⟩
+            return ⟨R,workas,state,l1,l2⟩
           | .letE n l r z bi =>
-            let ⟨l,C,workas,state,l1,l2⟩ ← go state workas l d l1 l2 C
-            let ⟨r,C,workas,state,l1,l2⟩ ← go state workas r d l1 l2 C
+            let ⟨l,workas,state,l1,l2⟩ ← go state workas l d l1 l2
+            let ⟨r,workas,state,l1,l2⟩ ← go state workas r d l1 l2
             let S := l2.size
             let fv ←  worker d
             let ⟨fv,z,l1,l2⟩ ← withFreeingLet fv l r z l1 l2
-            let ⟨z,C,workas,state,l1,l2⟩ ← go state (workas.push (.fvar fv)) z (d+1) l1 l2 C
+            let ⟨z,workas,state,l1,l2⟩ ← go state (workas.push (.fvar fv)) z (d+1) l1 l2
             let l2 := if (← withLCtx l1 l2 (isClass? l)).isSome then l2.patch S 1 else l2
             let z := z.abstract #[.fvar fv]
             let R := .letE n l r z bi
-            let C := C.insert e R
-            return ⟨R,C,workas,state,l1,l2⟩
+            return ⟨R,workas,state,l1,l2⟩
           | .proj n i l =>
-            let ⟨l,C,workas,state,l1,l2⟩ ← go state workas l d l1 l2 C
+            let ⟨l,workas,state,l1,l2⟩ ← go state workas l d l1 l2
             let R := .proj n i l
-            let C := C.insert e R
-            return ⟨R,C,workas,state,l1,l2⟩
+            return ⟨R,workas,state,l1,l2⟩
           | .mdata da l =>
-            let ⟨l,C,workas,state,l1,l2⟩ ← go state workas l d l1 l2 C
+            let ⟨l,workas,state,l1,l2⟩ ← go state workas l d l1 l2
             let R := .mdata da l
-            let C := C.insert e R
-            return ⟨R,C,workas,state,l1,l2⟩
-          | t => return ⟨t,C.insert e t,workas,state,l1,l2⟩
+            return ⟨R,workas,state,l1,l2⟩
+          | t => return ⟨t,workas,state,l1,l2⟩
       | .error R =>
-          return ⟨R,C,workas,state,l1,l2⟩
+          return ⟨R,workas,state,l1,l2⟩
   do
-  let ⟨r,_,_,state,l1,l2⟩ ← go init #[] e 0 l1 l2 {}
+  let ⟨r,_,state,l1,l2⟩ ← go init #[] e 0 l1 l2
   return ⟨r,state,l1,l2⟩
