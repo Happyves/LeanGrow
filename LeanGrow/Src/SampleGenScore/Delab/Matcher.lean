@@ -70,4 +70,9 @@ partial def delabSample_Matcher_top (appH : Expr) (l1 : LocalContext) (l2 : Loca
   then
     return .mk true l1 l2
   else
-    return .mk false l1 l2
+    match h with
+    | .str _ s =>
+      if s == "splitter" -- splitters are private and this is the best way I know to recognize them ...
+      then return .mk true l1 l2
+      else return .mk false l1 l2
+    | _ => return .mk false l1 l2

@@ -16,6 +16,7 @@ import LeanGrow.Src.SampleGenScore.Delab.Matcher
 import LeanGrow.Src.SampleGenScore.Delab.Simp
 import LeanGrow.Src.SampleGenScore.Delab.CongrConvert
 import LeanGrow.Src.SampleGenScore.Delab.Calc
+import LeanGrow.Src.SampleGenScore.Delab.WfBrec
 
 open Lean Meta
 
@@ -97,15 +98,21 @@ def delabSample
                                 mtrace on .zero with s!" success of matcher"
                                 return .mk [] (l.map .raw) .none l1 l2
                             | .none =>
-                                let resCalc ← delabSample_Calc_core appH appA
-                                match resCalc with
-                                | .some resCalc =>
-                                  mtrace on .zero with s!" success of calc"
-                                  return .mk [] (resCalc.map .raw) .none l1 l2
-                                | _ =>
-                                  let .mk lif sub delZet l1 l2 ← delabSample_AssertDefineRevert_core appH appA l1 l2
-                                  mtrace on .zero with s!" success of revert ; rervert :\n · Types : {← sub.mapM (fun x => do PpExpr (← InferType x l1 l2) l1 l2)} \n · Terms : {← sub.mapM (fun x => do PpExpr x l1 l2)}\n · lifted : {repr lif}"
-                                  return .mk lif (sub.map .raw) delZet l1 l2
+                                let wfbrec ← delabSample_WfBrec_core appH
+                                if wfbrec
+                                then
+                                  mtrace on .zero with s!" success of wf-induction or brec-induciton"
+                                  return .mk [] [] .none l1 l2
+                                else
+                                  let resCalc ← delabSample_Calc_core appH appA
+                                  match resCalc with
+                                  | .some resCalc =>
+                                    mtrace on .zero with s!" success of calc"
+                                    return .mk [] (resCalc.map .raw) .none l1 l2
+                                  | _ =>
+                                    let .mk lif sub delZet l1 l2 ← delabSample_AssertDefineRevert_core appH appA l1 l2
+                                    mtrace on .zero with s!" success of revert ; rervert :\n · Types : {← sub.mapM (fun x => do PpExpr (← InferType x l1 l2) l1 l2)} \n · Terms : {← sub.mapM (fun x => do PpExpr x l1 l2)}\n · lifted : {repr lif}"
+                                    return .mk lif (sub.map .raw) delZet l1 l2
   | .letE n t v b _ =>
     let .mk lif sub l1 l2 ← delabSample_HaveLet_core n t v b l1 l2
     mtrace on .zero with s!" have/let :\n · Types : {← PpExpr (← InferType sub l1 l2) l1 l2} \n · Terms : {← PpExpr sub l1 l2}\n · lifted : {repr lif}"
@@ -125,7 +132,7 @@ def delabSample
 
 #check 1
 
-
+-- #exit
 
 def delabDig
   (preProcessed : CTrie SimpCongrTheorem)
@@ -206,15 +213,20 @@ def delabDig
                                 mtrace on .zero with s!" success of match"
                                 return .mk .none [] (l.map .raw) [] l1 l2
                             | .none =>
-                                let resCalc ← delabSample_Calc_core appH appA
-                                match resCalc with
-                                | .some resCalc =>
-                                  mtrace on .zero with s!" success of calc"
-                                  return .mk .none [] (resCalc.map .raw) [] l1 l2
+                                let .mk resWfB l1 l2 ← delabDig_WfBrec_core [] appH appA l1 l2
+                                match resWfB with
+                                | .some br wfbLif =>
+                                  return .mk .none wfbLif (br.map .raw) [] l1 l2
                                 | _ =>
-                                  let .mk lif sub haves l1 l2 ← delabDig_AssertDefineRevert_core appH appA l1 l2
-                                  mtrace on .zero with s!" rervert :\n · Types : {← sub.mapM (fun x => do PpExpr (← InferType x l1 l2) l1 l2)} \n · Terms : {← sub.mapM (fun x => do PpExpr x l1 l2)}\n · lifted : {repr lif}"
-                                  return .mk .none lif (sub.map .raw) (haves.map .raw) l1 l2
+                                  let resCalc ← delabSample_Calc_core appH appA
+                                  match resCalc with
+                                  | .some resCalc =>
+                                    mtrace on .zero with s!" success of calc"
+                                    return .mk .none [] (resCalc.map .raw) [] l1 l2
+                                  | _ =>
+                                    let .mk lif sub haves l1 l2 ← delabDig_AssertDefineRevert_core appH appA l1 l2
+                                    mtrace on .zero with s!" rervert :\n · Types : {← sub.mapM (fun x => do PpExpr (← InferType x l1 l2) l1 l2)} \n · Terms : {← sub.mapM (fun x => do PpExpr x l1 l2)}\n · lifted : {repr lif}"
+                                    return .mk .none lif (sub.map .raw) (haves.map .raw) l1 l2
   | .letE n t v b _ =>
     let .mk lif sub haves l1 l2 ← delabDig_HaveLet_core n t v b l1 l2
     mtrace on .zero with s!" have/let :\n · Types : {← PpExpr (← InferType sub l1 l2) l1 l2} \n · Terms : {← PpExpr sub l1 l2}\n · lifted : {repr lif}"
@@ -316,15 +328,21 @@ partial def delabTopBack
                             mtrace on .zero with s!" success of matcher"
                             return .mk havelift .none l1 l2
                           else
-                            let resCalc ← delabSample_Calc_top l1 l2 appH appA
-                            match resCalc with
-                            | .some resCalc =>
-                              mtrace on .zero with s!" success of calc"
-                              return .mk havelift resCalc l1 l2
-                            | _ =>
-                            mtrace on .zero with s!" calling delab for apply & revert"
-                            let r ← delabSample_AssertDefineRevert_top conjable appH appA l1 l2
-                            return .mk havelift r l1 l2
+                            let wfbrec ← delabSample_WfBrec_core appH
+                            if wfbrec
+                            then
+                              mtrace on .zero with s!" success of wf-induction or brec-induciton"
+                              return .mk havelift .none l1 l2
+                            else
+                              let resCalc ← delabSample_Calc_top l1 l2 appH appA
+                              match resCalc with
+                              | .some resCalc =>
+                                mtrace on .zero with s!" success of calc"
+                                return .mk havelift resCalc l1 l2
+                              | _ =>
+                              mtrace on .zero with s!" calling delab for apply & revert"
+                              let r ← delabSample_AssertDefineRevert_top conjable appH appA l1 l2
+                              return .mk havelift r l1 l2
           | r =>
             mtrace on .zero with s!" success of ind with {repr r}"
             return .mk havelift r l1 l2
@@ -424,15 +442,21 @@ def delabTopForw
                                 mtrace on .zero with s!" success of matcher"
                                 return .mk .none [] l1 l2
                               else
-                                let resCalc ← delabSample_Calc_top l1 l2 appH appA
-                                match resCalc with
-                                | .some resCalc =>
-                                  mtrace on .zero with s!" success of calc"
-                                  return .mk resCalc [] l1 l2
-                                | _ =>
-                                  mtrace on .zero with s!" calling delab for apply & revert"
-                                  let r ← delabSample_AssertDefineRevert_top .empty appH appA l1 l2
-                                  return .mk r [] l1 l2
+                                let wfbrec ← delabSample_WfBrec_core appH
+                                if wfbrec
+                                then
+                                  mtrace on .zero with s!" success of wf-induction or brec-induciton"
+                                  return .mk .none [] l1 l2
+                                else
+                                  let resCalc ← delabSample_Calc_top l1 l2 appH appA
+                                  match resCalc with
+                                  | .some resCalc =>
+                                    mtrace on .zero with s!" success of calc"
+                                    return .mk resCalc [] l1 l2
+                                  | _ =>
+                                    mtrace on .zero with s!" calling delab for apply & revert"
+                                    let r ← delabSample_AssertDefineRevert_top .empty appH appA l1 l2
+                                    return .mk r [] l1 l2
     | .some .none =>
       mtrace on .zero with s!" recognized rw, but not thm-rw"
       return .mk .none [] l1 l2
@@ -524,15 +548,21 @@ def delabTopForw_withHyps
                                 mtrace on .zero with s!" success of matcher"
                                 return .mk .none [] l1 l2
                               else
-                                let resCalc ← delabSample_Calc_top l1 l2 appH appA
-                                match resCalc with
-                                | .some resCalc =>
-                                  mtrace on .zero with s!" success of calc"
-                                  return .mk resCalc [] l1 l2
-                                | _ =>
-                                  mtrace on .zero with s!" calling delab for apply & revert"
-                                  let .mk r a ← delabSample_AssertDefineRevert_top_withHyps appH appA l1 l2
-                                  return .mk r a l1 l2
+                                let wfbrec ← delabSample_WfBrec_core appH
+                                if wfbrec
+                                then
+                                  mtrace on .zero with s!" success of wf-induction or brec-induciton"
+                                  return .mk .none [] l1 l2
+                                else
+                                  let resCalc ← delabSample_Calc_top l1 l2 appH appA
+                                  match resCalc with
+                                  | .some resCalc =>
+                                    mtrace on .zero with s!" success of calc"
+                                    return .mk resCalc [] l1 l2
+                                  | _ =>
+                                    mtrace on .zero with s!" calling delab for apply & revert"
+                                    let .mk r a ← delabSample_AssertDefineRevert_top_withHyps appH appA l1 l2
+                                    return .mk r a l1 l2
     | .some .none =>
       mtrace on .zero with s!" recognized rw, but not thm-rw"
       return .mk .none [] l1 l2

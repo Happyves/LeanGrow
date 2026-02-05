@@ -139,18 +139,9 @@ unsafe def testNoDelZet_inEnv (printLift? : Bool) (thmName : Name) (depthDig dep
 -- good stress test : combinatorial nullstellensatz
 
 
---[delabTopBack]  looking at  id (Eq.mp List.injOn_insertIdx_index_of_notMem._simp_1_4 hm)
--- [delabSample]  success of revert ; rervert :
-
 #check List.injOn_insertIdx_index_of_notMem._simp_1_4
 #print List.injOn_insertIdx_index_of_notMem._simp_1_4
 #print List.injOn_insertIdx_index_of_notMem._simp_1_3
 #print List.injOn_insertIdx_index_of_notMem._simp_1_2
 #print List.injOn_insertIdx_index_of_notMem._simp_1_1
 #print Set.mem_singleton_iff._simp_1
-
-/-
-Todo:
-- debug id and Eq.mp in stress test
-
--/

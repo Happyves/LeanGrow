@@ -179,12 +179,3 @@ partial def delabDig_WfBrec_core (inibins : List FVarId)
 
 
 #check 1
-
-
-/-
-Todo:
-- trace
-- test
-- fix delabdig /digexpr to handle delabs returning mutiple digs
-
--/

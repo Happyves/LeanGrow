@@ -153,7 +153,12 @@ partial def delabSample_ObtRCaseIndCase_topBack (e : Expr)
   | _ =>
     match e.getAppFn' with
     | .const h _ =>
-      if h == ``dite then return (.thmC ``Classical.byCases #[(e.getArg! 1)])else core e
+      if h == ``dite
+      then return (.thmC ``Classical.byCases #[(e.getArg! 1)])
+      else
+        if h == ``Decidable.casesOn -- is how `split` splits ite's
+        then return (.thmC ``Classical.byCases #[(e.getArg! 0)])
+        else core e
     | _ => core e
 
 

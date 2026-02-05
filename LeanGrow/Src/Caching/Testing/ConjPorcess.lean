@@ -7,7 +7,7 @@ open Lean Meta
 
 
 def test (n : Name) : MetaM Unit := do
-  let .some (.thmInfo I) := (← getEnv).find? n | throwError "Bad name"
+  let .some I := (← getEnv).find? n | throwError "Bad name"
   let res ← getConjecturablePos I.type
   IO.println res
 
@@ -17,3 +17,6 @@ def test (n : Name) : MetaM Unit := do
 #eval test ``Classical.byCases
 
 #eval test ``Nat.le_trans
+
+#eval test ``Decidable.casesOn
+-- motive could be type, hence the misfire
