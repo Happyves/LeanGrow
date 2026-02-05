@@ -27,8 +27,9 @@ Continuation expects:
 -/
 @[inline]
 def embedBackProcess (l1 : LocalContext) (l2 : LocalInstances) (thmData : ThmFormat) (res : embedBackData)
-  {α : Sort _} (fail : MetaM α) (k : Expr → Array Level → List Nat → Array Expr → ListProd Nat Expr → MetaM α) : MetaM α := do
-  do --trace set Tracing.Flags.none in do
+  : MetaM (OptionProd5 Expr (Array Level) (List Nat) (Array Expr) (ListProd Nat Expr)) := do
+  do
+  mtracing
   -- *Note*, we expect the defeqs to have assigned transitive dependet arguments
   let arg_lvls : Array Level := Array.replicate thmData.lvlParamsNum .zero
   let arg_exprs : Array Expr := Array.replicate thmData.hypsNum (failExpr "embedBackProcess")
@@ -76,7 +77,7 @@ def embedBackProcess (l1 : LocalContext) (l2 : LocalInstances) (thmData : ThmFor
         match val? with
         | .none =>
             mtrace on .zero with s!"[embedBackProcess] ways instance, but synthesis failed"
-            fail
+            return .none
           -- *Note* ↑ is an avoidable design choice. We could keep unsythesised instances as new goals,
           -- but this is most commonly more of a burden then anything else, so we just fail.
         | .some val =>
@@ -106,9 +107,10 @@ def embedBackProcess (l1 : LocalContext) (l2 : LocalInstances) (thmData : ThmFor
       mtrace on .zero with s!"[embedBackProcess] instantiated to {← PpExpr G l1 l2}"
       let todo_expr := todo_expr.foldl .nil ListProd.cons
       -- we must reverse it as next functions expect dependencies
-      k G arg_lvls todo_lvls arg_exprs todo_expr
+      return .some G arg_lvls todo_lvls arg_exprs todo_expr
 
--- #exit
+
+
 /--
 Adds tnodes, makes term and orders tnodes and returns their pos-index size.
 
@@ -121,7 +123,8 @@ def embedBackPreIntegrate
   (thmData : ThmFormat) (NewBackIdx : Nat)
   (arg_lvls : Array Level) (todo_lvls : List Nat) (arg_exprs : Array Expr) (todo_expr : ListProd Nat Expr)
   : MetaM (Prod4 Expr Nat LocalContext LocalInstances) :=
-    do --trace set Tracing.Flags.none in do
+    do
+    mtracing
     let mut arg_lvls := arg_lvls
     for i in todo_lvls do
       let lmid := tnode NewBackIdx i
@@ -160,26 +163,23 @@ def embedBackPreIntegrate
 @[specialize, inline]
 def embedBackRWPreIntegrate
   (introAdmissible? : Nat → Bool)
-  (l1 : LocalContext) (l2 : LocalInstances) (depsCache : Array (List LocalDecl))
+  (l1 : LocalContext) (l2 : LocalInstances)
+  (depsCache : Array DepCache) (RevCutOff : Nat)
   (dirs : rwDirs) (NewBackIdx : Nat) (within : Expr) (extWorkas : List FVarId) (thmData : ThmFormat)
   (arg_lvls : Array Level) (todo_lvls : List Nat) (arg_exprs : Array Expr) (todo_expr : ListProd Nat Expr)
-  {α : Sort _} (fail : LocalContext → LocalInstances → MetaM α) (k : Expr → Nat → LocalContext → LocalInstances → MetaM α) : MetaM α :=
+  : MetaM (Prod3 (OptionProd Expr Nat) LocalContext LocalInstances) :=
+  do
+  mtracing
   match thmData with
   | .std .. => throwError s!"[embedBackRWPreIntegrate] tryto to perform rewrite with non rewrite lemm {repr thmData.name}"
   | .rw _ _ kind .. =>
-      do --trace set Tracing.Flags.none in do
+      do
       let mut arg_lvls := arg_lvls
       for i in todo_lvls do
         let lmid := tnode NewBackIdx i
         arg_lvls := arg_lvls.set! i (.param lmid)
       mtrace on .zero with s!"[embedBackRWPreIntegrate] arg_lvls {repr arg_lvls}"
       let extWorkas : Array FVarId := extWorkas.reverse.toArray
-      -- let aws ← extWorkas.filterM (fun fid => do
-      --   match ← fid.GetDecl l1 l2 with
-      --   | .cdecl .. => return true
-      --   | .ldecl .. => return false
-      --   )
-      --let aws := aws.map Expr.fvar
       let aws := extWorkas.map Expr.fvar
       mtrace on .zero with s!"[embedBackRWPreIntegrate] aws/extWorkas {← aws.mapM (PpExpr · l1 l2)} of types {← aws.mapM (fun e => return ← PpExpr (← InferType e l1 l2) l1 l2)}"
       todo_expr.foldlMcps (⟨arg_exprs,0,l1,l2⟩ : Prod4 _ _ _ _) (fun i T ⟨arg_exprs,c,l1,l2⟩ cont => do
@@ -197,8 +197,7 @@ def embedBackRWPreIntegrate
               | x => x)
           | x => x)
         mtrace on .zero with s!"[embedBackRWPreIntegrate] instanciated to {← PpExpr T l1 l2}"
-        let ⟨T,l1,l2⟩ ← T.abstractLetFvarAsAllWrt l1 l2 extWorkas
-        -- ↑ used to be `abstractLetFvarWrt` but led to bug
+        let ⟨T,l1,l2⟩ ← T.abstractLetFvarAll l1 l2 extWorkas
         mtrace on .zero with s!"[embedBackRWPreIntegrate] instantaited to {← PpExpr T l1 l2}"
         let tn := tnode NewBackIdx c
         mtrace on .zero with s!"[embedBackRWPreIntegrate] assigned tnode id {tn}"
@@ -206,20 +205,31 @@ def embedBackRWPreIntegrate
         cont ⟨arg_exprs.set! i (mkAppN (.fvar wtn) aws), c+1,l1,l2⟩
         ) <| fun ⟨arg_exprs,c,l1,l2⟩ => do
           let term := mkAppN (match thmData.name with | .inl n => .const n arg_lvls.toList | .inr id => .fvar id) arg_exprs
-          withReader (fun ctx => {ctx with lctx := l1, localInstances := l2}) do
-            mtrace on .zero with s!"[embedBackRWPreIntegrate] term {← PpExpr term l1 l2}"
-            let prefixed : Expr := ← do
-              match kind with
-              | .eq_mp => return term
-              | .eq_mpr => mkAppM `Eq.symm #[term]
-              | .iff_mp => mkAppM `propext #[term]
-              | .iff_mpr => mkAppM `Eq.symm #[← mkAppM `propext #[term]]
-            let T ← InferType prefixed l1 l2
-            let .some (_,pat,_) := T.eq? | throwError s!"[embedBackRWPreIntegrate] expected eq, got {← PpExpr T l1 l2}"
-            mtrace on .zero with s!"[embedBackRWPreIntegrate] start mainBackRWData with pat {← PpExpr pat l1 l2} and within {← PpExpr within l1 l2}"
-            let ⟨fullProof,l1,l2⟩ ← mainBackRWData introAdmissible? depsCache l1 l2 dirs NewBackIdx c within pat prefixed
+          mtrace on .zero with s!"[embedBackRWPreIntegrate] term {← PpExpr term l1 l2}"
+          let prefixed : Expr := ← withLCtx l1 l2 <| do
+            match kind with
+            | .eq_mp => return term
+            | .eq_mpr => mkAppM `Eq.symm #[term]
+            | .iff_mp => mkAppM `propext #[term]
+            | .iff_mpr => mkAppM `Eq.symm #[← mkAppM `propext #[term]]
+          let T ← InferType prefixed l1 l2
+          let .some (_,pat,_) := T.eq? | throwError s!"[embedBackRWPreIntegrate] expected eq, got {← PpExpr T l1 l2}"
+          mtrace on .zero with s!"[embedBackRWPreIntegrate] start mainBackRWData with pat {← PpExpr pat l1 l2} and within {← PpExpr within l1 l2}"
+          let .mk wis l1 l2 ← (do
+            if c != 0
+            then return Prod3.mk (List.range aws.size) l1 l2
+            else
+              let r1 ← prefixed.getWorkerIndsTrans l1 l2
+              let .mk w2 l1 l2 ← pat.getWorkerIndsTrans r1.2 r1.3
+              let ws := (List.orderedUnion r1.1.toList w2.toList)
+              return .mk ws l1 l2
+            )
+          let ⟨fullProof,l1,l2⟩ ← mainBackRW introAdmissible? depsCache RevCutOff l1 l2 dirs NewBackIdx c within pat prefixed wis
+          match fullProof with
+          | .none => return .mk .none l1 l2
+          | .some fullProof =>
             if ← IsTypeCorrect fullProof l1 l2
-            then k fullProof (c+1) l1 l2
+            then return .mk (.some fullProof (c+1)) l1 l2
             else
               mtrace on .zero with s!"[embedBackRWPreIntegrate] proof not type correct: {← PpExpr fullProof l1 l2}"
               let dbugHelp (l1 : LocalContext) (fullProof : Expr) : MetaM Unit := do
@@ -228,4 +238,4 @@ def embedBackRWPreIntegrate
                 | .ok _ => IO.println "Correct: yes"
                 | .error e => IO.println s!"Correct: no\n{← MessageData.format (e.toMessageData {})}" ;
               mtrace on .zero with s!"[embedBackRWPreIntegrate] Kernel check: {← dbugHelp l1 fullProof}"
-              fail l1 l2
+              return .mk .none l1 l2

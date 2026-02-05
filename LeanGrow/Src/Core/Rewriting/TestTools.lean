@@ -126,7 +126,16 @@ def testBackRW_sandBox_noSub (thm : Name) : Array Expr → Array Expr → Array 
       IO.println s!"[testBackRW] eqProof {← ppExpr eqProof}"
       IO.println s!"[testBackRW] eqProof type {← ppExpr <| ← inferType eqProof}"
       findDirs l1 l2 pat initGoal 0 <| fun dirs l1 l2 => do
-        let ⟨proof,l1,l2⟩ ← mainBackRW (fun _ => true) deps 10 l1 l2 dirs 42 7 initGoal pat eqProof .none
+        -- let Prod3.mk ws l1 l2 ← (do
+        --   match ifSubgoalsThenAllWs with
+        --   | .none =>
+        let r1 ← eqProof.getWorkerIndsTrans l1 l2
+        let .mk w2 l1 l2 ← pat.getWorkerIndsTrans r1.2 r1.3
+        let ws := (List.orderedUnion r1.1.toList w2.toList)
+          -- | .some wLen =>
+          --   return Prod3.mk (List.range wLen) l1 l2
+          -- )
+        let ⟨proof,l1,l2⟩ ← mainBackRW (fun _ => true) deps 10 l1 l2 dirs 42 7 initGoal pat eqProof ws
         match proof with
         | .none => IO.println "[testBackRW] Invalid rewrite"
         | .some proof =>
@@ -143,13 +152,13 @@ def testBackRW_sandBox_noSub (thm : Name) : Array Expr → Array Expr → Array 
 def testBackRW_sandBox_wiSub (thm : Name) : Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array DepCache → Array (FVarId × List FVarId) → MetaM Unit
   | guT, gu, tT, t, lT, l, wsT, ws, ewsT, ews, Ts, deps, wdeps => do
       IO.println s!"[testBackRW] built depCache : {repr <| deps.mapIdx Prod.mk}"
-      let initGoal := Ts[0]!
+      let initGoal ← withTransparency .reducible <| reduce (skipTypes := false) Ts[0]!
       let ⟨D,pat,eqProof,l1,l2⟩ ← findFirstAppli (← getLCtx) (← getLocalInstances) thm initGoal
       IO.println s!"[testBackRW] pat {← ppExpr pat}"
       IO.println s!"[testBackRW] eqProof {← ppExpr eqProof}"
       IO.println s!"[testBackRW] eqProof type {← ppExpr <| ← inferType eqProof}"
       findDirs l1 l2 pat initGoal 0 <| fun dirs l1 l2 => do
-        let ⟨proof,l1,l2⟩ ← mainBackRW (fun _ => true) deps 10 l1 l2 dirs 42 7 initGoal pat eqProof (.some D)
+        let ⟨proof,l1,l2⟩ ← mainBackRW (fun _ => true) deps 10 l1 l2 dirs 42 7 initGoal pat eqProof ((List.range D) )
         match proof with
         | .none => IO.println "[testBackRW] Invalid rewrite"
         | .some proof =>
@@ -167,7 +176,7 @@ def testBackRW_sandBox_wiSub (thm : Name) : Array Expr → Array Expr → Array 
 def testForwRW_sandBox (thm : Name) : Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array DepCache → Array (FVarId × List FVarId) → MetaM Unit
   | guT, gu, tT, t, lT, l, wsT, ws, ewsT, ews, Ts, deps, wdeps => do
       IO.println s!"[testForwRW] built depCache : {repr <| deps.mapIdx Prod.mk}"
-      let initGoal := Ts[0]!
+      let initGoal ← withTransparency .reducible <| reduce (skipTypes := false) Ts[0]!
       withLocalDecl `testing .default initGoal <| fun fv => do
         let ⟨_,pat,eqProof,l1,l2⟩ ← findFirstAppli (← getLCtx) (← getLocalInstances) thm initGoal
         IO.println s!"[testForwRW] pat {← ppExpr pat}"

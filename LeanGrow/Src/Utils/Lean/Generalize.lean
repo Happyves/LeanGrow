@@ -95,7 +95,7 @@ partial def Lean.Expr.onAllSubtermsWiWorkerCpsSkipTravExpectingState (e : Expr) 
 
 
 @[specialize]
-partial def generalizeProofsIgnoringMain
+partial def generalizeProofsIgnoringExpectingMain
   (initD : LocalContext) (initI : LocalInstances)
   (type: Expr) (extWorkers : Array FVarId) (ignore prohibProof : Expr → LocalContext → LocalInstances → MetaM Bool)
   : MetaM (Prod4 Expr (Prod3 (Array Expr) (Array Expr) (Array Expr)) LocalContext LocalInstances) := do
@@ -113,6 +113,45 @@ partial def generalizeProofsIgnoringMain
         let .mk absdT absdWs initD initI ← ET.abstractInnerWorkersAll extWorkers initD initI
         mtrace on .zero with s!" worker fvars in expected type: {repr absdWs}"
         mtrace on .zero with s!" abstracted expected type to {← ppExpr absdT}"
+        let .mk genT (.mk genFac genFacT genFvs) initD initI ← generalizeProofsIgnoringExpectingMain initD initI absdT extWorkers ignore prohibProof -- for the case that the proof's type contains further proofs !
+        let factors := factors ++ genFac
+        let factors := factors.push absd
+        let factypes := factypes ++ genFacT
+        let factypes := factypes.push genT -- genT isn't the actual type of absd ; it is when instantiated with genFac
+        let facFvs := facFvs ++ genFvs
+        let dummy := Expr.fvar ⟨← mkFreshId⟩
+        let facFvs := facFvs.push dummy
+        let args ← absdWs.filterM (fun x => do match ← x.GetDecl initD initI with | .cdecl .. => return true | _ => return false)
+          -- absd is lambda let bound, and we want it to only be in an application with the lambda args
+        let rep := mkAppN dummy (args.map Expr.fvar)
+        mtrace on .zero with s!" replacing by {rep}"
+        mtrace on .two with s!" (factors, factypes) : {← factors.mapM ppExpr} {← factypes.mapM ppExpr}"
+        return ⟨(.error rep), (.mk factors factypes facFvs),initD,initI⟩ -- instruct `onAllSubtermsWiWorkerCpsSkipTravState` to skip, for convenience
+      else
+        if ← ignore e initD initI
+        then
+          mtrace on .zero with s!" subexpression was ignored"
+          return ⟨(.error e),F,initD,initI⟩
+        else
+          return ⟨(.ok e),F,initD,initI⟩
+      )
+
+@[specialize]
+partial def generalizeProofsIgnoringMain
+  (initD : LocalContext) (initI : LocalInstances)
+  (type: Expr) (extWorkers : Array FVarId) (ignore prohibProof : Expr → LocalContext → LocalInstances → MetaM Bool)
+  : MetaM (Prod4 Expr (Prod3 (Array Expr) (Array Expr) (Array Expr)) LocalContext LocalInstances) := do
+  mtracing
+  Lean.Expr.onAllSubtermsWiWorkerCpsSkipTravState type initD initI ((.mk #[] #[] #[]) : Prod3 (Array Expr) (Array Expr) (Array Expr))
+    (fun e _ F@(.mk factors factypes facFvs) initD initI => do
+      mtrace on .one with s!" looking at {← ppExpr e}"
+      if ← (IsProof e initD initI <&&> prohibProof e initD initI)
+      then
+        mtrace on .zero with s!" found proof {← ppExpr e}"
+        let .mk absd absdWs initD initI ← e.abstractInnerWorkers extWorkers initD initI
+        mtrace on .zero with s!" worker fvars in proof: {repr absdWs}"
+        mtrace on .zero with s!" abstracted proof to {← ppExpr absd}"
+        let absdT ← InferType absd initD initI
         let .mk genT (.mk genFac genFacT genFvs) initD initI ← generalizeProofsIgnoringMain initD initI absdT extWorkers ignore prohibProof -- for the case that the proof's type contains further proofs !
         let factors := factors ++ genFac
         let factors := factors.push absd
@@ -212,87 +251,3 @@ def generalizeTnodesSafeIgnoring
   if res.hasTnodes
   then return .mk .none #[] l1 l2
   else return .mk (.some res) factors l1 l2
-
-
-
-#exit
-
-@[specialize]
-partial def generalizeTnodesSafeIgnoringMain
-  (initD : LocalContext) (initI : LocalInstances)
-  (fst? : Bool) (type : Expr) (extWorkers : Array FVarId) (ignore prohibTnodeFst prohibTnodeHard : Expr → LocalContext → LocalInstances → MetaM Bool)
-  : MetaM (Prod4 Expr (Option (Array Expr × Array Expr)) LocalContext LocalInstances) := do
-  mtracing
-  Lean.Expr.onAllSubtermsWiWorkerCpsSkipTravState type initD initI ((#[], #[] ): Array Expr × Array Expr)
-    (fun e depth F initD initI  => do
-      match F with
-      | .none =>
-          return ⟨(.error e), F, initD, initI⟩
-      | .some (factors, factypes) =>
-          match e with
-          | .fvar ⟨(.num (.num _ _) _)⟩ =>
-              mtrace on .zero with s!"[generalizeTnodesSafeIgnoringMain] found tnode {← ppExpr e}"
-              if ← (if fst? then (prohibTnodeFst e initD initI) else (prohibTnodeHard e initD initI))
-              then
-                mtrace on .zero with s!"[generalizeTnodesSafeIgnoringMain] prohibition predicates were ture (fst? {fst?})"
-                let eT ← InferType e initD initI
-                mtrace on .zero with s!"[generalizeTnodesSafeIgnoringMain] tnode of type {← ppExpr eT}"
-                let (eT, absdWs) ← e.abstractInnerWorkersAll extWorkers initD initI
-                mtrace on .zero with s!"[generalizeTnodesSafeIgnoringMain] abstracted workers to {← ppExpr eT}"
-                if ← IsProp eT initD initI
-                then
-                  let .mk genT ok? initD initI ← generalizeTnodesSafeIgnoringMain initD initI false eT extWorkers ignore prohibTnodeFst prohibTnodeHard
-                  match ok? with
-                  | .none => return ⟨(.error e), ok?, initD, initI⟩
-                  | .some (genFac, genFacT) =>
-                    let factors := factors ++ genFac
-                    let factypes := factypes ++ genFacT
-                    let args ← absdWs.filterM (fun x => do match ← x.fvarId!.GetDecl initD initI with | .cdecl .. => return true | _ => return false)
-                      -- absd is lambda let bound, and we want it to only be in an application with the lambda args
-                    let rep := mkAppN (.bvar (depth + factors.size)) args
-                    let factors := factors.push e
-                    let factypes := factypes.push genT -- genT isn't the actual type of eT ; it is when instantiated with genFac
-                    mtrace on .zero with s!"[generalizeTnodesSafeIgnoringMain] returned from types of {← ppExpr e}, replacing it by {rep}"
-                    mtrace on .one with s!"[generalizeTnodesSafeIgnoringMain] current factors\n{← factors.mapM ppExpr}\ncurrent factype\n{← factypes.mapM ppExpr}"
-                    return ⟨(.error rep), (factors, factypes), initD, initI⟩
-                else
-                  return ⟨(.error e), .none, initD, initI⟩
-              else
-                if ← ignore e initD initI
-                then
-                  mtrace on .zero with s!"[generalizeTnodesSafeIgnoringMain] tnode was ignored"
-                  return ⟨(.error e), F, initD, initI⟩
-                else
-                  return ⟨(.ok e), F, initD, initI⟩
-          | _ =>
-              if ← ignore e initD initI
-              then
-                mtrace on .zero with s!"[generalizeTnodesSafeIgnoringMain] term {← ppExpr e} was ignored"
-                return ⟨(.error e), F, initD, initI⟩
-              else
-                return ⟨(.ok e), F, initD, initI⟩
-      )
-
-
-/--
-
-We need this in the context of tnodes instead of `generalizeProofsIgnoring`, since for example,
-for some predicate `P : Nat → Prop` and some Nat-typed tnode t, `P t` is a proof that whould
-get abstracted, but we don't want it to, as we loose information for unification ...
--/
-@[inline, specialize]
-def generalizeTnodesSafeIgnoring
-  (initD : LocalContext) (initI : LocalInstances)
-  (type : Expr) (extWorkers : Array FVarId) (ignore prohibTnodeFst prohibTnodeHard : Expr → LocalContext → LocalInstances → MetaM Bool)
-  : MetaM (OptionProd4 Expr (Array Expr) LocalContext LocalInstances) := do
-  mtracing
-  let .mk res ok? l1 l2 ← generalizeTnodesSafeIgnoringMain initD initI true type extWorkers ignore prohibTnodeFst prohibTnodeHard
-  mtrace on .zero with s!"[generalizeTnodesSafeIgnoring] main returned: {← ppExpr res}"
-  match ok? with
-  | .none => return .none
-  | .some (factors, factypes) =>
-      let mut res := res
-      for T in factypes do
-        res := .forallE `generalize T res .default
-      mtrace on .zero with s!"[generalizeTnodesSafeIgnoring] after attaching ∀s: {← ppExpr res}"
-      return .some res factors.reverse l1 l2

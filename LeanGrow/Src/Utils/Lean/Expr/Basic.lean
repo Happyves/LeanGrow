@@ -131,6 +131,28 @@ def Lean.Expr.abstractPatBind (pat patType within : Expr) (binder : BinderInfo) 
   let absd := Expr.abstractPat pat within
   .lam `abstractPat.dummy patType absd binder
 
+/-- Should not be used with mvars, as no context loaded nor assignements cleared-/
+@[inline]
+def Lean.Expr.abstractPat! (l1 : LocalContext) (l2 : LocalInstances)
+  (pat within : Expr) : MetaM (Prod3 Expr LocalContext LocalInstances) :=
+  within.onAllSubtermsWiWorkerTrackedMTR l1 l2 (fun x d _ l1 l2 => do
+    if ← withLCtx l1 l2 <| isDefEqGuarded pat x
+    then
+      return .mk (.bvar d) l1 l2 -- `d` in TR version, then go to ↓ in next iter and get the bump
+      -- debug stuff if witching to non-TR X__X
+    else
+      match x with
+      | .bvar i => if i ≥ d then return .mk (.bvar (i+1)) l1 l2 else return .mk x l1 l2
+      | _ => return .mk x l1 l2
+      )
+
+/-- Should not be used with mvars, as no context loaded nor assignements cleared-/
+@[inline]
+def Lean.Expr.abstractPatBind! (l1 : LocalContext) (l2 : LocalInstances)
+  (pat patType within : Expr) (binder : BinderInfo) : MetaM (Prod3 Expr LocalContext LocalInstances) := do
+  let .mk absd l1 l2 ← Expr.abstractPat! l1 l2 pat within
+  return .mk (.lam `abstractPat.dummy patType absd binder) l1 l2
+
 
 
 /--
@@ -267,6 +289,18 @@ partial def Lean.Expr.instantiateLooseBvar (fvs : List FVarId) (e : Expr) : Expr
 def Lean.Expr.hasPattern (pat within : Expr) : Bool :=
   within.onAllSubtermsCheckExists (fun x => x == pat)
 
+#check defEqNoMv
+
+/-- Should not be used with mvars, as no context loaded nor assignements cleared-/
+@[inline]
+def Lean.Expr.hasPattern! (l1 : LocalContext) (l2 : LocalInstances)
+  (pat within : Expr) : MetaM (Prod3 Bool LocalContext LocalInstances) :=
+  within.onAllSubtermsCheckExistsM l1 l2 (fun x _ l1 l2 => do
+    let res ← withLCtx l1 l2 <| isDefEqGuarded pat x
+    return .mk res l1 l2
+    )
+
+
 @[inline]
 def Lean.Expr.hasWorker (within : Expr) : Bool :=
   within.onAllSubtermsCheckExistsSkip (fun | .fvar x => (x.isWorker,true) | x => (false, !x.hasFVar))
@@ -275,6 +309,16 @@ def Lean.Expr.hasWorker (within : Expr) : Bool :=
 @[inline]
 def Lean.Expr.hasPatternTR (pat within : Expr) : Bool :=
   within.onAllSubtermsCheckExistsTR (fun x => x == pat)
+
+/-- Should not be used with mvars, as no context loaded nor assignements cleared-/
+@[inline]
+def Lean.Expr.hasPatternTR! (l1 : LocalContext) (l2 : LocalInstances)
+  (pat within : Expr) : MetaM (Prod3 Bool LocalContext LocalInstances) :=
+  within.onAllSubtermsCheckExistsMTR l1 l2 (fun x _ l1 l2 => do
+    let res ← withLCtx l1 l2 <| isDefEqGuarded pat x
+    return .mk res l1 l2
+    )
+
 
 @[inline]
 def Lean.Expr.hasWorkerTR (within : Expr) : Bool :=

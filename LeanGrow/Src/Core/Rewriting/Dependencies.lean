@@ -109,7 +109,8 @@ partial def Lean.Expr.getGUFVarsIdsWithDirectDeps
             if k == `g
             then
               let T ← y.getType
-              if Expr.hasPatternTR pat T
+              let .mk h? l1 l2 ← Expr.hasPatternTR! l1 l2 pat T
+              if h?
               then
                 return ⟨(sofarD.insert y, sofarI),l1,l2⟩
               else
@@ -119,7 +120,8 @@ partial def Lean.Expr.getGUFVarsIdsWithDirectDeps
               then
                 match (← y.getDecl) with
                 | .ldecl _ _ _  T V .. =>
-                    if Expr.hasPatternTR pat T
+                    let .mk h? l1 l2 ← Expr.hasPatternTR! l1 l2 pat T
+                    if h?
                     then
                       -- we effictivly unfold the unode to get the real dependecies
                       let ⟨(sofarD, sofarI),l1,l2⟩ ← Expr.getGUFVarsIdsWithDirectDeps l1 l2 sofarD sofarI pat V

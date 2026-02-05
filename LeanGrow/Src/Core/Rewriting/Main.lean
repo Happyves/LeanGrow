@@ -57,14 +57,15 @@ def topBackRW
           then return false
           else
             let T ← InferType x l1 l2
-            return Expr.hasPatternTR pat T
+            let res ← Expr.hasPatternTR! l1 l2 pat T
+            return res.1
           )
       dbg_trace s!"[topBackRW] within {← ppExpr within}"
       dbg_trace s!"[topBackRW] proofs {← proofs.mapM ppExpr}"
       let patType ← InferType pat l1 l2
       dbg_trace s!"[topBackRW] patType {← ppExpr patType}"
       let patTypeLevel ← withLCtx l1 l2 <| do getLevel patType
-      let motive := Expr.abstractPatBind pat patType within .default
+      let .mk motive l1 l2 ← Expr.abstractPatBind! l1 l2 pat patType within .default
       dbg_trace s!"[topBackRW] motive {← ppExpr motive}"
       let motT ← InferType motive l1 l2
       dbg_trace s!"[topBackRW] motT {← ppExpr motT}"
@@ -103,22 +104,22 @@ partial def bindTypsOfNoAbs (l1 : LocalContext) (l2 : LocalInstances)
 
 @[inline]
 def castProofForRW (l1 : LocalContext) (l2 : LocalInstances)
-  (pat rep patType eqProof x : Expr) (patTypeLevel : Level) : MetaM Expr :=
-  withLCtx l1 l2 <| do
-    let xT ← inferType x
+  (pat rep patType eqProof x : Expr) (patTypeLevel : Level)
+    : MetaM (Prod3 Expr LocalContext LocalInstances) := do
+    let xT ← InferType x l1 l2
     dbg_trace s!"[castProofForRW] xT {← ppExpr xT}"
-    let eqMot := Expr.abstractPat pat xT
+    let .mk eqMot l1 l2 ← Expr.abstractPat! l1 l2 pat xT
     let rT := (Expr.app (.lam `castProofForRW patType eqMot .default) rep).headBeta
     dbg_trace s!"[castProofForRW] rT {← ppExpr rT}"
     let eqMot := .lam `castProofForRW patType (mkAppN (.const `Eq [1]) #[.sort 0, xT,eqMot]) .default
-    dbg_trace s!"[castProofForRW] eqMot {← ppExpr eqMot}, of type {← ppExpr (← inferType eqMot)}"
+    dbg_trace s!"[castProofForRW] eqMot {← ppExpr eqMot}, of type {← ppExpr (← InferType eqMot l1 l2)}"
     let eqRfl := mkAppN (.const `Eq.refl [1]) #[.sort 0, xT]
-    dbg_trace s!"[castProofForRW] eqRfl {← ppExpr eqRfl}, of type {← ppExpr (← inferType eqRfl)}"
+    dbg_trace s!"[castProofForRW] eqRfl {← ppExpr eqRfl}, of type {← ppExpr (← InferType eqRfl l1 l2)}"
     let eqP := mkAppN (.const `Eq.ndrec [0,patTypeLevel]) #[patType,pat,eqMot,eqRfl,rep,eqProof]
-    dbg_trace s!"[castProofForRW] eqP {← ppExpr eqP}, of type {← ppExpr (← inferType eqP)}"
+    dbg_trace s!"[castProofForRW] eqP {← ppExpr eqP}, of type {← ppExpr (← InferType eqP l1 l2)}"
     let castMain := mkAppN (.const ``cast [0]) #[xT,rT,eqP,x]
-    dbg_trace s!"[castProofForRW] castMain {← ppExpr castMain}, of type {← ppExpr (← inferType castMain)}"
-    return castMain
+    dbg_trace s!"[castProofForRW] castMain {← ppExpr castMain}, of type {← ppExpr (← InferType castMain l1 l2)}"
+    return .mk castMain l1 l2
     -- assumes `pat` has no abstracted dependecies in the reverted types
 
 
@@ -160,14 +161,15 @@ def topForwRW
             then return false
             else
               let T ← InferType x l1 l2
-              return Expr.hasPatternTR pat T
+              let res ← Expr.hasPatternTR! l1 l2 pat T
+              return res.1
             )
     dbg_trace s!"[topForwRW] within {← ppExpr within}"
     dbg_trace s!"[topForwRW] proofs {← proofs.mapM ppExpr}"
     let patType ← InferType pat l1 l2
     dbg_trace s!"[topForwRW] patType {← ppExpr patType}"
     let patTypeLevel ←  withLCtx l1 l2 <| do getLevel patType
-    let motive := Expr.abstractPatBind pat patType within .default
+    let .mk motive l1 l2 ← Expr.abstractPatBind! l1 l2 pat patType within .default
     dbg_trace s!"[topForwRW] motive {← ppExpr motive}"
     let motT ← InferType motive l1 l2
     dbg_trace s!"[topForwRW] motT {← ppExpr motT}"
@@ -179,8 +181,12 @@ def topForwRW
     dbg_trace s!"[topForwRW] here {← ppExpr here}"
     let mainProof := mkAppN (.const `Eq.ndrec [motL,patTypeLevel]) #[patType, pat, motive, here , rep, eqProof]
     dbg_trace s!"[topForwRW] mainProof {← ppExpr mainProof}, of type {← ppExpr (← inferType mainProof)}"
-    let castedArgs ← (allRev ++ proofs).reverse.mapM
-      (fun x => castProofForRW l1 l2 pat rep patType eqProof x patTypeLevel)
+    let ARG := (proofs ++ allRev)
+    let .mk castedArgs l1 l2 ← ARG.foldlM
+      (fun (.mk R l1 l2) x => do
+        let .mk here l1 l2 ← castProofForRW l1 l2 pat rep patType eqProof x patTypeLevel
+        return .mk (R.push here) l1 l2
+        ) (Prod3.mk (Array.emptyWithCapacity ARG.size) l1 l2)
     let withRevs := mkAppN mainProof castedArgs
     dbg_trace s!"[topForwRW] withRevs {← ppExpr withRevs}, of type {← ppExpr (← inferType withRevs)}"
     return ⟨withRevs,l1,l2⟩
@@ -388,7 +394,8 @@ partial def handleBinders
                 then return false
                 else
                   let T ← InferType x l1 l2
-                  return Expr.hasPatternTR boundedTerm T
+                  let res ← Expr.hasPatternTR! l1 l2 boundedTerm T
+                  return res.1
                 )
             dbg_trace s!"[handleBinders] within {← ppExpr within}"
             dbg_trace s!"[handleBinders] proofs {← proofs.mapM ppExpr}"
@@ -410,8 +417,12 @@ partial def handleBinders
             dbg_trace s!"[handleBinders] eqP {← ppExpr eqP}, of type {← ppExpr (← inferType eqP)}"
             -- *Note* we don't filter out unodes since we assume all unodes to be non-prop typed,
             -- so if they were dependecies, we'd have failed already
-            let castedArgs ← (proofs ++ (allRev.map Expr.fvar) ++ tnodes).mapM
-              (fun x => castProofForRW l1 l2 boundedTerm boundedRep boundedType extProof x boundedTypeLevel)
+            let ARG := (proofs ++ (allRev.map Expr.fvar) ++ tnodes)
+            let .mk castedArgs l1 l2 ← ARG.foldlM
+              (fun (.mk R l1 l2) x => do
+                let .mk here l1 l2 ← castProofForRW l1 l2 boundedTerm boundedRep boundedType extProof x boundedTypeLevel
+                return .mk (R.push here) l1 l2
+                ) (Prod3.mk (Array.emptyWithCapacity ARG.size) l1 l2)
             let finalProof := mkAppN eqP castedArgs
             dbg_trace s!"[handleBinders] finalProof {← ppExpr finalProof}, of type {← ppExpr (← inferType finalProof)}"
             return ⟨finalProof,l1,l2⟩
@@ -423,6 +434,12 @@ partial def handleBinders
 
 #check Expr.getWorkerIndsTrans
 
+
+/--
+`ws` should already be computed, so that we may abstarct workers in
+eqProof, which should be an application of a ∀-typed tnode with
+worker args
+-/
 @[specialize, inline]
 def mainBackRW
   (introAdmissible? : Nat → Bool)
@@ -430,20 +447,20 @@ def mainBackRW
   (RevCutOff : Nat)
   (l1 : LocalContext) (l2 : LocalInstances)
   (dirs : rwDirs) (backIdx pos : Nat) (within pat eqProof : Expr)
-  (ifSubgoalsThenAllWs : Option Nat)
+  (ws : List Nat)
   : MetaM (Prod3 (Option Expr) LocalContext LocalInstances) := do
   dbg_trace s!"[mainBackRW] within {← PpExpr within l1 l2}"
   dbg_trace s!"[mainBackRW] eqProof {← PpExpr eqProof l1 l2}"
   dbg_trace s!"[mainBackRW] pat {← PpExpr pat l1 l2}"
-  let Prod3.mk ws l1 l2 ← (do
-    match ifSubgoalsThenAllWs with
-    | .none =>
-      let r1 ← eqProof.getWorkerIndsTrans l1 l2
-      let .mk w2 l1 l2 ← pat.getWorkerIndsTrans r1.2 r1.3
-      return Prod3.mk (List.orderedUnion r1.1.toList w2.toList) l1 l2
-    | .some wLen =>
-      return Prod3.mk (List.range wLen) l1 l2
-    )
+  -- let Prod3.mk ws l1 l2 ← (do
+  --   match ifSubgoalsThenAllWs with
+  --   | .none =>
+  --     let r1 ← eqProof.getWorkerIndsTrans l1 l2
+  --     let .mk w2 l1 l2 ← pat.getWorkerIndsTrans r1.2 r1.3
+  --     return Prod3.mk (List.orderedUnion r1.1.toList w2.toList) l1 l2
+  --   | .some wLen =>
+  --     return Prod3.mk (List.range wLen) l1 l2
+  --   )
   dbg_trace s!"[mainBackRW] ws {ws}"
   match ws with
   | _ :: _ =>
@@ -462,7 +479,7 @@ def mainBackRW
     let ⟨term,l1,l2⟩ ← topBackRW introAdmissible? depsCache RevCutOff l1 l2 dirs backIdx pos within pat eqProof
     return ⟨term,l1,l2⟩
 
--- #exit
+
 
 @[specialize, inline]
 def mainForwRW

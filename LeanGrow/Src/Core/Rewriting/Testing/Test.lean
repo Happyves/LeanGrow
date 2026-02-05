@@ -98,19 +98,16 @@ structure LFin (n : Nat) where
 -- With context g(P : (k : Nat) → Fin k → Prop) and objects ((fun (n : Nat)  => P (n+1) ⟨0,(by apply Nat.zero_lt_of_ne_zero ; apply Nat.add_one_ne_zero)⟩) = (fun _ => True)) run testBackRWC
 
 
--- With context g(P : (k : Nat) → Fin k → Prop) and objects ((fun (n : Nat) (x : Fin (n+1)) => P (n+1) x) 41 (⟨0, by decide⟩ : Fin 42)) run testBackRWA
-/- *negative example*
-This fails because the type of the term rewritten under a binder depends on the rewrite.
-Here, with free var `n`, the term `(fun (x : Fin (n+1)) => P (n+1) x) = (fun (x : Fin (1+n)) => P (n+1) x)`
-isn't correct because the sides have different types.
-
-For beta: get this to work with HEq somehow ?
+-- With context g(P : (k : Nat) → Fin k → Prop) and objects ((fun (n : Nat) (x : Fin (n+1)) => P (n+1) x) = (fun (n : Nat) (x : Fin (n+1)) => 2+2=4)) run testBackRWA
+/- Issue is that the first occurence is the the type of the equality, where the
+pattern is present under a binder and our approach fails. Should work if we take
+the expected occurece with n ?
 -/
 
--- With context g(P : (k : Nat) → Fin k → Prop) and objects ((fun (n : Nat) (x : Fin (n+1)) => P (n+1) x) 41 (⟨0, by decide⟩ : Fin 42)) run testBackRWB
+-- With context g(P : (k : Nat) → Fin k → Prop) and objects ((fun (n : Nat) (x : Fin (n+1)) => P (n+1) x) = (fun (n : Nat) (x : Fin (n+1)) => 2+2=4)) run testBackRWB
 
--- With context g(P : (k : Nat) → Fin k → Prop) and objects ((fun (n : Nat) (x : Fin (n+1)) => P (n+1) x) 41 (⟨0, by decide⟩ : Fin 42)) run testBackRWC
--- no error thrown, but type incorrect
+-- With context g(P : (k : Nat) → Fin k → Prop) and objects ((fun (n : Nat) (x : Fin (n+1)) => P (n+1) x) = (fun (n : Nat) (x : Fin (n+1)) => 2+2=4)) run testBackRWC
+
 
 
 -- With context g(n : Nat) g(m : Nat) g(x : Fin (n+m)) g(P : (k : Nat) → Fin k → Prop) u(y : Fin (n+m) : x+x) and objects (P (n+m) y) run testBackRWA
@@ -158,7 +155,6 @@ For beta: get this to work with HEq somehow ?
 -- With context g(n : Nat) and objects ((fun x y : Fin (n+1) => x + y) = (fun x y => x*y)) run testBackRWC
 
 
--- set_option pp.proofs true in
 -- With context g(n : Nat) and objects ((fun (x : Fin (n+1)) (h : 0 < (n+1)) => x + ⟨0,h⟩) = ((fun (x : Fin (n+1)) (h : 0 < (n+1)) => x + ⟨0,h⟩))) run testBackRWA
 
 -- With context g(n : Nat) and objects ((fun (x : Fin (n+1)) (h : 0 < (n+1)) => x + ⟨0,h⟩) = ((fun (x : Fin (n+1)) (h : 0 < (n+1)) => x + ⟨0,h⟩))) run testBackRWB
@@ -180,9 +176,24 @@ For beta: get this to work with HEq somehow ?
 
 -- With context g(n : Nat) g(P : {k : Nat} → Fin k → Prop) and objects (P (⟨0, Nat.zero_lt_succ n⟩ : Fin (n+1))) run testBackRWB
 
--- set_option pp.proofs true in
 -- With context g(n : Nat) g(P : {k : Nat} → Fin k → Prop) and objects (P (⟨0, Nat.zero_lt_succ n⟩ : Fin (n+1))) run testBackRWC
--- Proof not recognized cause pattern not defeq
+
+
+-- With context g(n : Nat) g(P : (k : Nat) → Fin k → Prop) g(x : Fin n.succ) and objects (P (n+1) x) run testBackRWA
+
+-- With context g(n : Nat) g(P : (k : Nat) → Fin k → Prop) g(x : Fin n.succ) and objects (P (n+1) x) run testBackRWB
+
+-- With context g(n : Nat) g(P : (k : Nat) → Fin k → Prop) g(x : Fin n.succ) and objects (P (n+1) x) run testBackRWC
+
+
+-- With context g(n : Nat) g(P : (k : Nat) → (y : Fin k) → y = y → Prop) g(x : Fin n.succ) and objects (P (n+1) x (Eq.refl x)) run testBackRWA
+
+-- With context g(n : Nat) g(P : (k : Nat) → (y : Fin k) → y = y → Prop) g(x : Fin n.succ) and objects (P (n+1) x (Eq.refl x)) run testBackRWB
+
+-- With context g(n : Nat) g(P : (k : Nat) → (y : Fin k) → y = y → Prop) g(x : Fin n.succ) and objects (P (n+1) x (Eq.refl x)) run testBackRWC
+
+
+
 
 #check Nat.zero_lt_succ
 #check Nat.succ_eq_add_one
@@ -190,14 +201,13 @@ For beta: get this to work with HEq somehow ?
 
 -- With context g(n : Nat) g(m : Nat) and objects (∀  x : Fin (n+m), x.val = 42) run testBackRWA
 
+#check Nat.add_sub_assoc
 
-/-
-TODO:
-- dbg
-- reduce query in test
-- fix generalize factor situation
-- test with lib query
-- test subtype projection issue
-- extern-export trick for rw ?
+def testBackRWA' := testBackRW_sandBox_noSub `Nat.add_sub_assoc
 
--/
+def testBackRWB' := testBackRW_sandBox_wiSub `Nat.add_sub_assoc
+
+
+-- With context and objects ((fun (x y z : Nat) (h : x = 42) => x + y - z) = (fun (x y z : Nat) (h : x = 42) => x*y*z)) run testBackRWA'
+-- can't really test adding binders to subgoals, but at least ↓ looks good as it adds a funext for h
+-- With context and objects ((fun (x y z : Nat) (h : x = 42) => x + y - z) = (fun (x y z : Nat) (h : x = 42) => x*y*z)) run testBackRWB'

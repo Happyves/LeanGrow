@@ -331,3 +331,7 @@ where
 @[inline]
 def ForallMetaTagTelescope (lctx : LocalContext) (lins : LocalInstances) (tag : String) (e : Expr) (kind := MetavarKind.natural) : MetaM (Array Expr × Array BinderInfo × Expr) :=
   forallMetaTagTelescopeReducingAux tag lctx lins e (reducing := false) (maxMVars? := none) kind
+
+
+
+-- # Expr
