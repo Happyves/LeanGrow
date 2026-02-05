@@ -122,6 +122,20 @@ cleaned-types.
 
 Bring fixes to subpats and conjecturable
 
+
+Generalisation:
+- Frequency of type among all types, not just infrequent ones ?
+- Issue with generalisation for rewrite goals (for example): generalised version
+  may not contain patern anymore, so rw wouldn't apply ...
+  Long term:
+    - track position of patterns, and prohibit generalising them ?
+    - separate pattern and term its in, and generalise each separately ?
+
 -/
+tracing_mode .std
+tracing_flags [(``test_backSample_cvbGoalHyp, TracingFlags.all),
+               (`cvb_goal_hyp_genGoal, TracingFlags.all),
+               (`cvb_goal_hyp_genHyps, TracingFlags.all),
+               ]
 
 -- #eval test_GH thmNames

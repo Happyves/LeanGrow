@@ -46,10 +46,10 @@ def test_subSample_cvbThm
       | _ =>
           return B
       )
-  let .mk types res ← cvb_thms_genMain_subPat
+  let .mk (_,types) res ← cvb_thms_genMain_subPat
     fold empty insert insertMulti intersect union difference
     empty? size contains l1 l2 genCondition freqCondition sampleName
-    types sorted
+    types #[] sorted
   withLCtx l1 l2 <| do
     let mut i := 0
     IO.println "Types:"
@@ -101,10 +101,10 @@ def test_subSample_cvbGoalHyp
       | _ =>
           return B
       )
-  let .mk sT W _ types ← cvb_goal_hyp_genMain_subPat
+  let .mk sT W _ _ types ← cvb_goal_hyp_genMain_subPat
     fold empty insert insertMulti intersect union difference
     empty? size contains l1 l2 genCondition freqCondition sampleName
-    types sorted
+    types #[] sorted
   withLCtx l1 l2 <| do
     let mut i := 0
     IO.println "Types:"

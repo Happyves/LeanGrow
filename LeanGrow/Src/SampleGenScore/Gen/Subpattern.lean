@@ -133,15 +133,15 @@ partial def cvb_thms_genMain_subPat [Repr IdxCollType]
   (l1 : LocalContext) (l2 : LocalInstances)
   (genCondition : (occWeight : Nat) → (branchWeight : Nat) → (branchDistrib : Array Nat) → (commonType : Expr) → (branchDepth : Nat) → Bool)
   (freqCondition : (occWeight : Nat) → (branchWeight : Nat) → (branchDistrib : Array Nat) → (branchDepth : Nat) → Bool)
-  (sampleName : Name) (types : Array Expr)
+  (sampleName : Name) (allTypes cleanTypes : Array Expr)
   (sorted : CTrie (Prod Nat (PaIn IdxCollType)))
-  : MetaM ((Array Expr) × (CTrie (Prod3 (PaIn IdxCollType) (Array Nat) Nat))) := do
-    sorted.foldMapM types (fun entry types => do
-      let .mk gT gW gw _ types ← cvb_thms_genGoal
+  : MetaM (Prod ((Array Expr) × (Array Expr)) (CTrie (Prod3 (PaIn IdxCollType) (Array Nat) Nat))) := do
+    sorted.foldMapM (allTypes, cleanTypes) (fun entry (allTypes, cleanTypes) => do
+      let .mk gT gW gw _ allTypes cleanTypes ← cvb_thms_genGoal
         fold empty insert insertMulti intersect union difference
         empty? size contains l1 l2 genCondition freqCondition
-        entry.1 entry.2 sampleName types
-      return (types, .some (.mk gT gW gw))
+        entry.1 entry.2 sampleName allTypes cleanTypes
+      return .mk (allTypes, cleanTypes) (.some (.mk gT gW gw))
       )
 
 #check 1
@@ -157,21 +157,21 @@ partial def cvb_goal_hyp_genMain_subPat [Repr IdxCollType]
   (l1 : LocalContext) (l2 : LocalInstances)
   (genCondition : (occWeight : Nat) → (branchWeight : Nat) → (branchDistrib : Array Nat) → (commonType : Expr) → (branchDepth : Nat) → Bool)
   (freqCondition : (occWeight : Nat) → (branchWeight : Nat) → (branchDistrib : Array Nat) → (branchDepth : Nat) → Bool)
-  (sampleName : Name) (types : Array Expr)
+  (sampleName : Name) (allTypes cleanTypes : Array Expr)
   (state : Prod3 Nat (PaIn IdxCollType) (Array ByteArray))
-  : MetaM (Prod4 (PaIn IdxCollType) (Array (CTrie Nat)) Nat (Array Expr)) := do
+  : MetaM (Prod5 (PaIn IdxCollType) (Array (CTrie Nat)) Nat (Array Expr) (Array Expr)) := do
   mtracing
   let .mk samIdx goalPain thms := state
   let weights := Array.replicate samIdx 1
   mtrace on .zero with s!" generalising"
-  let .mk freqInd T types _ _ ← generalizePaInCore
+  let .mk freqInd T allTypes _ _ ← generalizePaInCore
     fold empty insertMulti intersect union difference empty? l1 l2 genCondition freqCondition sampleName
-    goalPain weights types
+    goalPain weights allTypes
   mtrace on .one with s!" generalised PaIn {← T.pp l1 l2 [] 0 intersect empty?}"
   mtrace on .zero with s!" found freqInd {repr freqInd}, deduplicating"
   let .mk T weights trans ← T.dedup insert union empty size contains fold weights freqInd
   mtrace on .zero with s!" running lnode garbadge collection"
-  let (T,types,_) := lnodeGarbageCollection T types
+  let (T,cleanTypes,_) := lnodeGarbageCollection T allTypes cleanTypes
   let total := weights.foldl (fun x y => x+y) 0
   let mut next := Array.replicate weights.size CTrie.empty
   for (ini,new) in trans do
@@ -181,7 +181,7 @@ partial def cvb_goal_hyp_genMain_subPat [Repr IdxCollType]
         | .none => .some weights[new]!
         | .some w => .some <| w + weights[new]!
         ))
-  return Prod4.mk T next total types
+  return Prod5.mk T next total allTypes cleanTypes
 
 #check 1
 

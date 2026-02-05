@@ -55,15 +55,15 @@ def test_backSample_cvbThm
           return B
       )
   mtrace on .zero with s!" done classifying"
-  let .mk types res ← cvb_thms_genMain
+  let .mk (_,cleanTypes) res ← cvb_thms_genMain
     fold empty insert insertMulti intersect union difference
     empty? size contains l1 l2 genCondition freqCondition sampleName
-    types sorted
+    types #[] sorted
   mtrace on .zero with s!" generalised"
   withLCtx l1 l2 <| do
     let mut i := 0
     IO.println "Types:"
-    for T in types do
+    for T in cleanTypes do
       IO.println s!"{i} : {← ppExpr T}"
       i := i+1
     res.foldM () (fun n v _ => do
@@ -121,22 +121,22 @@ def test_backSample_cvbGoalHyp
           return B
       )
   mtrace on .zero with s!" done classifying"
-  let .mk types res ← cvb_goal_hyp_genMain
+  let .mk _ cleanedTypes res ← cvb_goal_hyp_genMain
     fold empty shiftAdd insert insertMulti intersect union difference
     empty? size contains l1 l2 genCondition freqCondition sampleName
-    types sorted
+    types #[] sorted
   mtrace on .zero with s!" done generalising"
   withLCtx l1 l2 <| do
     let mut i := 0
     IO.println "Types:"
-    for T in types do
+    for T in cleanedTypes do
       IO.println s!"{i} : {← ppExpr T}"
       i := i+1
     IO.println s!"\nGoals: {← res.goalPain.pp l1 l2 [] 0 intersect empty?}"
     IO.println s!"Goal weights {res.goalWeights.mapIdx Prod.mk}"
     i := 0
     for entry in res.hypEntries do
-      IO.println s!"Hyps: {← entry.hypSetTrie.pp 0 (fun p => p.pp l1 l2 [] 0 intersect empty?) (fun t => return s!"{t.toList}")}"
+      IO.println s!"\nIdx {i}\nHyps: {← entry.hypSetTrie.pp 0 (fun p => p.pp l1 l2 [] 0 intersect empty?) (fun t => return s!"{t.toList}")}"
       IO.println s!"Hyp weights {entry.hypWeights.mapIdx Prod.mk}"
       i := i+1
 
