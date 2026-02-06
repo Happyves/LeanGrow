@@ -248,6 +248,22 @@ def generalizeTnodesSafeIgnoring
         let tns := p.getTnodes
         withLCtx l1 l2 <| tns.allM isProof
       )
-  if res.hasTnodes
+  let .mk unsafe? l1 l2 ← res.onAllSubtermsCheckExistsSkipMTR l1 l2 (fun e _ l1 l2 => do
+    if e.hasTnodes
+    then
+      if ← IsProof e l1 l2
+      then
+        let tns := e.getTnodes
+        let ok? ← withLCtx l1 l2 <| tns.allM isProof
+        return .mk (.some !ok?) l1 l2
+      else
+        return .mk (.some false) l1 l2
+    else
+      return .mk .none l1 l2 --skip
+    )
+  if unsafe?
   then return .mk .none #[] l1 l2
   else return .mk (.some res) factors l1 l2
+
+
+#check Expr.onAllSubtermsCheckExistsSkipMTR

@@ -61,7 +61,7 @@ def testSandbox_embedForwRWMainS (thms : Array Name)  : Array Expr → Array Exp
             match thmM with
             | .std .. => continue
             | .rw tname _ _ goal rep .. =>
-              IO.println s!"\nThm : {tname}\nGoal : {← ppExpr goal}\nReplacement : {← ppExpr rep}\nEmbeddings"
+              IO.println s!"\nThm ({i}) : {tname}\nGoal : {← ppExpr goal}\nReplacement : {← ppExpr rep}\nEmbeddings"
               for (em,dirs) in emb.toListOfProd do
                 IO.println s!"Dirs {repr dirs}"
                 for (p,l) in em.llv.toListOfProd do
@@ -89,7 +89,7 @@ def testSandbox_embedBackRWMainnS (thms : Array Name)  : Array Expr → Array Ex
             match thmM with
             | .std .. => continue
             | .rw tname _ _ goal rep .. =>
-              IO.println s!"\nThm : {tname}\nGoal : {← ppExpr goal}\nReplacement : {← ppExpr rep}\nEmbeddings"
+              IO.println s!"\nThm  ({i}): {tname}\nGoal : {← ppExpr goal}\nReplacement : {← ppExpr rep}\nEmbeddings"
               for (em,dirs,_) in emb.toListOfProd do
                 IO.println s!"Dirs {repr dirs}"
                 for (p,l) in em.llv.toListOfProd do
@@ -125,7 +125,7 @@ unsafe def testLoad_embedForwRWMainS (moduleNames : Array Name) : Array Expr →
             match thmM with
             | .std .. => continue
             | .rw tname _ _ goal rep .. =>
-              out := out ++ s!"\n\nThm : {tname}\nGoal : {← ppExpr goal}\nReplacement : {← ppExpr rep}\nEmbeddings"
+              out := out ++ s!"\n\nThm ({i}) : {tname}\nGoal : {← ppExpr goal}\nReplacement : {← ppExpr rep}\nEmbeddings"
               for (em,dirs) in emb.toListOfProd do
                 out := out ++ s!"\nDirs {repr dirs}\nLevels:"
                 for (p,l) in em.llv.toListOfProd do
@@ -155,7 +155,7 @@ unsafe def testLoad_embedBackRWMainnS (moduleNames : Array Name) : Array Expr �
             match thmM with
             | .std .. => continue
             | .rw tname _ _ goal rep .. =>
-              out := out ++ s!"\n\nThm : {tname}\nGoal : {← ppExpr goal}\nReplacement : {← ppExpr rep}\nEmbeddings"
+              out := out ++ s!"\n\nThm ({i}) : {tname}\nGoal : {← ppExpr goal}\nReplacement : {← ppExpr rep}\nEmbeddings"
               for (em,dirs,_) in emb.toListOfProd do
                 out := out ++ s!"\nDirs {repr dirs}\nLevels:"
                 for (p,l) in em.llv.toListOfProd do

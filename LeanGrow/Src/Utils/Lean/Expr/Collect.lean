@@ -169,6 +169,45 @@ partial def Lean.Expr.onAllSubtermsCheckExistsMTR (e : Expr) (initD : LocalConte
 
 
 @[specialize f, inline]
+partial def Lean.Expr.onAllSubtermsCheckExistsSkipMTR (e : Expr) (initD : LocalContext) (initI : LocalInstances)
+  (f : Expr → Nat → LocalContext → LocalInstances → MetaM (Prod3 (Option Bool) LocalContext LocalInstances))
+  : MetaM (Prod3 Bool LocalContext LocalInstances) :=
+  let rec @[specialize f] go (initD : LocalContext) (initI : LocalInstances) : ListProdSpe1 Nat Expr → MetaM (Prod3 Bool LocalContext LocalInstances)
+    | .nil => return ⟨false, initD, initI⟩
+    | .sig binfo more =>
+      go initD (initI.patch binfo 1) more
+    | .cons d e more => do
+      let ⟨cond, initD, initI⟩ ← f e d initD initI
+      match cond with
+      | .some true => return ⟨true, initD, initI⟩
+      | .none => go initD initI more
+      | .some false =>
+        match e with
+        | .app l r => go initD initI (.cons d l <| .cons d r more)
+        | .lam _ l r bi =>
+            let S := initI.size
+            let fv ← worker d
+            let ⟨_,r,initD,initI⟩ ← withFreeing fv l r initD initI
+            go initD initI (.cons d l <| .cons (d+1) r <| (match bi with | .instImplicit => .sig S more | _ => more))
+        | .forallE _ l r bi =>
+            let S := initI.size
+            let fv ← worker d
+            let ⟨_,r,initD,initI⟩ ← withFreeing fv l r initD initI
+            go initD initI (.cons d l <| .cons (d+1) r <| (match bi with | .instImplicit => .sig S more | _ => more))
+        | .letE _ l r z _ =>
+            let S := initI.size
+            let fv ← worker d
+            let ⟨_,z,initD,initI⟩ ← withFreeingLet fv l r z initD initI
+            go initD initI (.cons d l <| .cons d r <| .cons (d+1) z <| (if (← withLCtx  initD initI (isClass? l)).isSome then .sig S more else more))
+        | .proj _ _ e => go initD initI (.cons d e more)
+        | .mdata _ e => go initD initI (.cons d e more)
+        | _ => go initD initI more
+  go initD initI <| .cons 0 e .nil
+
+
+
+
+@[specialize f, inline]
 partial def Lean.Expr.onAllSubtermsCheckExistsM (e : Expr) (l1 : LocalContext) (l2 : LocalInstances)
   (f : Expr → Nat → LocalContext → LocalInstances → MetaM (Prod3 Bool LocalContext LocalInstances))
   : MetaM (Prod3 Bool LocalContext LocalInstances) :=

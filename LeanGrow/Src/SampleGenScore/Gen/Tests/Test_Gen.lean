@@ -131,7 +131,7 @@ tracing_flags [(``test_backSample_cvbGoalHyp, TracingFlags.all),
                (`cvb_goal_hyp_genHyps, TracingFlags.all),
                ]
 
-#eval test_GH thmNames
+-- #eval test_GH thmNames
 
 /-
 TODO:

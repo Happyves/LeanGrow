@@ -41,13 +41,13 @@ unsafe def testBackRw (moduleNames : Array Name) : Array Expr → Array Expr →
           let thmM := data.data.thm_data[i]!
           for (em,dirs,ws) in emb.toListOfProd do
             let l2 := l2.cleanPatchesAndWokers
-            let res ← embedBackProcess l1 l2 thmM em
+            let res ← embedBackProcess' l1 l2 thmM em
             match res with
             | .none => out := out ++ s!"\n\nInstance synth fail for an embed of {thmM.name}"
             | .some _ arg_lvls todo_lvls arg_exprs todo_expr =>
-                let .mk res l1 l2 ← embedBackRWPreIntegrate
+                let .mk res l1 l2 ← embedBackRWPreIntegrate'
                   (fun _ => true) l1 l2 deps 10 dirs NewBackIdx
-                  que ws thmM arg_lvls todo_lvls arg_exprs todo_expr
+                  que ws thmM em arg_lvls todo_lvls arg_exprs todo_expr
                 NewBackIdx := NewBackIdx + 1
                 match res with
                 | .none => out := out ++ s!"\n\nRewrite fail for an emb of {thmM.name}"
@@ -57,11 +57,18 @@ unsafe def testBackRw (moduleNames : Array Name) : Array Expr → Array Expr →
                       let ffv : FVarId := .mk (tnode (NewBackIdx - 1) i)
                       let T ← ffv.GetType l1 l2
                       inter := inter ++ s!"\n{ffv.name} : {← ppExpr T}"
+                    inter := inter ++ s!"\nT-Level assignements "
+                    for (i,p,l) in em.tlv.toListOfProd do
+                      inter := inter ++ s!"\nidx {i} pos {p} : {l}"
+                    inter := inter ++ s!"\nTnode assignemet"
+                    for (i,p,e) in em.tn.toListOfProd do
+                      inter := inter ++ s!"\nidx {i} pos {p} : {← ppExpr e}"
                     inter := inter ++ s!"\nAnd with term {← ppExpr term}"
                     out := out ++ inter
         return out
 
 #check 1
+
 
 
 #exit

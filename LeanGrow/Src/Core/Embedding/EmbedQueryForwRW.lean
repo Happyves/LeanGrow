@@ -650,7 +650,7 @@ partial def embedForwRWMain [Inhabited IdxCollType]  [Repr IdxCollType] [ToStrin
         return .mk empty .nil l1 l2
       else
         let ⟨yes?,conHere,here,l1,l2⟩ ← embedForwRWTop thmData empty? intersect union difference empty l1 l2 sConstr revCountMax extWorkas E T
-        mtrace on .zero with s!" found : {yes? == 3}"
+        mtrace on .zero with s!" found : {yes? == 3}\nIndices {conHere}\nEmbeddings: {here}"
         if yes? == 3
         then core l1 l2 here conHere
         else core l1 l2 .nil empty

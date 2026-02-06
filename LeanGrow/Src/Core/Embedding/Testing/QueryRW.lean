@@ -75,15 +75,28 @@ def test_5 := testSandbox_embedBackRWMainnS #[`List.concat_inj_left]
 
 
 
+unsafe def test_6 := testLoad_embedForwRWMainS #[`Init.Data.List.Perm, `Init.Data.List.Range]
+
+unsafe def test_7 := testLoad_embedBackRWMainnS #[`Init.Data.List.Perm, `Init.Data.List.Range]
+
+tracing_mode .std
+tracing_flags [(`PaInG.embedForwRWCore, TracingFlags.all),
+                (`PaInG.embedForwRWMain, TracingFlags.all),
+                (`PaInG.embedForwRWRevert, TracingFlags.all)
+                ]
+
+
+-- With context g(n : Nat) g(l : List Nat) and objects (n ∈ (l ++ (List.range (n.succ)))) run test_6
+
+-- With context g(n : Nat) g(l : List Nat) and objects (n ∈ (l ++ (List.range (n+1)))) run test_6
+
+
 #check mkProjFn
 
 #check getStructureFields
+#check List.foldl.eq_1
+#check List.Mem
+#check Membership.mem
+#check List.range'
 
-
-/-
-LG:
-- add option to sample hyps of forward sample, and should be used for
-  conveyorbelt of type goal-hyp, rather then thm,
-- test conjecturables-sampling
-
--/
+#check List.mem_range'

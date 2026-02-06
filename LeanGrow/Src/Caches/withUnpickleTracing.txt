@@ -1,23 +1,20 @@
 
 
-Success for List.range_succ with subgoals
-t.0.0 : g.0 ∈ g.1 ++ (List.range g.0 ++ [g.0])
-And with term Eq.symm List.range_succ ▸ t.0.0
-
 Success for List.range_eq_range' with subgoals
-t.1.0 : g.0 ∈ g.1 ++ List.range' 0 g.0.succ
-And with term Eq.symm List.range_eq_range' ▸ t.1.0
+t.0.0 : List.range' 0 g.0 = t.37.42
+T-Level assignements 
+Tnode assignemet
+And with term Eq.symm List.range_eq_range' ▸ t.0.0
 
-Rewrite fail for an emb of List.foldl.eq_1
+Success for List.range_eq_nil with subgoals
+t.1.0 : g.0 = 0
+T-Level assignements 
+Tnode assignemet
+idx 37 pos 42 : []
+And with term Eq.symm (propext List.range_eq_nil) ▸ t.1.0
 
-Success for List.Perm.mem_iff with subgoals
-t.3.0 : List Nat
-t.3.1 : (g.1 ++ List.range g.0.succ).Perm t.3.0
-t.3.2 : g.0 ∈ t.3.0
-And with term Eq.symm (propext (List.Perm.mem_iff t.3.1)) ▸ t.3.2
-
-Success for List.Perm.mem_iff with subgoals
-t.4.0 : List Nat
-t.4.1 : List.Perm t.4.0 (g.1 ++ List.range g.0.succ)
-t.4.2 : g.0 ∈ t.4.0
-And with term Eq.symm (Eq.symm (propext (List.Perm.mem_iff t.4.1))) ▸ t.4.2
+Success for List.singleton_perm_singleton with subgoals
+t.2.0 : [List.range g.0].Perm [t.37.42]
+T-Level assignements 
+Tnode assignemet
+And with term Eq.symm (Eq.symm (propext List.singleton_perm_singleton)) ▸ t.2.0

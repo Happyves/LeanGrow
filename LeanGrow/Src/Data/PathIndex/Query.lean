@@ -82,6 +82,8 @@ partial def queryCoreWW [Repr IdxCollType]
               go l1 l2 constr state false true false false 0 moreA todo
         else
           match ankers with
+          | .cons _ _ _ .nil | .cons _ _ _ (.consSpe _ _ _  .nil) => return ⟨0,constr,state,l1,l2⟩
+          -- ↑ means we would effectively test defeq with all terms in the PaIn, which is a performance crush
           | .nil => return ⟨0,constr,state,l1,l2⟩ --fail state
           | .consSpe constr todo state moreA =>
               go l1 l2 constr state false true false false 0 moreA todo
@@ -375,6 +377,8 @@ partial def queryLCoreWW [Repr IdxCollType]
               go l1 l2 constr state false true false false 0 moreA todo
         else
           match ankers with
+          | .cons _ _ _ .nil | .cons _ _ _ (.consSpe _ _ _  .nil) => return ⟨0,constr,state,l1,l2⟩
+          -- ↑ means we would effectively test defeq with all terms in the PaIn, which is a performance crush
           | .nil => return ⟨0,constr,state,l1,l2⟩ --fail state
           | .consSpe constr todo state moreA =>
               go l1 l2 constr state false true false false 0 moreA todo
