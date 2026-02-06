@@ -6,25 +6,18 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Author: Yves Jäckle.
 -/
 
-import LeanGrow.Src.SampleGenScore.Utils
-import LeanGrow.Src.Utils.Lean.Blacklisting
-import LeanGrow.Src.Utils.Lean.Expr.Basic
+import LeanGrow.Src.SampleGenScore.Delab.Term
 
 open Lean Meta
 
 
 -- have let revert assert specialize define apply decide
 
-@[inline]
-def Lean.Name.shouldBeDelabedAsSpecialTerm (n : Name) : Bool :=
-  n == ``Eq.ndrec || n == ``Eq.mp || n == ``Eq.mpr || n == ``congrArg || n == ``congrFun
-  -- todo add more
-
 
 
 @[inline]
 partial def delabSample_Apply_core (appH : Expr) (appA : Array Expr) (l1 : LocalContext) (l2 : LocalInstances)
-  : MetaM ((Option Expr) × (List Expr)) := do
+  : MetaM (Prod5 (List FVarId) (Option (List Expr)) (Option Expr) LocalContext LocalInstances) := do
   let core := do
     let rarg ← appH.withRelevantArgsBack l1 l2 appA [] (fun x xs => return x :: xs)
     let ra ← (appH :: rarg).filterM (fun -- appH could be inlined have
@@ -34,64 +27,50 @@ partial def delabSample_Apply_core (appH : Expr) (appA : Array Expr) (l1 : Local
         | _ => return false
       | x => return !x.isAtomic)
     if ← appH.isPseudoAtomic l1 l2
-    then return .mk (.some (mkAppN appH appA)) ra
-    else return .mk .none ra
+    then return .mk [] ra (.some (mkAppN appH appA)) l1 l2
+    else return .mk [] ra .none l1 l2
   let .const h _ := appH | core
   if h == ``of_decide_eq_true
-  then return .mk .none []
+  then return .mk [] .none .none l1 l2
   else
-    if h.shouldBeDelabedAsSpecialTerm
-    then return .mk .none []
-      -- **IMPORTANT** term delab should be here
-    else core
+    delabSample_Term_core h appH appA l1 l2
 
 @[inline]
 partial def delabDig_Apply_core (appH : Expr) (appA : Array Expr) (l1 : LocalContext) (l2 : LocalInstances)
-  : MetaM (List Expr) := do
+  : MetaM (Option (List Expr)) := do
   let core := do
     let rarg ← appH.withRelevantArgsBack l1 l2 appA [] (fun x xs => return x :: xs)
     return (appH :: rarg).filter (fun x => !x.isAtomic) -- appH could be inlined have
   let .const h _ := appH | core
   if h == ``of_decide_eq_true
-  then return []
+  then return .none
   else
-    if h.shouldBeDelabedAsSpecialTerm
-    then return []
-      -- **IMPORTANT** term delab should be here
-    else core
+    delabDig_Term_core h appH appA l1 l2
 
 @[inline]
-partial def delabSample_Apply_top
+partial def delabSample_Apply_topBack
   (conjable : CTrie (List Nat))
   (appH : Expr) (appA : Array Expr) (l1 : LocalContext) (l2 : LocalInstances)
-  : MetaM SampleData := do
-  match ← appH.pseudoConst l1 l2 with
-  | .some n =>
-    if n.blackListSampleDelta || n == ``of_decide_eq_true
-    then return .none
-    else
-      match conjable.find? n.toString.toUTF8 with
-      | .none =>
-        return .thm n
-      | .some poses =>
-        let cjs := poses.foldl (fun A p => A.push appA[p]!) #[]
-        return .thmC n cjs
-  | _ => return .none
+  : MetaM (Option SampleData) := do
+  let .const h _ := appH | return .none -- awful plumming
+  delabSample_Term_topBack conjable h appH appA l1 l2
+
+
+@[inline]
+partial def delabSample_Apply_topForw
+  (appH : Expr) (appA : Array Expr) (l1 : LocalContext) (l2 : LocalInstances)
+  : MetaM (Option (Name ⊕ OptionProd Name Expr)) := do
+  let .const h _ := appH | return .none -- awful plumming
+  delabSample_Term_topForw h appH appA l1 l2
+
 
 
 @[inline]
 partial def delabSample_Apply_top_withHyps
   (appH : Expr) (appA : Array Expr) (l1 : LocalContext) (l2 : LocalInstances)
   : MetaM (SampleData × List Expr) := do
-  match ← appH.pseudoConst l1 l2 with
-  | .some n =>
-    if n.blackListSampleDelta || n == ``of_decide_eq_true || n.shouldBeDelabedAsSpecialTerm
-    then return (.none, [])
-    else
-      let rarg ← appH.withRelevantArgsBack l1 l2 appA [] (fun x xs => return x :: xs)
-      let arg := rarg.filter (fun x => !x.isAtomic)
-      return (.thm n, arg)
-  | _ => return (.none, [])
+  let .const h _ := appH | return (.none,[]) -- awful plumming
+  delabSample_Term_topForw_withHyps h appH appA l1 l2
 
 
 
@@ -222,8 +201,9 @@ partial def delabSample_AssertDefineRevert_core (appH : Expr) (appA : Array Expr
   then return .mk lifted [h] .none l1 l2
   else
     let appA := appA.drop aIdx
-    let (delZet, rargs) ← delabSample_Apply_core h appA l1 l2
-    return .mk lifted (if h.isAtomic then rargs else h :: rargs) delZet l1 l2
+    let .mk lli rargs delZet l1 l2 ← delabSample_Apply_core h appA l1 l2
+    let rargs := rargs.getD []
+    return .mk (lli ++ lifted) (if h.isAtomic then rargs else h :: rargs) delZet l1 l2
 
 
 /-- assumes appA nonempty-/
@@ -268,13 +248,14 @@ partial def delabDig_AssertDefineRevert_core (appH : Expr) (appA : Array Expr) (
   else
     let appA := appA.drop aIdx
     let rargs ← delabDig_Apply_core h appA l1 l2
+    let rargs := rargs.getD []
     return .mk lifted (if h.isAtomic then rargs else h :: rargs) haveLikeProofs l1 l2
 
 
 
 /-- assumes appA nonempty-/
 @[inline]
-partial def delabSample_AssertDefineRevert_top
+partial def delabSample_AssertDefineRevert_topBack
   (conjable : CTrie (List Nat))
   (appH : Expr) (appA : Array Expr) (l1 : LocalContext) (l2 : LocalInstances)
   : MetaM SampleData := do
@@ -311,7 +292,48 @@ partial def delabSample_AssertDefineRevert_top
               reduceLetLike (letB.instantiateBetaRevRange 0 1 #[letV]) (aIdx+1) l1 l2
     | _ => return .mk h aIdx l1 l2
   let .mk h skip l1 l2 ← reduceLetLike appH 0 l1 l2
-  delabSample_Apply_top conjable h (appA.drop skip) l1 l2
+  let res ← delabSample_Apply_topBack conjable h (appA.drop skip) l1 l2
+  return res.getD .none
+
+
+@[inline]
+partial def delabSample_AssertDefineRevert_topForw
+  (appH : Expr) (appA : Array Expr) (l1 : LocalContext) (l2 : LocalInstances)
+  : MetaM (Option (Name ⊕ OptionProd Name Expr)) := do
+  mtracing
+  mtrace on .zero with s!" cal on appH : {← ppExpr appH}\nappA : {← appA.mapM ppExpr}"
+  let rec reduceLetLike (h : Expr) (aIdx : Nat)
+    (l1 : LocalContext) (l2 : LocalInstances)
+    : MetaM (Prod4 Expr Nat LocalContext LocalInstances) := do
+    match h with
+    | .letE _ _ V B _ => reduceLetLike (B.instantiate1 V) aIdx l1 l2
+    | .lam _ letT letB _ =>
+        if aIdx ≥ appA.size
+        then return .mk h aIdx l1 l2
+        else
+          let letV := appA[aIdx]!
+          if (← IsProp letT l1 l2)
+          then
+            if letB.hasBvarZeroTwice
+            then
+              let desambig ← mkFreshId
+              let .mk nfv l1 l2 ← WithLetDecl (`lamLetLike ++ desambig) letT letV l1 l2
+              let letB := Expr.instantiateBetaRevRange letB 0 1 #[(.fvar nfv)]
+              reduceLetLike letB (aIdx+1) l1 l2
+            else
+              reduceLetLike (letB.instantiateBetaRevRange 0 1 #[letV]) (aIdx+1) l1 l2
+          else
+            match ← IsClass? letT l1 l2 with
+            | .some .. =>
+              let desambig ← mkFreshId
+              let .mk nfv l1 l2 ← WithLetDecl (`lamLetLike ++ desambig) letT letV l1 l2
+              let letB := Expr.instantiateBetaRevRange letB 0 1 #[(.fvar nfv)]
+              reduceLetLike letB (aIdx+1) l1 l2
+            | _ =>
+              reduceLetLike (letB.instantiateBetaRevRange 0 1 #[letV]) (aIdx+1) l1 l2
+    | _ => return .mk h aIdx l1 l2
+  let .mk h skip l1 l2 ← reduceLetLike appH 0 l1 l2
+  delabSample_Apply_topForw h (appA.drop skip) l1 l2
 
 
 @[inline]

@@ -341,7 +341,7 @@ partial def delabTopBack
                                 return .mk havelift resCalc l1 l2
                               | _ =>
                               mtrace on .zero with s!" calling delab for apply & revert"
-                              let r ← delabSample_AssertDefineRevert_top conjable appH appA l1 l2
+                              let r ← delabSample_AssertDefineRevert_topBack conjable appH appA l1 l2
                               return .mk havelift r l1 l2
           | r =>
             mtrace on .zero with s!" success of ind with {repr r}"
@@ -455,8 +455,12 @@ def delabTopForw
                                     return .mk resCalc [] l1 l2
                                   | _ =>
                                     mtrace on .zero with s!" calling delab for apply & revert"
-                                    let r ← delabSample_AssertDefineRevert_top .empty appH appA l1 l2
-                                    return .mk r [] l1 l2
+                                    let r ← delabSample_AssertDefineRevert_topForw appH appA l1 l2
+                                    match r with
+                                    | .none => return .mk .none [] l1 l2
+                                    | .some (.inl n) => return .mk (.thm n) [] l1 l2
+                                    | .some (.inr .none) => return .mk .none [] l1 l2
+                                    | .some (.inr (.some n es)) => return .mk (.thm n) [es] l1 l2
     | .some .none =>
       mtrace on .zero with s!" recognized rw, but not thm-rw"
       return .mk .none [] l1 l2
@@ -465,6 +469,9 @@ def delabTopForw
       return .mk (.thm r) [ini] l1 l2
   | _ =>
     return .mk .none [] l1 l2-- todo
+
+#check 1
+
 
 
 def delabTopForw_withHyps
