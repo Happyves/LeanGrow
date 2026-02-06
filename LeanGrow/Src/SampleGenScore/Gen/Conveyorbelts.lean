@@ -131,7 +131,7 @@ partial def cvb_goal_hyp_sampleClassify
         return .mk (nhi + 1) (nhi :: tshd) iT
         ) (.mk initHypIdx [] PaIn.dead : Prod3 ..)
       return .mk nhi (w+1) (.cons sampleThm tshd dic) (PaIn.merge union emptyCol nhT hs))
-    return .mk (initSamIdx+1) goalPain sorted
+    return .mk initSamIdx goalPain sorted
   else
     mtrace on .zero with s!" not found"
     let .mk ngT _ _ ← goalPain.insert l1 l2 sampleGoal initSamIdx emptyCol singleton insert
@@ -249,7 +249,7 @@ partial def cvb_goal_hyp_genGoal [Repr IdxCollType]
   mtracing
   let .mk _ goalPain sorted := state
   let weights := sorted.map Prod4.snd
-  mtrace on .zero with s!" generalising goalPain {← goalPain.pp l1 l2 [] 0 intersect empty?}"
+  mtrace on .zero with s!" generalising goalPain {← goalPain.pp l1 l2 [] 0 intersect empty?}\nwrt weights {weights.mapIdx Prod.mk}"
   let .mk freqInd T allTypes _ _ ← generalizePaInCore
     fold empty insertMulti intersect union difference empty? l1 l2 genCondition freqCondition sampleName
     goalPain weights allTypes

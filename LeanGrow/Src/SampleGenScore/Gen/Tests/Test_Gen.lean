@@ -113,16 +113,6 @@ tracing_flags [(`test_backSample_cvbThm, TracingFlags.all),
 
 /-
 
-FIX:
-At `cvb_thms_genMain`, maintain sample-types and cleaned-types.
-Generalisation should use sample-types and emit sample-types, as it doesn't
-delete any entries. Lnode garbade collection should take both types,
-and set the new cleaned-types, where the new tree will reference the
-cleaned-types.
-
-Bring fixes to subpats and conjecturable
-
-
 Generalisation:
 - Frequency of type among all types, not just infrequent ones ?
 - Issue with generalisation for rewrite goals (for example): generalised version
@@ -130,6 +120,9 @@ Generalisation:
   Long term:
     - track position of patterns, and prohibit generalising them ?
     - separate pattern and term its in, and generalise each separately ?
+- Do look at distribution ... currently, if only one infrequent, then
+  frequence of type will be 1, and it will be generalised ...
+  or not ...
 
 -/
 tracing_mode .std
@@ -138,4 +131,11 @@ tracing_flags [(``test_backSample_cvbGoalHyp, TracingFlags.all),
                (`cvb_goal_hyp_genHyps, TracingFlags.all),
                ]
 
--- #eval test_GH thmNames
+#eval test_GH thmNames
+
+/-
+TODO:
+- forward LG: Q should be PainG, l Pain X__X
+-
+
+-/

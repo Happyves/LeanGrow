@@ -18,6 +18,7 @@ variable {IdxCollType : Type _}
 
 
 
+
 /-- Will require types to have been loaded ! -/
 @[specialize, inline]
 def generaliseToLnodesCore [Repr IdxCollType]
@@ -39,7 +40,7 @@ def generaliseToLnodesCore [Repr IdxCollType]
       return .mk (.cons e T is W Res.1) (W + Res.2) (Res.3.push W)
       )
     let preprocessed := Res.1
-    mtrace on .zero with (← preprocessed.foldlM s!"[generaliseToLnodesCore] preprocessed \n" (fun e T is W msg => return s!" e {← ppExpr e}\n T {← ppExpr T}\n is {repr is}\n w {W}\n" ++ msg))
+    mtrace on .zero with (← preprocessed.foldlM s!"[generaliseToLnodesCore] preprocessed \n" (fun e T is W msg => return msg ++ s!" e {← ppExpr e}\n T {← ppExpr T}\n is {repr is}\n w {W}\n"))
     let totalWeigth := Res.2
     let distrib := Res.3
     mtrace on .zero with s!"[generaliseToLnodesCore] totalWeigth {totalWeigth}"
@@ -73,6 +74,7 @@ def generaliseToLnodesCore [Repr IdxCollType]
           else
             mtrace on .zero with s!"[generaliseToLnodesCore] abstracted loose bvars (workers) to {← ppExpr T}"
             T.abstractLetFvarAll l1 l2 ws)
+        mtrace on .zero with s!"[generaliseToLnodesCore] abstracted workers {ws.map FVarId.name} to get:\n {← ppExpr T}"
         let mut i := 0
         let mut found? := false
         for τ in P2 do
@@ -450,7 +452,7 @@ partial def getLiveLnodes (T : PaIn IdxCollType) : UInt32Array × UInt32Array :=
               let R := d.foldl R (fun _ lvs R =>
                 lvs.foldl (fun R lv =>
                   lv.onAllSubtermsFold R (fun
-                    | .mvar ⟨.num (.num _ i) _⟩, L => L.oInsert i.toUInt32
+                    | .mvar ⟨(.num _ i)⟩, L => L.oInsert i.toUInt32
                     | _, L => L)) R)
               R
             ))
@@ -473,7 +475,7 @@ partial def lnodeGarbageCollection
     | i :: is =>
         let T := allTypes[i]!
         let deps := T.onAllSubtermsFold is (fun
-          | .mvar ⟨.num (.num _ i) _⟩, L =>
+          | .mvar ⟨(.num _ i)⟩, L =>
             if done.oContains i.toUInt32
             then L
             else L.insert i
@@ -486,12 +488,12 @@ partial def lnodeGarbageCollection
       let I := I.toNat
       let T := allTypes[I]!
       let T := T.onAllSubtermsTR (fun
-        | .mvar ⟨.num (.num k j) s⟩ =>
+        | .mvar ⟨(.num k j)⟩ =>
           match rb.find? j with
           | .none => panic s!"[lnodeGarbageCollection] untranslatable {j}"
           -- crutially relies on the fact that `Lean.Expr.translateToLnodes` and
           -- `getLiveLnodes` preserve dependence in increasing order
-          | .some J => .mvar ⟨.num (.num k J) s⟩
+          | .some J => .mvar ⟨(.num k J)⟩
         | x => x)
       match cleanTypes.findIdx? (fun x => x == T) with
       | .some j =>

@@ -81,8 +81,28 @@ def generaliseToLnodesCoreMulti [Repr IdxCollType]
         ) <| fun | .mk P1 P2 P3 l1 l2 => return .mk P3 P1 P2 l1 l2
 
 
+#check 1
 
-partial def lnodeGarbageCollection
+
+@[inline, specialize]
+partial def Array.findIdxIdx? {α : Type _} (A : Array α) (p : Nat → α → Bool) : Option Nat :=
+  let rec @[specialize] go (i : Nat) :=
+    if h : i < A.size
+    then
+      if p i A[i]
+      then .some i
+      else go (i+1)
+    else
+      .none
+  go 0
+
+
+#check 1
+
+
+
+
+partial def lnodeGarbageCollectionMulti
   (T : PaIn IdxCollType) (allTypes cleanTypes: Array Expr)
   : ((PaIn IdxCollType) × Array Expr × Nat) :=
   trace set TracingFlags.all in
@@ -93,7 +113,7 @@ partial def lnodeGarbageCollection
     | i :: is =>
         let T := allTypes[i]!
         let deps := T.onAllSubtermsFold is (fun
-          | .mvar ⟨.num (.num _ i) _⟩, L =>
+          | .mvar ⟨(.num _ i)⟩, L =>
             if done.oContains i.toUInt32
             then L
             else L.insert i
@@ -101,24 +121,24 @@ partial def lnodeGarbageCollection
         extend (done.oInsert i.toUInt32) deps
   let extended := extend (.emptyWithCapacity liveE.size) (liveE.foldl [] (fun i l => i.toNat :: l))
   trace on .zero with s!"[lnodeGarbageCollection] extended {extended}" in
-  let (cleanTypes,transE) : Array Expr × RBMap Nat Nat instOrdNat.compare :=
-    extended.foldl (cleanTypes,{}) (fun I (cleanTypes,rb) =>
+  let .mk cleanTypes transE _ : Prod3 (Array Expr) (RBMap Nat Nat instOrdNat.compare) (List Nat) :=
+    extended.foldl (.mk cleanTypes {} []) (fun I (.mk cleanTypes rb seen) =>
       let I := I.toNat
       let T := allTypes[I]!
       let T := T.onAllSubtermsTR (fun
-        | .mvar ⟨.num (.num k j) s⟩ =>
+        | .mvar ⟨(.num k j)⟩ =>
           match rb.find? j with
           | .none => panic s!"[lnodeGarbageCollection] untranslatable {j}"
           -- crutially relies on the fact that `Lean.Expr.translateToLnodes` and
           -- `getLiveLnodes` preserve dependence in increasing order
-          | .some J => .mvar ⟨.num (.num k J) s⟩
+          | .some J => .mvar ⟨(.num k J)⟩
         | x => x)
-      match cleanTypes.findIdx? (fun x => x == T) with
+      match cleanTypes.findIdxIdx? (fun i x => !(seen.orderedContains i) && x == T) with
       | .some j =>
-        (cleanTypes, rb.insert I j)
+        .mk cleanTypes (rb.insert I j) (seen.orderedEraseOrLeave j)
       | .none =>
         let s := cleanTypes.size
-        (cleanTypes.push T, rb.insert I s)
+        .mk (cleanTypes.push T) (rb.insert I s) seen
         )
   -- let (sizeL,transL) : UInt32 × RBMap UInt32 UInt32 UInt32.instOrd.compare :=
   --   liveL.foldl (0,{}) (fun I (i,rb) => (i+1, rb.insert I i))
@@ -184,7 +204,7 @@ partial def lnodeGarbageCollection
 
 
 
-#exit
+
 
 @[specialize, inline]
 partial def generalizePaInCoreMulti [Repr IdxCollType]
@@ -301,7 +321,7 @@ def generalizePaInMainMulti [Repr IdxCollType]
     mtrace on .zero with s!"[generalizePaInMain] found freqInd {repr freqInd}, deduplicating"
     let .mk T weights trans ← T.dedup insert union empty size contains fold weights freqInd
     mtrace on .zero with s!"[generalizePaInMain] running lnode garbadge collection"
-    let (T,types,lvlNum) := lnodeGarbageCollection T types #[]
+    let (T,types,lvlNum) := lnodeGarbageCollectionMulti T types #[]
     return .mk T types lvlNum weights trans l1 l2
 
 #check PaIn.dedup

@@ -121,6 +121,7 @@ def test_backSample_cvbGoalHyp
           return B
       )
   mtrace on .zero with s!" done classifying"
+  mtrace on .one with s!" types {← types.mapIdxM (fun i x => return (i, ← ppExpr x))}"
   let .mk _ cleanedTypes res ← cvb_goal_hyp_genMain
     fold empty shiftAdd insert insertMulti intersect union difference
     empty? size contains l1 l2 genCondition freqCondition sampleName
