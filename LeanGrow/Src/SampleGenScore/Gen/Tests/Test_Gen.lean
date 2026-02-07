@@ -102,40 +102,20 @@ def thmNames := #[`material_1, `material_2_1, `material_2_2, `material_3, `mater
 --samples
 -- #eval test_samples thmNames
 
-tracing_mode .std
-tracing_flags [(`test_backSample_cvbThm, TracingFlags.all),
-               (`cvb_thms_genGoal, TracingFlags.all),
-               (`cvb_thms_genHyps, TracingFlags.all),
-               ]
+-- tracing_mode .std
+-- tracing_flags [(`test_backSample_cvbThm, TracingFlags.all),
+--                (`cvb_thms_genGoal, TracingFlags.all),
+--                (`cvb_thms_genHyps, TracingFlags.all),
+--                ]
 
 
 -- #eval test_T thmNames
 
-/-
 
-Generalisation:
-- Frequency of type among all types, not just infrequent ones ?
-- Issue with generalisation for rewrite goals (for example): generalised version
-  may not contain patern anymore, so rw wouldn't apply ...
-  Long term:
-    - track position of patterns, and prohibit generalising them ?
-    - separate pattern and term its in, and generalise each separately ?
-- Do look at distribution ... currently, if only one infrequent, then
-  frequence of type will be 1, and it will be generalised ...
-  or not ...
-
--/
-tracing_mode .std
-tracing_flags [(``test_backSample_cvbGoalHyp, TracingFlags.all),
-               (`cvb_goal_hyp_genGoal, TracingFlags.all),
-               (`cvb_goal_hyp_genHyps, TracingFlags.all),
-               ]
+-- tracing_mode .std
+-- tracing_flags [(``test_backSample_cvbGoalHyp, TracingFlags.all),
+--                (`cvb_goal_hyp_genGoal, TracingFlags.all),
+--                (`cvb_goal_hyp_genHyps, TracingFlags.all),
+--                ]
 
 -- #eval test_GH thmNames
-
-/-
-TODO:
-- forward LG: Q should be PainG, l Pain X__X
--
-
--/

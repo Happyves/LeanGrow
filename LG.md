@@ -99,13 +99,6 @@ LG:
   - Make version that doesn't make rewrites of binding types.
   - refer to revert tests : we should add deps for reverts at rw/induction
 - Embed and RW processing
-- Induction:
-  - Try to speed up ?
-  - detect ite and dite and allow for case disjunction on their condition
-  - prohibit reco on eq ?
-  - Elab-elim inductions should detect constroturs of recursed type (ex: Fin.mk) ?
-  - refer to revert tests : we should add deps for reverts at rw/induction
-  - caching ... (don't forget realizeGlobalConsts)
 
 
 Djv Core:
@@ -118,6 +111,50 @@ Djv Parse:
 
 
 # W6 (2-8) Search  ; Conveyorbelt & Query ; Delab Congr
+
+LG:
+
+Djv Core:
+- migrate repo, fix and consider local-instance-patching in generalise too ?
+- caching for generalise
+- Generalize proofs by defaut, but not in the top branch
+- somehow disallow mvar-apps as result of generalised patterns,
+  since it's bad for uni ... Should be ok when queried as
+  proper sub-pattern though ...
+
+
+Djv Parse:
+- Brec Induction, WF induction and termination by, split & split ifs ?
+
+
+
+# W7 (9-15) Search & Heuristic & CallLLM ; Conveyorbelt & Query ; Delab Misc
+
+Djv Parse:
+- Dbg
+
+Djv Core:
+- query
+- caching
+- For score add different generalisations (corresponding to different ratios, for example) from same sample
+to scoring-structures, possibly with different scores
+- dbg
+
+
+LG:
+- Induction:
+  - caching ... (don't forget realizeGlobalConsts)
+- Emb forw and introtrees
+- Start search ?
+
+
+
+# W8 (16-22) Debug
+
+Hang in there!
+
+Djv Core:
+- DéjàVue Codes
 
 LG:
 - Eq.efl and Iff.refl being patlogical, add them to tactic support or add them as defaults to caches, but in apply format
@@ -186,39 +223,9 @@ LG:
 - Make alternative version where we don't query applicable theorems, but use goal-hyp scores to
   get theorems, then get their indices, and query applicability only among these indices 
 - processForQuery always uses gnodes for name : is this ok ?
-
-Djv Core:
-- migrate repo, fix and consider local-instance-patching in generalise too ?
-- caching for generalise
-- Generalize proofs by defaut, but not in the top branch
-- somehow disallow mvar-apps as result of generalised patterns,
-  since it's bad for uni ... Should be ok when queried as
-  proper sub-pattern though ...
-- For score add different generalisations (corresponding to different ratios, for example) from same sample
-to scoring-structures, possibly with different scores
-
-
-Djv Parse:
-- Brec Induction, WF induction and termination by, split & split ifs ?
-
-
-
-# W7 (9-15) Search & Heuristic & CallLLM ; Conveyorbelt & Query ; Delab Misc
-
-LG:
 - Add support and special score for declarations from the same file as the query
   Probably best to do ad hoc by looking up moduleIdx at query ?
 
 
-Djv Core:
-- DéjàVue Codes
 
-Djv Parse:
-- Term style proofs: transform Eq.rec Eq.ndrec and congrarg etc...
-- At apply and term style proofs: thms like Eq.trans should be treated like by_cases
-- Prohibiters for linarith, ring, grind, etc.
-
-# W8 (16-22) Debug
-
-Hang in there!
 

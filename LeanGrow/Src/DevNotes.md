@@ -35,3 +35,15 @@
 
 - at scoring for sampled types that are types, record value so that at scoring
   we use these for unodes ...
+
+
+Generalisation:
+- Frequency of type among all types, not just infrequent ones ?
+- Issue with generalisation for rewrite goals (for example): generalised version
+  may not contain patern anymore, so rw wouldn't apply ...
+  Long term:
+    - track position of patterns, and prohibit generalising them ?
+    - separate pattern and term its in, and generalise each separately ?
+- Do look at distribution ... currently, if only one infrequent, then
+  frequence of type will be 1, and it will be generalised ...
+  or not ...

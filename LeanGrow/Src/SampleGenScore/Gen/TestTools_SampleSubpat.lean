@@ -10,6 +10,8 @@ import LeanGrow.Src.SampleGenScore.Sample
 
 open Lean Meta
 
+
+
 @[specialize]
 def test_subSample_cvbThm
   (thmNames : Array Name)
@@ -21,7 +23,9 @@ def test_subSample_cvbThm
   (size : IdxCollType → Nat) (contains : Nat → IdxCollType → Bool)
   (genCondition : (occWeight : Nat) → (branchWeight : Nat) → (branchDistrib : Array Nat) → (commonType : Expr) → (branchDepth : Nat) → Bool)
   (freqCondition : (occWeight : Nat) → (branchWeight : Nat) → (branchDistrib : Array Nat) → (branchDepth : Nat) → Bool)
+  (onlyInd : Bool)
   : MetaM Unit := do
+  mtracing
   let sampleName := `testSam
   let env ← getEnv
   let preS ← mkPreProCongr
@@ -35,6 +39,8 @@ def test_subSample_cvbThm
     samples := res
     L1 := l1
     L2 := l2
+  samples := (if onlyInd then samples.foldl .nil (fun w x y z L => match w with | .induc .. => ListProd4.cons w x y z L | _ => L) else samples)
+  mtrace on .zero with s!" done sampling"
   let sorted : CTrie (Nat × PaIn IdxCollType) := .empty
   let .mk sorted types l1 l2 ← samples.foldlM (Prod4.mk sorted (#[] : Array Expr) L1 L2)
     (fun sd _ goal _ B@(.mk sorted types l1 l2) => do
@@ -46,10 +52,12 @@ def test_subSample_cvbThm
       | _ =>
           return B
       )
+  mtrace on .zero with s!" done classifying"
   let .mk (_,types) res ← cvb_thms_genMain_subPat
     fold empty insert insertMulti intersect union difference
     empty? size contains l1 l2 genCondition freqCondition sampleName
     types #[] sorted
+  mtrace on .zero with s!" done generalising"
   withLCtx l1 l2 <| do
     let mut i := 0
     IO.println "Types:"
@@ -75,7 +83,9 @@ def test_subSample_cvbGoalHyp
   (size : IdxCollType → Nat) (contains : Nat → IdxCollType → Bool)
   (genCondition : (occWeight : Nat) → (branchWeight : Nat) → (branchDistrib : Array Nat) → (commonType : Expr) → (branchDepth : Nat) → Bool)
   (freqCondition : (occWeight : Nat) → (branchWeight : Nat) → (branchDistrib : Array Nat) → (branchDepth : Nat) → Bool)
+  (onlyInd : Bool)
   : MetaM Unit := do
+  mtracing
   let sampleName := `testSam
   let env ← getEnv
   let preS ← mkPreProCongr
@@ -89,6 +99,8 @@ def test_subSample_cvbGoalHyp
     samples := res
     L1 := l1
     L2 := l2
+  samples := (if onlyInd then samples.foldl .nil (fun w x y z L => match w with | .induc .. => ListProd4.cons w x y z L | _ => L) else samples)
+  mtrace on .zero with s!" done sampling"
   let state : Prod3 Nat (PaIn IdxCollType) (Array ByteArray) := .mk 0 .dead #[]
   let .mk sorted types l1 l2 ← samples.foldlM (Prod4.mk state (#[] : ) L1 L2)
     (fun sd _ goal _ B@(.mk state types l1 l2) => do
@@ -101,10 +113,12 @@ def test_subSample_cvbGoalHyp
       | _ =>
           return B
       )
+  mtrace on .zero with s!" done classifying"
   let .mk sT W _ _ types ← cvb_goal_hyp_genMain_subPat
     fold empty insert insertMulti intersect union difference
     empty? size contains l1 l2 genCondition freqCondition sampleName
     types #[] sorted
+  mtrace on .zero with s!" done generalising"
   withLCtx l1 l2 <| do
     let mut i := 0
     IO.println "Types:"
@@ -126,6 +140,7 @@ def test_subSample_cvbThm_S
   (depthDig depthStart depthStop : Nat) (deltaFuzz zetaFuzz : Option Nat)
   (genCondition : (occWeight : Nat) → (branchWeight : Nat) → (branchDistrib : Array Nat) → (commonType : Expr) → (branchDepth : Nat) → Bool)
   (freqCondition : (occWeight : Nat) → (branchWeight : Nat) → (branchDistrib : Array Nat) → (branchDepth : Nat) → Bool)
+  (onlyInd : Bool)
   : MetaM Unit :=
   @test_subSample_cvbThm
     thmNames depthDig depthStart depthStop deltaFuzz zetaFuzz
@@ -133,7 +148,7 @@ def test_subSample_cvbThm_S
     (fun n => UInt32Array.single n.toUInt32) (fun x y => y.oInsert x.toUInt32)
     UInt32Array.union UInt32Array.inter UInt32Array.union UInt32Array.diff UInt32Array.isEmpty
     UInt32Array.size (fun x y => y.oContains x.toUInt32)
-    genCondition freqCondition
+    genCondition freqCondition onlyInd
 
 
 #check 1
@@ -143,6 +158,7 @@ def test_subSample_cvbGoalHyp_S
   (depthDig depthStart depthStop : Nat) (deltaFuzz zetaFuzz : Option Nat)
   (genCondition : (occWeight : Nat) → (branchWeight : Nat) → (branchDistrib : Array Nat) → (commonType : Expr) → (branchDepth : Nat) → Bool)
   (freqCondition : (occWeight : Nat) → (branchWeight : Nat) → (branchDistrib : Array Nat) → (branchDepth : Nat) → Bool)
+  (onlyInd : Bool)
   : MetaM Unit :=
   @test_subSample_cvbGoalHyp
     thmNames depthDig depthStart depthStop deltaFuzz zetaFuzz
@@ -150,6 +166,6 @@ def test_subSample_cvbGoalHyp_S
     (fun n => UInt32Array.single n.toUInt32) (fun x y => y.oInsert x.toUInt32)
     UInt32Array.union UInt32Array.inter UInt32Array.union UInt32Array.diff UInt32Array.isEmpty
     UInt32Array.size (fun x y => y.oContains x.toUInt32)
-    genCondition freqCondition
+    genCondition freqCondition onlyInd
 
 #check 1

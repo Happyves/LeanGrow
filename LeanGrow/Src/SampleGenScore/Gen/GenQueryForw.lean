@@ -257,3 +257,98 @@ partial def genQueryForwNoLoadMain [Repr IndexColType]
       subsetOf
       () Q scores
     return .mk res.1 res.2 res.3
+
+#check 1
+
+/-- Q is ltx, l is hyps with lnodes-/
+@[specialize, inline]
+partial def genQueryForwInterLGCore [Repr IndexColType]
+  (intersect difference : IndexColType → IndexColType → IndexColType) (empty? : IndexColType → Bool)
+  (l1 : LocalContext) (l2 : LocalInstances) (Q : PaInG IndexColType) (l : PaIn IndexColType)
+  : MetaM <| ListProd IndexColType IndexColType :=
+    do
+    mtracing
+    let rec @[specialize] go (Q : PaInG IndexColType) (l : PaIn IndexColType)
+      : MetaM <| ListProd IndexColType IndexColType :=
+      do -- trace set Tracing.Flags.none in do
+      match Q, l with
+      | _, .dead =>
+          mtrace on .zero with s!"[genQueryForwInterCore] l is dead"
+          return .nil
+      | .dead, _=>
+          mtrace on .zero with s!"[genQueryForwInterCore] Q is dead"
+          return .nil
+      | .br _ _ _ _ bvars sorts consts lits apf apa api laf laa lai alf ala ali lef lea lez lei projs proofsOf proofs,
+        .br _ mvars' bvars' sorts' consts' lits' apf' apa' api' laf' laa' lai' alf' ala' ali' lef' lea' lez' lei' projs' proofsOf' proofs' =>
+          do
+          let IL : ListProd IndexColType IndexColType := ← do
+            match mvars' with
+            | .leaf =>
+              return .nil
+            | _ =>
+              let QB ← Q.buildNoLoBvCore l1 l2 0 id intersect empty?
+              let R ← mvars'.foldM (ListProd.nil : ListProd IndexColType IndexColType) (fun nb inds R => do
+                let mv := Expr.mvar ⟨(String.fromUTF8! nb).toName⟩
+                let R ← QB.foldlM R (fun e qinds R => do
+                  mtrace on .zero with s!"[genQueryForwInterCore] defeq e {← ppExpr e} vs lnode {repr mv} of type {← ppExpr <| ← inferType mv}"
+                  let welab ← defEqWiMv mv e l1 l2
+                  match welab with
+                  | .none =>
+                      mtrace on .zero with s!"[genQueryForwInterCore] negative defeq"
+                      return R
+                  | .some .. =>
+                      mtrace on .zero with s!"[genQueryForwInterCore] positive defeq"
+                      return ListProd.cons qinds inds R
+                  )
+                return R
+              )
+              return R
+          mtrace on .zero with s!"[genQueryForwInterCore] IL : {repr IL}"
+          let IB := merge2 (· == ·) IL bvars bvars'
+          mtrace on .zero with s!"[genQueryForwInterCore] IB : {repr IB}"
+          let IS ← merge3 IB sorts sorts' (fun u u' => do
+            match ← defEqWiMv (.sort u) (.sort u') l1 l2 with
+            | .none => return false
+            | .some ..=> return true
+            )
+          mtrace on .zero with s!"[genQueryForwInterCore] IS : {repr IS}"
+          let IC : ListProd IndexColType IndexColType := ← do
+            (CTrie.intersect_val_pairs' consts consts').foldlM IS (fun cs cs' R => do
+              merge3 R cs cs' (fun lv lv' => do
+                -- ugly but can't be bothered to get clean version
+                for u in lv, u' in lv' do
+                  match ← defEqWiMv (.sort u) (.sort u') l1 l2 with
+                  | .none => return false
+                  | .some .. => continue
+                return true
+                ))
+          mtrace on .zero with s!"[genQueryForwInterCore] IC : {repr IC}"
+          let II := merge2 (· == ·) IC lits lits'
+          mtrace on .zero with s!"[genQueryForwInterCore] II : {repr II}"
+          let Iap := ← merge1 intersect empty? II (← go apf apf') (← go apa apa')
+          mtrace on .zero with s!"[genQueryForwInterCore] Iap : {repr Iap}"
+          let Ila := ← merge1 intersect empty? Iap (← go laf laf') (← go laa laa')
+          mtrace on .zero with s!"[genQueryForwInterCore] Ila : {repr Ila}"
+          let Ial := ← merge1 intersect empty? Ila (← go alf alf') (← go ala ala')
+          mtrace on .zero with s!"[genQueryForwInterCore] Ial : {repr Ial}"
+          let Ile := ← merge1 intersect empty? Ial (← merge1 intersect empty? .nil (← go lef lef') (← go lea lea')) (← go lez lez')
+          mtrace on .zero with s!"[genQueryForwInterCore] Ile : {repr Ile}"
+          let IP : ListProd IndexColType IndexColType := ← do
+            (CTrie.intersect_val_pairs' projs projs').foldlM Ile (fun cs cs' R => do
+              cs.foldlM R (fun _ (i,p1) R => do
+                cs'.foldlM R (fun _ (j,p2) R => do
+                  if i == j
+                  then
+                    let res ← go p1 p2
+                    return res.foldl R (fun x y w => .cons x y w)
+                  else
+                    return R
+                  )))
+          mtrace on .zero with s!"[genQueryForwInterCore] IP : {repr IP}"
+          -- ↓ is so that we assign lnodes inside proofs, in a way that matching IndexColTypes don't get duplicated
+          let final ← merge4 intersect difference empty? IP (← go proofsOf proofsOf') (← go proofs proofs')
+          mtrace on .zero with s!"[genQueryForwInterCore] final : {repr final}"
+          return final
+    go Q l
+
+#check 1

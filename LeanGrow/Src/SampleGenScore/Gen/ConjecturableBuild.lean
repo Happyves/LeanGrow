@@ -214,8 +214,8 @@ partial def cvb_thmConj_genConj [Repr IdxCollType]
   (genCondition : (occWeight : Nat) → (branchWeight : Nat) → (branchDistrib : Array Nat) → (commonType : Expr) → (branchDepth : Nat) → Bool)
   (freqCondition : (occWeight : Nat) → (branchWeight : Nat) → (branchDistrib : Array Nat) → (branchDepth : Nat) → Bool)
   (samIdx : Nat) (conjPain : PaIn IdxCollType)
-  (sampleName : Name) (allTypes cleanTypes : Array Expr)
-  : MetaM (Prod3 (ListProd ThmFormat Nat) (Array Expr) (Array Expr)) := do
+  (sampleName : Name) (allTypes : Array Expr)
+  : MetaM (Prod (ListProd ThmFormat Nat) (Array Expr)) := do
     mtracing
     let weights := Array.replicate samIdx (1 : Nat)
     mtrace on .zero with s!" generalising"
@@ -225,13 +225,11 @@ partial def cvb_thmConj_genConj [Repr IdxCollType]
     mtrace on .one with s!" generalised PaIn {← T.pp l1 l2 [] 0 intersect empty?}"
     mtrace on .zero with s!" found freqInd {repr freqInd}, deduplicating"
     let .mk T weights _ ← T.dedup insert union empty size contains fold weights freqInd
-    mtrace on .zero with s!" running lnode garbadge collection"
-    let (T,cleanTypes,_) := lnodeGarbageCollectionMulti T allTypes cleanTypes
     let build ← T.buildAllTop l1 l2 intersect empty?
     let (res,_) ← build.foldlM ((ListProd.nil : ListProd ThmFormat Nat),0) (fun e is (R,i) => do
       let w := getCPIweights fold weights is
       let r ← e.bindLnodes_makeLevelPara l1 l2
-      let .mk _ f _ _ ← processForMainSpe l1 l2 (.num sampleName i) i (.inl <| (.num sampleName i)) #[] 0 r.1 .both
+      let .mk _ f _ _ ← processForMainSpe l1 l2 sampleName i (.inl <| (.num sampleName i)) #[] 0 r.1 .both
       -- ↑↓ make this more tailored
       let f :=
         match f with
@@ -239,7 +237,7 @@ partial def cvb_thmConj_genConj [Repr IdxCollType]
         | _ => panic! "[cvb_thmConj_genConj] failed process ??"
       return (ListProd.cons f w R,i+1)
       )
-    return .mk res allTypes cleanTypes
+    return .mk res allTypes
 
 #check 1
 
@@ -253,26 +251,26 @@ partial def cvb_thmConj_genMain [Repr IdxCollType]
   (l1 : LocalContext) (l2 : LocalInstances)
   (genCondition : (occWeight : Nat) → (branchWeight : Nat) → (branchDistrib : Array Nat) → (commonType : Expr) → (branchDepth : Nat) → Bool)
   (freqCondition : (occWeight : Nat) → (branchWeight : Nat) → (branchDistrib : Array Nat) → (branchDepth : Nat) → Bool)
-  (sampleName : Name) (allTypes cleanTypesGH cleanTypesC : Array Expr)
+  (sampleName : Name) (allTypes cleanTypes : Array Expr)
   (sorted : (CTrie (Prod6 Nat Nat (ListProd Nat (List Nat)) (PaIn IdxCollType) (PaIn IdxCollType) (Array (Nat × PaIn IdxCollType)))))
-  : MetaM ((Prod3 (Array Expr) (Array Expr) (Array Expr)) × (CTrie (Prod3 (thmGenDataEntry IdxCollType) Nat (Array (ListProd ThmFormat Nat))))) := do
-    sorted.foldMapM (.mk allTypes cleanTypesGH cleanTypesC ) (fun entry (.mk allTypes cleanTypesGH cleanTypesC ) => do
-      let .mk gT gW gw _ allTypes cleanTypesGH ← cvb_thms_genGoal
+  : MetaM ((Prod (Array Expr) (Array Expr)) × (CTrie (Prod3 (thmGenDataEntry IdxCollType) Nat (Array (ListProd ThmFormat Nat))))) := do
+    sorted.foldMapM (.mk allTypes cleanTypes) (fun entry (.mk allTypes cleanTypes) => do
+      let .mk gT gW gw _ allTypes cleanTypes ← cvb_thms_genGoal
         fold empty insert insertMulti intersect union difference
         empty? size contains l1 l2 genCondition freqCondition
-        entry.1 entry.4 sampleName allTypes cleanTypesGH
-      let .mk hT hw _ allTypes cleanTypesGH ← cvb_thms_genHyps
+        entry.1 entry.4 sampleName allTypes cleanTypes
+      let .mk hT hw _ allTypes cleanTypes ← cvb_thms_genHyps
         fold empty insert insertMulti intersect union difference
         empty? size contains l1 l2 genCondition freqCondition
-        entry.2 entry.5 entry.3 sampleName allTypes cleanTypesGH
-      let .mk allTypes cleanTypesC total conjs ← entry.6.foldlM (fun (.mk allTypes cleanTypesC total A) (samIdx,T) => do
-        let .mk res allTypes cleanTypesC ← cvb_thmConj_genConj
+        entry.2 entry.5 entry.3 sampleName allTypes cleanTypes
+      let .mk allTypes total conjs ← entry.6.foldlM (fun (.mk allTypes total A) (samIdx,T) => do
+        let .mk res allTypes ← cvb_thmConj_genConj
           fold empty insert insertMulti intersect union difference
           empty? size contains l1 l2 genCondition freqCondition
-          samIdx T sampleName allTypes cleanTypesC
-        return (Prod4.mk allTypes cleanTypesC total (A.push res) )
-        ) (Prod4.mk allTypes cleanTypesC 0 (Array.emptyWithCapacity entry.6.size))
-      return ((.mk allTypes cleanTypesGH cleanTypesC), .some (.mk (.mk gT gW gw hT hw) total conjs))
+          samIdx T sampleName allTypes
+        return (Prod3.mk allTypes total (A.push res) )
+        ) (Prod3.mk allTypes 0 (Array.emptyWithCapacity entry.6.size))
+      return ((.mk allTypes cleanTypes), .some (.mk (.mk gT gW gw hT hw) total conjs))
       )
 
 #check 1

@@ -350,7 +350,7 @@ def intersect (merge : α → α → α) (l r : CTrie α) : CTrie α :=
 
 @[specialize]
 partial def foldOnCommon
-  (init : β) (f : α → α → β → β) (todo : ListProd4 (CTrie α) (CTrie α) Nat Nat) : β :=
+  (init : β) (f : α → γ → β → β) (todo : ListProd4 (CTrie α) (CTrie γ) Nat Nat) : β :=
   match todo with
   | .nil => init
   | .cons l r ol or nx =>
@@ -476,7 +476,7 @@ partial def foldOnCommon
               if or == 0 then foldOnCommon (f v w init) f nx else foldOnCommon init f nx
   | .lnode ax cx, .lnode ay cy | .fnode _ ax cx, .lnode ay cy | .lnode ax cx, .fnode _ ay cy =>
       let hits := (ByteArray.matchMulti ax ay)
-      let gone : ListProd4 (CTrie α) (CTrie α) Nat Nat := hits.foldl
+      let gone : ListProd4 (CTrie α) (CTrie γ) Nat Nat := hits.foldl
         (fun L ⟨ai,bi,com⟩ =>
           let A := ax[ai]!
           let B := ay[bi]!
@@ -497,7 +497,7 @@ partial def foldOnCommon
       foldOnCommon init f gone
   | .fnode v ax cx, .fnode w ay cy =>
       let hits := (ByteArray.matchMulti ax ay)
-      let gone : ListProd4 (CTrie α) (CTrie α) Nat Nat := hits.foldl
+      let gone : ListProd4 (CTrie α) (CTrie γ) Nat Nat := hits.foldl
         (fun L ⟨ai,bi,com⟩ =>
           let A := ax[ai]!
           let B := ay[bi]!
@@ -520,7 +520,6 @@ partial def foldOnCommon
 
 
 
--- #exit
 
 @[inline]
 def CountCommon  (l r : CTrie α) : Nat :=
@@ -531,16 +530,15 @@ def intersect_val  (l r : CTrie α) : List α :=
   foldOnCommon [] (fun v _ L => v :: L) (.cons l r 0 0 .nil)
 
 @[inline]
-def intersect_val_pairs  (l r : CTrie α) : List (α × α) :=
+def intersect_val_pairs  (l : CTrie α) (r : CTrie β) : List (α × β) :=
   foldOnCommon [] (fun v w L => (v,w) :: L) (.cons l r 0 0 .nil)
 
 
 
 @[inline]
-def intersect_val_pairs' (l r : CTrie α) : ListProd α α :=
+def intersect_val_pairs' (l : CTrie α) (r : CTrie β) : ListProd α β :=
   foldOnCommon .nil (fun v w L => .cons v w L) (.cons l r 0 0 .nil)
 
--- #exit
 
 @[inline]
 def merge_count_initialise (t : CTrie α) : CTrie Nat :=

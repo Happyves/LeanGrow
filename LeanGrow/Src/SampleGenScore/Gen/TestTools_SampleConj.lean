@@ -35,6 +35,7 @@ def test_conjSample_cvbThm
     samples := res
     L1 := l1
     L2 := l2
+  samples := samples.foldl .nil (fun w x y z L => match w with | .thmC .. => ListProd4.cons w x y z L | _ => L)
   let state : Prod3 Nat (Array Expr) (CTrie (Prod6 Nat Nat (ListProd Nat (List Nat)) (PaIn IdxCollType) (PaIn IdxCollType) (Array (Nat × PaIn IdxCollType))))
     := .mk 0 #[] .empty
   let .mk _ types res ← samples.foldlM state
@@ -49,11 +50,11 @@ def test_conjSample_cvbThm
   let .mk types res ← cvb_thmConj_genMain
     fold empty insert insertMulti intersect union difference
     empty? size contains L1 L2 genCondition freqCondition sampleName
-    types res
+    types #[] res
   withLCtx L1 L2 <| do
     let mut i := 0
-    IO.println "Types:"
-    for T in types do
+    IO.println "Pattern Types:"
+    for T in types.2 do
       IO.println s!"{i} : {← ppExpr T}"
       i := i+1
     res.foldM () (fun n (.mk v _ pats) _ => do

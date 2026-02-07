@@ -108,6 +108,7 @@ partial def cvb_goal_hyp_sampleClassify_subPat
   (state : Prod3 Nat (PaIn IdxCollType) (Array ByteArray))
   : MetaM (Prod4 (Array Expr) Nat (PaIn IdxCollType) (Array ByteArray)) := do
     let .mk gsubP l1 l2 ← sampleGoal.getSubPat l1 l2 []
+    let gsubPN := gsubP.length
     let .mk gsubP (types,_) l1 l2 ← gsubP.foldlM (fun (.mk l (types,dict) l1 l2) e => do
       let .mk r (types,dict) l1 l2 ← e.translateToLnodes l1 l2 sampleName types dict
       return .mk (r :: l) (types,dict) l1 l2
@@ -118,7 +119,7 @@ partial def cvb_goal_hyp_sampleClassify_subPat
       let .mk iT _ _ ← nT.insert l1 l2 e nhi emptyCol singleton insert
       return .mk (nhi + 1)  iT
       ) (.mk initSamIdx goalPain : Prod ..)
-    let sorted := sorted.push sampleThm
+    let sorted := sorted.pushN sampleThm gsubPN
     return .mk types ngi ngT sorted
 
 #check 1
@@ -172,6 +173,7 @@ partial def cvb_goal_hyp_genMain_subPat [Repr IdxCollType]
   let .mk T weights trans ← T.dedup insert union empty size contains fold weights freqInd
   mtrace on .zero with s!" running lnode garbadge collection"
   let (T,cleanTypes,_) := lnodeGarbageCollection T allTypes cleanTypes
+  mtrace on .zero with s!" done with lnode garbadge collection"
   let total := weights.foldl (fun x y => x+y) 0
   let mut next := Array.replicate weights.size CTrie.empty
   for (ini,new) in trans do
