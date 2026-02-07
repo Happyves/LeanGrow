@@ -14,11 +14,12 @@ def test_apply_sample (n : Name) : MetaM Unit := do
   lambdaTelescope info.value! <| fun _ b => do
     let h := b.getAppFn'
     let as := b.getAppArgs
-    let (delZet,res) ← delabSample_Apply_core h as (← getLCtx) (← getLocalInstances)
+    let .mk _ res delZet _ _ ← delabSample_Apply_core h as (← getLCtx) (← getLocalInstances)
     let _ ← do
       match delZet with
       | .none => IO.println "Args:"
       | .some R => IO.println s!"delZet:\n{← ppExpr R}\nArgs:"
+    let res := res.getD []
     for r in res do
       IO.println s!"· {← ppExpr r}"
 
@@ -29,6 +30,7 @@ def test_apply_dig (n : Name) : MetaM Unit := do
     let h := b.getAppFn'
     let as := b.getAppArgs
     let res ← delabDig_Apply_core h as (← getLCtx) (← getLocalInstances)
+    let res := res.getD []
     IO.println "Args:"
     for r in res do
       IO.println s!"· {← ppExpr r}"
@@ -39,7 +41,7 @@ def test_apply_top (n : Name) : MetaM Unit := do
   lambdaTelescope info.value! <| fun _ b => do
     let h := b.getAppFn'
     let as := b.getAppArgs
-    let res ← delabSample_Apply_top .empty h as (← getLCtx) (← getLocalInstances)
+    let res ← delabSample_Apply_topBack .empty h as (← getLCtx) (← getLocalInstances)
     IO.println s!"{repr res}"
 
 
@@ -100,7 +102,7 @@ def test_revert_top (n : Name) : MetaM Unit := do
   lambdaLetTelescope info.value! <| fun _ b => do
     let h := b.getAppFn'
     let as := b.getAppArgs
-    let dat ← delabSample_AssertDefineRevert_top .empty h as (← getLCtx) (← getLocalInstances)
+    let dat ← delabSample_AssertDefineRevert_topBack .empty h as (← getLCtx) (← getLocalInstances)
     IO.println <| repr dat
 
 

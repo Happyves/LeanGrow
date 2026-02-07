@@ -35,16 +35,18 @@ theorems about List.range (n+1), those for List.rang n.succ are ignored ...
 #check List.range_eq_nil
 #check List.singleton_perm_singleton
 
+-- With context g(n : Nat) g(l : List Nat) and objects ((List.range 42)[37]? = .some (List.count ((List.range n).length) l)) run test_1
 
-
-
-#check List.Perm.eq_nil
 #check List.Perm.count_eq
 #check List.getElem?_range
 #check List.length_range
+#check List.length_zipIdx
+#check List.Perm.length_eq
 
-/-
-Bad rw: goal has no fvar/mvar and is replaced by term with fvar/mvar
-for example List.Perm.eq_nil in ← ; should be bad for back
+-- With context g(n : Nat) g(j : Nat) t(37 : 42 : m : Nat) g(h : j < n+1) and objects (((List.range n) ++ [m])[j]'(by simp ; exact h) = 42) run test_1
 
--/
+-- With context g(n : Nat) g(j : Nat) t(37 : 42 : m : Nat) t(37 : 67 : h : j < n+1) and objects (((List.range n) ++ [m])[j]'(by simp ; exact h) = 42) run test_1
+
+-- With context g(n : Nat) t(42 : 42 : j : Nat) t(37 : 42 : m : Nat) t(37 : 67 : h : j < n+1) and objects (((List.range n) ++ [m])[j]'(by simp ; exact h) = 42) run test_1
+
+#check List.range_one

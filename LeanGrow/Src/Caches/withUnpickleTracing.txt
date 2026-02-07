@@ -1,20 +1,25 @@
 
 
-Success for List.range_eq_range' with subgoals
-t.0.0 : List.range' 0 g.0 = t.37.42
-T-Level assignements 
-Tnode assignemet
-And with term Eq.symm List.range_eq_range' ▸ t.0.0
+Rewrite fail for an emb of List.length_zipIdx
 
-Success for List.range_eq_nil with subgoals
-t.1.0 : g.0 = 0
-T-Level assignements 
-Tnode assignemet
-idx 37 pos 42 : []
-And with term Eq.symm (propext List.range_eq_nil) ▸ t.1.0
+Rewrite fail for an emb of List.Perm.length_eq
 
-Success for List.singleton_perm_singleton with subgoals
-t.2.0 : [List.range g.0].Perm [t.37.42]
-T-Level assignements 
-Tnode assignemet
-And with term Eq.symm (Eq.symm (propext List.singleton_perm_singleton)) ▸ t.2.0
+Rewrite fail for an emb of List.Perm.length_eq
+
+Rewrite fail for an emb of List.range_eq_range'
+
+Rewrite fail for an emb of List.range'.eq_1
+
+Rewrite fail for an emb of List.Perm.eq_nil
+
+Rewrite fail for an emb of List.Perm.nil_eq
+
+Rewrite fail for an emb of List.range_one
+
+Rewrite fail for an emb of List.Perm.eq_singleton
+
+Rewrite fail for an emb of List.Perm.singleton_eq
+
+Rewrite fail for an emb of List.range_succ
+
+Rewrite fail for an emb of List.singleton_perm_singleton

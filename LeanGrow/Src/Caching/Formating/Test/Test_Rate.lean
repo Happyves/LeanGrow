@@ -3,6 +3,7 @@ import LeanGrow.Src.Caching.Formating.Process
 
 import Mathlib.Data.List.Dedup
 
+
 open Lean Meta
 
 
@@ -13,11 +14,11 @@ def test (n : Name) : MetaM Unit := do
     IO.println s!"\nTheorem {thm.name}"
     IO.println s!"Bad uni {repr badu}"
     match thm with
-    | .std _ _ _ _ _ _ goal _ bf bb =>
+    | .std _ _ _ _ _ _ goal _ bf bb _ =>
         IO.println s!"Goal: {← PpExpr goal l1 l2}"
         IO.println s!"Bad forw: {bf}"
         IO.println s!"Bad back: {bb}"
-    | .rw _ _ _ goal rep _ _ _ _ bf bb si =>
+    | .rw _ _ _ goal rep _ _ _ _ bf bb si _ =>
         IO.println s!"RW goal: {← PpExpr goal l1 l2}"
         IO.println s!"RW rep: {← PpExpr rep l1 l2}"
         IO.println s!"Simplifier score: {si}"
@@ -32,7 +33,7 @@ def testSpe (n : Name) (badu : badUniType) : MetaM Unit := do
     IO.println s!"\nTheorem {thm.name}"
     IO.println s!"Bad uni {repr badu}"
     match thm with
-    | .std _ _ _ _ _ _ goal _ bf bb =>
+    | .std _ _ _ _ _ _ goal _ bf bb _ =>
         IO.println s!"Goal: {← PpExpr goal l1 l2}"
         IO.println s!"Bad forw: {bf}"
         IO.println s!"Bad back: {bb}"
@@ -163,6 +164,11 @@ theorem test_badUni_3 (P : Nat → Prop) (h1 : P 42) (h2: ¬ P 42) : [1].Pairwis
 #check 1
 
 -- To test:
-#check Classical.byCases
-#check Classical.byContradiction
+#eval test `Classical.byCases
 
+#eval test `Classical.byContradiction
+
+
+#eval test ``List.Perm.eq_nil
+
+#eval test ``List.singleton_perm_singleton

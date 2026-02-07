@@ -13,6 +13,14 @@ import LeanGrow.Src.Utils.Lean.Expr.Basic
 open Lean Meta
 
 
+def mathlibTactic? : Name → Bool
+  | .str (.str .anonymous s1) s2 =>
+    s1 == "Mathlib" && s2 == "Tactic"
+  | .str p _ => mathlibTactic? p
+  | .num p _ => mathlibTactic? p
+  | .anonymous => false
+
+
 @[inline]
 partial def delabSample_Term_core (head : Name) (appH : Expr) (appA : Array Expr) (l1 : LocalContext) (l2 : LocalInstances)
   : MetaM (Prod5 (List FVarId) (Option (List Expr)) (Option Expr) LocalContext LocalInstances) := do
@@ -49,16 +57,20 @@ partial def delabSample_Term_core (head : Name) (appH : Expr) (appA : Array Expr
         let nh := Expr.app appA[3]! appA[4]!
         return .mk [] (.some [mkAppN nh (appA.drop 5)]) .none l1 l2
       | _ => -- same as apply core
-        let rarg ← appH.withRelevantArgsBack l1 l2 appA [] (fun x xs => return x :: xs)
-        let ra ← (appH :: rarg).filterM (fun -- appH could be inlined have
-          | .fvar fvid => do
-            match ← fvid.GetDecl l1 l2 with
-            | .ldecl .. => return true
-            | _ => return false
-          | x => return !x.isAtomic)
-        if ← appH.isPseudoAtomic l1 l2
-        then return .mk [] (.some ra) (.some (mkAppN appH appA)) l1 l2
-        else return .mk [] ra .none l1 l2
+        if head.blackListSampleDelta || head == ``of_decide_eq_true || mathlibTactic? head
+        then
+          return .mk [] (.some []) .none l1 l2
+        else
+          let rarg ← appH.withRelevantArgsBack l1 l2 appA [] (fun x xs => return x :: xs)
+          let ra ← (appH :: rarg).filterM (fun -- appH could be inlined have
+            | .fvar fvid => do
+              match ← fvid.GetDecl l1 l2 with
+              | .ldecl .. => return true
+              | _ => return false
+            | x => return !x.isAtomic)
+          if ← appH.isPseudoAtomic l1 l2
+          then return .mk [] (.some ra) (.some (mkAppN appH appA)) l1 l2
+          else return .mk [] ra .none l1 l2
 
 
 @[inline]
@@ -89,8 +101,12 @@ partial def delabDig_Term_core (head : Name) (appH : Expr) (appA : Array Expr) (
         let nh := Expr.app appA[3]! appA[4]!
         return (.some [mkAppN nh (appA.drop 5)])
       | _ => --same as apply
-        let rarg ← appH.withRelevantArgsBack l1 l2 appA [] (fun x xs => return x :: xs)
-        return (appH :: rarg).filter (fun x => !x.isAtomic)
+        if head.blackListSampleDelta || head == ``of_decide_eq_true || mathlibTactic? head
+        then
+          return .some []
+        else
+          let rarg ← appH.withRelevantArgsBack l1 l2 appA [] (fun x xs => return x :: xs)
+          return (appH :: rarg).filter (fun x => !x.isAtomic)
 
 
 
@@ -126,7 +142,7 @@ partial def delabSample_Term_topBack
       | _ => --same as apply
         match ← appH.pseudoConst l1 l2 with
         | .some n =>
-          if n.blackListSampleDelta || n == ``of_decide_eq_true
+          if n.blackListSampleDelta || n == ``of_decide_eq_true || mathlibTactic? n
           then return .none
           else
             match conjable.find? n.toString.toUTF8 with
@@ -164,7 +180,7 @@ partial def delabSample_Term_topForw
       | _ => --same as apply
         match ← appH.pseudoConst l1 l2 with
         | .some n =>
-          if n.blackListSampleDelta || n == ``of_decide_eq_true
+          if n.blackListSampleDelta || n == ``of_decide_eq_true || mathlibTactic? n
           then return .some <| .inr .none
           else
             return .some <| .inl n
@@ -198,7 +214,7 @@ partial def delabSample_Term_topForw_withHyps
       | _ => --same as apply
         match ← appH.pseudoConst l1 l2 with
         | .some n =>
-          if n.blackListSampleDelta || n == ``of_decide_eq_true
+          if n.blackListSampleDelta || n == ``of_decide_eq_true || mathlibTactic? n
           then return (.none, [])
           else
             let rarg ← appH.withRelevantArgsBack l1 l2 appA [] (fun x xs => return x :: xs)
