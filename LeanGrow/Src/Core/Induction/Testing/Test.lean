@@ -6,97 +6,80 @@ Author: Yves Jäckle.
 -/
 
 
-import LeanGrowBeta.Core.Induction.TestTools
+import LeanGrow.Src.Core.Induction.TestTools
 
 import Mathlib.Data.List.Dedup
--- We require the import because the elaboration in the `With gnodes ..` command needs it !
+-- We require the import because the elaboration in the `With context ..` command needs it !
 import Mathlib.Data.List.Defs
 
 -- #exit
 
 set_option linter.style.longLine false
 
-unsafe def testGoalInductionA := testGoalInduction `Mathlib.Data.List.Dedup
+def testGoalInductionA := testGoalInduction `Mathlib.Data.List.Dedup
 
--- With gnodes (n : Nat) (hn : n = 42) and unodes and tnodes and objects (n % 2 = 0) run testGoalInductionA
+-- With context g(n : Nat) g(hn : n = 42) and objects (n % 2 = 0) run testGoalInductionA
 
--- With gnodes (l : List Nat) (hn : l.dedup = [42]) and unodes and tnodes and objects (l = 42 :: l) run testGoalInductionA
+-- With context g(n : Nat) u(hn : n = 42 : sorry) and objects (n % 2 = 0) run testGoalInductionA
+-- remeber that proof valued us will become gnodes
 
--- With gnodes (l : List Nat) (hn : l.dedup = [42]) and unodes and tnodes and objects ((fun x => l = x :: l) 42) run testGoalInductionA
+-- With context g(l : List Nat) g(hn : l.dedup = [42]) and objects (l = 42 :: l) run testGoalInductionA
+
+-- With context g(l : List Nat) g(hn : l.dedup = [42]) and objects ((fun x => l = x :: l) 42) run testGoalInductionA
 
 
-unsafe def testSndHyp := testHypInduction `Mathlib.Data.List.Dedup 1
+def testSndHyp := testHypInduction `Mathlib.Data.List.Dedup 1
 
--- With gnodes (l : List Nat) (hn : l = [42] ∨ l = [37]) and unodes and tnodes and objects (l.dedup = l) run testSndHyp
+-- With context g(l : List Nat) g(hn : l = [42] ∨ l = [37]) and  objects (l.dedup = l) run testSndHyp
 
--- With gnodes (l : List Nat) (hn : l = [42] ∧ l = [37]) and unodes and tnodes and objects (l.dedup = l) run testSndHyp
+-- With context g(l : List Nat) g(hn : l = [42] ∧ l = [37]) and  objects (l.dedup = l) run testSndHyp
 
--- With gnodes (l : List Nat) (hn : ∃ n, l = [n]) and unodes and tnodes and objects (l.dedup = l) run testSndHyp
+-- With context g(l : List Nat) g(hn : ∃ n, l = [n]) and  objects (l.dedup = l) run testSndHyp
 
 --negative test
--- With gnodes (l : List Nat) (hn : l.dedup = [42]) and unodes and tnodes and objects ((fun x => l = x :: l) 42) run testSndHyp
+-- With context g(l : List Nat) g(hn : l.dedup = [42]) and  objects ((fun x => l = x :: l) 42) run testSndHyp
 
 
-unsafe def testThirdHyp := testHypInduction `Mathlib.Data.List.Dedup 2
+def testThirdHyp := testHypInduction `Mathlib.Data.List.Dedup 2
 
--- With gnodes (n : Nat) (m : Nat) (hn : n ≤ m) and unodes and tnodes and objects (n % 2 = m) run testThirdHyp
+-- With context g(n : Nat) g(m : Nat) g(hn : n ≤ m) and  objects (n % 2 = m) run testThirdHyp
 
--- With gnodes (n : Nat) (m : Nat) (hn : Nat.le n m) and unodes and tnodes and objects (n % 2 = m) run testThirdHyp
+-- With context g(n : Nat) g(m : Nat) g(hn : Nat.le n m) and  objects (n % 2 = m) run testThirdHyp
 
--- With gnodes (l : List Nat) (L : List Nat) (hn : l.Perm L) and unodes and tnodes and objects (l.dedup = l) run testThirdHyp
+-- With context g(l : List Nat) g(L : List Nat) g(hn : l.Perm L) and  objects (l.dedup = l) run testThirdHyp
 
--- With gnodes (l : List Nat) (L : List Nat) (hn : (fun x => l.Perm x) L) and unodes and tnodes and objects (l.dedup = l) run testThirdHyp
+-- With context g(l : List Nat) g(L : List Nat) g(hn : (fun x => l.Perm x) L) and  objects (l.dedup = l) run testThirdHyp
 
 -- negative test
--- With gnodes (l : List Nat) (L : List Nat) (hn : l.Perm L) and unodes and tnodes and objects (l.dedup = l) run testSndHyp
+-- With context g(l : List Nat) g(L : List Nat) g(hn : l.Perm L) and  objects (l.dedup = l) run testSndHyp
 
 
-unsafe def testGoalInductionB := testGoalInduction `Mathlib.Data.List.Defs
+def testGoalInductionB := testGoalInduction `Mathlib.Data.List.Defs
 
--- tracing_mode .std
--- tracing_flags [(`functionalInductionMain,TracingFlags.all)]
+-- With context g(l : List Nat) g(hn : l.dedup = [42]) and objects (l.getLastI = 42) run testGoalInductionB
 
--- With gnodes (l : List Nat) (hn : l.dedup = [42]) and unodes and tnodes and objects (l.getLastI = 42) run testGoalInductionB
-
-
-unsafe def testSndHypB := testHypInduction `Mathlib.Data.List.Defs 1
-
--- With gnodes (l : List Nat) (hn : l.getLastI = 42) and unodes and tnodes and objects (l.dedup = [42]) run testSndHypB
+#check List.permutationsAux.rec
+-- has 2 majors, which we don't support ...
 
 
-#check 1
+def testSndHypB := testHypInduction `Mathlib.Data.List.Defs 1
 
-open Lean Meta
-
-#check List.getLastI.induct
-
-unsafe def testGoalInductionC := testGoalInductionMulti #[`Mathlib.Data.List.Dedup]
+-- With context g(l : List Nat) g(hn : l.getLastI = 42) and objects (l.dedup = [42]) run testSndHypB
 
 
 -- negative test
--- With gnodes (n : Nat) (hn : n = 42) and unodes (m : Nat : n+2) and tnodes and objects (m % 2 = 0) run testGoalInductionA
+-- With context g(n : Nat) g(hn : n = 42) u(m : Nat : n+2) and objects (m % 2 = 0) run testGoalInductionA
 
 
--- With gnodes (n : Nat) (hn : n = 42) and unodes (m : Nat : n+2) and tnodes and objects ((n+m) % 2 = 0) run testGoalInductionA
-
-#check 1
-
--- With gnodes (n : Nat) (hn : n = 42) and unodes (m : Nat : n+2) and tnodes and objects ((n+m) % 2 = 0) run testGoalInductionC
+-- With context g(n : Nat) g(hn : n = 42) u(m : Nat : n+2) and objects ((n+m) % 2 = 0) run testGoalInductionA
 
 
-#check 1
+-- With context g(l : List Nat) g(hn : l.dedup = [42]) u(L : List Nat : 37 :: l) and objects (l.getLastI = L.getLastI) run testGoalInductionB
 
--- With gnodes (l : List Nat) (hn : l.dedup = [42]) and unodes (L : List Nat : 37 :: l) and tnodes and objects (l.getLastI = L.getLastI) run testGoalInductionB
-
-#check 1
 
 #check List.get
 
--- With gnodes (l : List Nat) (hn : l.dedup = [42]) and unodes and tnodes (L : List Nat) and objects (L = l) run testGoalInductionA
+-- negative : no tnodes in induct hyp, only for structures
+-- With context g(l : List Nat) g(hn : l.dedup = [42]) t(37 : 67 : L : List Nat) and objects (L = l) run testGoalInductionA
 
-
-#check 1
-
--- With gnodes (l : List Nat) (hn : l.dedup = [42]) (n : Nat) and unodes and tnodes (hf : n < l.length) and objects (l.get ⟨n,hf⟩ = 37) run testGoalInductionA
-
-#check 1
+-- With context g(l : List Nat) u(hn : l.dedup = [42] : sorry) g(n : Nat) t(37 : 67 : hf : n < l.length) and objects (l.get ⟨n,hf⟩ = 37) run testGoalInductionA

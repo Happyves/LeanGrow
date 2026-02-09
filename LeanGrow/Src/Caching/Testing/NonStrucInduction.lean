@@ -6,7 +6,7 @@ Author: Yves Jäckle.
 -/
 
 
-import LeanGrowBeta.Caching.NonStrucIndunction
+import LeanGrow.Src.Caching.NonStrucIndunction
 
 import Mathlib.Data.List.Dedup
 
@@ -19,15 +19,15 @@ open Lean Meta
 -- #eval buildRecursorCache `Mathlib.Data.List.Dedup
 -- #eval buildRecursorCache `Mathlib.Data.List.Defs
 
-#eval RecursorCache_printFunIndNames `Mathlib.Data.List.Dedup
-#eval RecursorCache_printElimNames `Mathlib.Data.List.Dedup
+-- #eval RecursorCache_printFunIndNames `Mathlib.Data.List.Dedup
+-- #eval RecursorCache_printElimNames `Mathlib.Data.List.Dedup
 
-#eval RecursorCache_printFunIndNames `Mathlib.Data.List.Defs
-#eval RecursorCache_printElimNames `Mathlib.Data.List.Defs
+-- #eval RecursorCache_printFunIndNames `Mathlib.Data.List.Defs
+-- #eval RecursorCache_printElimNames `Mathlib.Data.List.Defs
 
 
 -- #eval RecursorCache_printFunIndNamesWithKeys `Mathlib.Data.List.Defs
-
+-- currently causes freeze ...
 
 -- #check List.getLastI.induct
 #check List.getLastI.induct_unfolding

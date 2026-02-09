@@ -6,10 +6,10 @@ Author: Yves Jäckle.
 -/
 
 
-import LeanGrowBeta.Utils.LeanGrow.Expr
-import LeanGrowBeta.Core.Induction.Format
-import LeanGrowBeta.Utils.Lean.Generalize
-import LeanGrowBeta.Utils.Lean.Revert
+import LeanGrow.Src.Utils.LeanGrow.Expr
+import LeanGrow.Src.Core.Induction.Format
+import LeanGrow.Src.Utils.Lean.Generalize
+import LeanGrow.Src.Utils.Lean.Revert
 
 open Lean Meta
 
@@ -108,7 +108,7 @@ private partial def getTargetArity : Expr → Nat
   | Expr.forallE _ _ b _ => getTargetArity b + 1
   | e                    => if e.isHeadBetaTarget then getTargetArity e.headBeta else 0
 
-@[specialize, inline]
+@[inline]
 private partial def finalize
     (l1 : LocalContext) (l2 : LocalInstances)
     (backIdx : Nat)
@@ -171,26 +171,52 @@ private partial def finalize
         return ⟨.some subgoals,l1,l2⟩
   loop l1 l2 (recursorInfo.paramsPos.length + 1) 0 recursor recursorType false #[]
 
+#check 1
+
+partial def checkTnodesSitchOkForInd (l1 : LocalContext) (l2 : LocalInstances)
+  (relevant : Array FVarId) : Expr → MetaM Bool
+  | .forallE _ T B _ =>
+    if T.hasTnodes then return false else checkTnodesSitchOkForInd l1 l2 relevant B
+  | T =>
+    let tns := T.getTnodes
+    let rec safedeps? (seen : ExprSet) : List Expr → MetaM Bool
+      | [] => return true
+      | t :: ts => do
+        if seen.contains t
+        then safedeps? seen ts
+        else
+          let nts := (← InferType t l1 l2).getTnodes
+          if nts.any (fun x => relevant.contains x.fvarId!)
+          then
+            return false
+          else
+            let nx := nts.foldl (fun L t =>
+              if seen.contains t then L else L.insert t
+              ) ts
+            safedeps? (seen.insert t) nx
+    safedeps? {} tns
 
 
-@[specialize, inline]
+/-- mtrace causes massive codegen slowdown-/
+@[specialize]
 partial def inductiveInductionMain
-  (revert : MVarId → Array FVarId → LocalContext → LocalInstances → MetaM (Array FVarId × MVarId))
+  (introAdmissible? : Nat → Bool) (sinkRevCutOff : Nat) (depsCache : Array DepCache)
   (l1 : LocalContext) (l2 : LocalInstances)
   (backIdx : Nat) (major : Expr) (goal : Expr)
   : MetaM (Prod3 (OptionProd Expr (Array Expr)) LocalContext LocalInstances) :=
   withReader (fun ctx => {ctx with lctx := l1, localInstances := l2}) do
-    mtrace on .one with s!"[inductiveInductionMain] major {← ppExpr major}"
+    mtracing
+    -- mtrace on .one with s!"[inductiveInductionMain] major {← ppExpr major}"
     let majorT ← inferType major
-    mtrace on .one with s!"[inductiveInductionMain] majorT {← ppExpr majorT}"
+    -- mtrace on .one with s!"[inductiveInductionMain] majorT {← ppExpr majorT}"
     let recursorName :=
       match (← whnfAtMostI majorT).getAppFn with
       | .const n _ => n
       | _ => .anonymous
-    mtrace on .zero with s!"[inductiveInductionMain] recursorName {recursorName}"
+    -- mtrace on .zero with s!"[inductiveInductionMain] recursorName {recursorName}"
     let recursorInfo ← mkRecursorInfo (.str recursorName "rec")
     let some majorType ← whnfUntil majorT recursorInfo.typeName | return ⟨.none,l1,l2⟩
-    mtrace on .zero with s!"[inductiveInductionMain] majorType {← ppExpr majorType}"
+    -- mtrace on .zero with s!"[inductiveInductionMain] majorType {← ppExpr majorType}"
     majorType.withApp fun _ majorTypeArgs => do
       let mut broke? := false
       for paramPos? in recursorInfo.paramsPos do
@@ -201,7 +227,7 @@ partial def inductiveInductionMain
       then return ⟨.none,l1,l2⟩
       else
         let .some indices ← getMajorTypeIndices recursorInfo majorType | return ⟨.none,l1,l2⟩
-        mtrace on .zero with s!"[inductiveInductionMain] indices {← indices.mapM ppExpr}"
+        -- mtrace on .zero with s!"[inductiveInductionMain] indices {← indices.mapM ppExpr}"
         let cont? ← (do
           if (← pure !recursorInfo.depElim)
           then
@@ -220,84 +246,56 @@ partial def inductiveInductionMain
               match major with
               | .fvar majorId => (indices.map Expr.fvarId!).push majorId
               | _ => (indices.map Expr.fvarId!)
-          mtrace on .zero with s!"[inductiveInductionMain] fvars to be reverted {repr relevant}"
-          let rec prohib (l1 : LocalContext) (l2 : LocalInstances) (e : List Expr) : MetaM Bool := do
-            match e with
-            | [] =>
-                return false
-            | e :: es =>
-                let T ← InferType e l1 l2
-                match T.getFVars with
-                | [] => prohib l1 l2 es
-                | fvs =>
-                    let mut dep? := false
-                    let mut nx := []
-                    for fv in fvs do
-                      if major == fv
-                      then
-                        dep? := true
-                        break
-                      else
-                        if es.contains fv
-                        then
-                          continue
-                        else
-                          nx := fv :: nx
-                    if dep?
-                    then
-                      return true
-                    else
-                      prohib l1 l2 (nx ++ es)
-          match ← generalizeTnodesSafeIgnoring l1 l2 goal (fun _ _ _ => return false) (fun e l1 l2 => prohib l1 l2 [e]) (fun _ _ _ => return true) with
-          | .none => return ⟨.none,l1,l2⟩
-          | .some goal revTnodes => do
-              mtrace on .zero with s!"[inductiveInductionMain] generalised tnodes {← revTnodes.mapM ppExpr} to new goal {← ppExpr goal}"
-              let mvar ← mkFreshExprMVar (.some goal)
-              let mvarId := mvar.mvarId!
-              let (allRev, mvarId) ← revert mvarId relevant l1 l2
-              mtrace on .zero with s!"[inductiveInductionMain] reverted fvars {repr allRev} to new goal {← ppExpr (← mvarId.getType)}"
+          let .mk gen revTnodes l1 l2 ← generalizeTnodesSafeIgnoring l1 l2 goal #[] (fun _ _ _ => return false)
+          match gen with
+          | .none =>
+            return ⟨.none,l1,l2⟩
+          | .some goal => do
+            -- mtrace on .zero with s!"[elimInductionMain] generalised tnodes {← revTnodes.mapM ppExpr} to new goal {← ppExpr goal}"
+            if ← (do if isStructureLike (← getEnv) recursorName then checkTnodesSitchOkForInd l1 l2 relevant goal else return !(goal.hasTnodes))
+            then
+              -- mtrace on .zero with s!"[inductiveInductionMain] generalised tnodes {← revTnodes.mapM ppExpr} to new goal {← ppExpr goal}"
+              let .mk revgoal _ allRev l1 l2 ← revert_NoTn_cutOff_wDepsCache introAdmissible? l1 l2 goal relevant depsCache #[] sinkRevCutOff
+              -- mtrace on .zero with s!"[inductiveInductionMain] reverted fvars {repr allRev} to new goal {← ppExpr revgoal}"
               let allRevFirst := ((allRev.take relevant.size).map Expr.fvar).filter (fun | .fvar x => !(x.isUnode) | _ => false)
               -- **Note* ↑↓ `instantiateForall` actually uses whnf, so will reduce lets !
               -- We crutially assume that `revert` reverts unused lets also !!
-              let mvar ← mkFreshExprMVar (.some (← instantiateForall (← mvarId.getType) allRevFirst))
+              let mvar ← mkFreshExprMVar (.some (← instantiateForall revgoal allRevFirst))
               let mvarId := mvar.mvarId!
               let .some recursor ← mkRecursorAppPrefix mvarId major recursorInfo indices | return ⟨.none,l1,l2⟩
-              mtrace on .zero with s!"[inductiveInductionMain] recursor {← ppExpr recursor}"
+              -- mtrace on .zero with s!"[inductiveInductionMain] recursor {← ppExpr recursor}"
               match ← finalize l1 l2 backIdx mvarId recursorInfo major indices recursor with
-              | ⟨.none,l1,l2⟩ => return ⟨.none,l1,l2⟩
+              | ⟨.none,l1,l2⟩ =>
+                  clearMvarAssignments
+                  return ⟨.none,l1,l2⟩
               | ⟨.some subgoals,l1,l2⟩  =>
                   withReader (fun ctx => {ctx with lctx := l1, localInstances := l2}) do
                     let .some proofterm := (← getMCtx).eAssignment.find? mvarId | return ⟨.none,l1,l2⟩
-                    mtrace on .zero with s!"[inductiveInductionMain] pre proofterm: {← ppExpr proofterm}"
-                    let allRevFinal ← ((allRev.drop relevant.size).map Expr.fvar).filterM (fun | .fvar x => do (match ← x.GetDecl l1 l2 with | .ldecl .. => return false | .cdecl .. => return true) | _ => return false)
+                    -- mtrace on .zero with s!"[inductiveInductionMain] pre proofterm: {← ppExpr proofterm}"
+                    -- let allRevFinal ← ((allRev.drop relevant.size).map Expr.fvar).filterM (fun
+                    --   | .fvar x => do (match ← x.GetDecl l1 l2 with
+                    --     | .ldecl _ _ _ T .. => IsProp T l1 l2
+                    --     | .cdecl .. => return true)
+                    --   | _ => return false)
+                    let allRevFinal := ((allRev.drop relevant.size).map Expr.fvar).filter (fun | .fvar x => !(x.isUnode) | _ => false)
                     -- ↑ used to filter on not being unodes but that wasn't enough since forwaard proofs are also let-bound
                     let proofterm := mkAppN (mkAppN proofterm allRevFinal) revTnodes
-                    mtrace on .zero with s!"[inductiveInductionMain] final proofterm {← ppExpr proofterm}"
+                    -- mtrace on .zero with s!"[inductiveInductionMain] final proofterm {← ppExpr proofterm}"
+                    clearMvarAssignments
                     if ← isTypeCorrect proofterm
                     then
                       return ⟨.some proofterm (← subgoals.mapM inferType),l1,l2⟩
                     else
-                      mtrace on .zero with s!"[inductiveInductionMain] incorrect proofterm"
+                      -- mtrace on .zero with s!"[inductiveInductionMain] incorrect proofterm"
                       return ⟨.none,l1,l2⟩
+            else
+              -- mtrace on .zero with s!"[inductiveInductionMain] bad tnodes"
+              return ⟨.none,l1,l2⟩
 
 
+#check 1
+#check isStructureLike
 
-@[specialize, inline]
-def inductiveInductionComp
-  (introAdmissible? : Nat → Bool) (sinkRevCutOff : Nat)
-  (l1 : LocalContext) (l2 : LocalInstances)
-  (backIdx : Nat) (major : Expr) (goal : Expr)
-  : MetaM (Prod3 (OptionProd Expr (Array Expr)) LocalContext LocalInstances) :=
-  inductiveInductionMain (fun g fv l1 l2 => MVarId.revert_NoTn_cutOff introAdmissible? l1 l2 g fv sinkRevCutOff) l1 l2 backIdx major goal
-
-
-@[specialize, inline]
-def inductiveInductionData
-  (introAdmissible? : Nat → Bool) (depsCache : Array (List LocalDecl)) (workerDepsCache : Array (FVarId × (List LocalDecl)))  (sinkRevCutOff : Nat)
-  (l1 : LocalContext) (l2 : LocalInstances)
-  (backIdx : Nat) (major : Expr) (goal : Expr)
-  : MetaM (Prod3 (OptionProd Expr (Array Expr)) LocalContext LocalInstances) :=
-  inductiveInductionMain (fun g fv l1 l2 => MVarId.revert_NoTn_cutOff_wDepsCache introAdmissible? l1 l2 g fv depsCache workerDepsCache sinkRevCutOff) l1 l2 backIdx major goal
-
-
-#check MVarId.induction
+-- run_meta do
+--   let env ← getEnv
+--   IO.println <| isStructureLike env `Fin

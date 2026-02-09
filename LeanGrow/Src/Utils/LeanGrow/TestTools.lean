@@ -88,7 +88,8 @@ def elabAndLoad_U (i gu_idx : Nat) (is : Name) (ts vs : Syntax)
                 | _ => .fvar ⟨new⟩
         | x => x
         )
-  let rep := (.num `u gu_idx)
+  let proof? ← isProp termT
+  let rep := if proof? then (.num `g gu_idx) else (.num `u gu_idx)
   let trans := trans.insert name rep
   let ltx ← getLCtx
   let linst ← getLocalInstances

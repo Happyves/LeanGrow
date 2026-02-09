@@ -6,11 +6,11 @@ Author: Yves Jäckle.
 -/
 
 
-import LeanGrowBeta.Core.Induction.Format
-import LeanGrowBeta.Data.CTrie.Basic
-import LeanGrowBeta.Utils.Lean.ImportExport
-import LeanGrowBeta.Utils.Std.Name
-import LeanGrowBeta.Utils.Lean.Blacklisting
+import LeanGrow.Src.Core.Induction.Format
+import LeanGrow.Src.Data.CTrie.Basic
+import LeanGrow.Src.Utils.Lean.ImportExport
+import LeanGrow.Src.Utils.Std.Name
+import LeanGrow.Src.Utils.Lean.Blacklisting
 
 
 open Lean Meta
@@ -192,8 +192,56 @@ structure RecursorCachePickle where
   elimrecu : CTrie (List RecursorCache)
 deriving Inhabited
 
+def RecursorCachePickle.emptyNamed (modu : Name) : RecursorCachePickle where
+  module := modu
+  funinducts := #[]
+  funrecu := .empty
+  elimrecu := .empty
 
 def LeanGrow.mkRecuCacheName := fun module : Name => s!"RecursorCache_{module.toUnderscoreString}"
+
+
+
+def buildRecursorCache_core (module : Name) : MetaM RecursorCachePickle := do
+  let env ← getEnv
+  let .some midx := env.getModuleIdx? module | throwError s!"[buildRecursorCache] module {module} has no index"
+  let consts := (env.header.moduleData[midx]!).constants
+  let mut elimrecu : CTrie (List RecursorCache) := .leaf
+  let ee ← getElabElims' env midx
+  for n in ee do
+    let (key,val) ← deriveElabElimKeyVal n
+    elimrecu := elimrecu.upsert key (fun
+      | .none => .some [val]
+      | .some V => .some <| V.insert val -- *Note* duplicates (customelim & elabelim) may exist, such as `Nat.recAux` (in 4.18), so we avoid them
+      )
+  let ce ← getCustomElims' env midx
+  for d in ce do
+    let data ← deriveCustomElimKeyVal d
+    for (key,val) in data do
+      elimrecu := elimrecu.upsert key (fun
+        | .none => .some [val]
+        | .some V => .some <| V.insert val
+        )
+  -- *Note* do ↑ before ↓ since the latter will modify env, and this order makes for linear use (?)
+  let mut funrecu : CTrie FunRecursorCache := .leaf
+  let mut funinducts := #[]
+  for con in consts do
+    if con.isDefinition
+    then
+      if con.name.blackListCaching env
+      then
+        continue
+      else
+        match ← deriveFunIndKeyVal' con.name with
+        | .none =>
+            continue
+        | .some (decs,key,recu) =>
+            funrecu := funrecu.insert  key recu
+            for dec in decs do
+              funinducts := funinducts.push dec
+    else continue
+  let res : RecursorCachePickle := ⟨module,funinducts, funrecu, elimrecu⟩
+  return res
 
 
 /--
@@ -202,47 +250,8 @@ that traces may refer to (didn't test this...)
 -/
 unsafe def buildRecursorCache (module : Name) : IO Unit :=
   stdImportTracePickle #[module] {} (LeanGrow.mkRecuCacheName module) do
-    let env ← getEnv
-    let .some midx := env.getModuleIdx? module | throwError s!"[buildRecursorCache] module {module} has no index"
-    let consts := (env.header.moduleData[midx]!).constants
-    let mut elimrecu : CTrie (List RecursorCache) := .leaf
-    let ee ← getElabElims' env midx
-    for n in ee do
-      let (key,val) ← deriveElabElimKeyVal n
-      elimrecu := elimrecu.upsert key (fun
-        | .none => .some [val]
-        | .some V => .some <| V.insert val -- *Note* duplicates (customelim & elabelim) may exist, such as `Nat.recAux` (in 4.18), so we avoid them
-        )
-    let ce ← getCustomElims' env midx
-    for d in ce do
-      let data ← deriveCustomElimKeyVal d
-      for (key,val) in data do
-        elimrecu := elimrecu.upsert key (fun
-          | .none => .some [val]
-          | .some V => .some <| V.insert val
-          )
-    -- *Note* do ↑ before ↓ since the latter will modify env, and this order makes for linear use (?)
-    let mut funrecu : CTrie FunRecursorCache := .leaf
-    let mut funinducts := #[]
-    for con in consts do
-      if con.isDefinition
-      then
-        if con.name.blackListCaching
-        then
-          continue
-        else
-          match ← deriveFunIndKeyVal' con.name with
-          | .none =>
-              continue
-          | .some (decs,key,recu) =>
-              funrecu := funrecu.insert  key recu
-              for dec in decs do
-                funinducts := funinducts.push dec
-      else continue
-    let res : RecursorCachePickle := ⟨module,funinducts, funrecu, elimrecu⟩
-    return (res,"Ready to recurse !")
-
-
+    let res ← buildRecursorCache_core module
+    return (res, "Ready to recurse")
 
 
 -- # Explore

@@ -6,7 +6,9 @@ Author: Yves Jäckle.
 -/
 
 
-import LeanGrowBeta.Utils.Lean.Expr.Basic
+import LeanGrow.Src.Utils.Lean.Expr.Basic
+import LeanGrow.Src.Utils.LeanGrow.Expr
+
 
 open Lean Meta
 
@@ -35,7 +37,7 @@ def processRecursorCache (recu : Name) : MetaM RecursorCache := do
       let (lvl,lcache) ← mkFreshTaggedLevelMVarsForWN "processRecursorCache" info
       let R := Expr.const recu lvl
       let T ← inferType R
-      let (recA,_,g) ← forallMetaTagTelescope (← getLCtx) (← getLocalInstances) "processRecursorCache" T
+      let (recA,_,g) ← ForallMetaTagTelescope (← getLCtx) (← getLocalInstances) "processRecursorCache" T
       let motA := g.getAppArgs
       let mot := g.getAppFn
       let mut ecache : Array (Name × Expr) := Array.replicate recA.size (.anonymous, failExpr "processRecursorForCache")
@@ -59,72 +61,6 @@ def processRecursorCache (recu : Name) : MetaM RecursorCache := do
 def loadRecursorCache (l1 : LocalContext) (l2 : LocalInstances) (recu : RecursorCache) : MetaM Unit := do
   loadLMVarsNoCoA recu.lvlLoad
   loadMVarsWiCoA recu.argLoad l1 l2
-  -- k recu.recuArgMv recu.motArgMv recu.motMv
 
 def loadFunRecursorCache (l1 : LocalContext) (l2 : LocalInstances) (recu : FunRecursorCache) : MetaM Unit := do
   loadRecursorCache l1 l2 recu.toRecursorCache
-
-
-/-- Obtained via `#eval processRecursorCache Quot.ind`-/
-def QuotIndRecursorCacheManual : RecursorCache :=
-{ name := `Quot.ind,
-  term := Lean.Expr.const
-            `Quot.ind
-            [Lean.Level.mvar ⟨(Lean.Name.mkStr (Lean.Name.mkNum `_uniq 8316) "processRecursorCache")⟩],
-  lvlLoad := #[⟨Lean.Name.mkStr (Lean.Name.mkNum `_uniq 8316) "processRecursorCache"⟩],
-  argLoad := #[(Lean.Name.mkStr (Lean.Name.mkNum `_uniq 8317) "processRecursorCache",
-                Lean.Expr.sort
-                  (Lean.Level.mvar ⟨(Lean.Name.mkStr (Lean.Name.mkNum `_uniq 8316) "processRecursorCache")⟩)),
-               (Lean.Name.mkStr (Lean.Name.mkNum `_uniq 8318) "processRecursorCache",
-                Lean.Expr.forallE
-                  `a
-                  (Lean.Expr.mvar ⟨(Lean.Name.mkStr (Lean.Name.mkNum `_uniq 8317) "processRecursorCache")⟩)
-                  (Lean.Expr.forallE
-                    `a
-                    (Lean.Expr.mvar ⟨(Lean.Name.mkStr (Lean.Name.mkNum `_uniq 8317) "processRecursorCache")⟩)
-                    (Lean.Expr.sort (Lean.Level.zero))
-                    (Lean.BinderInfo.default))
-                  (Lean.BinderInfo.default)),
-               (Lean.Name.mkStr (Lean.Name.mkNum `_uniq 8319) "processRecursorCache",
-                Lean.Expr.forallE
-                  `a
-                  (Lean.Expr.app
-                    (Lean.Expr.app
-                      (Lean.Expr.const
-                        `Quot
-                        [Lean.Level.mvar ⟨(Lean.Name.mkStr (Lean.Name.mkNum `_uniq 8316) "processRecursorCache")⟩])
-                      (Lean.Expr.mvar ⟨(Lean.Name.mkStr (Lean.Name.mkNum `_uniq 8317) "processRecursorCache")⟩))
-                    (Lean.Expr.mvar ⟨(Lean.Name.mkStr (Lean.Name.mkNum `_uniq 8318) "processRecursorCache")⟩))
-                  (Lean.Expr.sort (Lean.Level.zero))
-                  (Lean.BinderInfo.default)),
-               (Lean.Name.mkStr (Lean.Name.mkNum `_uniq 8320) "processRecursorCache",
-                Lean.Expr.forallE
-                  `a
-                  (Lean.Expr.mvar ⟨(Lean.Name.mkStr (Lean.Name.mkNum `_uniq 8317) "processRecursorCache")⟩)
-                  (Lean.Expr.app
-                    (Lean.Expr.mvar ⟨(Lean.Name.mkStr (Lean.Name.mkNum `_uniq 8319) "processRecursorCache")⟩)
-                    (Lean.Expr.app
-                      (Lean.Expr.app
-                        (Lean.Expr.app
-                          (Lean.Expr.const
-                            `Quot.mk
-                            [Lean.Level.mvar ⟨(Lean.Name.mkStr (Lean.Name.mkNum `_uniq 8316) "processRecursorCache")⟩])
-                          (Lean.Expr.mvar ⟨(Lean.Name.mkStr (Lean.Name.mkNum `_uniq 8317) "processRecursorCache")⟩))
-                        (Lean.Expr.mvar ⟨(Lean.Name.mkStr (Lean.Name.mkNum `_uniq 8318) "processRecursorCache")⟩))
-                      (Lean.Expr.bvar 0)))
-                  (Lean.BinderInfo.default)),
-               (Lean.Name.mkStr (Lean.Name.mkNum `_uniq 8321) "processRecursorCache",
-                Lean.Expr.app
-                  (Lean.Expr.app
-                    (Lean.Expr.const
-                      `Quot
-                      [Lean.Level.mvar ⟨(Lean.Name.mkStr (Lean.Name.mkNum `_uniq 8316) "processRecursorCache")⟩])
-                    (Lean.Expr.mvar ⟨(Lean.Name.mkStr (Lean.Name.mkNum `_uniq 8317) "processRecursorCache")⟩))
-                  (Lean.Expr.mvar ⟨(Lean.Name.mkStr (Lean.Name.mkNum `_uniq 8318) "processRecursorCache")⟩))],
-  recuArgMv := #[Lean.Expr.mvar ⟨(Lean.Name.mkStr (Lean.Name.mkNum `_uniq 8317) "processRecursorCache")⟩,
-                 Lean.Expr.mvar ⟨(Lean.Name.mkStr (Lean.Name.mkNum `_uniq 8318) "processRecursorCache")⟩,
-                 Lean.Expr.mvar ⟨(Lean.Name.mkStr (Lean.Name.mkNum `_uniq 8319) "processRecursorCache")⟩,
-                 Lean.Expr.mvar ⟨(Lean.Name.mkStr (Lean.Name.mkNum `_uniq 8320) "processRecursorCache")⟩,
-                 Lean.Expr.mvar ⟨(Lean.Name.mkStr (Lean.Name.mkNum `_uniq 8321) "processRecursorCache")⟩],
-  motArgMv := #[Lean.Expr.mvar ⟨(Lean.Name.mkStr (Lean.Name.mkNum `_uniq 8321) "processRecursorCache")⟩],
-  motMv := Lean.Expr.mvar ⟨(Lean.Name.mkStr (Lean.Name.mkNum `_uniq 8319) "processRecursorCache")⟩ }

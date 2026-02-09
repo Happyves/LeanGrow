@@ -6,9 +6,8 @@ Author: Yves Jäckle.
 -/
 
 
-import LeanGrowBeta.Core.Induction.Format
-import LeanGrowBeta.Data.CTrie.Basic
-
+import LeanGrow.Src.Core.Induction.Format
+import LeanGrow.Src.Data.CTrie.Basic
 
 open Lean Meta
 
@@ -30,6 +29,8 @@ def TargetType.pp : TargetType → String
 def funIndTarget
   (l1 : LocalContext) (l2 : LocalInstances)
   (recus : CTrie FunRecursorCache) (e : Expr) : MetaM (Option TargetType) :=
+  do
+  mtracing
   match e with
   | .app .. => do
       let (h,args) := (← WhnfAtMostI e l1 l2).getAppFnArgs
@@ -64,7 +65,8 @@ def detectIndHyp
   (l1 : LocalContext) (l2 : LocalInstances)
   (funrecus : CTrie FunRecursorCache) (elimrecus : CTrie (List RecursorCache))
   (hyp : FVarId) : MetaM (Prod3 (List TargetType) LocalContext LocalInstances) :=
-  trace set TracingFlags.none in do
+  do
+  mtracing
   let T ← hyp.GetType l1 l2
   let T ← WhnfAtMostI T l1 l2
   let Res@⟨fs,l1,l2⟩ ← T.onAllSubtermsFoldM l1 l2 [] (fun e _ _ l1 l2 R =>  do
@@ -80,13 +82,13 @@ def detectIndHyp
     let key := n.toString.toUTF8
     match TargetTypeBlackList.find? key with
     | .none =>
-        let eliminators : List TargetType :=
+        let eliminators : List TargetType ← (do
           match elimrecus.find? key with
-          | .none => fs
+          | .none => return fs
           | .some recu =>
               let here := (recu.map (fun R => .elim hyp R))
-              trace on .zero with s!"[detectIndHyp] eliminator induction targets {here.map TargetType.pp}" in
-              here ++ fs
+              mtrace on .zero with s!"[detectIndHyp] eliminator induction targets {here.map TargetType.pp}"
+              return here ++ fs)
         match (← getEnv).find? n with
         | .some info =>
             match info with
@@ -95,7 +97,8 @@ def detectIndHyp
               return ⟨(.indu (.fvar hyp)) :: eliminators, l1,l2⟩
             | .quotInfo .. =>
               mtrace on .zero with s!"[detectIndHyp] quotient induction target"
-              return ⟨(.elim hyp QuotIndRecursorCacheManual) :: eliminators, l1,l2⟩
+              let qotrec ← processRecursorCache ``Quot.ind
+              return ⟨(.elim hyp qotrec) :: eliminators, l1,l2⟩
             | _ =>
               return ⟨eliminators, l1,l2⟩
         | _ =>
@@ -110,16 +113,18 @@ partial def detectIndGoal
   (l1 : LocalContext) (l2 : LocalInstances)
   (funrecus : CTrie FunRecursorCache) (elimrecus : CTrie (List RecursorCache))
   (goal : Expr) : MetaM (Prod3 (List TargetType) LocalContext LocalInstances) :=
-  trace set TracingFlags.none in do
+  do
+  mtracing
   let main (sub : Expr) (l1 : LocalContext) (l2 : LocalInstances) (sofar : List TargetType) : MetaM (Prod3 (List TargetType) LocalContext LocalInstances) := do
     mtrace on .one with s!"[detectIndGoal] looking at {← ppExpr sub}"
-    let fs :=
+    let fs := ← (do
       match ← funIndTarget l1 l2 funrecus sub with
       | .none =>
-          sofar
+          return sofar
       | .some x =>
-          trace on .zero with s!"[detectIndGoal] functional induction target {x.pp}" in
-          sofar.insert x
+          mtrace on .zero with s!"[detectIndGoal] functional induction target {x.pp}"
+          return sofar.insert x
+          )
     match sub with
     | .fvar fid =>
         if fid.isWorker || fid.isUnode || fid.isTnode
@@ -130,12 +135,15 @@ partial def detectIndGoal
           let key := n.toString.toUTF8
           match TargetTypeBlackList.find? key with
           | .none =>
-              let eliminators : List TargetType :=
+              let eliminators : List TargetType := ← (do
                 match elimrecus.find? key with
-                | .none => fs
-                | .some recu => recu.foldl (fun R r =>
-                      trace on .zero with s!"[detectIndGoal] eliminator induction targets {(TargetType.elim fid r).pp}" in
-                      R.insert (.elim fid r)) fs
+                | .none => return fs
+                | .some recu =>
+                    recu.foldlM  (fun R r => do
+                      mtrace on .zero with s!"[detectIndGoal] eliminator induction targets {(TargetType.elim fid r).pp}"
+                      return R.insert (.elim fid r)
+                    ) fs
+                )
               match (← getEnv).find? n with
               | .some info =>
                   match info with
@@ -144,7 +152,8 @@ partial def detectIndGoal
                     return ⟨eliminators.insert (.indu (.fvar fid)), l1,l2⟩
                   | .quotInfo .. =>
                     mtrace on .zero with s!"[detectIndGoal] structural induction target"
-                    return ⟨eliminators.insert (.elim fid QuotIndRecursorCacheManual), l1,l2⟩
+                    let qotrec ← processRecursorCache ``Quot.ind
+                    return ⟨eliminators.insert (.elim fid qotrec), l1,l2⟩
                   | _ =>
                     return ⟨eliminators, l1,l2⟩
               | _ =>
@@ -154,3 +163,6 @@ partial def detectIndGoal
     | _ =>
         return ⟨fs, l1,l2⟩
   goal.onAllSubtermsFoldNoPartialM l1 l2 [] (fun x _ _ w l1 l2 => main x l1 l2 w)
+
+
+#check 1
