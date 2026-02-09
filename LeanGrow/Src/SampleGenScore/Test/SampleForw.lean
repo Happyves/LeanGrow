@@ -52,7 +52,7 @@ def testNoDelZet_wH_F (printLift? : Bool) (thmName : Name) (depthDig depthStart 
     let .mk res l1 l2 ← sampleCoreForw preS (← getLCtx) (← getLocalInstances) true depthDig depthStart depthStop .none .none (.cons (.raw p) (fvs.map Expr.fvarId!).toList .nil) .nil
     withLCtx l1 l2 <| do
       res.foldlM () (fun kind fvs goal hyps _ => do
-        IO.println "\nSample (forw):\nLifted:"
+        IO.println "\nSample (forw with hyps):\nLifted:"
         if printLift?
           then fvs.foldlM (fun _ fv => do IO.println s!" {← fv.getUserName} : {← ppExpr (← fv.getType)}") ()
         IO.println s! "Goal: {← ppExpr goal}"

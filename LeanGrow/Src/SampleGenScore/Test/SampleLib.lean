@@ -37,12 +37,10 @@ unsafe def testNoDelZet_inEnv (printLift? : Bool) (thmName : Name) (depthDig dep
 
 #print List.drop_nil
 
--- #eval testNoDelZet false `Init.Data.List.Basic `List.drop_nil 1 1 1
+-- #eval testNoDelZet false `Init.Data.List.Basic `List.drop_nil 1 2 2
 
 
 #print List.Subset.dedup_append_right
-
--- #eval testNoDelZet false `Mathlib.Data.List.Dedup `List.Subset.dedup_append_right 1 1 1
 
 -- #eval testNoDelZet false `Mathlib.Data.List.Dedup `List.Subset.dedup_append_right 1 2 2
 

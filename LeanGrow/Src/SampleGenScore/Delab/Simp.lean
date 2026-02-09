@@ -798,7 +798,6 @@ partial def simpProof_topDelab' (res : ListProd3 (List FVarId) Expr Expr)
 
 #check 1
 
-
 partial def simpProof_topDelab_forTest (proof : Expr) : MetaM (Option Name) :=
   match proof.getAppFn' with
   | .const n _ =>

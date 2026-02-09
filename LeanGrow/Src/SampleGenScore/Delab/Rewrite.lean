@@ -58,12 +58,15 @@ def delabRW_core (h : Name) (as : Array Expr) : OptionProd Expr Expr :=
 @[inline]
 partial def delabSample_Rewrite_core (appH : Expr) (appA : Array Expr) (l1 : LocalContext) (l2 : LocalInstances)
   : MetaM (Prod5 (List FVarId) (Option (List Expr)) (Option Expr) LocalContext LocalInstances) := do
+  mtracing
   match appH with
   | .const h _ =>
       match delabRW_core h appA with
       | .none =>
           return .mk [] .none .none l1 l2
       | .some main ini =>
+          mtrace on .zero with s!" main {← ppExpr main}"
+          mtrace on .one with s!" ini {← ppExpr ini}"
           let appH := main.getAppFn
           let appA := main.getAppArgs
           if ← appH.isPseudoAtomic l1 l2
@@ -86,12 +89,15 @@ partial def delabSample_Rewrite_core (appH : Expr) (appA : Array Expr) (l1 : Loc
 @[inline]
 partial def delabDig_Rewrite_core (appH : Expr) (appA : Array Expr) (l1 : LocalContext) (l2 : LocalInstances)
   : MetaM (Option (List Expr)) := do
+  mtracing
   match appH with
   | .const h _ =>
       match delabRW_core h appA with
       | .none =>
           return .none
       | .some main ini =>
+          mtrace on .zero with s!" main {← ppExpr main}"
+          mtrace on .one with s!" ini {← ppExpr ini}"
           let appH := main.getAppFn
           let appA := main.getAppArgs
           if ← appH.isPseudoAtomic l1 l2
@@ -109,12 +115,14 @@ partial def delabSample_Rewrite_topBack
   (conjable : CTrie (List Nat))
   (appH : Expr) (appA : Array Expr) (l1 : LocalContext) (l2 : LocalInstances)
   : MetaM (Option SampleData) := do
+  mtracing
   match appH with
   | .const h _ =>
       match delabRW_core h appA with
       | .none =>
           return .none
       | .some main _ =>
+          mtrace on .zero with s!" main {← ppExpr main}"
           let appH := main.getAppFn
           match ← appH.pseudoConst l1 l2 with
           | .some n => -- case of standard rw
@@ -133,12 +141,15 @@ partial def delabSample_Rewrite_topBack
 @[inline]
 partial def delabSample_Rewrite_topForw (appH : Expr) (appA : Array Expr) (l1 : LocalContext) (l2 : LocalInstances)
   : MetaM (Option (OptionProd Name Expr)) := do
+  mtracing
   match appH with
   | .const h _ =>
       match delabRW_core h appA with
       | .none =>
           return .none
       | .some main ini =>
+          mtrace on .zero with s!" main {← ppExpr main}"
+          mtrace on .one with s!" ini {← ppExpr ini}"
           let appH := main.getAppFn
           match ← appH.pseudoConst l1 l2 with
           | .some n => -- case of standard rw
@@ -151,12 +162,15 @@ partial def delabSample_Rewrite_topForw (appH : Expr) (appA : Array Expr) (l1 : 
 @[inline]
 partial def delabSample_Rewrite_topForw_withHyps (appH : Expr) (appA : Array Expr) (l1 : LocalContext) (l2 : LocalInstances)
   : MetaM (Option (OptionProd Name (List Expr))) := do
+  mtracing
   match appH with
   | .const h _ =>
       match delabRW_core h appA with
       | .none =>
           return .none
       | .some main ini =>
+          mtrace on .zero with s!" main {← ppExpr main}"
+          mtrace on .one with s!" ini {← ppExpr ini}"
           let appH := main.getAppFn
           match ← appH.pseudoConst l1 l2 with
           | .some n => -- case of standard rw

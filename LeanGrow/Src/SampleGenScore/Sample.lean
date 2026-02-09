@@ -223,6 +223,8 @@ partial def sampleHypsCore
 
 #check 1
 
+
+
 partial def digExpr
   (preProcessed : CTrie SimpCongrTheorem)
   (l1 : LocalContext) (l2 : LocalInstances)
@@ -331,6 +333,16 @@ where
 
 #check 1
 
+
+def Lean.Expr.isRefl? (e : Expr) : Bool := Id.run <| do
+  let h := e.getAppFn'
+  let .const h _ := h | return false
+  return (h == ``Eq.refl || h == ``Iff.refl)
+
+#check 1
+
+
+
 partial def sampleCoreBack
   (preProcessed : CTrie SimpCongrTheorem) (conjable : CTrie (List Nat))
   (l1 : LocalContext) (l2 : LocalInstances)
@@ -343,6 +355,7 @@ partial def sampleCoreBack
       mtrace on .zero with s!" looking at sample:\nterm : {← e.pp l1 l2}"
       match e with
       | .raw e | .irreducible e =>
+        -- ↑ irreducible is no mistake : induction should yield empty delabSample, but will yield non empty delabDig
         let .mk e fvs l1 l2 ← LambdaOnlyTelescope e l1 l2
         mtrace on .zero with s!" possibly introed to:\nterm : {← ppExpr e}"
         -- Note : here and in all other sampling fuctions : shouldn't ever synthesise instances,
@@ -360,52 +373,85 @@ partial def sampleCoreBack
             let usedFv := e.getFVarIds
             let goal ← WhnfR goal l1 l2
             mtrace on .zero with s!" goal {← ppExpr goal}"
-            let samples ← withLCtx l1 l2 <| hyps.foldlM samples (fun locLifted hs R => do
-              let locLifted := locLifted.filter (fun x => usedFv.contains x)
-              let presinks ← locLifted.mapM (fun fv => do
+            match hyps with
+            | .nil =>
+              let lifted := lifted.filter (fun x => usedFv.contains x)
+              let presinks ← lifted.foldlM (fun L fv => do
                 let T ← fv.getType
-                let T ← WhnfR T l1 l2
-                return (fv,T))
+                let T ← (do match ← isClass? T with | .none => whnfR T | _ => return T)
+                match T with
+                | .sort _ => return L
+                | _ => return (fv,T) :: L
+                ) []
               let presinks ← presinks.foldlM (fun S (_,T) => do
                 let nonSink := T.getFVarIds
                 return S.filter (fun (x,_) => !(nonSink.contains x))
                 ) presinks
-              let hyps ← hs.foldlM (fun H h => do
-                match h with
-                | .raw h | .irreducible h =>
-                  let T ← InferType h l1 l2
-                  let T ← WhnfR T l1 l2
-                  return T :: H
-                | .simp simpSteps nonTerminal _ =>
-                  match simpSteps with
-                  | .nil =>
-                    match nonTerminal with
-                    | .none => return H
-                    | .some nonTerminal =>
-                        let T ← InferType nonTerminal l1 l2
-                        let T ← WhnfR T l1 l2
-                        return T :: H
-                  | .cons _ T _ _ =>
-                    let T ← WhnfR (cleanBetaTopType T) l1 l2
-                    return T :: H
-                ) []
-              let hyps ← presinks.foldlM (fun S (fv,fvT) => do
-                let nonSink := hyps.any (fun HT => HT.onAllSubtermsCheckExistsTR (fun | .fvar id => fv == id | _ => false))
-                if nonSink then return S else return  fvT :: S
-                ) hyps
+              let hyps := presinks.map Prod.snd
               mtrace on .zero with s!" hyps {← hyps.mapM ppExpr}"
-              return .cons r locLifted goal hyps R)
-            sampleCoreBack preProcessed conjable l1 l2 depthDig depthStart depthStop deltaFuzz zetaFuzz todo samples (haveP.foldl havePats ListProd3.cons)
+              sampleCoreBack preProcessed conjable l1 l2 depthDig depthStart depthStop deltaFuzz zetaFuzz todo (.cons r lifted goal hyps samples) (haveP.foldl havePats ListProd3.cons)
+            | _ =>
+              let samples ← withLCtx l1 l2 <| hyps.foldlM samples (fun locLifted hs R => do
+                let locLifted := locLifted.filter (fun x => usedFv.contains x && !(lifted.contains x))
+                -- ugly, and should be fixed by having sampleHypsCore be run on empty lifted ??
+                -- point is, when hyps was non-empty, we don't want binder hyps ...
+                let presinks ← locLifted.foldlM (fun L fv => do
+                  let T ← fv.getType
+                  let T ← (do match ← isClass? T with | .none => whnfR T | _ => return T)
+                  match T with
+                  | .sort _ => return L
+                  | _ => return (fv,T) :: L
+                  ) []
+                let presinks ← presinks.foldlM (fun S (_,T) => do
+                  let nonSink := T.getFVarIds
+                  return S.filter (fun (x,_) => !(nonSink.contains x))
+                  ) presinks
+                let hyps ← hs.foldlM (fun H h => do
+                  match h with
+                  | .raw h | .irreducible h =>
+                    if h.isRefl?
+                    then return H
+                    else
+                      let T ← inferType h
+                      let T ← whnfR T
+                      match T with
+                      | .sort _ => return H
+                      | _ => return T :: H
+                  | .simp simpSteps nonTerminal _ =>
+                    match simpSteps with
+                    | .nil =>
+                      match nonTerminal with
+                      | .none => return H
+                      | .some nonTerminal =>
+                          let T ← inferType nonTerminal
+                          let T ← whnfR T
+                          match T with
+                          | .sort _ => return H
+                          | _ => return T :: H
+                    | .cons _ T _ _ =>
+                      let T ← whnfR (cleanBetaTopType T)
+                      return T :: H
+                  ) []
+                let hyps ← presinks.foldlM (fun S (fv,fvT) => do
+                  let nonSink := hyps.any (fun HT => HT.onAllSubtermsCheckExistsTR (fun | .fvar id => fv == id | _ => false))
+                  if nonSink then return S else return  fvT :: S
+                  ) hyps
+                mtrace on .zero with s!" hyps {← hyps.mapM ppExpr}"
+                return .cons r locLifted goal hyps R)
+              sampleCoreBack preProcessed conjable l1 l2 depthDig depthStart depthStop deltaFuzz zetaFuzz todo samples (haveP.foldl havePats ListProd3.cons)
         | .induc .. =>
             let goal ← InferType e l1 l2
             let usedFv := e.getFVarIds
             let lifted := lifted.filter (fun x => usedFv.contains x)
             let goal ← WhnfR goal l1 l2
             mtrace on .zero with s!" goal {← ppExpr goal}"
-            let presinks ← lifted.mapM (fun fv => do
+            let presinks ← lifted.foldlM (fun L fv => do
               let T ← fv.GetType l1 l2
-              let T ← WhnfR T l1 l2
-              return (fv,T))
+              let T ←  (do match ← IsClass? T l1 l2 with | .none => WhnfR T l1 l2 | _ => return T)
+              match T with
+              | .sort _ => return L
+              | _ => return (fv,T) :: L
+              ) []
             let presinks ← presinks.foldlM (fun S (_,T) => do
               let nonSink := T.getFVarIds
               return S.filter (fun (x,_) => !(nonSink.contains x))
@@ -419,10 +465,13 @@ partial def sampleCoreBack
           | .some fvs goal n =>
               let locLifted := (fvs.foldl (fun x y => x.insert y) lifted) -- worried about duplication
               let locLifted := locLifted.filter (fun x => usedFv.contains x)
-              let presinks ← locLifted.mapM (fun fv => do
+              let presinks ← locLifted.foldlM (fun L fv => do
                 let T ← fv.GetType l1 l2
-                let T ← WhnfR T l1 l2
-                return (fv,T))
+                let T ← (do match ← IsClass? T l1 l2 with | .none => WhnfR T l1 l2 | _ => return T)
+                match T with
+                | .sort _ => return L
+                | _ => return (fv,T) :: L
+                ) []
               let presinks ← presinks.foldlM (fun S (_,T) => do
                 let nonSink := T.getFVarIds
                 return S.filter (fun (x,_) => !(nonSink.contains x))
@@ -438,7 +487,8 @@ partial def sampleCoreBack
 
 
 #check 1
--- #exit
+
+
 
 partial def sampleCoreForw
   (preProcessed : CTrie SimpCongrTheorem) --(conjable : CTrie (List Nat))
@@ -491,10 +541,13 @@ partial def sampleCoreForw
         let .mk samples l1 l2 ← hyps.foldlM (Prod3.mk samples l1 l2) (fun locLifted hs (.mk samples l1 l2) => do
           withLCtx l1 l2 <| do
             let locLifted := locLifted.filter (fun x => usedFv.contains x)
-            let presinks ← locLifted.mapM (fun fv => do
+            let presinks ← locLifted.foldlM (fun L fv => do
               let T ← fv.getType
-              let T ← whnfR T
-              return (fv,T))
+              let T ← (do match ← isClass? T with | .none => whnfR T | _ => return T)
+              match T with
+              | .sort _ => return L
+              | _ => return (fv,T) :: L
+              ) []
             let presinks ← presinks.foldlM (fun S (_,T) => do
               let nonSink := T.getFVarIds
               return S.filter (fun (x,_) => !(nonSink.contains x))
@@ -502,9 +555,14 @@ partial def sampleCoreForw
             let prehyps ← hs.foldlM (fun H h => do
               match h with
               | .raw h | .irreducible h =>
-                let T ← inferType h
-                let T ← whnfR T
-                return ListProd.cons (.some h) T H
+                if h.isRefl?
+                then return H
+                else
+                  let T ← inferType h
+                  let T ← whnfR T
+                  match T with
+                  | .sort _ => return H
+                  | _ => return ListProd.cons (.some h) T H
               | .simp simpSteps nonTerminal _ =>
                   match simpSteps with
                   | .nil =>
@@ -513,7 +571,9 @@ partial def sampleCoreForw
                     | .some nonTerminal =>
                         let T ← inferType nonTerminal
                         let T ← whnfR T
-                        return .cons (.some nonTerminal) T H
+                        match T with
+                        | .sort _ => return H
+                        | _ => return .cons (.some nonTerminal) T H
                   | .cons _ T _ _ =>
                     let T ← WhnfR (cleanBetaTopType T) l1 l2
                     return .cons .none T H
@@ -522,25 +582,34 @@ partial def sampleCoreForw
           )
         sampleCoreForw preProcessed l1 l2 withHyps depthDig depthStart depthStop deltaFuzz zetaFuzz todo samples
       | .simp simpSteps _  usedFv =>
-          match ← simpProof_topDelab' simpSteps with
-          | .some fvs goal n =>
-              let locLifted := (fvs.foldl (fun x y => x.insert y) lifted) -- worried about duplication
-              let locLifted := locLifted.filter (fun x => usedFv.contains x)
-              let presinks ← locLifted.mapM (fun fv => do
+          if withHyps
+          then
+            match ← simpProof_topDelab' simpSteps with
+            | .some fvs shyp n =>
+                let locLifted := (fvs.foldl (fun x y => x.insert y) lifted) -- worried about duplication
+                let locLifted := locLifted.filter (fun x => usedFv.contains x)
+                let presinks ← locLifted.foldlM (fun L fv => do
                 let T ← fv.GetType l1 l2
-                let T ← WhnfR T l1 l2
-                return (fv,T))
-              let presinks ← presinks.foldlM (fun S (_,T) => do
-                let nonSink := T.getFVarIds
-                return S.filter (fun (x,_) => !(nonSink.contains x))
-                ) presinks
-              let hyps := presinks.mapTRR Prod.snd
-              let samples := .cons (.thm n) lifted (cleanBetaTopType goal) hyps samples
-              let .mk todo _ l1 l2 ← digExpr preProcessed l1 l2 depthDig e todo lifted
-              sampleCoreForw preProcessed l1 l2 withHyps depthDig depthStart depthStop deltaFuzz zetaFuzz todo samples
-          | .none =>
-              let .mk todo _ l1 l2 ← digExpr preProcessed l1 l2 depthDig e todo lifted
-              sampleCoreForw preProcessed l1 l2 withHyps depthDig depthStart depthStop deltaFuzz zetaFuzz todo samples
+                let T ← (do match ← IsClass? T l1 l2 with | .none => WhnfR T l1 l2 | _ => return T)
+                match T with
+                | .sort _ => return L
+                | _ => return (fv,T) :: L
+                ) []
+                let presinks ← presinks.foldlM (fun S (_,T) => do
+                  let nonSink := T.getFVarIds
+                  return S.filter (fun (x,_) => !(nonSink.contains x))
+                  ) presinks
+                let hyps := (cleanBetaTopType shyp) :: presinks.mapTRR Prod.snd
+                let samples := .cons (.thm n) lifted (.const `True []) hyps samples
+                -- ficticous goal true ... idealy we want this to be a forward step in any goal,
+                -- and our framework doesn't really allow us to track that
+                let .mk todo _ l1 l2 ← digExpr preProcessed l1 l2 depthDig e todo lifted
+                sampleCoreForw preProcessed l1 l2 withHyps depthDig depthStart depthStop deltaFuzz zetaFuzz todo samples
+            | .none =>
+                let .mk todo _ l1 l2 ← digExpr preProcessed l1 l2 depthDig e todo lifted
+                sampleCoreForw preProcessed l1 l2 withHyps depthDig depthStart depthStop deltaFuzz zetaFuzz todo samples
+          else
+            sampleCoreForw preProcessed l1 l2 withHyps depthDig depthStart depthStop deltaFuzz zetaFuzz todo samples
   | .nil => return .mk samples l1 l2
 
 
