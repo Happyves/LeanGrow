@@ -45,7 +45,7 @@ def test_subSample_cvbThm
   let .mk sorted types l1 l2 ← samples.foldlM (Prod4.mk sorted (#[] : Array Expr) L1 L2)
     (fun sd _ goal _ B@(.mk sorted types l1 l2) => do
       match sd with
-      | .thm n =>
+      | .induc n =>
           let .mk types sorted ← cvb_thms_sampleClassify_subPat
             empty singleton insert l1 l2 n goal sampleName types sorted
           return .mk sorted types l1 l2
@@ -105,7 +105,7 @@ def test_subSample_cvbGoalHyp
   let .mk sorted types l1 l2 ← samples.foldlM (Prod4.mk state (#[] : ) L1 L2)
     (fun sd _ goal _ B@(.mk state types l1 l2) => do
       match sd with
-      | .thm n =>
+      | .induc n =>
           let sorted ← cvb_goal_hyp_sampleClassify_subPat
             empty singleton insert
             l1 l2 n goal sampleName types state

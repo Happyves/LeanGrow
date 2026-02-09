@@ -20,3 +20,9 @@ def test (n : Name) : MetaM Unit := do
 
 #eval test ``Decidable.casesOn
 -- motive could be type, hence the misfire
+
+#check 1
+
+-- #eval buildConjPosTree #[`Init.Prelude]
+
+-- #eval loadConjPosTree_forTest `Init.Prelude

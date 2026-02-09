@@ -32,6 +32,7 @@ def test_conjSample_cvbThm
     let .some (.thmInfo I) := env.find? thmName | throwError "Bad name"
     let .mk p fvs l1 l2 ← LambdaLetTelescope I.value 0 L1 L2
     let .mk res _ l1 l2 ← sampleCoreBack preS .empty l1 l2 depthDig depthStart depthStop deltaFuzz zetaFuzz (.cons (.raw p) (fvs.map Expr.fvarId!).toList .nil) samples .nil
+    -- ↑ empty conj tree means only tactics will be recognized, noth thms
     samples := res
     L1 := l1
     L2 := l2

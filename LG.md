@@ -136,6 +136,7 @@ Djv Parse:
 Djv Core:
 - query
 - caching
+- alternative gen
 - For score add different generalisations (corresponding to different ratios, for example) from same sample
 to scoring-structures, possibly with different scores
 - dbg

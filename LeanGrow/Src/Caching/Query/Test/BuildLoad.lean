@@ -149,6 +149,7 @@ def bigInit := #[`Init.Prelude, `Init.SimpLemmas, `Init.PropLemmas,
 
 -- # Test Loads
 
+-- **Change** capitilized `WithImportModules` in buildPartialCacheData ; check if causes errors
 
 -- #eval exploreCaches_stdBackPaIn_pp #[`Init.Data.List.Perm, `Init.Data.List.Range, `Init.Data.List.Basic, `Init.Data.List.Lemmas]
 -- overflow : ue to printing since ↑ stress test passes

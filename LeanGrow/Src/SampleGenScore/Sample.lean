@@ -376,7 +376,7 @@ partial def sampleCoreBack
             match hyps with
             | .nil =>
               let lifted := lifted.filter (fun x => usedFv.contains x)
-              let presinks ← lifted.foldlM (fun L fv => do
+              let presinks ← withLCtx l1 l2 <| lifted.foldlM (fun L fv => do
                 let T ← fv.getType
                 let T ← (do match ← isClass? T with | .none => whnfR T | _ => return T)
                 match T with
@@ -463,8 +463,9 @@ partial def sampleCoreBack
       | .simp simpSteps _ usedFv =>
           match ← simpProof_topDelab' simpSteps with
           | .some fvs goal n =>
-              let locLifted := (fvs.foldl (fun x y => x.insert y) lifted) -- worried about duplication
-              let locLifted := locLifted.filter (fun x => usedFv.contains x)
+              -- let locLifted := (fvs.foldl (fun x y => x.insert y) lifted) -- worried about duplication
+              -- let locLifted := locLifted.filter (fun x => usedFv.contains x)
+              let locLifted := fvs
               let presinks ← locLifted.foldlM (fun L fv => do
                 let T ← fv.GetType l1 l2
                 let T ← (do match ← IsClass? T l1 l2 with | .none => WhnfR T l1 l2 | _ => return T)
@@ -586,8 +587,9 @@ partial def sampleCoreForw
           then
             match ← simpProof_topDelab' simpSteps with
             | .some fvs shyp n =>
-                let locLifted := (fvs.foldl (fun x y => x.insert y) lifted) -- worried about duplication
-                let locLifted := locLifted.filter (fun x => usedFv.contains x)
+                -- let locLifted := (fvs.foldl (fun x y => x.insert y) lifted) -- worried about duplication
+                -- let locLifted := locLifted.filter (fun x => usedFv.contains x)
+                let locLifted := fvs
                 let presinks ← locLifted.foldlM (fun L fv => do
                 let T ← fv.GetType l1 l2
                 let T ← (do match ← IsClass? T l1 l2 with | .none => WhnfR T l1 l2 | _ => return T)

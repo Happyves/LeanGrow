@@ -176,25 +176,25 @@ partial def buildCachDataForCore [Repr IdxCollType]
           let ciN := cinfo.name.toString.toUTF8
           let .mk sofarBack formats sofarBackRW countThm sofarFwd hyptothm hyptosink sofarFwdRW countHyps thmNameToIdx thmNameToHypIdx ← inner ciN sofarBack formats sofarBackRW countThm sofarFwd hyptothm hyptosink sofarFwdRW countHyps thmNameToIdx thmNameToHypIdx rwWithSinkNotInGoal data
           go (cinfoI + 1) sofarBack formats sofarBackRW countThm sofarFwd hyptothm hyptosink sofarFwdRW countHyps thmNameToIdx thmNameToHypIdx
-        | .ctorInfo .. =>
-          if cinfo.name.blackListCaching (← getEnv)
+      | .ctorInfo .. =>
+        if cinfo.name.blackListCaching (← getEnv)
+        then
+          mtrace on .zero with s!" blacklisted !"
+          go (cinfoI + 1) sofarBack formats sofarBackRW countThm sofarFwd hyptothm hyptosink sofarFwdRW countHyps thmNameToIdx thmNameToHypIdx
+        else
+          if ← isProp cinfo.type
           then
-            mtrace on .zero with s!" blacklisted !"
+            let .mk rwWithSinkNotInGoal data _ _ ← processForCache module countThm cinfo
+            mtrace on .zero with s!" passed processForCache"
+            let ciN := cinfo.name.toString.toUTF8
+            let .mk sofarBack formats sofarBackRW countThm sofarFwd hyptothm hyptosink sofarFwdRW countHyps thmNameToIdx thmNameToHypIdx ← inner ciN sofarBack formats sofarBackRW countThm sofarFwd hyptothm hyptosink sofarFwdRW countHyps thmNameToIdx thmNameToHypIdx rwWithSinkNotInGoal data
             go (cinfoI + 1) sofarBack formats sofarBackRW countThm sofarFwd hyptothm hyptosink sofarFwdRW countHyps thmNameToIdx thmNameToHypIdx
           else
-            if ← isProp cinfo.type
-            then
-              let .mk rwWithSinkNotInGoal data _ _ ← processForCache module countThm cinfo
-              mtrace on .zero with s!" passed processForCache"
-              let ciN := cinfo.name.toString.toUTF8
-              let .mk sofarBack formats sofarBackRW countThm sofarFwd hyptothm hyptosink sofarFwdRW countHyps thmNameToIdx thmNameToHypIdx ← inner ciN sofarBack formats sofarBackRW countThm sofarFwd hyptothm hyptosink sofarFwdRW countHyps thmNameToIdx thmNameToHypIdx rwWithSinkNotInGoal data
-              go (cinfoI + 1) sofarBack formats sofarBackRW countThm sofarFwd hyptothm hyptosink sofarFwdRW countHyps thmNameToIdx thmNameToHypIdx
-            else
-              mtrace on .zero with s!" non prop ctor !"
-              go (cinfoI + 1) sofarBack formats sofarBackRW countThm sofarFwd hyptothm hyptosink sofarFwdRW countHyps thmNameToIdx thmNameToHypIdx
-        | _ =>
-          mtrace on .zero with s!" skip !"
-          go (cinfoI + 1) sofarBack formats sofarBackRW countThm sofarFwd hyptothm hyptosink sofarFwdRW countHyps thmNameToIdx thmNameToHypIdx
+            mtrace on .zero with s!" non prop ctor !"
+            go (cinfoI + 1) sofarBack formats sofarBackRW countThm sofarFwd hyptothm hyptosink sofarFwdRW countHyps thmNameToIdx thmNameToHypIdx
+      | _ =>
+        mtrace on .zero with s!" skip !"
+        go (cinfoI + 1) sofarBack formats sofarBackRW countThm sofarFwd hyptothm hyptosink sofarFwdRW countHyps thmNameToIdx thmNameToHypIdx
   Meta.withUnlimitedHeartbeats do
   mtracing
   mtrace on .zero with s!" unlimited heartbeats"
@@ -220,7 +220,7 @@ unsafe def buildPartialCacheData [Repr IdxCollType]
   (singleton : Nat → IdxCollType) (insert : Nat → IdxCollType → IdxCollType)
   (module : Name) (StepSize : Nat) (opts : Options := {}) : IO Unit :=
   let modules := #[module]
-  withImportModules (modules.map (fun x => {module := x})) opts <| fun env => do
+  WithImportModules (modules.map (fun x => {module := x})) opts <| fun env => do
     stdMetaRun env do
       let cachePath ← findLeanGrowCacheDir
       let finalPath := FilePath.join cachePath (FilePath.toString "withUnpickleTracing.txt")
