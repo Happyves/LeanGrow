@@ -69,3 +69,4 @@ def testDelZet (printLift? : Bool) (thmName : Name)
 
 -- bad simp (simpParse : simpParse)
 -- issue of binder hyps not making it into hyps at forw
+-- is he Exists.casesOn for ind ? then revert hyps ! else pointless for subpatterns

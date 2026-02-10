@@ -359,7 +359,7 @@ def postCleanReject (l1 : LocalContext) (l2 : LocalInstances) (T : Expr) : MetaM
 
 #check Expr.getFVarIds'
 
-#exit
+
 
 partial def sampleCoreBack
   (preProcessed : CTrie SimpCongrTheorem) (conjable : CTrie (List Nat))
@@ -592,10 +592,10 @@ partial def sampleCoreForw
               | .none => return L
               | .some T => return (fv,T) :: L
               ) []
-            let presinks ← presinks.foldlM (fun S (_,T) => do
-              let nonSink := T.getFVarIds
-              return S.filter (fun (x,_) => !(nonSink.contains x))
-              ) presinks
+            -- let presinks ← presinks.foldlM (fun S (_,T) => do
+            --   let nonSink := T.getFVarIds
+            --   return S.filter (fun (x,_) => !(nonSink.contains x))
+            --   ) presinks
             let prehyps ← hs.foldlM (fun H h => do
               match h with
               | .raw h | .irreducible h =>
@@ -643,13 +643,13 @@ partial def sampleCoreForw
                 let T ← (do match ← IsClass? T l1 l2 with | .none => WhnfR T l1 l2 | _ => return T)
                 match ← postCleanReject l1 l2 T with
                 | .none => return L
-                | .some T => return (fv,T) :: L
+                | .some T => return T :: L --return (fv,T) :: L
                 ) []
-                let presinks ← presinks.foldlM (fun S (_,T) => do
-                  let nonSink := T.getFVarIds
-                  return S.filter (fun (x,_) => !(nonSink.contains x))
-                  ) presinks
-                let hyps := (cleanBetaTopType shyp) :: presinks.mapTRR Prod.snd
+                -- let presinks ← presinks.foldlM (fun S (_,T) => do
+                --   let nonSink := T.getFVarIds
+                --   return S.filter (fun (x,_) => !(nonSink.contains x))
+                --   ) presinks
+                let hyps := (cleanBetaTopType shyp) :: presinks --presinks.mapTRR Prod.snd
                 let samples := .cons (.thm n) lifted (.const `True []) hyps samples
                 -- ficticous goal true ... idealy we want this to be a forward step in any goal,
                 -- and our framework doesn't really allow us to track that
