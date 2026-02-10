@@ -157,8 +157,8 @@ def delab_simpTheorem
   mtracing
   let T ← InferType proof l1 l2
   mtrace on .zero with s!" on type {← ppExpr T}"
-  match T.eq? with
-  | .some (_,lhs,_) =>
+  match T.eq?, T.iff? with
+  | .some (_,lhs,_), _ | _, .some (lhs,_) =>
     -- let .mk _ actFvs ←  lhs.collectFVars.run {}
     -- let actFvs := actFvs.fvarIds
     -- let binFvs := binFvs.filter (fun x => actFvs.contains x.fvarId!)
@@ -180,7 +180,7 @@ def delab_simpTheorem
       mtrace on .zero with s!" adding\nType : {← ppExpr patToSimp}\nSubproof : {← ppExpr proof}"
       mtrace on .one with s!" Raw\n {repr patToSimp}"
       return .some <| .cons extFvs patToSimp proof sofar
-  | .none =>
+  | .none, .none =>
       return .none
     -- return .some <|  .cons extFvs T proof sofar
     -- -- can originate from `simpa using ...` as in `ConvexCone.salient_positive`

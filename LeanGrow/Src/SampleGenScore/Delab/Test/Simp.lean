@@ -130,3 +130,26 @@ theorem test_2 {n : Nat} {tl : List α} (hn : n + 1 ≤ tl.length + 1)
 
 #print test_2
 #eval testSimpDelab `test_2
+
+
+#check 1
+
+open List
+
+theorem test_3_1 (α β : Type _) (l : List α) (p : β → Prop) (f : α → β)
+   : Forall p (map f []) ↔ Forall (p ∘ f) [] := by
+   simp [*]
+
+#print test_3_1
+-- #eval testSimpDelab `test_3_1
+
+
+theorem test_3_2 (α β : Type _) (l : List α) (p : β → Prop) (f : α → β)
+  (head : α) (tail : List α) (tail_ih : Forall p (map f tail) ↔ Forall (p ∘ f) tail)
+  : Forall p (map f (head :: tail)) ↔ Forall (p ∘ f) (head :: tail) := by
+   simp [*]
+
+#print test_3_2
+
+
+#eval testSimpDelab `test_3_2

@@ -27,15 +27,6 @@ def testDelZet (printLift? : Bool) (thmName : Name)
 
 #print List.Subset.dedup_append_right
 
-
--- tracing_mode .std
--- tracing_flags [(`delabSample_Rewrite_core, TracingFlags.all),
---                (`delabDig_Rewrite_core, TracingFlags.all),
---                (`delabSample_Rewrite_topBack, TracingFlags.all),
---                (`delabSample_Rewrite_topForw, TracingFlags.all),
---                (`sampleCoreForw, TracingFlags.all),
---                ]
-
 -- #eval testNoDelZet false `List.Subset.dedup_append_right 1 2 2
 
 #check List.Subset.union_eq_right
@@ -50,5 +41,31 @@ def testDelZet (printLift? : Bool) (thmName : Name)
 
 #check List.filter_eq_foldr
 
+-- tracing_mode .std
+-- tracing_flags [(`sampleCoreForw, TracingFlags.all),
+--                ]
+
 -- #eval testNoDelZet false `List.filter_eq_foldr 1 2 2
--- unknonw free var , prbaly forgot to wrap in withLCtx somewhere, but it is lunshtime
+
+
+#check List.length_erase_add_one
+
+-- #eval testNoDelZet false `List.length_erase_add_one 1 2 2
+
+
+#check List.forall_map_iff
+
+-- #eval testNoDelZet false `List.forall_map_iff 1 2 2
+
+
+#check List.Forall.imp
+
+-- #eval testNoDelZet false `List.Forall.imp 1 2 2
+
+
+#check List.disjoint_pmap
+
+-- #eval testNoDelZet false `List.disjoint_pmap 1 2 2
+
+-- bad simp (simpParse : simpParse)
+-- issue of binder hyps not making it into hyps at forw
