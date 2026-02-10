@@ -68,8 +68,8 @@ unsafe def exploreCaches_ThmForThmFormat'
       | .none => throwError s!"Theorem {theo} has no entry"
       | .some inds =>
           mtrace on .zero with s!"[exploreCaches_ThmForThmFormat'] inds {inds}"
-          let idx := inds.head!
-          let msg ← act (data.data.thm_data[idx]!)
+          let idx := inds[0]!
+          let msg ← act (data.data.thm_data[idx.toNat]!)
           return msg
 
 

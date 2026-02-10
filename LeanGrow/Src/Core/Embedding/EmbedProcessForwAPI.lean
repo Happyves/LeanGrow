@@ -8,14 +8,13 @@ Author: Yves Jäckle.
 
 import LeanGrow.Src.Core.Embedding.EmbedQueryForwInclude
 import LeanGrow.Src.Search.IntroTree.Types
-import LeanGrow.Src.Data.SetTrie.Operations
-import LeanGrow.Src.Data.PathIndex.Operations
+import LeanGrow.Src.Data.SetTrie.Specialize
+import LeanGrow.Src.Data.PathIndexG.Operations
 
 
 open Lean Meta
 
 variable {IndexColType : Type}
-
 
 structure embedForwData where
   thm : ThmFormat
@@ -27,30 +26,18 @@ deriving Inhabited
 
 
 @[specialize, inline]
-def akwardFindSinkPosFromHypIdx
-  (toList : IndexColType → List Nat)
-  (thm : ThmFormat) (thmHypInds : IndexColType) (foundHypInd : Nat) : Nat :=
-  let thmHypInds := toList thmHypInds
-  match thmHypInds.findIdx? (· == foundHypInd) with
-  | .none => panic s!"[akwardFindSinkPosFromHypIdx] foundHypInd {foundHypInd} not found in hyp indices {thmHypInds}"
-  | .some pp =>
-    let sinkPos := thm.sinks.reverse -- sinks where added to hyp-counting in reverse !
-    match sinkPos[pp]? with
-    | .none => panic s!"[akwardFindSinkPosFromHypIdx] searched for {pp} among sinkPos {sinkPos}"
-    | .some pos => pos
-
-
-
-@[specialize, inline]
 def embedPropaInclude [Repr IndexColType]
   (intersect : IndexColType → IndexColType → IndexColType) (empty? : IndexColType → Bool)
-  (toList : IndexColType → List Nat)
+  (fold : ∀ {β : Type _}, IndexColType → (init : β) → (f : Nat → β → β) → β)
+  (foldM : ∀ {β : Type _}, IndexColType → (init : β) → (f : Nat → β → MetaM β) → MetaM β)
+  (stdForwSetTrie_idxToSinkIdx : Array Nat)
   (hypIndToThm : Nat → ThmFormat) (thmToInds : Name → IndexColType) (unode? : Nat → Bool)
   (l1 : LocalContext) (l2 : LocalInstances)
   (sofar : ListProd IndexColType embedForwData)
   (out : ListProd3 IndexColType IndexColType ((ListProd Nat Expr) × (ListProd Nat Level)))
   : MetaM (ListProd IndexColType embedForwData) :=
-  do --trace set Tracing.Flags.none in  do
+    do
+    mtracing
     mtrace on .zero with s!"[embedPropaInclude] sofar: {← sofar.foldlM "" (fun is emb S => return S ++ s!"\n{repr is} {repr emb.thm.name} {← emb.embedSofar.mapM ppExpr}")}"
     out.foldlM sofar (fun guInds thmHypInds (propaE, propaL) R => do
       mtrace on .zero with s!"[embedPropaInclude] Looking at match guInds {repr guInds} thmHypInds {repr thmHypInds}"
@@ -94,24 +81,25 @@ def embedPropaInclude [Repr IndexColType]
                     mtrace on .zero with s!"[embedPropaInclude] negative coherence defeq between →, aborting :\n V : {repr V} \n blue.paramsSofar[p]! : {repr blue.paramsSofar[p]!} "
                     q1 (.cons hI embedForwData R, true)
                 ) <| fun blue => do
-                  let opts : List Expr := (toList guInds).mapTRR (fun i =>
+                  let opts : List Expr := fold guInds [] (fun i L =>
                     if unode? i
-                    then .fvar ⟨unode i⟩
-                    else .fvar ⟨gnode i⟩
+                    then (.fvar ⟨unode i⟩) :: L
+                    else (.fvar ⟨gnode i⟩) :: L
                     )
                   mtrace on .zero with s!"[embedPropaInclude] sink opts {repr opts}"
-                  let mut N := .cons hI embedForwData R -- we keep the embedding without extentions, so that it can be extended further in other branches of the intro tree ?
-                  let explHypInds := (toList thmHypInds)
-                  for hypIdx in explHypInds do
+                  let N := .cons hI embedForwData R -- we keep the embedding without extentions, so that it can be extended further in other branches of the intro tree ?
+                  let N ← foldM thmHypInds N (fun hypIdx N => do
                     let thm := hypIndToThm hypIdx
                     let hI := thmToInds (match thm.name with | .inl n => n | .inr e => e.name)
-                    mtrace on .zero with s!"[embedPropaInclude] found {repr hI} as hyp-inds-signature for thm"
-                    let hypIdx := akwardFindSinkPosFromHypIdx toList thm hI hypIdx
+                    let hypIdx := stdForwSetTrie_idxToSinkIdx[hypIdx]!
                     mtrace on .zero with s!"[embedPropaInclude] assigning sink {hypIdx}"
+                    let mut Nm := N
                     for o in opts do
                       mtrace on .zero with s!"[embedPropaInclude] adding it withoption sink {o}"
                       let here :=  {blue with embedSofar := blue.embedSofar.set! hypIdx o, unassignedNodes := blue.unassignedNodes.erase hypIdx}
-                      N := .cons hI here N
+                      Nm := .cons hI here Nm
+                    return Nm
+                    )
                   q1 (N, true)
         ) <| fun (R, found?) => do
           if found?
@@ -119,10 +107,9 @@ def embedPropaInclude [Repr IndexColType]
             mtrace on .zero with s!"[embedPropaInclude] theorem corresponding tothmHypInds {repr thmHypInds} is/was present, not adding it"
             return R
           else
-            let explHypInds := (toList thmHypInds)
-            let mut N := R
-            for hypIdx in explHypInds do
+            foldM thmHypInds R (fun hypIdx N => do
               let thm := hypIndToThm hypIdx
+              let hI := thmToInds (match thm.name with | .inl n => n | .inr e => e.name)
               mtrace on .zero with s!"[embedPropaInclude] adding embed candidate for thm {repr thm.name}"
               let freshembedForwDataBlue : embedForwData :=
                 {thm := thm
@@ -131,160 +118,213 @@ def embedPropaInclude [Repr IndexColType]
                  unassignedNodes := propaE.foldl (List.range thm.hypsNum) (fun p _ A => A.erase p)
                  unassignedParams := propaL.foldl (List.range thm.lvlParamsNum) (fun p _ A => A.erase p)
                 }
-              let opts : List Expr := (toList guInds).mapTRR (fun i =>
+              let opts : List Expr := fold guInds [] (fun i L =>
                 if unode? i
-                then .fvar ⟨unode i⟩
-                else .fvar ⟨gnode i⟩
+                then (.fvar ⟨unode i⟩) :: L
+                else (.fvar ⟨gnode i⟩) :: L
                 )
-              mtrace on .zero with s!"[embedPropaInclude] sink opts {repr opts}"
-              let hI := thmToInds (match thm.name with | .inl n => n | .inr e => e.name)
-              mtrace on .zero with s!"[embedPropaInclude] found {repr hI} as hyp-inds-signature for thm"
-              let hypIdx := akwardFindSinkPosFromHypIdx toList thm hI hypIdx
+              let hypIdx := stdForwSetTrie_idxToSinkIdx[hypIdx]!
               mtrace on .zero with s!"[embedPropaInclude] assigning sink {hypIdx}"
+              let mut Nm := N
               for o in opts do
                 mtrace on .zero with s!"[embedPropaInclude] adding it withoption sink {o}"
                 let here :=  {freshembedForwDataBlue with embedSofar := freshembedForwDataBlue.embedSofar.set! hypIdx o, unassignedNodes := freshembedForwDataBlue.unassignedNodes.erase hypIdx}
-                N := .cons hI here N
-            return N
+                Nm := .cons hI here Nm
+              return Nm
+            )
           )
 
 
-#check PaIn.pp
+#check PaInG.pp
+
 
 @[specialize, inline]
 partial def embedForwIncludeMain
   (thmembedForwData : CTrie (Array ThmFormat)) [Repr IndexColType]
-  (toList : IndexColType → List Nat)
-  (hypIndToThm : Nat → ThmFormat) (thmToInds : Name → IndexColType) (unode? : Nat → Bool)
-  (intersect union difference : IndexColType → IndexColType → IndexColType) (empty? : IndexColType → Bool) (emptyCol : IndexColType)
-  (l1 : LocalContext) (l2 : LocalInstances)
-  (Q' : IntroTree IndexColType) (T : SetTrie ThmFormat (PaIn IndexColType))
-  : MetaM <| ListProd3 IndexColType (PaIn IndexColType) embedForwData :=
-  do --trace set Tracing.Flags.none in
+  (fold : ∀ {β : Type _}, IndexColType → (init : β) → (f : Nat → β → β) → β)
+  (foldM : ∀ {β : Type _}, IndexColType → (init : β) → (f : Nat → β → MetaM β) → MetaM β)
+  (insert : Nat → IndexColType → IndexColType)
+  (intersect union difference : IndexColType → IndexColType → IndexColType)
+  (empty? : IndexColType → Bool) (emptyCol : IndexColType)
+  (stdForwSetTrie_idxToSinkIdx : Array Nat)
+  (thm_data : Array ThmFormat) (stdForwSetTrie_idxToThmIdx : Array Nat)
+  (thmNameToHypIdx : CTrie IndexColType) (uNodes : Array Nat)
+  (l1 : LocalContext)
+  (Q' : IntroTree IndexColType) (T : SetTrieP ThmFormat IndexColType PaInG)
+  : MetaM <| ListProd4 LocalInstances IndexColType (PaInG IndexColType) embedForwData :=
+  do
+  mtracing
+  let hypIndToThm : Nat → ThmFormat :=
+    (fun i => let j := stdForwSetTrie_idxToThmIdx[i]! ; thm_data[j]!)
+  let thmToInds : Name → IndexColType := (fun n =>
+      match thmNameToHypIdx.find? n.toString.toUTF8 with
+      | .none => emptyCol
+      | .some ids => ids)
+  let unode? : Nat → Bool :=
+    (fun i => uNodes.binSearchContains i (· < · ))
   let rec @[specialize] findSplit
-    (done : ListProd3 (List (IntroTree IndexColType)) (PaIn IndexColType) (ListProd IndexColType embedForwData))
-    (t : PaIn IndexColType)
-    : ListProd3 ((IntroTree IndexColType)) (PaIn IndexColType) (ListProd IndexColType embedForwData) →
-        MetaM (ListProd3 (List (IntroTree IndexColType)) (PaIn IndexColType) (ListProd IndexColType embedForwData))
+    (done : ListProd4 LocalInstances (List (IntroTree IndexColType)) (PaInG IndexColType) (ListProd IndexColType embedForwData))
+    (t : PaInG IndexColType)
+    : ListProd3 ((IntroTree IndexColType)) (PaInG IndexColType) (ListProd IndexColType embedForwData) →
+        MetaM (ListProd4 LocalInstances (List (IntroTree IndexColType)) (PaInG IndexColType) (ListProd IndexColType embedForwData))
     | .nil => return done
     | .cons Q sf embs more => do
         match Q with
-        | .leaf _ _ _ q =>
-            let msf := ((PaIn.merge union emptyCol) q sf)
+        | .leaf l2 _ _ _ q =>
+            let msf := ((PaInG.merge union emptyCol) q sf)
             mtrace on .zero with s!"[findSplit] run embedForwIncludeCore on:\n msf : {← msf.pp l1 l2 [] 0 intersect empty?}\n t : {← t.pp l1 l2 [] 0 intersect empty?}"
-            match ← PaIn.embedForwIncludeCore thmembedForwData intersect difference empty? l1 l2 msf t with
+            match ← PaInG.embedForwIncludeCore thmembedForwData intersect difference empty? l1 l2 msf t with
             | .nil =>
                 mtrace on .zero with s!"[findSplit] nil"
                 findSplit done t more
             | Ms =>
                 mtrace on .zero with s!"[findSplit] propagate"
-                let nembs ← embedPropaInclude intersect empty? toList hypIndToThm thmToInds unode? l1 l2 embs Ms
+                let nembs ← embedPropaInclude intersect empty? fold foldM stdForwSetTrie_idxToSinkIdx hypIndToThm thmToInds unode? l1 l2 embs Ms
                 match nembs with
                 | .nil =>
                     mtrace on .zero with s!"[findSplit] nil after propa"
                     findSplit done t more
                 | _ =>
                     mtrace on .zero with s!"[findSplit] proceed"
-                    findSplit (.cons [] msf nembs done) t more
-        | .node _ _ _ q kids =>
-            let msf := ((PaIn.merge union emptyCol) q sf)
+                    findSplit (.cons l2 [] msf nembs done) t more
+        | .node l2 _ _ _ q kids =>
+            let msf := ((PaInG.merge union emptyCol) q sf)
             mtrace on .zero with s!"[findSplit] run embedForwIncludeCore on:\n msf : {← msf.pp l1 l2 [] 0 intersect empty?}\n t : {← t.pp l1 l2 [] 0 intersect empty?}"
-            match ← PaIn.embedForwIncludeCore thmembedForwData intersect difference empty? l1 l2 msf t with
+            match ← PaInG.embedForwIncludeCore thmembedForwData intersect difference empty? l1 l2 msf t with
             | .nil =>
                 mtrace on .zero with s!"[findSplit] nil"
                 findSplit done t (kids.foldl more (fun _ _ k R => .cons k msf embs R))
             | Ms =>
                 mtrace on .zero with s!"[findSplit] propagate"
-                let nembs ← embedPropaInclude intersect empty? toList hypIndToThm thmToInds unode? l1 l2 embs Ms
+                let nembs ← embedPropaInclude intersect empty? fold foldM stdForwSetTrie_idxToSinkIdx  hypIndToThm thmToInds unode? l1 l2 embs Ms
                 match nembs with
                 | .nil =>
                     mtrace on .zero with s!"[findSplit] nil after propa"
                     findSplit done t (kids.foldl more (fun _ _ k R => .cons k msf embs R))
                 | _ =>
                     mtrace on .zero with s!"[findSplit] proceed"
-                    findSplit (.cons (kids.foldl [] (fun _ _ y R => y :: R)) msf nembs done) t more
-  let rec @[specialize] go (done : ListProd3 IndexColType (PaIn IndexColType) embedForwData) :
-    ListProd4 (SetTrie ThmFormat (PaIn IndexColType)) (Option (IntroTree IndexColType)) (PaIn IndexColType) (ListProd IndexColType embedForwData)
-      → MetaM (ListProd3 IndexColType (PaIn IndexColType) embedForwData)
+                    findSplit (.cons l2 (kids.foldl [] (fun _ _ y R => y :: R)) msf nembs done) t more
+  let rec @[specialize] go (done : ListProd4 LocalInstances IndexColType (PaInG IndexColType) embedForwData) :
+    ListProd5 (SetTrieP ThmFormat IndexColType PaInG) (Option (IntroTree IndexColType)) LocalInstances (PaInG IndexColType) (ListProd IndexColType embedForwData)
+      → MetaM (ListProd4 LocalInstances IndexColType (PaInG IndexColType) embedForwData)
     | .nil => return done
-    | .cons T (.some Q) sf embs more => do
+    | .cons T (.some Q) l2 sf embs more => do
         match T with
-        | .root c =>
-            go done (c.foldl (fun R st => .cons st (.some Q) sf embs R) more)
-        | .node t c =>
+        | .root t c =>
             mtrace on .zero with s!"[embedForwIncludeMain] run embedForwIncludeCore on:\n sf : {← sf.pp l1 l2 [] 0 intersect empty?}\n t : {← t.pp l1 l2 [] 0 intersect empty?}"
-            match ← PaIn.embedForwIncludeCore thmembedForwData intersect difference empty? l1 l2 sf t with
+            match ← PaInG.embedForwInterCore thmembedForwData intersect difference empty? l1 l2 sf t with
             | .nil =>
                 mtrace on .zero with s!"[embedForwIncludeMain] not found in prior, going forward with findSplit"
                 let nxs ← findSplit .nil t (.cons Q sf embs .nil)
-                let nxsf := nxs.foldl more (fun its sf emb R =>
+                let nxsf := nxs.foldl more (fun ll2 its sf emb R =>
                   match its with
-                  | [] => c.foldl (fun R c => .cons c .none sf emb R) R
-                  | _ => c.foldl (fun R c => its.foldl (fun R it => .cons c (.some it) sf emb R) R) R
+                  | [] => c.foldl (fun R c => .cons c .none (l2 ++ ll2) sf emb R) R
+                  | _ => c.foldl (fun R c => its.foldl (fun R it => .cons c (.some it) (l2 ++ ll2) sf emb R) R) R
                   )
                 go done nxsf
             | Ms =>
-                let nembs ← embedPropaInclude intersect empty? toList hypIndToThm thmToInds unode? l1 l2 embs Ms
+                let nembs ← embedPropaInclude intersect empty? fold foldM stdForwSetTrie_idxToSinkIdx  hypIndToThm thmToInds unode? l1 l2 embs Ms
                 match nembs with
                 | .nil =>
                     mtrace on .zero with s!"[embedForwIncludeMain] found in prior, but inconcistent, going forward with findSplit"
                     let nxs ← findSplit .nil t (.cons Q sf embs .nil)
-                    let nxsf := nxs.foldl more (fun its sf emb R =>
+                    let nxsf := nxs.foldl more (fun ll2 its sf emb R =>
                       match its with
-                      | [] => c.foldl (fun R c => .cons c .none sf emb R) R
-                      | _ => c.foldl (fun R c => its.foldl (fun R it => .cons c (.some it) sf emb R) R) R
+                      | [] => c.foldl (fun R c => .cons c .none (l2 ++ ll2) sf emb R) R
+                      | _ => c.foldl (fun R c => its.foldl (fun R it => .cons c (.some it) (l2 ++ ll2) sf emb R) R) R
                       )
                     go done nxsf
                 | _ =>
-                    go done (c.foldl (fun R st => .cons st (.some Q) sf nembs R) more)
+                    go done (c.foldl (fun R st => .cons st (.some Q) l2 sf nembs R) more)
+        | .node _ t c =>
+            mtrace on .zero with s!"[embedForwIncludeMain] run embedForwIncludeCore on:\n sf : {← sf.pp l1 l2 [] 0 intersect empty?}\n t : {← t.pp l1 l2 [] 0 intersect empty?}"
+            match ← PaInG.embedForwIncludeCore thmembedForwData intersect difference empty? l1 l2 sf t with
+            | .nil =>
+                mtrace on .zero with s!"[embedForwIncludeMain] not found in prior, going forward with findSplit"
+                let nxs ← findSplit .nil t (.cons Q sf embs .nil)
+                let nxsf := nxs.foldl more (fun ll2 its sf emb R =>
+                  match its with
+                  | [] => c.foldl (fun R c => .cons c .none (l2 ++ ll2) sf emb R) R
+                  | _ => c.foldl (fun R c => its.foldl (fun R it => .cons c (.some it) (l2 ++ ll2) sf emb R) R) R
+                  )
+                go done nxsf
+            | Ms =>
+                let nembs ← embedPropaInclude intersect empty? fold foldM stdForwSetTrie_idxToSinkIdx  hypIndToThm thmToInds unode? l1 l2 embs Ms
+                match nembs with
+                | .nil =>
+                    mtrace on .zero with s!"[embedForwIncludeMain] found in prior, but inconcistent, going forward with findSplit"
+                    let nxs ← findSplit .nil t (.cons Q sf embs .nil)
+                    let nxsf := nxs.foldl more (fun ll2 its sf emb R =>
+                      match its with
+                      | [] => c.foldl (fun R c => .cons c .none (l2 ++ ll2) sf emb R) R
+                      | _ => c.foldl (fun R c => its.foldl (fun R it => .cons c (.some it) (l2 ++ ll2) sf emb R) R) R
+                      )
+                    go done nxsf
+                | _ =>
+                    go done (c.foldl (fun R st => .cons st (.some Q) l2 sf nembs R) more)
         | .leaf thm =>
             let hI := thmToInds (match thm.name with | .inl n => n | .inr e => e.name)
             go (embs.foldl done (fun x y z =>
               if empty? (intersect hI x)
               then z
-              else .cons x sf y z)) more
-    | .cons T .none sf embs more => do
+              else .cons l2 x sf y z)) more
+    | .cons T .none l2 sf embs more => do
         match T with
-        | .root c =>
-            go done (c.foldl (fun R st => .cons st .none sf embs R) more)
-        | .node t c =>
+        | .root t c =>
             mtrace on .zero with s!"[embedForwIncludeMain] run embedForwIncludeCore on:\n sf : {← sf.pp l1 l2 [] 0 intersect empty?}\n t : {← t.pp l1 l2 [] 0 intersect empty?}"
-            match ← PaIn.embedForwIncludeCore thmembedForwData intersect difference empty? l1 l2 sf t with
+            match ← PaInG.embedForwInterCore thmembedForwData intersect difference empty? l1 l2 sf t with
             | .nil =>
                 go done more
             | Ms =>
-                let nembs ← embedPropaInclude intersect empty? toList hypIndToThm thmToInds unode? l1 l2 embs Ms
+                let nembs ← embedPropaInclude intersect empty? fold foldM stdForwSetTrie_idxToSinkIdx  hypIndToThm thmToInds unode? l1 l2 embs Ms
                 match nembs with
                 | .nil =>
                     go done more
                 | _ =>
-                    go done (c.foldl (fun R st => .cons st .none sf nembs R) more)
+                    go done (c.foldl (fun R st => .cons st .none  l2 sf nembs R) more)
+        | .node _ t c =>
+            mtrace on .zero with s!"[embedForwIncludeMain] run embedForwIncludeCore on:\n sf : {← sf.pp l1 l2 [] 0 intersect empty?}\n t : {← t.pp l1 l2 [] 0 intersect empty?}"
+            match ← PaInG.embedForwInterCore thmembedForwData intersect difference empty? l1 l2 sf t with
+            | .nil =>
+                go done more
+            | Ms =>
+                let nembs ← embedPropaInclude intersect empty? fold foldM stdForwSetTrie_idxToSinkIdx  hypIndToThm thmToInds unode? l1 l2 embs Ms
+                match nembs with
+                | .nil =>
+                    go done more
+                | _ =>
+                    go done (c.foldl (fun R st => .cons st .none  l2 sf nembs R) more)
         | .leaf thm =>
             let hI := thmToInds (match thm.name with | .inl n => n | .inr e => e.name)
             go (embs.foldl done (fun x y z =>
               if empty? (intersect hI x)
               then z
-              else .cons x sf y z)) more
+              else .cons l2 x sf y z)) more
   do
   clearMvarAssignments
-  go .nil (.cons T Q' .dead .nil .nil)
+  go .nil (.cons T Q' #[] .dead .nil .nil)
 
 
 #check 1
+#check PaInG.embedForwInterCore
+#check PaInG.embedForwIncludeCore
 
 
 
 /--
 To add the term to the introtree, use the list of the sink-u-g-nodes:
 use u-g-dirs to find sinks, stop when all are found : this is the spot
+
+**New** check if term is instance, and if so, add it to instances of intro tree branch
 -/
 @[inline]
-def embedForwIncludePostProcess
-  (l1 : LocalContext) (l2 : LocalInstances)
-  (L : ListProd3 IndexColType (PaIn IndexColType) embedForwData )
-  : MetaM <| ListProd3 Expr (PaIn IndexColType) (List Nat) :=
-    do --trace set Tracing.Flags.none in
-    L.foldlM .nil (fun _ ltxPaIn data R => do
+def embedForwIncludePostProcess' -- ' to remeber todo
+  (l1 : LocalContext)
+  (L : ListProd4 LocalInstances IndexColType (PaInG IndexColType) embedForwData )
+  : MetaM <| ListProd3 Expr (PaInG IndexColType) (List Nat) :=
+    do
+    mtracing
+    L.foldlM .nil (fun l2 _ ltxPaInG data R => do
       mtrace on .zero with s!"[embedForwIncludePostProcess] looking at data for thm {repr data.thm.name}"
       if !data.unassignedParams.isEmpty
       then
@@ -324,8 +364,8 @@ def embedForwIncludePostProcess
             | _ => throwError s!"[embedForwIncludePostProcess] we expect sinks to have u-g-nodes as args only, instead we have {← ppExpr A}"
         mtrace on .zero with s!"[embedForwIncludePostProcess] term {← ppExpr term} of type {← ppExpr (← inferType term)}"
         mtrace on .zero with s!"[embedForwIncludePostProcess] sinkGUinds {sinkGUinds}"
-        return .cons term ltxPaIn sinkGUinds R
+        return .cons term ltxPaInG sinkGUinds R
       )
 
 
-#check PaIn.merge
+#check PaInG.merge

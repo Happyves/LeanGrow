@@ -18,8 +18,8 @@ variable {IdxCollType : Type _}
 
 structure ModuleCacheState (IdxCollType : Type _) where
   thm_data : Array ThmFormat
-  thmNameToIdx : CTrie (List Nat)
-  thmNameToHypIdx : CTrie (List Nat)
+  thmNameToIdx : CTrie IdxCollType
+  thmNameToHypIdx : CTrie IdxCollType
   stdBackPaIn : PaInG IdxCollType
   stdForwSetTrie : SetTrieP ThmFormat IdxCollType PaInG
   stdForwSetTrie_idxToThmIdx : Array Nat
@@ -33,8 +33,8 @@ structure ModuleCacheStatePartial (IdxCollType : Type _) where
   countThm : Nat
   countHyps : Nat
   thm_data : Array ThmFormat
-  thmNameToIdx : CTrie (List Nat)
-  thmNameToHypIdx : CTrie (List Nat)
+  thmNameToIdx : CTrie IdxCollType
+  thmNameToHypIdx : CTrie IdxCollType
   stdBackPaIn : PaInG IdxCollType
   stdForwSetTrie : ListProd (PaInG IdxCollType) ThmFormat
   stdForwSetTrie_idxToThmIdx : Array Nat
@@ -53,12 +53,12 @@ partial def buildCachDataForCore [Repr IdxCollType]
   (module : Name) (cinfos : Array ConstantInfo) (Cstart Cstop : Nat)
   (sofarBack : PaInG IdxCollType) (formats : Array ThmFormat)
   (sofarBackRW : PaInG IdxCollType) (countThm : Nat) (sofarFwd : ListProd (PaInG IdxCollType) ThmFormat)
-  (hyptothm hyptosink: Array Nat) (sofarFwdRW : PaInG IdxCollType) (countHyps : Nat) (thmNameToIdx thmNameToHypIdx : CTrie (List Nat))
+  (hyptothm hyptosink: Array Nat) (sofarFwdRW : PaInG IdxCollType) (countHyps : Nat) (thmNameToIdx thmNameToHypIdx : CTrie IdxCollType)
   : MetaM (ModuleCacheStatePartial IdxCollType) :=
   let rec @[specialize] inner (ciN : ByteArray)
     (sofarBack : PaInG IdxCollType) (formats : Array ThmFormat)
     (sofarBackRW : PaInG IdxCollType) (countThm : Nat) (sofarFwd : ListProd (PaInG IdxCollType) ThmFormat)
-    (hyptothm hyptosink : Array Nat) (sofarFwdRW : PaInG IdxCollType) (countHyps : Nat) (thmNameToIdx thmNameToHypIdx : CTrie (List Nat))
+    (hyptothm hyptosink : Array Nat) (sofarFwdRW : PaInG IdxCollType) (countHyps : Nat) (thmNameToIdx thmNameToHypIdx : CTrie IdxCollType)
     (rwWithSinkNotInGoal : Bool) (data : ListProd badUniType ThmFormat)
     : MetaM (Prod11 _ _ _ _ _ _ _ _ _ _ _) := do
     mtracing
@@ -77,7 +77,7 @@ partial def buildCachDataForCore [Repr IdxCollType]
           let ⟨sofarBack,_,_⟩ ← sofarBack.insert (← getLCtx) (← getLocalInstances) goal countThm emptyCol singleton insert
           mtrace on .zero with s!" add goal to back"
           -- let ciN := cinfo.name.toString.toUTF8
-          let thmNameToIdx := thmNameToIdx.insert ciN [countThm]
+          let thmNameToIdx := thmNameToIdx.insert ciN (singleton countThm)
           let countThm := countThm + 1
           inner ciN sofarBack formats sofarBackRW countThm sofarFwd hyptothm hyptosink sofarFwdRW countHyps thmNameToIdx thmNameToHypIdx rwWithSinkNotInGoal more
         | .bckOnly =>
@@ -91,9 +91,9 @@ partial def buildCachDataForCore [Repr IdxCollType]
           let sofarFwd := .cons FwdPaIn d sofarFwd
           let hyptothm := (hyptothm.pushN countThm) sinks.length
           -- let ciN := cinfo.name.toString.toUTF8
-          let thmNameToIdx := thmNameToIdx.insert ciN [countThm]
+          let thmNameToIdx := thmNameToIdx.insert ciN (singleton countThm)
           let countThm := countThm + 1
-          let thmNameToHypIdx := thmNameToHypIdx.insert ciN (List.Ico countHyps (countHyps + sinks.length))
+          let thmNameToHypIdx := thmNameToHypIdx.insert ciN ((List.Ico countHyps (countHyps + sinks.length)).foldl (fun R i => insert i R) emptyCol)
           let countHyps := countHyps + sinks.length
           inner ciN sofarBack formats sofarBackRW countThm sofarFwd hyptothm hyptosink sofarFwdRW countHyps thmNameToIdx thmNameToHypIdx rwWithSinkNotInGoal more
         | .no =>
@@ -109,9 +109,9 @@ partial def buildCachDataForCore [Repr IdxCollType]
           let sofarFwd := .cons FwdPaIn d sofarFwd
           let hyptothm := (hyptothm.pushN countThm) sinks.length
           -- let ciN := cinfo.name.toString.toUTF8
-          let thmNameToIdx := thmNameToIdx.insert ciN [countThm]
+          let thmNameToIdx := thmNameToIdx.insert ciN (singleton countThm)
           let countThm := countThm + 1
-          let thmNameToHypIdx := thmNameToHypIdx.insert ciN (List.Ico countHyps (countHyps + sinks.length))
+          let thmNameToHypIdx := thmNameToHypIdx.insert ciN ((List.Ico countHyps (countHyps + sinks.length)).foldl (fun R i => insert i R) emptyCol)
           let countHyps := countHyps + sinks.length
           inner ciN sofarBack formats sofarBackRW countThm sofarFwd hyptothm hyptosink sofarFwdRW countHyps thmNameToIdx thmNameToHypIdx rwWithSinkNotInGoal more
     | .cons badu fst@(.rw _ _ _ goal ..) more => do
@@ -127,20 +127,20 @@ partial def buildCachDataForCore [Repr IdxCollType]
             mtrace on .zero with s!" added left to back"
             let ⟨sofarFwdRW,_,_⟩ ← sofarFwdRW.insert (← getLCtx) (← getLocalInstances) goal countThm emptyCol singleton insert
             mtrace on .zero with s!" added left to forw"
-            let thmNameToIdx := thmNameToIdx.insert ciN [countThm]
+            let thmNameToIdx := thmNameToIdx.insert ciN (singleton countThm)
             let countThm := countThm + 1
             inner ciN sofarBack formats sofarBackRW countThm sofarFwd hyptothm hyptosink sofarFwdRW countHyps thmNameToIdx thmNameToHypIdx rwWithSinkNotInGoal more
           else
             let ⟨sofarBackRW,_,_⟩ ← sofarBackRW.insert (← getLCtx) (← getLocalInstances) goal countThm emptyCol singleton insert
             mtrace on .zero with s!" added left to back"
-            let thmNameToIdx := thmNameToIdx.insert ciN [countThm]
+            let thmNameToIdx := thmNameToIdx.insert ciN (singleton countThm)
             let countThm := countThm + 1
             inner ciN sofarBack formats sofarBackRW countThm sofarFwd hyptothm hyptosink sofarFwdRW countHyps thmNameToIdx thmNameToHypIdx rwWithSinkNotInGoal more
         | _ =>
           inner ciN sofarBack formats sofarBackRW countThm sofarFwd hyptothm hyptosink sofarFwdRW countHyps thmNameToIdx thmNameToHypIdx rwWithSinkNotInGoal more
   let rec @[specialize] go (cinfoI : Nat) (sofarBack : PaInG IdxCollType) (formats : Array ThmFormat)
     (sofarBackRW : PaInG IdxCollType) (countThm : Nat) (sofarFwd : ListProd (PaInG IdxCollType) ThmFormat)
-    (hyptothm hyptosink : Array Nat) (sofarFwdRW : PaInG IdxCollType) (countHyps : Nat) (thmNameToIdx thmNameToHypIdx : CTrie (List Nat))
+    (hyptothm hyptosink : Array Nat) (sofarFwdRW : PaInG IdxCollType) (countHyps : Nat) (thmNameToIdx thmNameToHypIdx : CTrie IdxCollType)
     : MetaM (ModuleCacheStatePartial IdxCollType) := do
     mtracing
     if cinfoI ≥ cinfos.size || cinfoI ≥ Cstop

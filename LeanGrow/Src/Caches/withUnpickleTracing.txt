@@ -1,1 +1,28 @@
-List.permutationsAux.rec
+
+
+Instance synth fail for an embed of List.range'.eq_1
+
+Instance synth fail for an embed of List.isPerm_iff
+
+Success for List.nil_perm with new type:
+g.0 = []
+And proof:
+propext List.nil_perm ▸ g.1
+
+Instance synth fail for an embed of List.perm_cons
+
+Success for List.perm_comm with new type:
+g.0.Perm []
+And proof:
+propext List.perm_comm ▸ g.1
+
+Success for List.perm_comm with new type:
+g.0.Perm []
+And proof:
+Eq.symm (propext List.perm_comm) ▸ g.1
+
+Instance synth fail for an embed of List.perm_append_left_iff
+
+Instance synth fail for an embed of List.perm_append_right_iff
+
+Instance synth fail for an embed of List.perm_iff_count

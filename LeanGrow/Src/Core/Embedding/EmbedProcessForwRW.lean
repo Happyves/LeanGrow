@@ -7,7 +7,6 @@ Author: Yves Jäckle.
 
 
 import LeanGrow.Src.Core.Embedding.EmbedQueryForwRW
-import LeanGrow.Src.Core.Embedding.EmbedProcessForwAPI
 import LeanGrow.Src.Core.Rewriting.Main
 
 
@@ -20,7 +19,8 @@ open Lean Meta
 def embedForwRWProcess (l1 : LocalContext) (l2 : LocalInstances)
   (thmData : ThmFormat) (res : embedForwRWData)
   {α : Sort _} (fail : MetaM α) (k : Expr → List Nat → MetaM α) : MetaM α := do
-  do --trace set Tracing.Flags.none in do
+  do
+  mtracing
   -- *Note*, we expect the defeqs to have assigned transitive dependet arguments
   let arg_lvls : Array Level := Array.replicate thmData.lvlParamsNum .zero
   let arg_exprs : Array Expr := Array.replicate thmData.hypsNum (failExpr "")
@@ -90,7 +90,7 @@ def embedForwRWProcess (l1 : LocalContext) (l2 : LocalInstances)
 
 @[specialize, inline]
 def embedForwRWPreIntegrate
-  (introAdmissible? : Nat → Bool) (depsCache : Array (List LocalDecl))
+  (introAdmissible? : Nat → Bool) (depsCache : Array DepCache) (RevCutOff : Nat)
   (l1 : LocalContext) (l2 : LocalInstances)
   (dirs : rwDirs) (within : Expr) (thmData : ThmFormat)
   (rwableFvar term : Expr)
@@ -107,7 +107,10 @@ def embedForwRWPreIntegrate
           | .iff_mpr => mkAppM `Eq.symm #[← mkAppM `propext #[term]]
         let T ← InferType prefixed l1 l2
         let .some (_,pat,_) := T.eq? | throwError s!"[embedForwRWPreIntegrate] expected eq, got {← ppExpr T}"
-        let ⟨fullProof,l1,l2⟩ ← mainForwRWData introAdmissible? depsCache l1 l2 dirs rwableFvar within pat prefixed
-        if ← IsTypeCorrect fullProof l1 l2
-        then k fullProof l1 l2
-        else fail l1 l2
+        let ⟨fullProof,l1,l2⟩ ← mainForwRW introAdmissible? depsCache RevCutOff l1 l2 dirs rwableFvar within pat prefixed
+        match fullProof with
+        | .some fullProof =>
+          if ← IsTypeCorrect fullProof l1 l2
+          then k fullProof l1 l2
+          else fail l1 l2
+        | _ => fail l1 l2

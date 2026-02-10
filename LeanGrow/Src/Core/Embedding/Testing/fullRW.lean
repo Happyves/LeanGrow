@@ -50,3 +50,21 @@ theorems about List.range (n+1), those for List.rang n.succ are ignored ...
 -- With context g(n : Nat) t(42 : 42 : j : Nat) t(37 : 42 : m : Nat) t(37 : 67 : h : j < n+1) and objects (((List.range n) ++ [m])[j]'(by simp ; exact h) = 42) run test_1
 
 #check List.range_one
+
+
+unsafe def test_2 := testForwRw #[`Init.Data.List.Perm, `Init.Data.List.Range]
+
+unsafe def test_2_1 := test_2 1
+
+With context g(l : List Nat) g(h : [].Perm l) and objects (42 = 42) run test_2_1
+
+
+#check List.nil_perm
+#check List.perm_comm
+
+#check List.range'.eq_1
+-- seems sink-not-in-goal condition wasn't specified to the rw-goal, but to the whole goal ...
+#check List.isPerm_iff
+-- ↑ should have succeeded
+#synth LawfulBEq Nat
+#check List.perm_cons

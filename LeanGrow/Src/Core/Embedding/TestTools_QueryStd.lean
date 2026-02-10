@@ -56,7 +56,7 @@ def testSandbox_embedForwIncludeCoreS (thms : Array Name)  : Array Expr → Arra
       let mut AthmDloc := []
       for thm in thms do
         let .some thmDloc := data.thmNameToIdx.find? thm.toString.toUTF8 | throwError "Not found in data ..."
-        AthmDloc := thmDloc ++ thmDloc
+        AthmDloc := thmDloc.foldl AthmDloc (fun i R => i.toNat :: R)
       let mut L := PaInG.dead
       let mut idx := 0
       for loc in AthmDloc do
@@ -99,7 +99,7 @@ def testSandbox_embedForwInterCoreS (thms : Array Name)  : Array Expr → Array 
       let mut AthmDloc := []
       for thm in thms do
         let .some thmDloc := data.thmNameToIdx.find? thm.toString.toUTF8 | throwError "Not found in data ..."
-        AthmDloc := thmDloc ++ thmDloc
+        AthmDloc := thmDloc.foldl AthmDloc (fun i R => i.toNat :: R)
       let mut L := PaInG.dead
       let mut idx := 0
       for loc in AthmDloc do

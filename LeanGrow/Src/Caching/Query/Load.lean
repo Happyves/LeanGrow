@@ -36,11 +36,11 @@ def ModuleCacheState.mergeCore [Repr IdxCollType]
     let main := {main with thm_data := main.thm_data ++ toAdd.thm_data}
     let main := {main with thmNameToIdx :=
         let NthmNameToIdx := CTrie.merge (fun x _ => x) main.thmNameToIdx
-          (toAdd.thmNameToIdx.map (fun x => .some (x.mapTR (· + thmIdxOff))))
+          (toAdd.thmNameToIdx.map (fun x => .some (shift thmIdxOff x)))
         NthmNameToIdx}
     let main := {main with thmNameToHypIdx :=
         let NthmNameToHypIdx := CTrie.merge (fun x _ => x) main.thmNameToHypIdx
-          (toAdd.thmNameToHypIdx.map (fun x => .some (x.mapTR (· + hypIdxOff))))
+          (toAdd.thmNameToHypIdx.map (fun x => .some (shift hypIdxOff x)))
         NthmNameToHypIdx}
     let main := {main with stdBackPaIn :=
       let NstdBackPaIn := PaInG.merge union emptyCol main.stdBackPaIn

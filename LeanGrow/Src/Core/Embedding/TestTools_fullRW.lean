@@ -9,6 +9,7 @@ import LeanGrow.Src.Caching.Query.Build
 import LeanGrow.Src.Caching.Query.Load
 
 import LeanGrow.Src.Core.Embedding.EmbedProcessBack
+import LeanGrow.Src.Core.Embedding.EmbedProcessForwRW
 import LeanGrow.Src.Core.Embedding.TestTools_QueryRW
 
 
@@ -69,33 +70,29 @@ unsafe def testBackRw (moduleNames : Array Name) : Array Expr → Array Expr →
 
 #check 1
 
-
-
-#exit
-
-
-unsafe def testLoad_embedForwRWMainS (moduleNames : Array Name) : Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array DepCache → Array (FVarId × List FVarId) → MetaM Unit
+unsafe def testForwRw (moduleNames : Array Name) (rwFvPos : Nat) : Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array Expr → Array DepCache → Array (FVarId × List FVarId) → MetaM Unit
   | guT, gu, tT, t, lT, l, wsT, ws, ewsT, ews, Ts, deps, wdeps =>
     loadCacheDataS_forTest moduleNames <| fun data => do
-      let que ← withTransparency .reducible <| reduce (skipTypes := false) Ts[0]!
-      let .mk _ res l1 l2 ← data.data.rwForwPaIn.embedForwRWMainS data.thmData (← getLCtx) (← getLocalInstances)
-        (data.data.rwForwPaIn.getIndicesS) UInt32Array.empty 2 [] que
-      withLCtx l1 l2 <| do
-        match res with
-        | .nil => return "Found nothing"
-        | _ =>
-          let mut out := ""
-          for (i,emb) in res.toListOfProd do
-            let thmM := data.data.thm_data[i]!
-            match thmM with
-            | .std .. => continue
-            | .rw tname _ _ goal rep .. =>
-              out := out ++ s!"\n\nThm : {tname}\nGoal : {← ppExpr goal}\nReplacement : {← ppExpr rep}\nEmbeddings"
-              for (em,dirs) in emb.toListOfProd do
-                out := out ++ s!"\nDirs {repr dirs}\nLevels:"
-                for (p,l) in em.llv.toListOfProd do
-                  out := out ++ s!"\npos {p} : {l}"
-                out := out ++ s!"\nHyps"
-                for (p,e) in em.ln.toListOfProd do
-                  out := out ++ s!"\npos {p} : {← ppExpr e}"
-          return out
+      let que ← withTransparency .reducible <| reduce (skipTypes := false) guT[rwFvPos]!
+      let .mk _ res l1 l2 ← PaInG.embedForwRWMainS data.thmData (← getLCtx) (← getLocalInstances)
+        (data.data.rwForwPaIn.getIndicesS) UInt32Array.empty 2 [] que data.data.rwForwPaIn
+      match res with
+      | .nil => return "Found nothing"
+      | _ =>
+        let mut out := ""
+        for (i,emb) in res.toListOfProd do
+          let thmM := data.data.thm_data[i]!
+          for (em,dirs) in emb.toListOfProd do
+            let l2 := l2.cleanPatchesAndWokers
+            let res ← embedForwRWProcess l1 l2 thmM em
+              (return s!"\n\nInstance synth fail for an embed of {thmM.name}")
+              (fun term _ => do
+                embedForwRWPreIntegrate (fun _ => true) deps 10 l1 l2 dirs que thmM gu[rwFvPos]! term
+                  (fun _ _ => return s!"\n\nRewrite fail for an embed of {thmM.name}")
+                  (fun term l1 l2 => do
+                    let T ← InferType term l1 l2
+                    return s!"\n\nSuccess for {thmM.name} with new type:\n{← PpExpr T l1 l2}\nAnd proof:\n{← PpExpr term l1 l2}"
+                    )
+                )
+            out := out ++ res
+        return out
