@@ -61,15 +61,16 @@ def testDelZet (printLift? : Bool) (thmName : Name)
 #check List.Forall.imp
 
 -- #eval testNoDelZet false `List.Forall.imp 1 2 2
-
+-- panic
 
 #print List.disjoint_pmap
 
 
-tracing_mode .std
-tracing_flags [(`sampleCoreBack, TracingFlags.all),
-               ]
+-- tracing_mode .std
+-- tracing_flags [(`sampleCoreBack, TracingFlags.all),
+--                ]
 
-#eval testNoDelZet false `List.disjoint_pmap 1 2 2
+-- #eval testNoDelZet false `List.disjoint_pmap 1 2 2
 
--- bad simp (simpParse : simpParse)
+
+-- TODO : panic ↑ ; maybe way introduciton if id parse for unfold ?

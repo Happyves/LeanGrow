@@ -141,7 +141,8 @@ theorem test_3_1 (α β : Type _) (l : List α) (p : β → Prop) (f : α → β
    simp [*]
 
 #print test_3_1
--- #eval testSimpDelab `test_3_1
+
+#eval testSimpDelab `test_3_1
 
 
 theorem test_3_2 (α β : Type _) (l : List α) (p : β → Prop) (f : α → β)
@@ -170,13 +171,14 @@ theorem test_4 {p : α → Prop} {f : ∀ a : α, p a → β} {s t : List α}
 #print test_4
 #print List.disjoint_pmap
 
-tracing_mode .std
-tracing_flags [(`delab_simpTheorem, [TracingFlags.zero]),
-               (`delab_simpCongrTheorem?, TracingFlags.all),
-               (`delab_simpStep, TracingFlags.all),
-               (`delab_simpStep.baseCase, TracingFlags.all),
-               (`delab_simpGoal, TracingFlags.all),
-                ]
+-- tracing_mode .std
+-- tracing_flags [(`delab_simpTheorem, [TracingFlags.zero]),
+--                (`delab_simpCongrTheorem?, TracingFlags.all),
+--                (`delab_simpStep, TracingFlags.all),
+--                (`delab_simpStep.baseCase, TracingFlags.all),
+--                (`delab_simpGoal, TracingFlags.all),
+--                 ]
 
-set_option pp.parens true
 #eval testSimpDelab `test_4
+
+#check 1

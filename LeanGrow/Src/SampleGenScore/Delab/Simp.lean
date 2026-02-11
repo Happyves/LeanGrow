@@ -130,13 +130,17 @@ partial def Lean.Expr.onAllSubtermsWiDepthSkip (e : Expr) (f : Expr → Nat → 
 
 
 def Lean.Expr.beta1Spe : Expr → Expr
-  | .app (.lam _ _ b _ ) a => b.onAllSubtermsWiDepthSkip (fun e d =>
+  | .app (.lam _ _ b _ ) a =>
+    --dbg_trace s!"{repr b}"
+    let res := b.onAllSubtermsWiDepthSkip (fun e d =>
     match e with
     | .bvar D =>
-      dbg_trace s!"{D} vs {d}"
+      --dbg_trace s!"{D} vs {d}"
       if d == D then .error a else .ok e
     | _ => .ok e
     )
+    --dbg_trace s!"{repr res}"
+    res
   | x => x
 
 
@@ -163,9 +167,9 @@ def delab_simpTheorem
     -- let .mk _ actFvs ←  lhs.collectFVars.run {}
     -- let actFvs := actFvs.fvarIds
     -- let binFvs := binFvs.filter (fun x => actFvs.contains x.fvarId!)
-    let patToSimp := Expr.beta1Spe (.app topType (Expr.abstract lhs binFvs))
-    let patToSimp := patToSimp.headBeta
-    mtrace on .zero with s!" topType : {← ppExpr topType}\nlhs {← ppExpr lhs}\nAbsed lhs {← ppExpr (Expr.abstract lhs binFvs)}\n binFvs : {← binFvs.mapM ppExpr}\n patToSimp : {← ppExpr patToSimp}"
+    let patToSimp' := Expr.beta1Spe (.app topType (Expr.abstract lhs binFvs))
+    let patToSimp := patToSimp'.headBeta
+    mtrace on .zero with s!" topType : {← ppExpr topType}\nlhs {← ppExpr lhs}\nAbsed lhs {← ppExpr (Expr.abstract lhs binFvs)}\n binFvs : {← binFvs.mapM ppExpr}\n patToSimp : {← ppExpr patToSimp}\n patToSimp' : {← ppExpr patToSimp'}"
     if terminal
     then
       let .const n _ := proof.getAppFn' | return .some sofar
@@ -243,6 +247,7 @@ partial def consumeAndProjs (e : Expr) : Expr :=
   | _ => e
 
 #check 1
+-- #exit
 
 partial def delab_simpStep
   (l1 : LocalContext) (l2 : LocalInstances)
@@ -341,25 +346,36 @@ partial def delab_simpStep
         delab_simpStep l1 l2 preProcessed terminal as[5]! newTop extFvs sofar binFvs
       | ``implies_congr => do --implies_congr
         let as := proof.getAppArgs
+        --dbg_trace s!"as[0]!  {← ppExpr as[0]! }"
         let P ← InferType as[0]! l1 l2
+        --dbg_trace s!"P  {← ppExpr P }"
+        --dbg_trace s!"as[2]!  {← ppExpr as[2]! }"
         let Q ← InferType as[2]! l1 l2
+        --dbg_trace s!"Q  {← ppExpr Q }"
         let a2 := Expr.abstract as[2]! (binFvs.push (.fvar ⟨`dummy⟩))
+        --dbg_trace s!"a2  {← ppExpr a2 }"
         let newTop : Expr := .lam `simpParse P (Expr.beta1Spe (.app topType (.forallE `simpParse (.bvar binFvs.size) a2 .default))) .default
+        --dbg_trace s!"newTop  {← ppExpr newTop }"
         let .some inter lif1 l1 l2 ← delab_simpStep l1 l2 preProcessed terminal as[4]! newTop extFvs sofar binFvs | return .none
+        --dbg_trace s!"as[1]!  {← ppExpr as[1]! }"
         let a1 := Expr.abstract as[1]! binFvs
+        --dbg_trace s!"a1  {← ppExpr a1}"
         let newTop : Expr := .lam `simpParse Q (Expr.beta1Spe (.app topType (.forallE `simpParse a1 (.bvar (binFvs.size + 1)) .default))) .default
-        let .some res lif2 l1 l2 ← delab_simpStep l1 l2 preProcessed terminal as[5]! newTop extFvs inter binFvs | return .none
+        --dbg_trace s!"newTop  {← ppExpr newTop}"
+        let .mk fv l1 l2 ← WithLocalDecl (`simpParse ++ (← mkFreshId)) as[1]! l1 l2
+        let .some res lif2 l1 l2 ← delab_simpStep l1 l2 preProcessed terminal as[5]! newTop extFvs inter (binFvs.push (.fvar fv)) | return .none
         return .some res (lif1 ++ lif2) l1 l2
       | ``implies_congr_ctx => do --implies_congr_ctx
         let as := proof.getAppArgs
         match as[5]! with
         | .lam _ _ nx _ =>
+          let .mk fv l1 l2 ← WithLocalDecl (`simpParse ++ (← mkFreshId)) as[1]! l1 l2
           let a2 := Expr.abstract as[2]! (binFvs.push (.fvar ⟨`dummy⟩))
           let newTop : Expr := .lam `simpParse (.sort 0) (Expr.beta1Spe (.app topType (.forallE `simpParse (.bvar binFvs.size) a2 .default))) .default
           let .some inter lif1 l1 l2 ← delab_simpStep l1 l2 preProcessed terminal as[4]! newTop extFvs sofar binFvs | return .none
           let a1 := Expr.abstract as[1]! binFvs
           let newTop : Expr := .lam `simpParse (.sort 0) (Expr.beta1Spe (.app topType (.forallE `simpParse a1 (.bvar (binFvs.size + 1)) .default))) .default
-          let .some res lif2 l1 l2 ← delab_simpStep l1 l2 preProcessed terminal nx newTop extFvs inter binFvs | return .none
+          let .some res lif2 l1 l2 ← delab_simpStep l1 l2 preProcessed terminal nx newTop extFvs inter (binFvs.push (.fvar fv)) | return .none
           return .some res (lif1 ++ lif2) l1 l2
         | _ =>
           mtrace on .zero with s!"At proof of type:\n{← ppExpr <| ← InferType proof l1 l2}\nAnd of value:\n{← ppExpr proof}\nExpected subproof ↓ to be a λ:\n{← ppExpr as[5]!}"
@@ -539,7 +555,7 @@ partial def delab_simpStep
   | _ =>
       baseCase l1 l2 proof
 
--- #exit
+
 #check have_congr'
 #check Eq.refl
 
