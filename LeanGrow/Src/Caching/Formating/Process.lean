@@ -170,22 +170,22 @@ partial def processForMain (l1 : LocalContext) (l2 : LocalInstances)
               let cjs ← getConjecturablePos_ofProcessed hyps goal
               let resI : ThmFormat :=
                 .std thmName lvlN pred? hyps ⟨lvlC, decls, userNames⟩ hyps.size goal sinks bf bb cjs
-              let goalDeps := goal.getLnodePos
-              let sinksNotInGoal? := sinks.any (fun x => !(goalDeps.contains x))
               let left ← withTransparency .reducible <| reduce (skipTypes := false) left
               let right ← withTransparency .reducible <| reduce (skipTypes := false) right
               if left == right
               then
-                return .mk sinksNotInGoal? .nil l1 l2
+                return .mk true .nil l1 l2
               else
                 match left.getAppFn', right.getAppFn' with
                 | .mvar _, .mvar _ =>
-                    return .mk sinksNotInGoal? .nil l1 l2
+                    return .mk true .nil l1 l2
                 | .mvar .., _ =>
                     let .mk bf l1 l2 ← isBadForForwRW l1 l2 right left
                     let .mk bb l1 l2 ← isBadForBackRW l1 l2 sinks hyps right left
                     let .mk si l1 l2 ← simplifierScore l1 l2 right left
                     let badu := badUniRW? right hyps sinks
+                    let goalDeps := right.getLnodePos
+                    let sinksNotInGoal? := sinks.any (fun x => !(goalDeps.contains x))
                     let resS : ThmFormat :=
                       .rw thmName lvlN (if iff? then .iff_mpr else .eq_mpr)
                           right left hyps ⟨lvlC, decls, userNames⟩ hyps.size sinks
@@ -196,6 +196,8 @@ partial def processForMain (l1 : LocalContext) (l2 : LocalInstances)
                     let .mk bb l1 l2 ← isBadForBackRW l1 l2 sinks hyps left right
                     let .mk si l1 l2 ← simplifierScore l1 l2 left right
                     let badu := badUniRW? left hyps sinks
+                    let goalDeps := left.getLnodePos
+                    let sinksNotInGoal? := sinks.any (fun x => !(goalDeps.contains x))
                     let resN : ThmFormat :=
                       .rw thmName lvlN (if iff? then .iff_mp else .eq_mp)
                           left right hyps ⟨lvlC, decls, userNames⟩ hyps.size sinks
@@ -206,6 +208,8 @@ partial def processForMain (l1 : LocalContext) (l2 : LocalInstances)
                     let .mk bb l1 l2 ← isBadForBackRW l1 l2 sinks hyps left right
                     let .mk si l1 l2 ← simplifierScore l1 l2 left right
                     let baduN := badUniRW? left hyps sinks
+                    let goalDeps := left.getLnodePos
+                    let sinksNotInGoal? := sinks.any (fun x => !(goalDeps.contains x))
                     let resN : ThmFormat :=
                       .rw thmName lvlN (if iff? then .iff_mp else .eq_mp)
                           left right hyps ⟨lvlC, decls, userNames⟩ hyps.size sinks
@@ -214,12 +218,16 @@ partial def processForMain (l1 : LocalContext) (l2 : LocalInstances)
                     let .mk bb l1 l2 ← isBadForBackRW l1 l2 sinks hyps right left
                     let .mk si l1 l2 ← simplifierScore l1 l2 right left
                     let baduS := badUniRW? right hyps sinks
+                    let goalDeps := right.getLnodePos
+                    let sinksNotInGoal? := sinks.any (fun x => !(goalDeps.contains x))
                     let resS : ThmFormat :=
                       .rw thmName lvlN (if iff? then .iff_mpr else .eq_mpr)
                           right left hyps ⟨lvlC, decls, userNames⟩ hyps.size sinks
                           bf bb si cjs
                     return .mk sinksNotInGoal? ((.cons baduS resS (.cons baduN resN (.cons baduI resI .nil)))) l1 l2
   go l1 l2 #[] #[] #[] T 0 []
+
+
 
 /--
 - Do not run for induction, as considered pathological

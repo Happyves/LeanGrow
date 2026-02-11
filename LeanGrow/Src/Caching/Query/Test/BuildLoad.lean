@@ -156,5 +156,7 @@ def bigInit := #[`Init.Prelude, `Init.SimpLemmas, `Init.PropLemmas,
 
 -- #eval exploreCaches_stdBackPaIn_pp #[`Init.Data.List.Perm, `Init.Data.List.Range]
 
+-- #eval exploreCaches_stdForwSetTrie_pp #[`Init.Data.List.Basic, `Init.Data.List.Lemmas]
+
 
 -- #eval exploreCaches_stdForwSetTrie_pp #[`Init.Data.List.Perm, `Init.Data.List.Range, `Init.Data.List.Basic, `Init.Data.List.Lemmas]

@@ -41,7 +41,7 @@ def embedForwRWProcess (l1 : LocalContext) (l2 : LocalInstances)
         let todo_expr_inds := List.orderedEraseOrLeave pos todo_expr_inds
         (arg_exprs, todo_expr_inds))
     mtrace on .zero with s!"[embedForwRWProcess] arg_exprs {← arg_exprs.mapM ppExpr}, todo_expr_inds {todo_expr_inds}"
-    todo_expr_inds.foldlMcps arg_exprs (fun i arg_exprs cont => do
+    todo_expr_inds.foldlMcps (arg_exprs,todo_expr_inds) (fun i (arg_exprs,todo_expr_inds) cont => do
       let T := thmData.hypsTypes[i]!
       mtrace on .zero with s!"[embedForwRWProcess] todo type {← ppExpr T}"
       let T := T.onAllSubtermsTR (fun
@@ -75,8 +75,8 @@ def embedForwRWProcess (l1 : LocalContext) (l2 : LocalInstances)
               fail
           | .some val =>
               mtrace on .zero with s!"[embedForwRWProcess] successfully synthesised instance for it"
-              cont (arg_exprs.set! i val)
-      ) <| fun arg_exprs => do
+              cont (arg_exprs.set! i val, todo_expr_inds.orderedEraseOrLeave i)
+      ) <| fun (arg_exprs,_) => do
           let term := mkAppN (match thmData.name with | .inl n =>(.const n arg_lvls.toList) | .inr fv => .fvar fv) arg_exprs
           let GUinds := term.getGUFVarsIds.mapTRR (fun | ⟨.num _ i⟩ => i | _ => 42)
           mtrace on .zero with s!"[embedForwIncludePostProcess] term {← ppExpr term} of type {← ppExpr (← inferType term)}"

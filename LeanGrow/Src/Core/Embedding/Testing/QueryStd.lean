@@ -108,6 +108,10 @@ unsafe def test_3_2 := testLoad_embedForwInterCoreS #[`Init.Data.List.Basic, `In
 #check List.head_mem_head?
 
 
+With context g(as : List Int) g(a : Int) and objects run test_3_2
+
+
+
 unsafe def test_4 := testLoad_embedBackMainS #[`Init.Data.List.Basic, `Init.Data.List.Lemmas]
 
 

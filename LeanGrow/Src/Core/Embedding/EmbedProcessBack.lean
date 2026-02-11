@@ -46,7 +46,7 @@ def embedBackProcess (l1 : LocalContext) (l2 : LocalInstances) (thmData : ThmFor
       (arg_exprs, todo_expr_inds))
   mtrace on .zero with s!"[embedBackProcess] arg_exprs {← arg_exprs.mapM (PpExpr ·  l1 l2)}, todo_expr_inds {todo_expr_inds}"
   let todo_expr : ListProd Nat Expr := .nil
-  todo_expr_inds.foldlMcps (arg_exprs, todo_expr) (fun i (arg_exprs, todo_expr) cont => do
+  todo_expr_inds.foldlMcps (Prod3.mk arg_exprs todo_expr todo_expr_inds) (fun i (.mk arg_exprs todo_expr todo_expr_inds) cont => do
     let T := thmData.hypsTypes[i]!
     mtrace on .zero with s!"[embedBackProcess] todo type {← PpExpr T l1 l2}"
     let T := T.onAllSubtermsTR (fun
@@ -71,7 +71,7 @@ def embedBackProcess (l1 : LocalContext) (l2 : LocalInstances) (thmData : ThmFor
     mtrace on .zero with s!"[embedBackProcess] instantaited to {← PpExpr T l1 l2}"
     match thmData.hyps[i]! with
     | .reg .. =>
-        cont (arg_exprs, .cons i T todo_expr)
+        cont (.mk arg_exprs (.cons i T todo_expr) todo_expr_inds)
     | .inst .. =>
         let val? ← (SynthInstance T l1 l2)
         match val? with
@@ -82,8 +82,8 @@ def embedBackProcess (l1 : LocalContext) (l2 : LocalInstances) (thmData : ThmFor
           -- but this is most commonly more of a burden then anything else, so we just fail.
         | .some val =>
             mtrace on .zero with s!"[embedBackProcess] successfully synthesised instance for it"
-            cont ((arg_exprs.set! i val), todo_expr)
-    ) <| fun (arg_exprs, todo_expr) => do
+            cont (.mk (arg_exprs.set! i val) todo_expr (todo_expr_inds.orderedEraseOrLeave i))
+    ) <| fun (.mk arg_exprs todo_expr _) => do
       let G := thmData.goal
       mtrace on .zero with s!"[embedBackProcess] goal {← PpExpr G l1 l2}"
       let G := G.onAllSubtermsTR (fun
@@ -110,6 +110,7 @@ def embedBackProcess (l1 : LocalContext) (l2 : LocalInstances) (thmData : ThmFor
       return .some G arg_lvls todo_lvls arg_exprs todo_expr
 
 #check 1
+
 
 
 /--
@@ -171,7 +172,7 @@ def embedBackProcess' (l1 : LocalContext) (l2 : LocalInstances) (thmData : ThmFo
       (arg_exprs, todo_expr_inds))
   mtrace on .zero with s!"[embedBackProcess] arg_exprs {← arg_exprs.mapM (PpExpr ·  l1 l2)}, todo_expr_inds {todo_expr_inds}"
   let todo_expr : ListProd Nat Expr := .nil
-  todo_expr_inds.foldlMcps (arg_exprs, todo_expr) (fun i (arg_exprs, todo_expr) cont => do
+  todo_expr_inds.foldlMcps (Prod3.mk arg_exprs todo_expr todo_expr_inds) (fun i (.mk arg_exprs todo_expr todo_expr_inds) cont => do
     let T := thmData.hypsTypes[i]!
     mtrace on .zero with s!"[embedBackProcess] todo type {← PpExpr T l1 l2}"
     let T := T.onAllSubtermsTR (fun
@@ -196,7 +197,7 @@ def embedBackProcess' (l1 : LocalContext) (l2 : LocalInstances) (thmData : ThmFo
     mtrace on .zero with s!"[embedBackProcess] instantaited to {← PpExpr T l1 l2}"
     match thmData.hyps[i]! with
     | .reg .. =>
-        cont (arg_exprs, .cons i T todo_expr)
+        cont (.mk arg_exprs (.cons i T todo_expr) todo_expr_inds)
     | .inst .. =>
         let val? ← (SynthInstance T l1 l2)
         match val? with
@@ -207,8 +208,8 @@ def embedBackProcess' (l1 : LocalContext) (l2 : LocalInstances) (thmData : ThmFo
           -- but this is most commonly more of a burden then anything else, so we just fail.
         | .some val =>
             mtrace on .zero with s!"[embedBackProcess] successfully synthesised instance for it"
-            cont ((arg_exprs.set! i val), todo_expr)
-    ) <| fun (arg_exprs, todo_expr) => do
+            cont (.mk (arg_exprs.set! i val) todo_expr (todo_expr_inds.orderedEraseOrLeave i))
+    ) <| fun (.mk arg_exprs todo_expr _) => do
       let G := thmData.goal
       mtrace on .zero with s!"[embedBackProcess] goal {← PpExpr G l1 l2}"
       let G := G.onAllSubtermsTR (fun
@@ -286,6 +287,7 @@ def embedBackPreIntegrate
 #check 1
 
 -- #exit
+
 
 /-- we should still bump backIdx at failure, as tnodes have been added ? -/
 @[specialize, inline]
@@ -430,26 +432,26 @@ def embedBackRWPreIntegrate'
           let T ← InferType prefixed l1 l2
           let .some (_,pat,_) := T.eq? | throwError s!"[embedBackRWPreIntegrate] expected eq, got {← PpExpr T l1 l2}"
           let within := within.onAllSubtermsTR (fun
-        | l@(.fvar (.mk (.num (.num _ bi) po))) =>
-          match res.tn.find? (fun x y _ => x == bi && y == po) with
-          | .none => l
-          | .some _ _ rep => rep
-        | .sort u => .sort <| u.onAllSubterms (fun
-            | l@(.param ((.num (.num _ bi) po))) =>
-              match res.tlv.find? (fun x y _ => x == bi && y == po) with
+            | l@(.fvar (.mk (.num (.num _ bi) po))) =>
+              match res.tn.find? (fun x y _ => x == bi && y == po) with
               | .none => l
               | .some _ _ rep => rep
+            | .sort u => .sort <| u.onAllSubterms (fun
+                | l@(.param ((.num (.num _ bi) po))) =>
+                  match res.tlv.find? (fun x y _ => x == bi && y == po) with
+                  | .none => l
+                  | .some _ _ rep => rep
+                | x => x
+                )
+            | .const n us => .const n <| us.map <| fun u => u.onAllSubterms (fun
+                | l@(.param ((.num (.num _ bi) po))) =>
+                  match res.tlv.find? (fun x y _ => x == bi && y == po) with
+                  | .none => l
+                  | .some _ _ rep => rep
+                | x => x
+                )
             | x => x
             )
-        | .const n us => .const n <| us.map <| fun u => u.onAllSubterms (fun
-            | l@(.param ((.num (.num _ bi) po))) =>
-              match res.tlv.find? (fun x y _ => x == bi && y == po) with
-              | .none => l
-              | .some _ _ rep => rep
-            | x => x
-            )
-        | x => x
-        )
           mtrace on .zero with s!"[embedBackRWPreIntegrate] start mainBackRWData with pat {← PpExpr pat l1 l2} and within {← PpExpr within l1 l2}"
           let .mk wis l1 l2 ← (do
             if c != 0

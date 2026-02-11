@@ -56,15 +56,10 @@ unsafe def test_2 := testForwRw #[`Init.Data.List.Perm, `Init.Data.List.Range]
 
 unsafe def test_2_1 := test_2 1
 
-With context g(l : List Nat) g(h : [].Perm l) and objects (42 = 42) run test_2_1
+-- With context g(l : List Nat) g(h : [].Perm l) and objects (42 = 42) run test_2_1
 
 
 #check List.nil_perm
 #check List.perm_comm
-
-#check List.range'.eq_1
--- seems sink-not-in-goal condition wasn't specified to the rw-goal, but to the whole goal ...
 #check List.isPerm_iff
--- ↑ should have succeeded
-#synth LawfulBEq Nat
-#check List.perm_cons
+#check List.perm_iff_count
