@@ -133,6 +133,7 @@ def Lean.Expr.beta1Spe : Expr → Expr
   | .app (.lam _ _ b _ ) a => b.onAllSubtermsWiDepthSkip (fun e d =>
     match e with
     | .bvar D =>
+      dbg_trace s!"{D} vs {d}"
       if d == D then .error a else .ok e
     | _ => .ok e
     )
@@ -148,7 +149,7 @@ def Lean.Expr.beta1 : Expr → Expr
 -- #eval Lean.Expr.beta1Spe <| Expr.app (.lam `a (.const `x []) (.forallE `b (.const `x []) (.bvar 1) .default) .default) (.bvar 0)
 -- insatnciate also bumps bvar idx in subst
 
-
+-- #exit
 
 def delab_simpTheorem
   (l1 : LocalContext) (l2 : LocalInstances)
@@ -164,7 +165,7 @@ def delab_simpTheorem
     -- let binFvs := binFvs.filter (fun x => actFvs.contains x.fvarId!)
     let patToSimp := Expr.beta1Spe (.app topType (Expr.abstract lhs binFvs))
     let patToSimp := patToSimp.headBeta
-    mtrace on .zero with s!" topType : {← ppExpr topType}\n binFvs : {← binFvs.mapM ppExpr}\n patToSimp : {← ppExpr patToSimp}"
+    mtrace on .zero with s!" topType : {← ppExpr topType}\nlhs {← ppExpr lhs}\nAbsed lhs {← ppExpr (Expr.abstract lhs binFvs)}\n binFvs : {← binFvs.mapM ppExpr}\n patToSimp : {← ppExpr patToSimp}"
     if terminal
     then
       let .const n _ := proof.getAppFn' | return .some sofar

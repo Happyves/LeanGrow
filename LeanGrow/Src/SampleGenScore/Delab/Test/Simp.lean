@@ -153,3 +153,30 @@ theorem test_3_2 (α β : Type _) (l : List α) (p : β → Prop) (f : α → β
 
 
 #eval testSimpDelab `test_3_2
+
+open Function
+
+open Nat
+theorem test_4 {p : α → Prop} {f : ∀ a : α, p a → β} {s t : List α}
+    (hs : ∀ a ∈ s, p a) (ht : ∀ a ∈ t, p a)
+    (hf : ∀ (a a' : α) (ha : p a) (ha' : p a'), f a ha = f a' ha' → a = a')
+    (h : Disjoint s t) :
+    --Disjoint (s.pmap f hs) (t.pmap f ht) := by
+    ∀ ⦃a : β⦄, a ∈ pmap f s hs → a ∈ pmap f t ht → False := by
+      -- unfold List.Disjoint
+      simp [mem_pmap]
+      sorry
+
+#print test_4
+#print List.disjoint_pmap
+
+tracing_mode .std
+tracing_flags [(`delab_simpTheorem, [TracingFlags.zero]),
+               (`delab_simpCongrTheorem?, TracingFlags.all),
+               (`delab_simpStep, TracingFlags.all),
+               (`delab_simpStep.baseCase, TracingFlags.all),
+               (`delab_simpGoal, TracingFlags.all),
+                ]
+
+set_option pp.parens true
+#eval testSimpDelab `test_4

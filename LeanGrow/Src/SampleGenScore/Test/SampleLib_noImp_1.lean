@@ -63,10 +63,13 @@ def testDelZet (printLift? : Bool) (thmName : Name)
 -- #eval testNoDelZet false `List.Forall.imp 1 2 2
 
 
-#check List.disjoint_pmap
+#print List.disjoint_pmap
 
--- #eval testNoDelZet false `List.disjoint_pmap 1 2 2
+
+tracing_mode .std
+tracing_flags [(`sampleCoreBack, TracingFlags.all),
+               ]
+
+#eval testNoDelZet false `List.disjoint_pmap 1 2 2
 
 -- bad simp (simpParse : simpParse)
--- issue of binder hyps not making it into hyps at forw
--- is he Exists.casesOn for ind ? then revert hyps ! else pointless for subpatterns
