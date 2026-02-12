@@ -24,9 +24,19 @@ def Lean.Expr.consumeId (h : Expr) (as : Array Expr) : Option Expr :=
   match h with
   | .const n _ =>
     if n == ``id
-    then as[1]!
+    then
+      match as[1]? with
+      | .none => .none -- `id` can actually appear as a term, as in `List.Forall.imp` for example :)
+      | .some a =>
+          match a.getAppFn' with
+          | .const n _ => do
+              if n == ``Eq.mp -- suspected simp ... kind of a bad fix ...
+              then .none
+              else .some a
+          | _ => .none
     else .none
   | _ => .none
+
 
 
 partial def delabSample

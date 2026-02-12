@@ -502,7 +502,7 @@ partial def sampleCoreBack
           | .some fvs goal n =>
               -- let locLifted := (fvs.foldl (fun x y => x.insert y) lifted) -- worried about duplication
               -- let locLifted := locLifted.filter (fun x => usedFv.contains x)
-              let locLifted := fvs
+              let locLifted := (fvs.foldl (fun x y => x.insert y) usedFv)  --fvs
               let hyps ← locLifted.foldlM (fun L fv => do
                 let T ← fv.GetType l1 l2
                 let T ← (do match ← IsClass? T l1 l2 with | .none => WhnfR T l1 l2 | _ => return T)
@@ -526,7 +526,7 @@ partial def sampleCoreBack
 
 #check 1
 
-
+-- #exit
 
 partial def sampleCoreForw
   (preProcessed : CTrie SimpCongrTheorem) --(conjable : CTrie (List Nat))
@@ -637,7 +637,8 @@ partial def sampleCoreForw
             | .some fvs shyp n =>
                 -- let locLifted := (fvs.foldl (fun x y => x.insert y) lifted) -- worried about duplication
                 -- let locLifted := locLifted.filter (fun x => usedFv.contains x)
-                let locLifted := fvs
+                --let locLifted := fvs
+                let locLifted := (fvs.foldl (fun x y => x.insert y) usedFv)
                 let presinks ← locLifted.foldlM (fun L fv => do
                 let T ← fv.GetType l1 l2
                 let T ← (do match ← IsClass? T l1 l2 with | .none => WhnfR T l1 l2 | _ => return T)

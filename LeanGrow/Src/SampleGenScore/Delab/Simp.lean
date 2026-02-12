@@ -538,13 +538,13 @@ partial def delab_simpStep
             return .none
         | _ => return .none
       | ``eq_false | ``eq_true =>
-        let proof := consumeAndProjs (proof.getArg! 1)
-        match proof.getAppFn' with
+        let proof' := consumeAndProjs (proof.getArg! 1)
+        match proof'.getAppFn' with
         | .const n _ =>
           if n == ``Eq.mp
           then
             let extFvs := binFvs.foldl (fun x y => y.fvarId! :: x) extFvs
-            let nx := proof.getArg! 2
+            let nx := proof'.getArg! 2
             let .some res lif l1 l2 ← delab_simpStep l1 l2 preProcessed true nx (.lam `simpParse (.const `falseButOk []) (.bvar 0) .default) extFvs .nil #[] | return .none
             return .some sofar (lif.push res) l1 l2
           else
@@ -558,7 +558,7 @@ partial def delab_simpStep
 
 #check have_congr'
 #check Eq.refl
-
+-- #exit
 #check Expr.abstract
 #check have_body_congr_dep'
 
@@ -618,7 +618,8 @@ partial def delab_simpGoal
           -- simpproof of terminal simp (= True)
       | ``Eq.mpr => -- potentially non-terminal simp
           let as := proof.getAppArgs
-          let eqP := as[2]!.getArg! 1 -- unwrap appli of `id`
+          let inter := as[2]!.getAppArgs
+          let .some eqP := inter[1]? | return .none -- unwrap appli of `id`
           -- eqP is a simpproof
           match as[1]! with
           | .const n [] => do
@@ -678,12 +679,14 @@ partial def delab_simpGoal
                 -- as[3]! can or not, be a simpproof (?)
                 match ← delab_simpStep l1 l2 preProcessed false as[3]! (.lam `simpParse (.sort 0) (.bvar 0) .default) extFvs inter binFvs with
                 | .none =>
-                  let sofar := lif1.push inter
+                  -- let sofar := lif1.push inter
+                  -- let extL := #[as[3]!]
+                  -- return .some l1 l2 .nil sofar extL .none
                   let extL := #[as[3]!]
-                  return .some l1 l2 .nil sofar extL .none
-                | .some inter lif2 l1 l2 =>
+                  return .some l1 l2 inter lif1 extL .none
+                | .some inter' lif2 l1 l2 =>
                   let sofar := (lif1 ++ lif2).push inter
-                  return .some l1 l2 .nil sofar #[] .none
+                  return .some l1 l2 inter' sofar #[] .none
               else
                 -- can happen ... in `List.reverse_cons` for example
                 mtrace on .zero with s!" expected an Eq.mp, got {← ppExpr a}"
@@ -691,6 +694,12 @@ partial def delab_simpGoal
           | _ =>
             mtrace on .zero with s!" expected an Eq.mp, got {← ppExpr a}"
             return .none
+      | ``Eq.mp =>
+          let as := proof.getAppArgs
+          mtrace on .one with s!" Eq.mp case, going on as2 {← ppExpr as[2]!}\nas3 : {← ppExpr as[3]!}"
+          let .some inter lif1 l1 l2 ← delab_simpStep l1 l2 preProcessed false as[2]! (.lam `simpParse (.sort 0) (.bvar 0) .default) extFvs .nil binFvs | return .none
+          let extL := #[as[3]!]
+          return .some l1 l2 inter lif1 extL .none
       | _ => -- not simp
           return .none
   | _ => -- not simp
@@ -698,6 +707,7 @@ partial def delab_simpGoal
 
 
 #check 1
+
 
 def mkPreProCongr : CoreM (CTrie SimpCongrTheorem) := do
   let thms ← Meta.getSimpCongrTheorems

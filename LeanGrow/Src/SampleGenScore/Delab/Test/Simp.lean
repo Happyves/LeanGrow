@@ -182,3 +182,40 @@ theorem test_4 {p : α → Prop} {f : ∀ a : α, p a → β} {s t : List α}
 #eval testSimpDelab `test_4
 
 #check 1
+
+theorem test_5 (α : Type) (x : α) (hx : x ∉ [])
+  (n : ℕ) (hn : n ∈ {n | n ≤ ([] : List α).length}) (m : ℕ) (hm : m ∈ {n | n ≤ ([] : List α).length})
+  (h : (fun k ↦ [].insertIdx k x) n = (fun k ↦ [].insertIdx k x) m)
+  : n = m := by
+    simp_all [Set.mem_singleton_iff, Set.setOf_eq_eq_singleton, length]
+
+
+#print test_5
+
+#eval testSimpDelab `test_5
+
+#check 1
+
+theorem test_6 (α : Type) (x hd : α) (tl : List α)
+  (IH : x ∉ tl →
+    ∀ ⦃n : ℕ⦄,
+      n ∈ {n | n ≤ tl.length} →
+        ∀ ⦃m : ℕ⦄, m ∈ {n | n ≤ tl.length} → (fun k ↦ tl.insertIdx k x) n = (fun k ↦ tl.insertIdx k x) m → n = m)
+  (hx : ¬x = hd ∧ x ∉ tl) (n : ℕ) (hn : (n+1) ∈ {n | n ≤ (hd :: tl).length})
+  (m : ℕ) (hm : (m+1) ∈ {n | n ≤ (hd :: tl).length})  (h : (fun k ↦ (hd :: tl).insertIdx k x) (n+1) = (fun k ↦ (hd :: tl).insertIdx k x) (m+1))
+  : n ∈ {n | n ≤ tl.length} := by
+    simpa [Nat.succ_le_succ_iff] using hn
+
+#print test_6
+
+-- tracing_mode .std
+-- tracing_flags [(`delab_simpTheorem, [TracingFlags.zero]),
+--                (`delab_simpCongrTheorem?, TracingFlags.all),
+--                (`delab_simpStep, TracingFlags.all),
+--                (`delab_simpStep.baseCase, TracingFlags.all),
+--                (`delab_simpGoal, TracingFlags.all),
+--                 ]
+
+#eval testSimpDelab `test_6
+
+#check 1

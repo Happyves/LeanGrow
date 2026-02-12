@@ -60,17 +60,49 @@ def testDelZet (printLift? : Bool) (thmName : Name)
 
 #check List.Forall.imp
 
+
 -- #eval testNoDelZet false `List.Forall.imp 1 2 2
--- panic
+
 
 #print List.disjoint_pmap
-
-
--- tracing_mode .std
--- tracing_flags [(`sampleCoreBack, TracingFlags.all),
---                ]
 
 -- #eval testNoDelZet false `List.disjoint_pmap 1 2 2
 
 
--- TODO : panic ↑ ; maybe way introduciton if id parse for unfold ?
+#check List.Perm.disjoint_right
+
+
+-- #eval testNoDelZet false `List.Perm.disjoint_right 1 2 2
+
+
+#check List.range'_0
+
+
+-- #eval testNoDelZet false `List.range'_0 1 2 2
+
+
+#check List.left_le_of_mem_range'
+
+
+-- #eval testNoDelZet false `List.left_le_of_mem_range' 1 2 2
+
+
+#check List.map_erase
+
+
+-- #eval testNoDelZet false `List.map_erase 1 2 2
+
+
+#print  List.injOn_insertIdx_index_of_notMem
+
+
+-- #eval testNoDelZet false `List.injOn_insertIdx_index_of_notMem 1 2 2
+
+
+#print List.injOn_insertIdx_index_of_notMem._simp_1_4
+
+
+-- tracing_mode .std
+-- tracing_flags [(`delabTopBack, TracingFlags.all),
+--                 (`delab_simpGoal, TracingFlags.all)
+--                ]
