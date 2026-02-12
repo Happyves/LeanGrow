@@ -104,7 +104,9 @@ unsafe def sampleClass_back_cvbThm_ofModule
   let modules := #[mod]
   WithImportModules (modules.map (fun x => {module := x})) {} <| fun env => do
     stdMetaRun env do
-      let imps := env.header.imports
+      let modpath ← findOLean mod
+      let (moddata, _) ← readModuleData modpath
+      let imps := moddata.imports
       let mut regs : Array CompactedRegion := Array.replicate imps.size (0 : USize)
       let mut i := 0
       let mut data : Array (CTrie (List Nat)) := Array.replicate imps.size default
@@ -138,6 +140,17 @@ unsafe def sampleClass_back_cvbThm_ofModule
 
 #check 1
 
+unsafe def sampleClass_back_cvbThm_ofModule_S
+  (depthDig depthStart depthStop : Nat) (deltaFuzz zetaFuzz : Option Nat)
+  (mod : Name)
+  : IO Unit :=
+    sampleClass_back_cvbThm_ofModule
+      depthDig depthStart depthStop deltaFuzz zetaFuzz
+      UInt32Array.empty (fun n => UInt32Array.single n.toUInt32)
+      (fun x y => y.oInsert x.toUInt32) UInt32Array.inter UInt32Array.isEmpty
+      mod
+
+#check 1
 
 
 @[specialize]
@@ -233,7 +246,9 @@ unsafe def sampleClass_back_cvbGoalHyp_ofModule
   let modules := #[mod]
   WithImportModules (modules.map (fun x => {module := x})) {} <| fun env => do
     stdMetaRun env do
-      let imps := env.header.imports
+      let modpath ← findOLean mod
+      let (moddata, _) ← readModuleData modpath
+      let imps := moddata.imports
       let mut regs : Array CompactedRegion := Array.replicate imps.size (0 : USize)
       let mut i := 0
       let mut data : Array (CTrie (List Nat)) := Array.replicate imps.size default
@@ -263,6 +278,21 @@ unsafe def sampleClass_back_cvbGoalHyp_ofModule
       pickle path res
       for reg in regs do
         reg.free
+
+
+#check 1
+
+
+unsafe def sampleClass_back_cvbGoalHyp_ofModule_S
+  (depthDig depthStart depthStop : Nat) (deltaFuzz zetaFuzz : Option Nat)
+  (mod : Name)
+  : IO Unit :=
+    sampleClass_back_cvbGoalHyp_ofModule
+      depthDig depthStart depthStop deltaFuzz zetaFuzz
+      UInt32Array.empty (fun n => UInt32Array.single n.toUInt32)
+      (fun x y => y.oInsert x.toUInt32) UInt32Array.inter
+      UInt32Array.union UInt32Array.isEmpty
+      (fun x => x[0]!.toNat) mod
 
 
 #check 1

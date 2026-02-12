@@ -289,7 +289,7 @@ unsafe def buildPartialCacheDataFullS (module : Name) (opts : Options := {}) : I
 
 
 @[specialize, inline]
-unsafe def buildCacheData [Repr IdxCollType]
+unsafe def buildCacheData [Repr IdxCollType] [EmptyCollection IdxCollType]
   (intersect union difference : IdxCollType → IdxCollType → IdxCollType)
   (emptyCol : IdxCollType) (empty? : IdxCollType → Bool) (size : IdxCollType → Nat)
   (module : Name) (opts : Options := {}) : IO Unit :=

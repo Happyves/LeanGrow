@@ -62,6 +62,14 @@ unsafe def explore_samClass_thm_core
 
 #check 1
 
+unsafe def explore_samClass_thm_core_S
+  (mod : Name)
+  : MetaM Unit :=
+    explore_samClass_thm_core
+      UInt32Array.inter UInt32Array.isEmpty mod
+
+#check 1
+
 
 unsafe def explore_samClass_gh_core
   {IdxCollType : Type} [Repr IdxCollType]
@@ -107,6 +115,13 @@ unsafe def explore_samClass_gh_core
 
 #check 1
 
+unsafe def explore_samClass_gh_core_S
+  (mod : Name)
+  : MetaM Unit :=
+    explore_samClass_gh_core
+      UInt32Array.inter UInt32Array.isEmpty mod
+
+#check 1
 
 unsafe def explore_gen_thm_core
   {IdxCollType : Type} [Repr IdxCollType]
@@ -164,6 +179,13 @@ unsafe def explore_gen_thm_core
 
 #check 1
 
+unsafe def explore_gen_thm_core_S
+  (mod : Name)
+  : MetaM Unit :=
+    explore_gen_thm_core
+      UInt32Array.inter UInt32Array.isEmpty mod
+
+#check 1
 
 unsafe def explore_gen_gh_core
   {IdxCollType : Type} [Repr IdxCollType]
@@ -217,5 +239,14 @@ unsafe def explore_gen_gh_core
         i := i+1
       )
   -- not freeing the pickle
+
+#check 1
+
+
+unsafe def explore_gen_gh_core_S
+  (mod : Name)
+  : MetaM Unit :=
+    explore_gen_gh_core
+      UInt32Array.inter UInt32Array.isEmpty mod
 
 #check 1

@@ -55,6 +55,8 @@ unsafe def testBack (moduleNames : Array Name) : Array Expr → Array Expr → A
 
 #check UInt32Array.foldlM
 
+#check UInt32Array.subsetOf
+
 
 
 def embedForwInterMain_S
@@ -66,7 +68,7 @@ def embedForwInterMain_S
   (Q' : IntroTree UInt32Array) (T : SetTrieP ThmFormat UInt32Array PaInG) :=
   embedForwInterMain thmembedForwData
     (fun a x f => a.foldl x (fun i s => f i.toNat s)) (fun a x f => a.foldlM x (fun i s => f i.toNat s))
-    UInt32Array.inter UInt32Array.union UInt32Array.diff UInt32Array.isEmpty UInt32Array.empty
+    UInt32Array.inter UInt32Array.union UInt32Array.diff UInt32Array.isEmpty UInt32Array.empty UInt32Array.subsetOf
     stdForwSetTrie_idxToSinkIdx thm_data stdForwSetTrie_idxToThmIdx thmNameToHypIdx uNodes
     l1 Q' T
 

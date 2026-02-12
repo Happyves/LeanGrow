@@ -23,7 +23,8 @@ structure mergeCoreData (IdxCollType : Type _) where
 
 
 @[specialize, inline]
-def ModuleCacheState.mergeCore [Repr IdxCollType]
+def ModuleCacheState.mergeCore
+  [Repr IdxCollType] [EmptyCollection IdxCollType]
   (union : IdxCollType → IdxCollType → IdxCollType)
   (emptyCol : IdxCollType)
   (shift : Nat → IdxCollType → IdxCollType)
@@ -71,7 +72,8 @@ def ModuleCacheState.mergeCore [Repr IdxCollType]
 
 
 @[specialize, inline]
-def ModuleCacheState.mergeMain [Repr IdxCollType]
+def ModuleCacheState.mergeMain
+  [Repr IdxCollType] [EmptyCollection IdxCollType]
   (union : IdxCollType → IdxCollType → IdxCollType)
   (emptyCol : IdxCollType)
   (shift : Nat → IdxCollType → IdxCollType)
@@ -86,7 +88,8 @@ def ModuleCacheState.mergeMain [Repr IdxCollType]
 
 
 @[specialize, inline]
-unsafe def loadCacheData_forTest [Repr IdxCollType]
+unsafe def loadCacheData_forTest
+  [Repr IdxCollType] [EmptyCollection IdxCollType] [Inhabited IdxCollType]
   (union : IdxCollType → IdxCollType → IdxCollType)
   (emptyCol : IdxCollType)
   (shift : Nat → IdxCollType → IdxCollType)

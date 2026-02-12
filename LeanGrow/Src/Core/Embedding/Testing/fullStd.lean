@@ -81,4 +81,5 @@ tracing_flags [
 
 With context g(as : List Int) g(a : Int) and objects run test_2_1
 
-#check List.elem_cons_self
+#check List.mem_insert_self
+#check List.getLast_mem

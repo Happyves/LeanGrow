@@ -187,7 +187,7 @@ private def translate (hs : List Nat) (trans : (RBMap Nat Nat instOrdNat.compare
 
 
 @[specialize, inline]
-partial def cvb_thms_genHyps [Repr IdxCollType]
+partial def cvb_thms_genHyps [Repr IdxCollType] [EmptyCollection IdxCollType]
   (fold : ∀ {β : Type _}, IdxCollType → (init : β) → (f : Nat → β → β) → β) (empty : IdxCollType)
   (insert : Nat → IdxCollType → IdxCollType)
   (insertMulti intersect union difference : IdxCollType → IdxCollType → IdxCollType) (empty? : IdxCollType → Bool)
@@ -277,7 +277,7 @@ partial def cvb_goal_hyp_genGoal [Repr IdxCollType]
 
 
 @[specialize, inline]
-partial def cvb_goal_hyp_genHyps [Repr IdxCollType]
+partial def cvb_goal_hyp_genHyps [Repr IdxCollType] [EmptyCollection IdxCollType]
   (fold : ∀ {β : Type _}, IdxCollType → (init : β) → (f : Nat → β → β) → β) (empty : IdxCollType)
   (insert : Nat → IdxCollType → IdxCollType)
   (insertMulti intersect union difference : IdxCollType → IdxCollType → IdxCollType) (empty? : IdxCollType → Bool)
@@ -318,7 +318,7 @@ partial def cvb_goal_hyp_genHyps [Repr IdxCollType]
     let st := st.mergeLeaves (fun (n,v) t => t.upsert n (fun
         | .none => .some v
         | .some w => .some (w+v))
-        ) CTrie.empty
+        ) union CTrie.empty
     mtrace on .zero with s!" st {← st.pp 0 (fun p => p.pp l1 l2 [] 0 intersect empty?) (fun t => return s!"{t.toList}")}"
     return .mk st weights total allTypes cleanTypes
 
@@ -326,7 +326,7 @@ partial def cvb_goal_hyp_genHyps [Repr IdxCollType]
 #check SetTrie.map
 
 @[specialize, inline]
-partial def cvb_thms_genMain [Repr IdxCollType]
+partial def cvb_thms_genMain [Repr IdxCollType] [EmptyCollection IdxCollType]
   (fold : ∀ {β : Type _}, IdxCollType → (init : β) → (f : Nat → β → β) → β) (empty : IdxCollType)
   (insert : Nat → IdxCollType → IdxCollType)
   (insertMulti intersect union difference : IdxCollType → IdxCollType → IdxCollType) (empty? : IdxCollType → Bool)
@@ -354,7 +354,7 @@ partial def cvb_thms_genMain [Repr IdxCollType]
 #check 1
 
 @[specialize, inline]
-partial def cvb_goal_hyp_genMain [Repr IdxCollType]
+partial def cvb_goal_hyp_genMain [Repr IdxCollType] [EmptyCollection IdxCollType]
   (fold : ∀ {β : Type _}, IdxCollType → (init : β) → (f : Nat → β → β) → β) (empty : IdxCollType)
   (shiftAdd : IdxCollType → Nat → IdxCollType)
   (insert : Nat → IdxCollType → IdxCollType)

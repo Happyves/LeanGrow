@@ -7,28 +7,45 @@ Author: Yves Jäckle.
 import LeanGrow.Src.Data.SetTrie.Build
 
 
-instance {α : Type _} [I : Inhabited α] (IdxCollType : Type u) (PaIn : Type u → Type u) : Inhabited (SetTrieP α IdxCollType PaIn) where
-  default := .leaf I.default
+instance {α : Type _} [I : Inhabited α] (IdxCollType : Type u) [EmptyCollection IdxCollType] (PaIn : Type u → Type u) : Inhabited (SetTrieP α IdxCollType PaIn) where
+  default := .leaf {} I.default
+
+@[specialize]
+def List.foldOnKeysCollectingLeaves {γ : Type _}
+  (c nl : List (SetTrie α β)) (l : List α) (init : γ) (merge : β → γ → γ) : Prod3 γ (List α) (List (SetTrie α β)) :=
+  match c with
+  | [] => .mk init l nl
+  | n@(.node k _) :: rest => rest.foldOnKeysCollectingLeaves (n :: nl) l (merge k init) merge
+  | .root _ :: rest => rest.foldOnKeysCollectingLeaves nl l init merge
+  | (.leaf v) :: rest => rest.foldOnKeysCollectingLeaves nl (v :: l) init merge
+
+
 
 
 @[inline, specialize]
 partial def SetTrieP.mk
   {α : Type _} [Inhabited α]
-  {IdxCollType : Type u}
+  {IdxCollType : Type u} [EmptyCollection IdxCollType]
   {PaIn : Type u → Type u}
   (merge : (PaIn IdxCollType) → (PaIn IdxCollType) → (PaIn IdxCollType)) (empty : (PaIn IdxCollType))
-  (getInds : (PaIn IdxCollType) → IdxCollType)
+  (getInds : (PaIn IdxCollType) → IdxCollType) (empty? : (PaIn IdxCollType) → Bool)
   (T : SetTrie α (PaIn IdxCollType)) : SetTrieP α IdxCollType PaIn :=
-  let rec @[specialize] go [Inhabited α] : SetTrie α (PaIn IdxCollType) → SetTrieP α IdxCollType PaIn
+  let rec @[specialize] go [Inhabited α] [EmptyCollection IdxCollType] (sf : List (SetTrieP α IdxCollType PaIn)) : SetTrie α (PaIn IdxCollType) → List (SetTrieP α IdxCollType PaIn)
     | .root c =>
-        let K := c.foldOnKeys empty merge
-        .root K (c.toArray.map go)
+        let .mk K ls c := c.foldOnKeysCollectingLeaves [] [] empty merge
+        let C := c.foldl (fun C p => go C p) []
+        [.root K (ls.foldl (fun x y => x.push (.leaf {} y)) C.toArray)]
     | .node q c =>
         let is := getInds q
-        let K := c.foldOnKeys empty merge
-        .node is K (c.toArray.map go)
-    | .leaf v => .leaf v
-  go T
+        let .mk K ls c := c.foldOnKeysCollectingLeaves [] [] empty merge
+        let C := c.foldl (fun C p => go C p) []
+        if empty? K
+        then ls.foldl (fun l v => (.leaf is v) :: l) sf
+        else (.node is K (ls.foldl (fun x y => x.push (.leaf {} y)) C.toArray)) :: sf
+    | .leaf v => (.leaf {} v) :: sf
+  (go [] T).head!
+
+
 
 -- # Query
 
@@ -38,7 +55,7 @@ partial def SetTrieP.depth (T : SetTrieP α IdxCollType PaIn) : Nat :=
     | [] => depth
     | t :: ts =>
         match t with
-        | .leaf _ =>
+        | .leaf _ _ =>
             match candidates with
             | n :: more => go more (if n > depth then n else depth) ts
             | _ => 0
@@ -64,13 +81,15 @@ partial def SetTrieP.query [Repr IdxCollType]
             trace on .zero with s!"[query] root, containedIn {repr I}" in
             let next := c.foldl (fun nx k =>
               match k with
-              | .leaf .. => k :: nx
+              | .leaf key .. => if subsetOf key I then k :: nx else nx
               | .node key .. => if subsetOf key I then k :: nx else nx
               | .root .. => panic! s!"[query] ill formed tree"
               ) more
             go done next
-        | .leaf a => go (a :: done) more
+        | .leaf _ a => go (a :: done) more
   go [] [T]
+
+
 
 @[inline, specialize]
 partial def SetTrieP.queryPass [Repr IdxCollType]
@@ -86,12 +105,11 @@ partial def SetTrieP.queryPass [Repr IdxCollType]
             trace on .zero with s!"[query] root, containedIn {repr I}" in
             let next := c.foldl (fun (nx,nr) k =>
               match k with
-              | .leaf .. => (k :: nx,nr)
-              | .node key .. => if subsetOf key I then (k :: nx,nr) else (nx, k :: nr)
+              | .leaf key .. | .node key .. => if subsetOf key I then (k :: nx,nr) else (nx, k :: nr)
               | .root .. => panic! s!"[query] ill formed tree"
               ) (more, ret)
             go done next.2 next.1
-        | .leaf a => go (a :: done) ret more
+        | .leaf _ a => go (a :: done) ret more
   go [] [] [T]
 
 open Lean Meta
@@ -112,12 +130,11 @@ partial def SetTrieP.queryPassNotifyM [Repr IdxCollType]
             let s := more.length
             let next := c.foldl (fun (nx,nr) k =>
               match k with
-              | .leaf .. => (k :: nx,nr)
-              | .node key .. => if subsetOf key I then (k :: nx,nr) else (nx, k :: nr)
+              | .leaf key .. | .node key .. => if subsetOf key I then (k :: nx,nr) else (nx, k :: nr)
               | .root .. => panic! s!"[query] ill formed tree"
               ) (more, ret)
             go done next.2 (if prog? then true else next.1.length > s) state next.1
-        | .leaf a => go (a :: done) ret prog? state more
+        | .leaf _ a => go (a :: done) ret prog? state more
   go [] [] false ini [T]
 
 
@@ -125,21 +142,22 @@ partial def SetTrieP.queryPassNotifyM [Repr IdxCollType]
 
 @[specialize]
 partial def SetTrieP.map
-  [Inhabited γ] (mapV : α → γ) (mapI : IdxCollType → IdxCollType) (mapK : PaIn IdxCollType → PaIn IdxCollType)
+  [Inhabited γ] [EmptyCollection IdxCollType]
+  (mapV : α → γ) (mapI : IdxCollType → IdxCollType) (mapK : PaIn IdxCollType → PaIn IdxCollType)
   (T : SetTrieP α IdxCollType PaIn) : SetTrieP γ IdxCollType PaIn :=
     match T with
     | .root keys c => .root (mapK keys) (c.map (fun x => x.map mapV mapI mapK))
     | .node inds keys c => .node (mapI inds) (mapK keys) (c.map (fun x => x.map mapV mapI mapK))
-    | .leaf a => .leaf <| mapV a
+    | .leaf inds a => .leaf (mapI inds) <| mapV a
 
 @[specialize]
 partial def SetTrieP.mapM
-  [Inhabited γ] (mapV : α → MetaM γ) (mapI : IdxCollType → IdxCollType) (mapK : PaIn IdxCollType → PaIn IdxCollType)
+  (mapV : α → MetaM γ) (mapI : IdxCollType → IdxCollType) (mapK : PaIn IdxCollType → PaIn IdxCollType)
   (T : SetTrieP α IdxCollType PaIn) : MetaM (SetTrieP γ IdxCollType PaIn) :=
     match T with
     | .root keys c => return .root (mapK keys) (← c.mapM (fun x => x.mapM mapV mapI mapK))
     | .node inds keys c => return .node (mapI inds) (mapK keys) (← c.mapM (fun x => x.mapM mapV mapI mapK))
-    | .leaf a => return .leaf <| ← mapV a
+    | .leaf inds  a => return .leaf (mapI inds)  <| ← mapV a
 
 
 
@@ -148,7 +166,8 @@ partial def SetTrieP.mapM
 
 @[inline, specialize]
 partial def SetTrieP.mergeNoJoin
-  [Inhabited α ] (merge : PaIn IdxCollType → PaIn IdxCollType → PaIn IdxCollType)
+  [Inhabited α ] [EmptyCollection IdxCollType]
+  (merge : PaIn IdxCollType → PaIn IdxCollType → PaIn IdxCollType)
   (fst snd : SetTrieP α IdxCollType PaIn) : SetTrieP α IdxCollType PaIn :=
     match fst, snd with
     | .root fk fc, .root sk sc => .root (merge fk sk) (fc ++ sc)
@@ -164,7 +183,7 @@ partial def SetTrieP.pp [Monad m] [Repr IdxCollType] (ind : Nat) (key : PaIn Idx
         return (Blank ind) ++ s!".root {← key k}\n" ++ (← BlankJumpM (ind +3) kids.toList (fun x => go (ind + 3) x))
     | .node inds k kids =>
         return (Blank ind) ++ s!".node {repr inds} {← key k}\n" ++ (← BlankJumpM (ind +3) kids.toList (fun x => go (ind + 3) x))
-    | .leaf v => return (Blank ind) ++ (← val v)
+    | .leaf inds v => return (Blank ind) ++ s!".leaf {repr inds} {← val v}\n"
   go ind T
 
 
@@ -173,21 +192,22 @@ partial def SetTrieP.pp [Monad m] [Repr IdxCollType] (ind : Nat) (key : PaIn Idx
 /-- Won't preserve order-/
 @[specialize]
 partial def SetTrieP.mergeLeaves {γ : Sort _}
-  [Inhabited α] (fold : α → γ → γ) (ini : γ)
-  (T : SetTrieP α IdxCollType PaIn) : SetTrieP γ IdxCollType PaIn :=
-    let rec @[specialize] inner (toL : γ) (leaf? : Bool) (done ref: Array (SetTrieP α IdxCollType PaIn)) : Nat → Prod3 Bool γ (Array (SetTrieP α IdxCollType PaIn))
-      | 0 => .mk leaf? toL done
+  [Inhabited α] [EmptyCollection IdxCollType]
+  (fold : α → γ → γ) (union : IdxCollType → IdxCollType → IdxCollType)
+  (ini : γ) (T : SetTrieP α IdxCollType PaIn) : SetTrieP γ IdxCollType PaIn :=
+    let rec @[specialize] inner (inds : IdxCollType) (toL : γ) (leaf? : Bool) (done ref: Array (SetTrieP α IdxCollType PaIn)) : Nat → Prod4 IdxCollType Bool γ (Array (SetTrieP α IdxCollType PaIn))
+      | 0 => .mk inds leaf? toL done
       | i+1 =>
         match ref[i]! with
-        | .leaf v  => inner (fold v toL) true done ref i
-        | nx => inner toL leaf? (done.push nx) ref i
+        | .leaf is v => inner (union is inds) (fold v toL) true done ref i
+        | nx => inner inds toL leaf? (done.push nx) ref i
     match T with
     | .root t c =>
-        let .mk leaf? toL c := inner ini false (.emptyWithCapacity c.size) c c.size
-        let c := c.map (mergeLeaves fold ini)
-        if leaf? then .root t (c.push (.leaf toL)) else .root t c
+        let .mk inds leaf? toL c := inner {} ini false (.emptyWithCapacity c.size) c c.size
+        let c := c.map (mergeLeaves fold union ini)
+        if leaf? then .root t (c.push (.leaf inds toL)) else .root t c
     | .node is t c =>
-        let .mk leaf? toL c := inner ini false (.emptyWithCapacity c.size) c c.size
-        let c := c.map (mergeLeaves fold ini)
-        if leaf? then .node is t (c.push (.leaf toL)) else .node is t c
-    | .leaf a => .leaf (fold a ini)
+        let .mk inds leaf? toL c := inner {} ini false (.emptyWithCapacity c.size) c c.size
+        let c := c.map (mergeLeaves fold union ini)
+        if leaf? then .node is t (c.push (.leaf inds toL)) else .node is t c
+    | .leaf inds a => .leaf inds (fold a ini)

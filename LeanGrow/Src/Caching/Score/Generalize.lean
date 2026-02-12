@@ -174,3 +174,33 @@ unsafe def generalize_back_cvbGoalHyp_ofModule
 
 
 #check 1
+
+
+unsafe def generalize_back_cvbThm_ofModule_S
+  (mod : Name)
+  : IO Unit :=
+    generalize_back_cvbThm_ofModule
+      (fun is i f => is.foldl i (fun i s => f i.toNat s))
+      UInt32Array.empty (fun x y => y.oInsert x.toUInt32)
+      UInt32Array.union UInt32Array.inter UInt32Array.union
+      UInt32Array.diff UInt32Array.isEmpty UInt32Array.size
+      (fun x y => y.oContains x.toUInt32) mod
+
+#check 1
+#check UInt32Array.shiftAdd
+
+
+
+unsafe def generalize_back_cvbGoalHyp_ofModule_S
+  (mod : Name)
+  : IO Unit :=
+    generalize_back_cvbGoalHyp_ofModule
+      (fun is i f => is.foldl i (fun i s => f i.toNat s))
+      UInt32Array.empty (fun x y => y.oInsert x.toUInt32)
+      UInt32Array.union UInt32Array.inter UInt32Array.union
+      UInt32Array.diff UInt32Array.isEmpty UInt32Array.size
+      (fun x y => y.oContains x.toUInt32)
+      (fun x y => x.shiftAdd y.toUInt32)
+      mod
+
+#check 1

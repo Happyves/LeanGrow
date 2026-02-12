@@ -349,7 +349,8 @@ partial def mergeLSpeSpe [Repr IdxCollType]
 end PaInG
 
 @[specialize]
-def SetTriePGSpe.ofList [Inhabited α] [Repr α] [Repr IdxCollType]
+def SetTriePGSpe.ofList
+  [Inhabited α] [Repr α] [Repr IdxCollType] [EmptyCollection IdxCollType]
   (thmData : CTrie (Array ThmFormat))
   (intersect union difference : IdxCollType → IdxCollType → IdxCollType)
   (emptyCol : IdxCollType)  (empty? : IdxCollType → Bool) (size : IdxCollType → Nat)
@@ -380,4 +381,4 @@ def SetTriePGSpe.ofList [Inhabited α] [Repr α] [Repr IdxCollType]
     (PaInG.clean emptyCol empty?)
     l
     (fun x => return x)
-  return SetTrieP.mk (PaInG.merge union emptyCol) .dead (PaInG.getIndices emptyCol union) res
+  return SetTrieP.mk (PaInG.merge union emptyCol) .dead (PaInG.getIndices emptyCol union) (fun | .dead => true | _ => false) res

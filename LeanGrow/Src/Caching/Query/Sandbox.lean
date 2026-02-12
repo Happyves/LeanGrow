@@ -19,7 +19,7 @@ variable {IdxCollType : Type _}
 
 
 @[specialize, inline]
-def inSandbox [Repr IdxCollType]
+def inSandbox [Repr IdxCollType] [EmptyCollection IdxCollType]
   (intersect union difference : IdxCollType → IdxCollType → IdxCollType)
   (emptyCol : IdxCollType) (empty? : IdxCollType → Bool) (size : IdxCollType → Nat)
   (singleton : Nat → IdxCollType) (insert : Nat → IdxCollType → IdxCollType)

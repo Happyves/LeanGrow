@@ -17,5 +17,5 @@ deriving Inhabited, Repr, BEq
 inductive SetTrieP (α : Type _) (IdxCollType : Type u) (PaIn : Type u → Type u)  where
 | root (q : PaIn IdxCollType) (c : Array (SetTrieP α IdxCollType PaIn))
 | node (k : IdxCollType) (q : PaIn IdxCollType) (c : Array (SetTrieP α IdxCollType PaIn))
-| leaf (a : α)
+| leaf (k : IdxCollType) (a : α)
 deriving Inhabited, Nonempty

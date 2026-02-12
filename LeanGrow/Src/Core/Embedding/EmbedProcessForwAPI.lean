@@ -33,22 +33,22 @@ def embedPropaInter [Repr IndexColType]
   (stdForwSetTrie_idxToSinkIdx : Array Nat)
   (hypIndToThm : Nat → ThmFormat) (thmToInds : Name → IndexColType) (unode? : Nat → Bool)
   (l1 : LocalContext) (l2 : LocalInstances)
-  (sofar : ListProd IndexColType embedForwData)
+  (sofar : ListProd3 IndexColType IndexColType embedForwData)
   (out : ListProd3 IndexColType IndexColType ((ListProd Nat Expr) × (ListProd Nat Level)))
-  : MetaM (ListProd IndexColType embedForwData) :=
+  : MetaM (ListProd3 IndexColType IndexColType embedForwData) :=
     do
     mtracing
-    mtrace on .zero with s!"[embedPropaInter] sofar: {← sofar.foldlM "" (fun is emb S => return S ++ s!"\n{repr is} {repr emb.thm.name} {← emb.embedSofar.mapM ppExpr}")}"
+    mtrace on .zero with s!"[embedPropaInter] sofar: {← sofar.foldlM "" (fun is tis emb S => return S ++ s!"\nis {repr is} tis {repr tis} {repr emb.thm.name} {← emb.embedSofar.mapM ppExpr}")}"
     out.foldlM sofar (fun guInds thmHypInds (propaE, propaL) R => do
       mtrace on .zero with s!"[embedPropaInter] Looking at match guInds {repr guInds} thmHypInds {repr thmHypInds}"
       mtrace on .zero with s!"[embedPropaInter] with propaE {← propaE.foldlM ListProd.nil (fun x y r => return .cons x (← ppExpr y) r)} and propaL {repr propaL}"
-      mtrace on .zero with s!"[embedPropaInter] R : {← R.foldlM "" (fun is emb S => return S ++ s!"\n{repr is} {repr emb.thm.name} {← emb.embedSofar.mapM ppExpr}")}"
-      R.foldlMcps (.nil,false) (fun hI embedForwData (R, found?) q1 => do
+      mtrace on .zero with s!"[embedPropaInter] R : {← R.foldlM "" (fun is tis emb S => return S ++ s!"\nis{repr is} tis {repr tis} {repr emb.thm.name} {← emb.embedSofar.mapM ppExpr}")}"
+      R.foldlMcps (.nil,false) (fun hI _ embedForwData (R, found?) q1 => do
         mtrace on .zero with s!"[embedPropaInter] Looking at embed with hyp-ids signature {repr hI}"
         if empty? (intersect hI thmHypInds)
         then
           mtrace on .zero with s!"[embedPropaInter] skiped"
-          q1 (.cons hI embedForwData R, found?)
+          q1 (.cons hI thmHypInds embedForwData R, found?)
         else
           mtrace on .zero with s!"[embedPropaInter] extending"
           let blue := embedForwData
@@ -64,7 +64,7 @@ def embedPropaInter [Repr IndexColType]
                 q2 blue
               else
                 mtrace on .zero with s!"[embedPropaInter] negative coherence defeq between →, aborting :\n V : {← ppExpr V} \n blue.embedSofar[p]! : {← ppExpr blue.embedSofar[p]!} "
-                q1 (.cons hI embedForwData R, true)
+                q1 (.cons hI thmHypInds embedForwData R, true)
                 -- so we keep the embed so far, but don't extend it
             ) <| fun blue => do
               propaL.foldlMcps blue (fun p V blue q2 => do
@@ -79,7 +79,7 @@ def embedPropaInter [Repr IndexColType]
                     q2 blue
                   else
                     mtrace on .zero with s!"[embedPropaInter] negative coherence defeq between →, aborting :\n V : {repr V} \n blue.paramsSofar[p]! : {repr blue.paramsSofar[p]!} "
-                    q1 (.cons hI embedForwData R, true)
+                    q1 (.cons hI thmHypInds embedForwData R, true)
                 ) <| fun blue => do
                   let opts : List Expr := fold guInds [] (fun i L =>
                     if unode? i
@@ -87,7 +87,7 @@ def embedPropaInter [Repr IndexColType]
                     else (.fvar ⟨gnode i⟩) :: L
                     )
                   mtrace on .zero with s!"[embedPropaInter] sink opts {repr opts}"
-                  let N := .cons hI embedForwData R -- we keep the embedding without extentions, so that it can be extended further in other branches of the intro tree ?
+                  let N := .cons hI thmHypInds embedForwData R -- we keep the embedding without extentions, so that it can be extended further in other branches of the intro tree ?
                   let N ← foldM thmHypInds N (fun hypIdx N => do
                     let thm := hypIndToThm hypIdx
                     let hI := thmToInds (match thm.name with | .inl n => n | .inr e => e.name)
@@ -97,7 +97,7 @@ def embedPropaInter [Repr IndexColType]
                     for o in opts do
                       mtrace on .zero with s!"[embedPropaInter] adding it withoption sink {o}"
                       let here :=  {blue with embedSofar := blue.embedSofar.set! hypIdx o, unassignedNodes := blue.unassignedNodes.erase hypIdx}
-                      Nm := .cons hI here Nm
+                      Nm := .cons hI thmHypInds here Nm
                     return Nm
                     )
                   q1 (N, true)
@@ -129,7 +129,7 @@ def embedPropaInter [Repr IndexColType]
               for o in opts do
                 mtrace on .zero with s!"[embedPropaInter] adding it withoption sink {o}"
                 let here :=  {freshembedForwDataBlue with embedSofar := freshembedForwDataBlue.embedSofar.set! hypIdx o, unassignedNodes := freshembedForwDataBlue.unassignedNodes.erase hypIdx}
-                Nm := .cons hI here Nm
+                Nm := .cons hI thmHypInds here Nm
               return Nm
             )
           )
@@ -137,14 +137,14 @@ def embedPropaInter [Repr IndexColType]
 
 #check PaInG.pp
 
-
+-- #exit
 @[specialize, inline]
 partial def embedForwInterMain
   (thmembedForwData : CTrie (Array ThmFormat)) [Repr IndexColType]
   (fold : ∀ {β : Type _}, IndexColType → (init : β) → (f : Nat → β → β) → β)
   (foldM : ∀ {β : Type _}, IndexColType → (init : β) → (f : Nat → β → MetaM β) → MetaM β)
   (intersect union difference : IndexColType → IndexColType → IndexColType)
-  (empty? : IndexColType → Bool) (emptyCol : IndexColType)
+  (empty? : IndexColType → Bool) (emptyCol : IndexColType) (subsetOf : IndexColType → IndexColType → Bool)
   (stdForwSetTrie_idxToSinkIdx : Array Nat)
   (thm_data : Array ThmFormat) (stdForwSetTrie_idxToThmIdx : Array Nat)
   (thmNameToHypIdx : CTrie IndexColType) (uNodes : Array Nat)
@@ -162,10 +162,10 @@ partial def embedForwInterMain
   let unode? : Nat → Bool :=
     (fun i => uNodes.binSearchContains i (· < · ))
   let rec @[specialize] findSplit
-    (done : ListProd4 LocalInstances (List (IntroTree IndexColType)) (PaInG IndexColType) (ListProd IndexColType embedForwData))
+    (done : ListProd4 LocalInstances (List (IntroTree IndexColType)) (PaInG IndexColType) (ListProd3 IndexColType IndexColType embedForwData))
     (t : PaInG IndexColType)
-    : ListProd3 ((IntroTree IndexColType)) (PaInG IndexColType) (ListProd IndexColType embedForwData) →
-        MetaM (ListProd4 LocalInstances (List (IntroTree IndexColType)) (PaInG IndexColType) (ListProd IndexColType embedForwData))
+    : ListProd3 ((IntroTree IndexColType)) (PaInG IndexColType) (ListProd3 IndexColType IndexColType embedForwData) →
+        MetaM (ListProd4 LocalInstances (List (IntroTree IndexColType)) (PaInG IndexColType) (ListProd3 IndexColType IndexColType embedForwData))
     | .nil => return done
     | .cons Q sf embs more => do
         match Q with
@@ -204,7 +204,7 @@ partial def embedForwInterMain
                     mtrace on .zero with s!"[findSplit] proceed"
                     findSplit (.cons l2 (kids.foldl [] (fun _ _ y R => y :: R)) msf nembs done) t more
   let rec @[specialize] go (done : ListProd4 LocalInstances IndexColType (PaInG IndexColType) embedForwData) :
-    ListProd5 (SetTrieP ThmFormat IndexColType PaInG) (Option (IntroTree IndexColType)) LocalInstances (PaInG IndexColType) (ListProd IndexColType embedForwData)
+    ListProd5 (SetTrieP ThmFormat IndexColType PaInG) (Option (IntroTree IndexColType)) LocalInstances (PaInG IndexColType) (ListProd3 IndexColType IndexColType embedForwData)
       → MetaM (ListProd4 LocalInstances IndexColType (PaInG IndexColType) embedForwData)
     | .nil => return done
     | .cons T (.some Q) l2 sf embs more => do
@@ -215,10 +215,44 @@ partial def embedForwInterMain
             | .nil =>
                 mtrace on .zero with s!"[embedForwInterMain] not found in prior, going forward with findSplit"
                 let nxs ← findSplit .nil t (.cons Q sf embs .nil)
-                let nxsf := nxs.foldl more (fun ll2 its sf emb R =>
+                let nxsf ← nxs.foldlM more (fun ll2 its sf emb R => do
                   match its with
-                  | [] => c.foldl (fun R c => .cons c .none (l2 ++ ll2) sf emb R) R
-                  | _ => c.foldl (fun R c => its.foldl (fun R it => .cons c (.some it) (l2 ++ ll2) sf emb R) R) R
+                  | [] =>
+                    --c.foldl (fun R c => .cons c .none (l2 ++ ll2) sf emb R) R
+                    let nx ← c.foldlM (fun R st => do
+                      match st with
+                      | .root .. => panic! "[embedForwInterMain] bad tree"
+                      | .leaf inds .. | .node inds .. =>
+                        mtrace on .zero with s!" looking at st child with inds {repr inds}"
+                        let locEmbs ← emb.foldlM (ListProd3.nil : ListProd3 IndexColType IndexColType embedForwData) (fun x is y z => do
+                          if subsetOf is inds
+                          then
+                            mtrace on .zero with s!"gets embeding with thm ind {repr x}"
+                            return ListProd3.cons x is y z
+                          else
+                            return z
+                          )
+                        return .cons st .none (l2 ++ ll2) sf locEmbs R
+                      ) R
+                    return nx
+                  | _ =>
+                    --c.foldl (fun R c => its.foldl (fun R it => .cons c (.some it) (l2 ++ ll2) sf emb R) R) R
+                    let nx ← c.foldlM (fun R st => do
+                      match st with
+                      | .root .. => panic! "[embedForwInterMain] bad tree"
+                      | .leaf inds .. | .node inds .. =>
+                        mtrace on .zero with s!" looking at st child with inds {repr inds}"
+                        let locEmbs ← emb.foldlM (ListProd3.nil : ListProd3 IndexColType IndexColType embedForwData) (fun x is y z => do
+                          if subsetOf is inds
+                          then
+                            mtrace on .zero with s!"gets embeding with thm ind {repr x}"
+                            return ListProd3.cons x is y z
+                          else
+                            return z
+                          )
+                        return its.foldl (fun R it => .cons st (.some it) (l2 ++ ll2) sf locEmbs R) R
+                      ) R
+                    return nx
                   )
                 go done nxsf
             | Ms =>
@@ -227,25 +261,109 @@ partial def embedForwInterMain
                 | .nil =>
                     mtrace on .zero with s!"[embedForwInterMain] found in prior, but inconcistent, going forward with findSplit"
                     let nxs ← findSplit .nil t (.cons Q sf embs .nil)
-                    let nxsf := nxs.foldl more (fun ll2 its sf emb R =>
+                    let nxsf ← nxs.foldlM more (fun ll2 its sf emb R => do
                       match its with
-                      | [] => c.foldl (fun R c => .cons c .none (l2 ++ ll2) sf emb R) R
-                      | _ => c.foldl (fun R c => its.foldl (fun R it => .cons c (.some it) (l2 ++ ll2) sf emb R) R) R
+                      | [] =>
+                        --c.foldl (fun R c => .cons c .none (l2 ++ ll2) sf emb R) R
+                        let nx ← c.foldlM (fun R st => do
+                          match st with
+                          | .root .. => panic! "[embedForwInterMain] bad tree"
+                          | .leaf inds .. | .node inds .. =>
+                            mtrace on .zero with s!" looking at st child with inds {repr inds}"
+                            let locEmbs ← emb.foldlM (ListProd3.nil : ListProd3 IndexColType IndexColType embedForwData) (fun x is y z => do
+                              if subsetOf is inds
+                              then
+                                mtrace on .zero with s!"gets embeding with thm ind {repr x}"
+                                return ListProd3.cons x is y z
+                              else
+                                return z
+                              )
+                            return .cons st .none (l2 ++ ll2) sf locEmbs R
+                          ) R
+                        return nx
+                      | _ =>
+                        --c.foldl (fun R c => its.foldl (fun R it => .cons c (.some it) (l2 ++ ll2) sf emb R) R) R
+                        let nx ← c.foldlM (fun R st => do
+                          match st with
+                          | .root .. => panic! "[embedForwInterMain] bad tree"
+                          | .leaf inds .. | .node inds .. =>
+                            mtrace on .zero with s!" looking at st child with inds {repr inds}"
+                            let locEmbs ← emb.foldlM (ListProd3.nil : ListProd3 IndexColType IndexColType embedForwData) (fun x is y z => do
+                              if subsetOf is inds
+                              then
+                                mtrace on .zero with s!"gets embeding with thm ind {repr x}"
+                                return ListProd3.cons x is y z
+                              else
+                                return z
+                              )
+                            return its.foldl (fun R it => .cons st (.some it) (l2 ++ ll2) sf locEmbs R) R
+                          ) R
+                        return nx
                       )
                     go done nxsf
                 | _ =>
                     mtrace on .zero with s!"[embedForwInterMain] found in prior"
-                    go done (c.foldl (fun R st => .cons st (.some Q) l2 sf nembs R) more)
+                    --go done (c.foldl (fun R st => .cons st (.some Q) l2 sf nembs R) more)
+                    let nx ← c.foldlM (fun R st => do
+                      match st with
+                      | .root .. => panic! "[embedForwInterMain] bad tree"
+                      | .leaf inds .. | .node inds .. =>
+                        mtrace on .zero with s!" looking at st child with inds {repr inds}"
+                        let locEmbs ← nembs.foldlM (ListProd3.nil : ListProd3 IndexColType IndexColType embedForwData) (fun x is y z => do
+                          if subsetOf is inds
+                          then
+                            mtrace on .zero with s!"gets embeding with thm ind {repr x}"
+                            return ListProd3.cons x is y z
+                          else
+                            return z
+                          )
+                        return .cons st (.some Q) l2 sf locEmbs R
+                      ) more
+                    go done nx
         | .node _ t c =>
             mtrace on .zero with s!"[embedForwInterMain] run embedForwInterCore on:\n sf : {← sf.pp l1 l2 [] 0 intersect empty?}\n t : {← t.pp l1 l2 [] 0 intersect empty?}"
             match ← PaInG.embedForwInterCore thmembedForwData intersect difference empty? l1 l2 sf t with
             | .nil =>
                 mtrace on .zero with s!"[embedForwInterMain] not found in prior, going forward with findSplit"
                 let nxs ← findSplit .nil t (.cons Q sf embs .nil)
-                let nxsf := nxs.foldl more (fun ll2 its sf emb R =>
+                let nxsf ← nxs.foldlM more (fun ll2 its sf emb R => do
                   match its with
-                  | [] => c.foldl (fun R c => .cons c .none (l2 ++ ll2) sf emb R) R
-                  | _ => c.foldl (fun R c => its.foldl (fun R it => .cons c (.some it) (l2 ++ ll2) sf emb R) R) R
+                  | [] =>
+                    -- c.foldl (fun R c => .cons c .none (l2 ++ ll2) sf emb R) R
+                    let nx ← c.foldlM (fun R st => do
+                      match st with
+                      | .root .. => panic! "[embedForwInterMain] bad tree"
+                      | .leaf inds .. | .node inds .. =>
+                        mtrace on .zero with s!" looking at st child with inds {repr inds}"
+                        let locEmbs ← emb.foldlM (ListProd3.nil : ListProd3 IndexColType IndexColType embedForwData) (fun x is y z => do
+                          if subsetOf is inds
+                          then
+                            mtrace on .zero with s!"gets embeding with thm ind {repr x}"
+                            return ListProd3.cons x is y z
+                          else
+                            return z
+                          )
+                        return .cons st .none (l2 ++ ll2) sf locEmbs R
+                      ) R
+                    return nx
+                  | _ =>
+                    --c.foldl (fun R c => its.foldl (fun R it => .cons c (.some it) (l2 ++ ll2) sf emb R) R) R
+                    let nx ← c.foldlM (fun R st => do
+                      match st with
+                      | .root .. => panic! "[embedForwInterMain] bad tree"
+                      | .leaf inds .. | .node inds .. =>
+                        mtrace on .zero with s!" looking at st child with inds {repr inds}"
+                        let locEmbs ← emb.foldlM (ListProd3.nil : ListProd3 IndexColType IndexColType embedForwData) (fun x is y z => do
+                          if subsetOf is inds
+                          then
+                            mtrace on .zero with s!"gets embeding with thm ind {repr x}"
+                            return ListProd3.cons x is y z
+                          else
+                            return z
+                          )
+                        return its.foldl (fun R it => .cons st (.some it) (l2 ++ ll2) sf locEmbs R) R
+                      ) R
+                    return nx
                   )
                 go done nxsf
             | Ms =>
@@ -254,19 +372,69 @@ partial def embedForwInterMain
                 | .nil =>
                     mtrace on .zero with s!"[embedForwInterMain] found in prior, but inconcistent, going forward with findSplit"
                     let nxs ← findSplit .nil t (.cons Q sf embs .nil)
-                    let nxsf := nxs.foldl more (fun ll2 its sf emb R =>
+                    let nxsf ← nxs.foldlM more (fun ll2 its sf emb R => do
                       match its with
-                      | [] => c.foldl (fun R c => .cons c .none (l2 ++ ll2) sf emb R) R
-                      | _ => c.foldl (fun R c => its.foldl (fun R it => .cons c (.some it) (l2 ++ ll2) sf emb R) R) R
+                      | [] =>
+                        --c.foldl (fun R c => .cons c .none (l2 ++ ll2) sf emb R) R
+                        let nx ← c.foldlM (fun R st => do
+                          match st with
+                          | .root .. => panic! "[embedForwInterMain] bad tree"
+                          | .leaf inds .. | .node inds .. =>
+                            mtrace on .zero with s!" looking at st child with inds {repr inds}"
+                            let locEmbs ← emb.foldlM (ListProd3.nil : ListProd3 IndexColType IndexColType embedForwData) (fun x is y z => do
+                              if subsetOf is inds
+                              then
+                                mtrace on .zero with s!"gets embeding with thm ind {repr x}"
+                                return ListProd3.cons x is y z
+                              else
+                                return z
+                              )
+                            return .cons st .none (l2 ++ ll2) sf locEmbs R
+                          ) R
+                        return nx
+                      | _ =>
+                        --c.foldl (fun R c => its.foldl (fun R it => .cons c (.some it) (l2 ++ ll2) sf emb R) R) R
+                        let nx ← c.foldlM (fun R st => do
+                          match st with
+                          | .root .. => panic! "[embedForwInterMain] bad tree"
+                          | .leaf inds .. | .node inds .. =>
+                            mtrace on .zero with s!" looking at st child with inds {repr inds}"
+                            let locEmbs ← emb.foldlM (ListProd3.nil : ListProd3 IndexColType IndexColType embedForwData) (fun x is y z => do
+                              if subsetOf is inds
+                              then
+                                mtrace on .zero with s!"gets embeding with thm ind {repr x}"
+                                return ListProd3.cons x is y z
+                              else
+                                return z
+                              )
+                            return its.foldl (fun R it => .cons st (.some it) (l2 ++ ll2) sf locEmbs R) R
+                          ) R
+                        return nx
                       )
                     go done nxsf
                 | _ =>
                     mtrace on .zero with s!"[embedForwInterMain] found in prior"
-                    go done (c.foldl (fun R st => .cons st (.some Q) l2 sf nembs R) more)
-        | .leaf thm =>
+                    --go done (c.foldl (fun R st => .cons st (.some Q) l2 sf nembs R) more)
+                    let nx ← c.foldlM (fun R st => do
+                      match st with
+                      | .root .. => panic! "[embedForwInterMain] bad tree"
+                      | .leaf inds .. | .node inds .. =>
+                        mtrace on .zero with s!" looking at st child with inds {repr inds}"
+                        let locEmbs ← nembs.foldlM (ListProd3.nil : ListProd3 IndexColType IndexColType embedForwData) (fun x is y z => do
+                          if subsetOf is inds
+                          then
+                            mtrace on .zero with s!"gets embeding with thm ind {repr x}"
+                            return ListProd3.cons x is y z
+                          else
+                            return z
+                          )
+                        return .cons st (.some Q) l2 sf locEmbs R
+                      ) more
+                    go done nx
+        | .leaf _ thm =>
             mtrace on .zero with s!"[embedForwInterMain] leaf with thm {thm.name}"
             let hI := thmToInds (match thm.name with | .inl n => n | .inr e => e.name)
-            go (embs.foldl done (fun x y z =>
+            go (embs.foldl done (fun x _ y z =>
               if empty? (intersect hI x)
               then z
               else .cons l2 x sf y z)) more
@@ -286,7 +454,23 @@ partial def embedForwInterMain
                     go done more
                 | _ =>
                     mtrace on .zero with s!"[embedForwInterMain] found in prior"
-                    go done (c.foldl (fun R st => .cons st .none  l2 sf nembs R) more)
+                    -- go done (c.foldl (fun R st => .cons st .none  l2 sf nembs R) more)
+                    let nx ← c.foldlM (fun R st => do
+                      match st with
+                      | .root .. => panic! "[embedForwInterMain] bad tree"
+                      | .leaf inds .. | .node inds .. =>
+                        mtrace on .zero with s!" looking at st child with inds {repr inds}"
+                        let locEmbs ← nembs.foldlM (ListProd3.nil : ListProd3 IndexColType IndexColType embedForwData) (fun x is y z => do
+                          if subsetOf is inds
+                          then
+                            mtrace on .zero with s!"gets embeding with thm ind {repr x}"
+                            return ListProd3.cons x is y z
+                          else
+                            return z
+                          )
+                        return .cons st .none l2 sf locEmbs R
+                      ) more
+                    go done nx
         | .node _ t c =>
             mtrace on .zero with s!"[embedForwInterMain] run embedForwInterCore on:\n sf : {← sf.pp l1 l2 [] 0 intersect empty?}\n t : {← t.pp l1 l2 [] 0 intersect empty?}"
             match ← PaInG.embedForwInterCore thmembedForwData intersect difference empty? l1 l2 sf t with
@@ -301,11 +485,27 @@ partial def embedForwInterMain
                     go done more
                 | _ =>
                     mtrace on .zero with s!"[embedForwInterMain] found in prior"
-                    go done (c.foldl (fun R st => .cons st .none  l2 sf nembs R) more)
-        | .leaf thm =>
+                    --go done (c.foldl (fun R st => .cons st .none  l2 sf nembs R) more)
+                    let nx ← c.foldlM (fun R st => do
+                      match st with
+                      | .root .. => panic! "[embedForwInterMain] bad tree"
+                      | .leaf inds .. | .node inds .. =>
+                        mtrace on .zero with s!" looking at st child with inds {repr inds}"
+                        let locEmbs ← nembs.foldlM (ListProd3.nil : ListProd3 IndexColType IndexColType embedForwData) (fun x is y z => do
+                          if subsetOf is inds
+                          then
+                            mtrace on .zero with s!"gets embeding with thm ind {repr x}"
+                            return ListProd3.cons x is y z
+                          else
+                            return z
+                          )
+                        return .cons st .none l2 sf locEmbs R
+                      ) more
+                    go done nx
+        | .leaf _ thm =>
             mtrace on .zero with s!"[embedForwInterMain] thm {thm.name}"
             let hI := thmToInds (match thm.name with | .inl n => n | .inr e => e.name)
-            go (embs.foldl done (fun x y z =>
+            go (embs.foldl done (fun x _ y z =>
               if empty? (intersect hI x)
               then z
               else .cons l2 x sf y z)) more

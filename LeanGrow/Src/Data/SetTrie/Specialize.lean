@@ -50,7 +50,7 @@ def SetTrieT.query (Q : CTrie Unit) (T : SetTrieT α) : List α :=
 
 
 @[specialize]
-def SetTriePnG.ofList [Inhabited α] [Repr α] [Repr IdxCollType]
+def SetTriePnG.ofList [Inhabited α] [Repr α] [Repr IdxCollType] [EmptyCollection IdxCollType]
   (intersect union difference : IdxCollType → IdxCollType → IdxCollType)
   (emptyCol : IdxCollType)  (empty? : IdxCollType → Bool) (size : IdxCollType → Nat)
   (l : ListProd (PaIn IdxCollType) α)
@@ -79,10 +79,10 @@ def SetTriePnG.ofList [Inhabited α] [Repr α] [Repr IdxCollType]
     (fun (_,es) τ => PaIn.merge union emptyCol es τ)
     (PaIn.clean emptyCol empty?)
     l
-  SetTrieP.mk (PaIn.merge union emptyCol) .dead (PaIn.getIndices emptyCol union) res
+  SetTrieP.mk (PaIn.merge union emptyCol) .dead (PaIn.getIndices emptyCol union) (fun | .dead => true | _ => false) res
 
 @[specialize]
-def SetTriePG.ofList [Inhabited α] [Repr α] [Repr IdxCollType]
+def SetTriePG.ofList [Inhabited α] [Repr α] [Repr IdxCollType] [EmptyCollection IdxCollType]
   (intersect union difference : IdxCollType → IdxCollType → IdxCollType)
   (emptyCol : IdxCollType)  (empty? : IdxCollType → Bool) (size : IdxCollType → Nat)
   (l : ListProd (PaInG IdxCollType) α)
@@ -111,19 +111,21 @@ def SetTriePG.ofList [Inhabited α] [Repr α] [Repr IdxCollType]
     (fun (_,es) τ => PaInG.merge union emptyCol es τ)
     (PaInG.clean emptyCol empty?)
     l
-  SetTrieP.mk (PaInG.merge union emptyCol) .dead (PaInG.getIndices emptyCol union) res
+  SetTrieP.mk (PaInG.merge union emptyCol) .dead (PaInG.getIndices emptyCol union) (fun | .dead => true | _ => false) res
 
 
 @[inline, specialize]
 partial def SetTriePnG.mergeNoJoin
-  [Inhabited α ] (union : IdxCollType → IdxCollType → IdxCollType)
+  [Inhabited α ] [EmptyCollection IdxCollType]
+  (union : IdxCollType → IdxCollType → IdxCollType)
   (emptyCol : IdxCollType)
   (fst snd : SetTrieP α IdxCollType PaIn) : SetTrieP α IdxCollType PaIn :=
     SetTrieP.mergeNoJoin (PaIn.merge union emptyCol) fst snd
 
 @[inline, specialize]
 partial def SetTriePG.mergeNoJoin
-  [Inhabited α ] (union : IdxCollType → IdxCollType → IdxCollType)
+  [Inhabited α ] [EmptyCollection IdxCollType]
+  (union : IdxCollType → IdxCollType → IdxCollType)
   (emptyCol : IdxCollType)
   (fst snd : SetTrieP α IdxCollType PaInG) : SetTrieP α IdxCollType PaInG :=
     SetTrieP.mergeNoJoin (PaInG.merge union emptyCol) fst snd
