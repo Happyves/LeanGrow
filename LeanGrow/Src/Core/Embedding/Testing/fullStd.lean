@@ -70,16 +70,17 @@ unsafe def test_1 := testBack #[`Init.Data.List.Basic, `Init.Data.List.Lemmas]
 
 unsafe def test_2 := testForw #[`Init.Data.List.Basic, `Init.Data.List.Lemmas]
 
-unsafe def test_2_1 := test_2 (.leaf (.mk #[0,1]))
+unsafe def test_2_1 := test_2 (.leaf (.mk #[0,1,2,3]))
 
 tracing_mode .std
 tracing_flags [
     (`testForw, TracingFlags.all), (`embedForwInterMain, TracingFlags.all), -- wouldn't print go and findSplit otherwise ...
-    (`embedPropaInter, TracingFlags.all), (`embedForwInterMain.findSplit , TracingFlags.all),
+    (`embedPropaInter, TracingFlags.all),
     (`embedForwInterPostProcess', TracingFlags.all),
     (`embedForwInterMain.go, TracingFlags.all)]
 
-With context g(as : List Int) g(a : Int) and objects run test_2_1
+With context g(a : Int) g(as : List Int) g(bs : List Int) g(h : a ∈ as) and objects run test_2_1
 
 #check List.mem_insert_self
-#check List.getLast_mem
+-- ↑  is considered bad fo uni since argument a has arg as type ...
+#check List.mem_append_left

@@ -8,7 +8,7 @@ import LeanGrow.Src.Caching.Query.Build
 import LeanGrow.Src.Caching.Query.Load
 
 import LeanGrow.Src.Core.Embedding.EmbedProcessBack
-import LeanGrow.Src.Core.Embedding.EmbedProcessForwAPI
+import LeanGrow.Src.Core.Embedding.EmbedProcessForw
 import LeanGrow.Src.Core.Embedding.TestTools_QueryStd
 
 
@@ -130,12 +130,14 @@ unsafe def testForw (moduleNames : Array Name) (scafold : FakeIntroTree) : Array
           i := i+1
         else
           i := i+1
+      let mut out := ""
       let res ← embedForwInterMain_S
         data.thmData data.data.stdForwSetTrie_idxToSinkIdx data.data.thm_data
         data.data.stdForwSetTrie_idxToThmIdx data.data.thmNameToHypIdx uNodes
         (← getLCtx) IT data.data.stdForwSetTrie
+      for (_,_,_,emb) in res.toListOfProd do
+        out := out ++ s!"\n\nFound embedding for {emb.thm.name}"
       let res ← embedForwInterPostProcess' (← getLCtx) res
-      let mut out := ""
       for (term,_,guinds) in res.toListOfProd do
         let T ← inferType term
         out := out ++ s!"\n\nNew type : {← ppExpr T}\nTerm : {← ppExpr term}\nguinds : {guinds}"

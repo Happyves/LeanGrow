@@ -172,3 +172,14 @@ theorem test_badUni_3 (P : Nat → Prop) (h1 : P 42) (h2: ¬ P 42) : [1].Pairwis
 #eval test ``List.Perm.eq_nil
 
 #eval test ``List.singleton_perm_singleton
+
+
+tracing_mode .std
+tracing_flags [(`isBadForBackRW, TracingFlags.all),
+               (`isBadForForwRW, TracingFlags.all),
+               (`isBadForRW, TracingFlags.all),
+               (`isGoodForRW, TracingFlags.all),
+               ]
+
+
+#eval test ``List.mem_insert_self

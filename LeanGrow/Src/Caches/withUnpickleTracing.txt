@@ -1,1 +1,25 @@
-[(sorryAx, [1]), (noConfusion_of_Nat, [0]), (lcCast, [2]), (congrFun, [0]), (congrArg, [0]), (congr, [0]), (Quot.lcInv, [2]), (Or.resolve_right, [1]), (Or.resolve_left, [0]), (Or.neg_resolve_right, [1]), (Or.neg_resolve_left, [0]), (Or.elim, [0, 1]), (Nonempty.intro, [1]), (Nonempty.elim, [0]), (Nat.not_succ_le_zero, [0]), (Nat.lt_trans, [1]), (Nat.lt_of_lt_of_le, [1]), (Nat.lt_of_le_of_lt, [1]), (Nat.le_trans, [1]), (Nat.le.brecOn, [0]), (Eq.trans, [2]), (Eq.subst, [2]), (ByteArray.IsValidUTF8.intro, [1]), (And.right, [0]), (And.left, [1])]
+
+
+Found embedding for List.mem_append_right
+
+Found embedding for List.mem_append_right
+
+Found embedding for List.mem_append_left
+
+Found embedding for List.mem_append_left
+
+New type : g.0 ∈ g.1 ++ g.1
+Term : List.mem_append_left g.1 g.3
+guinds : [1, 3]
+
+New type : g.0 ∈ g.1 ++ g.2
+Term : List.mem_append_left g.2 g.3
+guinds : [2, 3]
+
+New type : g.0 ∈ g.1 ++ g.1
+Term : List.mem_append_right g.1 g.3
+guinds : [1, 3]
+
+New type : g.0 ∈ g.2 ++ g.1
+Term : List.mem_append_right g.2 g.3
+guinds : [2, 3]
