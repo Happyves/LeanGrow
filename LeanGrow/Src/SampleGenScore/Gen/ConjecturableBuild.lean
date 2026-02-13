@@ -243,7 +243,7 @@ partial def cvb_thmConj_genConj [Repr IdxCollType]
 
 
 @[specialize, inline]
-partial def cvb_thmConj_genMain [Repr IdxCollType]
+partial def cvb_thmConj_genMain [Repr IdxCollType] [EmptyCollection IdxCollType]
   (fold : ∀ {β : Type _}, IdxCollType → (init : β) → (f : Nat → β → β) → β) (empty : IdxCollType)
   (insert : Nat → IdxCollType → IdxCollType)
   (insertMulti intersect union difference : IdxCollType → IdxCollType → IdxCollType) (empty? : IdxCollType → Bool)

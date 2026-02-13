@@ -10,7 +10,6 @@ import LeanGrow.Src.Caching.Score.Generalize
 
 open Lean Meta System
 
-
 unsafe def explore_samClass_thm_core
   {IdxCollType : Type} [Repr IdxCollType]
   (intersect : IdxCollType → IdxCollType → IdxCollType) (empty? : IdxCollType → Bool)
@@ -21,10 +20,15 @@ unsafe def explore_samClass_thm_core
   let (sams,reg) ← unpickle (ProcessedSamplesThmKey IdxCollType) loadpath
   IO.println s!"Sample name : {sams.sampleName}"
   IO.println s!"\nLevelNum : {sams.levelNum}"
+  for j in Array.range sams.levelNum do
+    let ln :=  .num sams.sampleName j
+    let _ ← mkLevelMVarOfName ln
   IO.println "\nTypes:"
   let mut i := 0
   for T in sams.types do
     IO.println s!"{i} : {← ppExpr T}"
+    let ln :=  .num sams.sampleName i
+    let _ ← mkMvarWiU ln (.num (.str .anonymous "?m") i) T
     i := i+1
   IO.println "\nRegular back:"
   sams.regularBack.foldM () (fun n v _ => do
@@ -62,6 +66,7 @@ unsafe def explore_samClass_thm_core
 
 #check 1
 
+
 unsafe def explore_samClass_thm_core_S
   (mod : Name)
   : MetaM Unit :=
@@ -81,10 +86,15 @@ unsafe def explore_samClass_gh_core
   let (sams,reg) ← unpickle (ProcessedSamplesGHKey IdxCollType) loadpath
   IO.println s!"Sample name : {sams.sampleName}"
   IO.println s!"\nLevelNum : {sams.levelNum}"
+  for j in Array.range sams.levelNum do
+    let ln :=  .num sams.sampleName j
+    let _ ← mkLevelMVarOfName ln
   IO.println "\nTypes:"
   let mut i := 0
   for T in sams.types do
     IO.println s!"{i} : {← ppExpr T}"
+    let ln := .num sams.sampleName i
+    let _ ← mkMvarWiU ln (.num (.str .anonymous "?m") i) T
     i := i+1
   IO.println s!"\nRegular back:\nIdx: {sams.regularBack.1}\nPats: {← sams.regularBack.2.pp (← getLCtx) (← getLocalInstances) [] 0 intersect empty?}"
   i := 0
@@ -133,10 +143,15 @@ unsafe def explore_gen_thm_core
   let (sams,reg) ← unpickle (scoreThmKey IdxCollType) loadpath
   IO.println s!"Sample name : {sams.sampleName}"
   IO.println s!"\nLevelNum : {sams.levelNum}"
+  for j in Array.range sams.levelNum do
+    let ln :=  .num sams.sampleName j
+    let _ ← mkLevelMVarOfName ln
   IO.println "\nTypes:"
   let mut i := 0
   for T in sams.types do
     IO.println s!"{i} : {← ppExpr T}"
+    let ln := .num sams.sampleName i
+    let _ ← mkMvarWiU ln (.num (.str .anonymous "?m") i) T
     i := i+1
   let l1 := (← getLCtx)
   let l2 := (← getLocalInstances)
@@ -197,10 +212,15 @@ unsafe def explore_gen_gh_core
   let (sams,reg) ← unpickle (scoreGHKey IdxCollType) loadpath
   IO.println s!"Sample name : {sams.sampleName}"
   IO.println s!"\nLevelNum : {sams.levelNum}"
+  for j in Array.range sams.levelNum do
+    let ln :=  .num sams.sampleName j
+    let _ ← mkLevelMVarOfName ln
   IO.println "\nTypes:"
   let mut i := 0
   for T in sams.types do
     IO.println s!"{i} : {← ppExpr T}"
+    let ln := .num sams.sampleName i
+    let _ ← mkMvarWiU ln (.num (.str .anonymous "?m") i) T
     i := i+1
   let l1 := (← getLCtx)
   let l2 := (← getLocalInstances)
