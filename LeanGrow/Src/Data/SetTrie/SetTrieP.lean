@@ -41,7 +41,7 @@ partial def SetTrieP.mk
         let C := c.foldl (fun C p => go C p) []
         if empty? K
         then ls.foldl (fun l v => (.leaf is v) :: l) sf
-        else (.node is K (ls.foldl (fun x y => x.push (.leaf {} y)) C.toArray)) :: sf
+        else (.node is K C.toArray) :: (ls.foldl (fun x y => (.leaf is y) :: x) sf)
     | .leaf v => (.leaf {} v) :: sf
   (go [] T).head!
 

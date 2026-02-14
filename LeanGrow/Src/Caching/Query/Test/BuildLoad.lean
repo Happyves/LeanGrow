@@ -160,6 +160,6 @@ def bigInit := #[`Init.Prelude, `Init.SimpLemmas, `Init.PropLemmas,
 
 -- #eval exploreCaches_hypIndsOfThm #[`Init.Data.List.Basic, `Init.Data.List.Lemmas] "List.mem_insert_self"
 
-#eval exploreCaches_thms #[`Init.Data.List.Basic, `Init.Data.List.Lemmas]
+-- #eval exploreCaches_thms #[`Init.Data.List.Basic, `Init.Data.List.Lemmas]
 
 -- #eval exploreCaches_stdForwSetTrie_pp #[`Init.Data.List.Perm, `Init.Data.List.Range, `Init.Data.List.Basic, `Init.Data.List.Lemmas]

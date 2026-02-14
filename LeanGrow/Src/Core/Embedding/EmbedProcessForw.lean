@@ -43,7 +43,9 @@ def embedPropaInter [Repr IndexColType]
       mtrace on .zero with s!"[embedPropaInter] Looking at match guInds {repr guInds} thmHypInds {repr thmHypInds}"
       mtrace on .zero with s!"[embedPropaInter] with propaE {← propaE.foldlM ListProd.nil (fun x y r => return .cons x (← ppExpr y) r)} and propaL {repr propaL}"
       mtrace on .zero with s!"[embedPropaInter] R : {← R.foldlM "" (fun is tis emb S => return S ++ s!"\nis{repr is} tis {repr tis} {repr emb.thm.name} {← emb.embedSofar.mapM ppExpr}")}"
-      sofar.foldlMcps (R, false) (fun hI embedForwData (R, found?) q1 => do
+      let inter := R.foldl sofar (fun x _ y z => .cons x y z)
+      mtrace on .zero with s!"[embedPropaInter] inter : {← inter.foldlM "" (fun is emb S => return S ++ s!"\nis{repr is} {repr emb.thm.name} {← emb.embedSofar.mapM ppExpr}")}"
+      inter.foldlMcps (R, false) (fun hI embedForwData (R, found?) q1 => do
         mtrace on .zero with s!"[embedPropaInter] Looking at embed with hyp-ids signature {repr hI}"
         if empty? (intersect hI thmHypInds)
         then
@@ -139,18 +141,8 @@ def embedPropaInter [Repr IndexColType]
 
 
 #check PaInG.pp
+-- #exit
 
-/-
-↑
-Takes embedding so far, identified by the hyp-indices of the correponding entry in the set-trie,
-an entry for irrelevant indices, and the actual embedding info.
-Takes a list of matches, identifed by the gu-inds and the hyp-inds they match with, as well as the
-assignement data.
-Adds extentions by the matches.
-If a match corresponded to a theorem without a prior embedding, a new one is made.
-
-
--/
 
 
 @[specialize, inline]

@@ -72,15 +72,97 @@ unsafe def test_2 := testForw #[`Init.Data.List.Basic, `Init.Data.List.Lemmas]
 
 unsafe def test_2_1 := test_2 (.leaf (.mk #[0,1,2,3]))
 
-tracing_mode .std
-tracing_flags [
-    (`testForw, TracingFlags.all), (`embedForwInterMain, TracingFlags.all), -- wouldn't print go and findSplit otherwise ...
-    (`embedPropaInter, TracingFlags.all),
-    (`embedForwInterPostProcess', TracingFlags.all),
-    (`embedForwInterMain.go, TracingFlags.all)]
+-- tracing_mode .std
+-- tracing_flags [
+--     (`testForw, TracingFlags.all), (`embedForwInterMain, TracingFlags.all), -- wouldn't print go and findSplit otherwise ...
+--     (`embedPropaInter, TracingFlags.all),
+--     (`embedForwInterPostProcess', TracingFlags.all),
+--     (`embedForwInterMain.go, TracingFlags.all)]
 
-With context g(a : Int) g(as : List Int) g(bs : List Int) g(h : a ∈ as) and objects run test_2_1
+-- With context g(a : Int) g(as : List Int) g(bs : List Int) g(h : a ∈ as) and objects run test_2_1
+
+unsafe def test_2_1_1 := test_2 (.leaf (.mk #[0,1,2,3,4]))
+
+-- With context g(n : Nat) g(a : Fin n.succ) g(as : List (Fin n.succ)) g(bs : List (Fin (n+1))) g(h : a ∈ as) and objects run test_2_1_1
+
 
 #check List.mem_insert_self
+#check List.leftpad_prefix
 -- ↑  is considered bad fo uni since argument a has arg as type ...
+#check List.ne_nil_of_mem
 #check List.mem_append_left
+#check List.mem_append_right
+#check List.eq_nil_or_concat
+#check List.getElem_of_mem
+#check List.eq_append_cons_of_mem
+#check List.length_pos_of_mem
+#check List.get_of_mem
+
+
+unsafe def test_2_2 := test_2 (.leaf (.mk #[0,1]))
+
+-- With context g(as : List Int) g(p : Int → Bool) and objects run test_2_2
+
+unsafe def test_2_2_1 := test_2 (.leaf (.mk #[0,1,2]))
+
+-- With context g(n : Nat) g(as : List (Fin n.succ)) g(p : (Fin (n+1)) → Bool) and objects run test_2_2_1
+
+-- With context g(n : Nat) g(as : List (Fin (n+1))) g(p : (Fin n.succ) → Bool) and objects run test_2_2_1
+
+#check List.length_filter_le
+#check List.filter_sublist
+
+unsafe def test_2_3_1 := test_2 (.leaf (.mk #[0,1]))
+
+-- With context g(l : List Int) g(n : Fin l.length) and objects run test_2_3_1
+
+#check List.get_mem
+
+unsafe def test_2_3_2 := test_2 (.leaf (.mk #[0,1,2]))
+
+-- With context g(l : List Int) g(k : Nat) g(n : Fin k) and objects run test_2_3_2
+
+-- With context g(l : List Int) u(k : Nat : l.length) g(n : Fin k) and objects run test_2_3_2
+-- unode not unfolded because `Fin ?m.length` is in the set-trie and unodes aren't
+-- unfolded by ForwInterCore ...
+
+
+-- With context g(l : List Int) g(h : l ≠ []) and objects run test_2_3_1
+
+-- With context g(l : List Int) g(h : ¬ l = []) and objects run test_2_3_1
+
+
+#check List.exists_mem_of_ne_nil
+#check List.append_ne_nil_of_right_ne_nil
+-- etc
+
+unsafe def test_2_4_1:= test_2 (.leaf (.mk #[0,1,2,3,4]))
+
+-- tracing_mode .std
+-- tracing_flags [
+--     (`testForw, TracingFlags.all), (`embedForwInterMain, TracingFlags.all), -- wouldn't print go and findSplit otherwise ...
+--     (`embedPropaInter, TracingFlags.all),
+--     (`embedForwInterPostProcess', TracingFlags.all),
+--     (`embedForwInterMain.go, TracingFlags.all)]
+
+
+-- With context g(a : Int) g(s : List Int) g(t : List Int) g(h₁ : ¬a ∈ s) g(h₂ : ¬a ∈ t) and objects run test_2_4_1
+
+unsafe def test_2_4_2 := test_2 (.node (.mk #[0]) [.leaf (.mk #[1,2,3,4])])
+
+-- With context g(a : Int) g(s : List Int) g(t : List Int) g(h₁ : ¬a ∈ s) g(h₂ : ¬a ∈ t) and objects run test_2_4_2
+
+
+unsafe def test_2_4_3 := test_2 (.node (.mk #[0,1,2]) [.leaf (.mk #[3,4])])
+
+-- With context g(a : Int) g(s : List Int) g(t : List Int) g(h₁ : ¬a ∈ s) g(h₂ : ¬a ∈ t) and objects run test_2_4_3
+
+
+unsafe def test_2_4_4 := test_2 (.node (.mk #[0,1,3]) [.leaf (.mk #[2,4])])
+
+-- With context g(a : Int) g(s : List Int) g(t : List Int) g(h₁ : ¬a ∈ s) g(h₂ : ¬a ∈ t) and objects run test_2_4_4
+
+
+unsafe def test_2_4_5 := test_2 (.node (.mk #[0]) [.leaf (.mk #[1,3]), .leaf (.mk #[2,4])])
+
+-- With context g(a : Int) g(s : List Int) g(t : List Int) g(h₁ : ¬a ∈ s) g(h₂ : ¬a ∈ t) and objects run test_2_4_5
