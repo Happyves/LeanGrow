@@ -14,8 +14,11 @@ open Lean Meta
 
 
 def mathlibTactic? : Name → Bool
+  | .str .anonymous s1 =>
+    s1 == "Lean" -- Lean.Omega for example
   | .str (.str .anonymous s1) s2 =>
     s1 == "Mathlib" && s2 == "Tactic"
+  -- todo : Batteries ?
   | .str p _ => mathlibTactic? p
   | .num p _ => mathlibTactic? p
   | .anonymous => false

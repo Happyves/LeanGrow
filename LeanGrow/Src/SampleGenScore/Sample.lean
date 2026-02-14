@@ -337,9 +337,10 @@ where
 def Lean.Expr.isRefl? (e : Expr) : Bool := Id.run <| do
   let h := e.getAppFn'
   let .const h _ := h | return false
-  return (h == ``Eq.refl || h == ``Iff.refl)
+  return (h == ``Eq.refl || h == ``Iff.refl || h == ``Iff.rfl || h == ``rfl)
 
 #check 1
+#check rfl
 
 def postCleanReject (l1 : LocalContext) (l2 : LocalInstances) (T : Expr) : MetaM (Option Expr) := do
   if ← IsProp T l1 l2
@@ -358,6 +359,15 @@ def postCleanReject (l1 : LocalContext) (l2 : LocalInstances) (T : Expr) : MetaM
     return .none
 
 #check Expr.getFVarIds'
+#check Name.isPrefixOf
+#print SampleData
+
+def Lean.Name.getPrefix! : Name → String
+  | anonymous => "anonymous"
+  | str .anonymous p => p
+  | num p _   => p.getPrefix!
+  | str p _   => p.getPrefix!
+
 
 
 
@@ -385,7 +395,11 @@ partial def sampleCoreBack
         match r with
         | .none =>
             sampleCoreBack preProcessed conjable l1 l2 depthDig depthStart depthStop deltaFuzz zetaFuzz todo samples (haveP.foldl havePats ListProd3.cons)
-        | .thm .. | .thmC .. =>
+        | .thm  sn | .thmC sn .. =>
+          if sn.getPrefix! == "_private"
+          then
+            sampleCoreBack preProcessed conjable l1 l2 depthDig depthStart depthStop deltaFuzz zetaFuzz todo samples (haveP.foldl havePats ListProd3.cons)
+          else
             let .mk hyps l1 l2 ← sampleHypsCore preProcessed l1 l2 depthStart depthStop e lifted deltaFuzz zetaFuzz
             let goal ← InferType e l1 l2
             let goal ← WhnfR goal l1 l2
@@ -476,7 +490,11 @@ partial def sampleCoreBack
                 mtrace on .zero with s!" hyps {← hyps.mapM ppExpr}"
                 return .cons r locLifted goal hyps R)
               sampleCoreBack preProcessed conjable l1 l2 depthDig depthStart depthStop deltaFuzz zetaFuzz todo samples (haveP.foldl havePats ListProd3.cons)
-        | .induc .. =>
+        | .induc sn =>
+          if sn.getPrefix! == "_private"
+          then
+            sampleCoreBack preProcessed conjable l1 l2 depthDig depthStart depthStop deltaFuzz zetaFuzz todo samples (haveP.foldl havePats ListProd3.cons)
+          else
             let goal ← InferType e l1 l2
             let usedFv := e.getFVarIds
             let lifted := lifted.filter (fun x => usedFv.contains x)
@@ -549,23 +567,27 @@ partial def sampleCoreForw
           let .mk dr subhyp l1 l2 ← (if withHyps then delabTopForw_withHyps preProcessed term l1 l2 else delabTopForw preProcessed term l1 l2)
           match dr with
           | .none | .induc .. => inner l1 l2 goal lifted presinks (type :: seenH) samples more
-          | .thm .. | .thmC .. =>
-            let shT ← withLCtx l1 l2 <| subhyp.foldlM (fun H x => do
-              let t ← inferType x
-              let t ← whnfR t
-              match ← postCleanReject l1 l2 t with
-              | .none => return H
-              | .some t => return t :: H
-              ) seenH
-            let hyps := more.foldl shT (fun _ t H => t :: H)
-            let hyps ← presinks.foldlM (fun S (fv,fvT) => do
-              -- let nonSink := hyps.any (fun HT => HT.onAllSubtermsCheckExistsTR (fun | .fvar id => fv == id | _ => false))
-              -- if nonSink then return S else return  fvT :: S
-              return  fvT :: S
-              ) hyps
-            mtrace on .zero with s!" hyps {← hyps.mapM ppExpr}"
-            let samples := .cons dr lifted goal hyps samples
-            inner l1 l2 goal lifted presinks (type :: seenH) samples more
+          | .thm sn | .thmC sn .. =>
+            if sn.getPrefix! == "_private"
+            then
+              inner l1 l2 goal lifted presinks (type :: seenH) samples more
+            else
+              let shT ← withLCtx l1 l2 <| subhyp.foldlM (fun H x => do
+                let t ← inferType x
+                let t ← whnfR t
+                match ← postCleanReject l1 l2 t with
+                | .none => return H
+                | .some t => return t :: H
+                ) seenH
+              let hyps := more.foldl shT (fun _ t H => t :: H)
+              let hyps ← presinks.foldlM (fun S (fv,fvT) => do
+                -- let nonSink := hyps.any (fun HT => HT.onAllSubtermsCheckExistsTR (fun | .fvar id => fv == id | _ => false))
+                -- if nonSink then return S else return  fvT :: S
+                return  fvT :: S
+                ) hyps
+              mtrace on .zero with s!" hyps {← hyps.mapM ppExpr}"
+              let samples := .cons dr lifted goal hyps samples
+              inner l1 l2 goal lifted presinks (type :: seenH) samples more
   match todo with
   | .cons e lifted todo => do
       mtrace on .zero with s!" looking at sample:\nterm : {← e.pp l1 l2}"
@@ -630,7 +652,7 @@ partial def sampleCoreForw
             inner l1 l2 goal lifted presinks [] samples prehyps
           )
         sampleCoreForw preProcessed l1 l2 withHyps depthDig depthStart depthStop deltaFuzz zetaFuzz todo samples
-      | .simp simpSteps _  usedFv =>
+      | .simp simpSteps _  _ =>
           if withHyps
           then
             match ← simpProof_topDelab' simpSteps with
@@ -638,7 +660,7 @@ partial def sampleCoreForw
                 -- let locLifted := (fvs.foldl (fun x y => x.insert y) lifted) -- worried about duplication
                 -- let locLifted := locLifted.filter (fun x => usedFv.contains x)
                 --let locLifted := fvs
-                let locLifted := (fvs.foldl (fun x y => x.insert y) usedFv)
+                let locLifted := (fvs.foldl (fun x y => x.insert y) [])
                 let presinks ← locLifted.foldlM (fun L fv => do
                 let T ← fv.GetType l1 l2
                 let T ← (do match ← IsClass? T l1 l2 with | .none => WhnfR T l1 l2 | _ => return T)

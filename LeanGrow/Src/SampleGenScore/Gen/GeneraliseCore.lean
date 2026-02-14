@@ -18,6 +18,38 @@ variable {IdxCollType : Type _}
 
 
 
+partial def defEqForGen
+  (l1 : LocalContext) (l2 : LocalInstances)
+  (s T : Expr)  : MetaM Bool:= do
+  match T with
+  | .letE n t v b _ =>
+    let .mk fv l1 l2 ← WithLetDeclU n t v l1 l2
+    defEqForGen l1 l2 s (Expr.instantiate1 b (.fvar fv))
+  | .forallE n Tt Tb _ =>
+    match s with
+    | .letE n t v b _ =>
+      let .mk fv l1 l2 ← WithLetDeclU n t v l1 l2
+      defEqForGen l1 l2 (Expr.instantiate1 b (.fvar fv)) T
+    | .forallE _ st sb _ =>
+      if (← defEqWiMv Tt st l1 l2).isSome
+      then
+        let .mk fv l1 l2 ← WithLocalDeclU n Tt l1 l2
+        defEqForGen l1 l2 (Expr.instantiate1 Tb (.fvar fv)) (Expr.instantiate1 sb (.fvar fv))
+      else return false
+    | _ => -- no reduction attempted
+      return false
+  | _ =>
+    match s with
+    | .letE n t v b _ =>
+      let .mk fv l1 l2 ← WithLetDeclU n t v l1 l2
+      defEqForGen l1 l2 (Expr.instantiate1 b (.fvar fv)) T
+    | .forallE .. =>
+      return false
+    | _ =>
+      return (← defEqWiMv s T l1 l2).isSome
+
+
+
 
 /-- Will require types to have been loaded ! -/
 @[specialize, inline]
@@ -49,7 +81,7 @@ def generaliseToLnodesCore [Repr IdxCollType]
         if L.2
         then return (.cons le τ W L.1, L.2)
         else
-          if (← defEqWiMv T τ l1 l2).isSome
+          if (← defEqForGen l1 l2 τ T)
           then return (.cons (ListProd.cons e is le) τ (w + W) L.1, true)
           else return (.cons le τ W L.1, L.2)
         )
@@ -79,7 +111,7 @@ def generaliseToLnodesCore [Repr IdxCollType]
         let mut found? := false
         for τ in P2 do
           mtrace on .one with s!"[generaliseToLnodesCore] comparing to {← ppExpr τ}"
-          if (← defEqWiMv τ T l1 l2).isSome
+          if (← defEqForGen l1 l2 τ T)
           then
             mtrace on .zero with s!"[generaliseToLnodesCore] type matches known type of index {i}"
             found? := true
@@ -102,6 +134,8 @@ def generaliseToLnodesCore [Repr IdxCollType]
           let .mk nP l1 l2 ← P1.insertMulti l1 l2 toadd addinds emptyCol insert
           q (.mk nP types (addinds :: P3) l1 l2)
       ) <| fun | .mk P1 P2 P3 l1 l2 => return .mk P3 P1 P2 l1 l2
+
+
 
 
 @[specialize, inline]
@@ -467,7 +501,7 @@ partial def getLiveLnodes (T : PaIn IdxCollType) : UInt32Array × UInt32Array :=
 partial def lnodeGarbageCollection
   (T : PaIn IdxCollType) (allTypes cleanTypes: Array Expr)
   : ((PaIn IdxCollType) × Array Expr × Nat) :=
-  trace set TracingFlags.all in
+  trace set TracingFlags.none in
   let (liveE,_) := getLiveLnodes T
   trace on .zero with s!"[lnodeGarbageCollection] live {liveE}" in
   let rec @[specialize] extend (done : UInt32Array) : List Nat → UInt32Array

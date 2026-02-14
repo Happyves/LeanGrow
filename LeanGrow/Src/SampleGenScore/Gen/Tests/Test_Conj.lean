@@ -38,7 +38,7 @@ def test_samples (dbg : Bool) (thmNames : Array Name) : MetaM Unit := do
       IO.println s! "Goal: {← ppExpr goal}"
       IO.println "Hyps:"
       hyps.foldlM (fun _ subp => do IO.println s!" · {← ppExpr subp}") ()
-      IO.println s!"Kind: {repr kind}"
+      IO.println s!"Kind: {← kind.pp}"
       )
 
 #check 1

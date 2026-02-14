@@ -46,7 +46,7 @@ def generaliseToLnodesCoreMulti [Repr IdxCollType]
         if L.2
         then return (.cons le τ W L.1, L.2)
         else
-          if (← defEqWiMv T τ l1 l2).isSome
+          if (← defEqForGen l1 l2 τ T)
           then return (.cons (ListProd.cons e is le) τ (w + W) L.1, true)
           else return (.cons le τ W L.1, L.2)
         )

@@ -82,7 +82,7 @@ unsafe def explore_samClass_gh_core
   (mod : Name)
   : MetaM Unit := do
   let cachePath ← findLeanGrowCacheDir
-  let loadpath := FilePath.join cachePath ((FilePath.toString (LeanGrow.sampleNameOfModuleName_thmKey mod)))
+  let loadpath := FilePath.join cachePath ((FilePath.toString (LeanGrow.sampleNameOfModuleName_ghKey mod)))
   let (sams,reg) ← unpickle (ProcessedSamplesGHKey IdxCollType) loadpath
   IO.println s!"Sample name : {sams.sampleName}"
   IO.println s!"\nLevelNum : {sams.levelNum}"
@@ -139,7 +139,7 @@ unsafe def explore_gen_thm_core
   (mod : Name)
   : MetaM Unit := do
   let cachePath ← findLeanGrowCacheDir
-  let loadpath := FilePath.join cachePath ((FilePath.toString (LeanGrow.sampleNameOfModuleName_thmKey mod)))
+  let loadpath := FilePath.join cachePath ((FilePath.toString (LeanGrow.genOfModuleName_thmKey mod)))
   let (sams,reg) ← unpickle (scoreThmKey IdxCollType) loadpath
   IO.println s!"Sample name : {sams.sampleName}"
   IO.println s!"\nLevelNum : {sams.levelNum}"
@@ -208,7 +208,7 @@ unsafe def explore_gen_gh_core
   (mod : Name)
   : MetaM Unit := do
   let cachePath ← findLeanGrowCacheDir
-  let loadpath := FilePath.join cachePath ((FilePath.toString (LeanGrow.sampleNameOfModuleName_thmKey mod)))
+  let loadpath := FilePath.join cachePath ((FilePath.toString (LeanGrow.genOfModuleName_ghKey mod)))
   let (sams,reg) ← unpickle (scoreGHKey IdxCollType) loadpath
   IO.println s!"Sample name : {sams.sampleName}"
   IO.println s!"\nLevelNum : {sams.levelNum}"
@@ -267,6 +267,87 @@ unsafe def explore_gen_gh_core_S
   (mod : Name)
   : MetaM Unit :=
     explore_gen_gh_core
+      UInt32Array.inter UInt32Array.isEmpty mod
+
+#check 1
+
+unsafe def explore_samClass_thm_light_core
+  {IdxCollType : Type} [Repr IdxCollType]
+  (intersect : IdxCollType → IdxCollType → IdxCollType) (empty? : IdxCollType → Bool)
+  (mod : Name)
+  : MetaM Unit := do
+  let cachePath ← findLeanGrowCacheDir
+  let loadpath := FilePath.join cachePath ((FilePath.toString (LeanGrow.sampleNameOfModuleName_light_thmKey mod)))
+  let (sams,reg) ← unpickle (ProcessedSamplesThmKey IdxCollType) loadpath
+  IO.println s!"Sample name : {sams.sampleName}"
+  IO.println s!"\nLevelNum : {sams.levelNum}"
+  for j in Array.range sams.levelNum do
+    let ln :=  .num sams.sampleName j
+    let _ ← mkLevelMVarOfName ln
+  IO.println "\nTypes:"
+  let mut i := 0
+  for T in sams.types do
+    IO.println s!"{i} : {← ppExpr T}"
+    let ln :=  .num sams.sampleName i
+    let _ ← mkMvarWiU ln (.num (.str .anonymous "?m") i) T
+    i := i+1
+  IO.println "\nRegular back:"
+  sams.regularBack.foldM () (fun n v _ => do
+      IO.println s!"\nTheorem: {String.fromUTF8! n}"
+      IO.println s!"G idx {v.1} H idx {v.2} Dict {v.3}"
+      IO.println s!"Gs: {← v.4.pp (← getLCtx) (← getLocalInstances) [] 0 intersect empty?}"
+      IO.println s!"Hs: {← v.5.pp (← getLCtx) (← getLocalInstances) [] 0 intersect empty?}"
+      )
+
+#check 1
+
+
+unsafe def explore_samClass_thm_light_core_S
+  (mod : Name)
+  : MetaM Unit :=
+    explore_samClass_thm_light_core
+      UInt32Array.inter UInt32Array.isEmpty mod
+
+#check 1
+
+
+unsafe def explore_gen_thm_light_core
+  {IdxCollType : Type} [Repr IdxCollType]
+  (intersect : IdxCollType → IdxCollType → IdxCollType) (empty? : IdxCollType → Bool)
+  (mod : Name)
+  : MetaM Unit := do
+  let cachePath ← findLeanGrowCacheDir
+  let loadpath := FilePath.join cachePath ((FilePath.toString (LeanGrow.genOfModuleName_light_thmKey mod)))
+  let (sams,reg) ← unpickle (scoreThmKey IdxCollType) loadpath
+  IO.println s!"Sample name : {sams.sampleName}"
+  IO.println s!"\nLevelNum : {sams.levelNum}"
+  for j in Array.range sams.levelNum do
+    let ln :=  .num sams.sampleName j
+    let _ ← mkLevelMVarOfName ln
+  IO.println "\nTypes:"
+  let mut i := 0
+  for T in sams.types do
+    IO.println s!"{i} : {← ppExpr T}"
+    let ln := .num sams.sampleName i
+    let _ ← mkMvarWiU ln (.num (.str .anonymous "?m") i) T
+    i := i+1
+  let l1 := (← getLCtx)
+  let l2 := (← getLocalInstances)
+  IO.println "\nRegular back:"
+  sams.regularBack.foldM () (fun n v _ => do
+      IO.println s!"\nTheorem: {String.fromUTF8! n}"
+      IO.println s!"Goals: {← v.goalPain.pp l1 l2 [] 0 intersect empty?}"
+      IO.println s!"Goal weights {v.goalWeights.mapIdx Prod.mk}"
+      IO.println s!"Hyps: {← v.hypSetTrie.pp 0 (fun p => p.pp l1 l2 [] 0 intersect empty?) (fun (x,y) => return s!"Idx {x}, weight {y}")}"
+      )
+
+
+#check 1
+
+unsafe def explore_gen_thm_light_core_S
+  (mod : Name)
+  : MetaM Unit :=
+    explore_gen_thm_light_core
       UInt32Array.inter UInt32Array.isEmpty mod
 
 #check 1

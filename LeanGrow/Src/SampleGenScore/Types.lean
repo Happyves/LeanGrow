@@ -17,7 +17,7 @@ inductive SubProof where
 | raw (_ : Expr)
 | irreducible (_ : Expr)
 | simp (_ : ListProd3 (List FVarId) Expr Expr) (_ : Option Expr) (usedFv : List FVarId)
-deriving Inhabited, Repr
+deriving Inhabited
 
 
 def SubProof.pp (l1 : LocalContext) (l2 : LocalInstances) : SubProof → MetaM String
@@ -31,7 +31,7 @@ inductive SampleData where
 | thm (n : Name)
 | induc (n : Name)
 | thmC (n : Name) (cs : Array Expr)
-deriving Inhabited, Repr, BEq
+deriving Inhabited, BEq
 
 
 def SampleData.pp : SampleData → MetaM String

@@ -1,7 +1,8 @@
 
 
 import LeanGrow.Src.SampleGenScore.Sample
-import LeanGrow.Src.SampleGenScore.Gen.ConjecturableProcess
+import LeanGrow.Src.SampleGenScore.Gen.ConjecturableBuild
+import LeanGrow.Src.Caching.Score.ConjecturableProcess
 
 import Mathlib.Data.List.Dedup
 import Mathlib.Data.List.Lemmas
@@ -25,7 +26,7 @@ def mkConjableTrie_envModules (modules : Array Name) : MetaM (CTrie (List Nat)) 
       then
         match ci with
         | .thmInfo .. =>
-          if !(cn.blackListCaching)
+          if !(cn.blackListCaching env)
           then
             let res ← getConjecturablePos ci.type
             match res with

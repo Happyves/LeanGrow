@@ -22,7 +22,7 @@ def testNoDelZet_F (printLift? : Bool) (thmName : Name) (depthDig depthStart dep
         IO.println s! "Goal: {← ppExpr goal}"
         IO.println "Hyps:"
         hyps.foldlM (fun _ subp => do IO.println s!" · {← ppExpr subp}") ()
-        IO.println s!"Kind: {repr kind}"
+        IO.println s!"Kind: {← kind.pp}"
         )
 
 #check 1
@@ -40,7 +40,7 @@ def testDelZet_F (printLift? : Bool) (thmName : Name) (depthDig depthStart depth
         IO.println s! "Goal: {← ppExpr goal}"
         IO.println "Hyps:"
         hyps.foldlM (fun _ subp => do IO.println s!" · {← ppExpr subp}") ()
-        IO.println s!"Kind: {repr kind}"
+        IO.println s!"Kind: {← kind.pp}"
         )
 
 #check 1
@@ -58,7 +58,7 @@ def testNoDelZet_wH_F (printLift? : Bool) (thmName : Name) (depthDig depthStart 
         IO.println s! "Goal: {← ppExpr goal}"
         IO.println "Hyps:"
         hyps.foldlM (fun _ subp => do IO.println s!" · {← ppExpr subp}") ()
-        IO.println s!"Kind: {repr kind}"
+        IO.println s!"Kind: {← kind.pp}"
         )
 
 #check List.dedup_sublist

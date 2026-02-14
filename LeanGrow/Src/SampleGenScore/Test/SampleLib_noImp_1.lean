@@ -121,7 +121,6 @@ def testDelZet (printLift? : Bool) (thmName : Name)
 #check MvPolynomial.combinatorial_nullstellensatz_exists_eval_nonzero
 
 -- #eval testNoDelZet false `MvPolynomial.combinatorial_nullstellensatz_exists_eval_nonzero 1 2 2
--- **fix** don't sample private theorems
 
 -- #eval testDelZet false `MvPolynomial.combinatorial_nullstellensatz_exists_eval_nonzero 1 2 2 2 2
 -- 10ish sec ...
@@ -158,9 +157,10 @@ def testDelZet (printLift? : Bool) (thmName : Name)
 
 
 -- #eval testNoDelZet false `Nat.coprime_mul_right_add_right 1 2 2
-
+-- **fix** no iff refl ...
 
 #check Nat.pow_sub_one_mod_pow_sub_one
+
 
 
 -- #eval testNoDelZet false `Nat.pow_sub_one_mod_pow_sub_one 1 2 2
@@ -249,12 +249,10 @@ def testDelZet (printLift? : Bool) (thmName : Name)
 
 
 /-
-- injOn_insertIdx_index_of_notMem
-  no usedFv for simp forward ?
-- pp conjecturables
-- discard Iff.refl wrt ↓, as for Eq.refl
+Todo:
 - prohibit Lean.Omega
-- don't sample private theorems (start with _private)
+- discard Iff.refl wrt ↓, as for Eq.refl
+  (also at sample, at same location as for test if private)
 - at `Coprime.mul_add_mul_ne_mul` terms in obtain seemingly not sampled
 - at `div_lcm_eq_div_gcd`, rcases on term (not fv) seems to cause term
   to be ignored (at least, as a hyp)
@@ -269,3 +267,5 @@ def testDelZet (printLift? : Bool) (thmName : Name)
 
 #check Iff.refl
 #check Iff.rfl
+
+#check Omega.LinearCombo.coordinate

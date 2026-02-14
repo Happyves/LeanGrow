@@ -15,7 +15,7 @@ open Lean Meta
 def test_backSample_cvbThm
   (thmNames : Array Name)
   (depthDig depthStart depthStop : Nat) (deltaFuzz zetaFuzz : Option Nat)
-  {IdxCollType : Type} [Repr IdxCollType]
+  {IdxCollType : Type} [Repr IdxCollType] [EmptyCollection IdxCollType]
   (fold : ∀ {β : Type _}, IdxCollType → (init : β) → (f : Nat → β → β) → β) (empty : IdxCollType)
   (singleton : Nat → IdxCollType) (insert : Nat → IdxCollType → IdxCollType)
   (insertMulti intersect union difference : IdxCollType → IdxCollType → IdxCollType) (empty? : IdxCollType → Bool)
@@ -79,7 +79,7 @@ def test_backSample_cvbThm
 def test_backSample_cvbGoalHyp
   (thmNames : Array Name)
   (depthDig depthStart depthStop : Nat) (deltaFuzz zetaFuzz : Option Nat)
-  {IdxCollType : Type} [Repr IdxCollType]
+  {IdxCollType : Type} [Repr IdxCollType] [EmptyCollection IdxCollType]
   (fold : ∀ {β : Type _}, IdxCollType → (init : β) → (f : Nat → β → β) → β) (empty : IdxCollType)
   (singleton : Nat → IdxCollType) (insert : Nat → IdxCollType → IdxCollType)
   (insertMulti intersect union difference : IdxCollType → IdxCollType → IdxCollType) (empty? : IdxCollType → Bool)
@@ -155,7 +155,7 @@ def test_backSample_cvbThm_S
   : MetaM Unit :=
   @test_backSample_cvbThm
     thmNames depthDig depthStart depthStop deltaFuzz zetaFuzz
-    UInt32Array _ (fun is i f => is.foldl i (fun i s => f i.toNat s)) UInt32Array.empty
+    UInt32Array _ _ (fun is i f => is.foldl i (fun i s => f i.toNat s)) UInt32Array.empty
     (fun n => UInt32Array.single n.toUInt32) (fun x y => y.oInsert x.toUInt32)
     UInt32Array.union UInt32Array.inter UInt32Array.union UInt32Array.diff UInt32Array.isEmpty
     UInt32Array.size (fun x y => y.oContains x.toUInt32)
@@ -175,7 +175,7 @@ def test_backSample_cvbGoalHyp_S
   : MetaM Unit :=
   @test_backSample_cvbGoalHyp
     thmNames depthDig depthStart depthStop deltaFuzz zetaFuzz
-    UInt32Array _ (fun is i f => is.foldl i (fun i s => f i.toNat s)) UInt32Array.empty
+    UInt32Array _ _ (fun is i f => is.foldl i (fun i s => f i.toNat s)) UInt32Array.empty
     (fun n => UInt32Array.single n.toUInt32) (fun x y => y.oInsert x.toUInt32)
     UInt32Array.union UInt32Array.inter UInt32Array.union UInt32Array.diff UInt32Array.isEmpty
     UInt32Array.size (fun x y => y.oContains x.toUInt32) (fun is => if is.isEmpty then panic! "[test_backSample_cvbGoalHyp_S] head" else is[0]!.toNat)

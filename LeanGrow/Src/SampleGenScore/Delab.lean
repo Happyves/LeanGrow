@@ -370,10 +370,10 @@ partial def delabTopBack
                                 let r ← delabSample_AssertDefineRevert_topBack conjable appH appA l1 l2
                                 return .mk havelift r l1 l2
             | r =>
-              mtrace on .zero with s!" success of ind with {repr r}"
+              mtrace on .zero with s!" success of ind with {← withLCtx l1 l2 r.pp}"
               return .mk havelift r l1 l2
       | .some r =>
-        mtrace on .zero with s!" success of rw with {repr r}"
+        mtrace on .zero with s!" success of rw with {← withLCtx l1 l2 r.pp}"
         return .mk havelift r l1 l2
   | .letE _ t v b _ =>
     let desambig ← mkFreshId

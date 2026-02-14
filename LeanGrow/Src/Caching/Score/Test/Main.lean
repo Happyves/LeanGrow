@@ -37,7 +37,20 @@ tracing_flags [(`cvb_thms_genGoal, TracingFlags.all),
                 (`generaliseToLnodesCore, TracingFlags.all),
                 ]
 
-#eval generalize_back_cvbThm_ofModule_inEnv_S mod1
+-- #eval generalize_back_cvbThm_ofModule_inEnv_S mod1
+
+#check sampleClass_back_cvbThm_light_ofModule_S
+
+-- #eval sampleClass_back_cvbThm_light_ofModule_S 1 2 2 .none .none mod1
+
+#check explore_samClass_thm_light_core_S
+
+-- #eval explore_samClass_thm_light_core_S mod1
+
+
+#check generalize_back_cvbThm_light_ofModule_S
+
+-- #eval generalize_back_cvbThm_light_ofModule_S mod1
 
 #check mkMvarStdIndexNoCoE
 
