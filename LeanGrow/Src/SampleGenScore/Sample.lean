@@ -103,6 +103,8 @@ def deltaZetaBeta? (l1 : LocalContext) (l2 : LocalInstances)
 
 #check 1
 
+
+
 -- #exit
 
 /--
@@ -362,13 +364,6 @@ def postCleanReject (l1 : LocalContext) (l2 : LocalInstances) (T : Expr) : MetaM
 #check Name.isPrefixOf
 #print SampleData
 
-def Lean.Name.getPrefix! : Name → String
-  | anonymous => "anonymous"
-  | str .anonymous p => p
-  | num p _   => p.getPrefix!
-  | str p _   => p.getPrefix!
-
-
 
 
 partial def sampleCoreBack
@@ -388,6 +383,11 @@ partial def sampleCoreBack
         mtrace on .zero with s!" possibly introed to:\nterm : {← ppExpr e}"
         -- Note : here and in all other sampling fuctions : shouldn't ever synthesise instances,
         -- because local instance don't get cleaned ...
+        if e.shollowTestProhibit
+        then
+          mtrace on .zero with s!" suspected unparsable lean/mathlib tactic, aborting"
+          return .mk samples havePats l1 l2
+        else
         let lifted := (fvs.foldl (fun x y => x.cons y.fvarId!) lifted)
         let .mk todo haveP l1 l2 ← digExpr preProcessed l1 l2 depthDig (.raw e) todo lifted
         let .mk postLift r l1 l2 ← delabTopBack preProcessed conjable e l1 l2 []
@@ -396,7 +396,7 @@ partial def sampleCoreBack
         | .none =>
             sampleCoreBack preProcessed conjable l1 l2 depthDig depthStart depthStop deltaFuzz zetaFuzz todo samples (haveP.foldl havePats ListProd3.cons)
         | .thm  sn | .thmC sn .. =>
-          if sn.getPrefix! == "_private"
+          if sn.badSample?
           then
             sampleCoreBack preProcessed conjable l1 l2 depthDig depthStart depthStop deltaFuzz zetaFuzz todo samples (haveP.foldl havePats ListProd3.cons)
           else
@@ -568,7 +568,7 @@ partial def sampleCoreForw
           match dr with
           | .none | .induc .. => inner l1 l2 goal lifted presinks (type :: seenH) samples more
           | .thm sn | .thmC sn .. =>
-            if sn.getPrefix! == "_private"
+            if sn.badSample?
             then
               inner l1 l2 goal lifted presinks (type :: seenH) samples more
             else
@@ -597,6 +597,11 @@ partial def sampleCoreForw
         mtrace on .zero with s!" possibly introed to:\nterm : {← ppExpr e}"
         -- Note : here and in all other sampling fuctions : shouldn't ever synthesise instances,
         -- because local instance don't get cleaned ...
+        if e.shollowTestProhibit
+        then
+          mtrace on .zero with s!" suspected unparsable lean/mathlib tactic, aborting"
+          return .mk samples l1 l2
+        else
         let lifted := (fvs.foldl (fun x y => x.cons y.fvarId!) lifted)
         let .mk todo _ l1 l2 ← digExpr preProcessed l1 l2 depthDig (.raw e) todo lifted
         let .mk hyps l1 l2 ← sampleHypsCore preProcessed l1 l2 depthStart depthStop e lifted deltaFuzz zetaFuzz

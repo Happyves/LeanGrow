@@ -33,6 +33,7 @@ def generaliseToLnodesCoreMulti [Repr IdxCollType]
     mtracing
     let Res ← todo.foldlM ((.mk ListProd4.nil 0 #[]) : Prod3 (ListProd4 Expr Expr IdxCollType Nat) Nat (Array Nat)) (fun e is Res => do
       let T ← InferType e l1 l2
+      let T ← WhnfR T l1 l2
       let W := getCPIweights fold weights is
       return .mk (.cons e T is W Res.1) (W + Res.2) (Res.3.push W)
       )

@@ -13,16 +13,6 @@ import LeanGrow.Src.Utils.Lean.Expr.Basic
 open Lean Meta
 
 
-def mathlibTactic? : Name → Bool
-  | .str .anonymous s1 =>
-    s1 == "Lean" -- Lean.Omega for example
-  | .str (.str .anonymous s1) s2 =>
-    s1 == "Mathlib" && s2 == "Tactic"
-  -- todo : Batteries ?
-  | .str p _ => mathlibTactic? p
-  | .num p _ => mathlibTactic? p
-  | .anonymous => false
-
 
 @[inline]
 partial def delabSample_Term_core (head : Name) (appH : Expr) (appA : Array Expr) (l1 : LocalContext) (l2 : LocalInstances)

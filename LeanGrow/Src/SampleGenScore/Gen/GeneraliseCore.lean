@@ -17,36 +17,56 @@ variable {IdxCollType : Type _}
 
 
 
-
 partial def defEqForGen
   (l1 : LocalContext) (l2 : LocalInstances)
   (s T : Expr)  : MetaM Bool:= do
-  match T with
-  | .letE n t v b _ =>
-    let .mk fv l1 l2 ← WithLetDeclU n t v l1 l2
-    defEqForGen l1 l2 s (Expr.instantiate1 b (.fvar fv))
-  | .forallE n Tt Tb _ =>
-    match s with
-    | .letE n t v b _ =>
-      let .mk fv l1 l2 ← WithLetDeclU n t v l1 l2
-      defEqForGen l1 l2 (Expr.instantiate1 b (.fvar fv)) T
-    | .forallE _ st sb _ =>
-      if (← defEqWiMv Tt st l1 l2).isSome
-      then
-        let .mk fv l1 l2 ← WithLocalDeclU n Tt l1 l2
-        defEqForGen l1 l2 (Expr.instantiate1 Tb (.fvar fv)) (Expr.instantiate1 sb (.fvar fv))
-      else return false
-    | _ => -- no reduction attempted
-      return false
-  | _ =>
-    match s with
-    | .letE n t v b _ =>
-      let .mk fv l1 l2 ← WithLetDeclU n t v l1 l2
-      defEqForGen l1 l2 (Expr.instantiate1 b (.fvar fv)) T
-    | .forallE .. =>
-      return false
-    | _ =>
+    if s.hasExprMVar || T.hasExprMVar
+    then
+      match s, T with
+      | _, .letE n t v b _ =>
+        let .mk fv l1 l2 ← WithLetDeclU n t v l1 l2
+        defEqForGen l1 l2 s (Expr.instantiate1 b (.fvar fv))
+      | .letE n t v b _, _ =>
+        let .mk fv l1 l2 ← WithLetDeclU n t v l1 l2
+        defEqForGen l1 l2 (Expr.instantiate1 b (.fvar fv)) T
+      | .mvar sm, .mvar tm =>
+        defEqForGen l1 l2 (← sm.getType) (← tm.getType)
+      | .mvar m, o | o, .mvar m =>
+        match ← m.getType with
+        | .sort _ => return false -- keep Types distinct
+        | .mvar .. => return false -- will mach with anything
+        | mt =>
+          defEqForGen l1 l2 mt (← InferType o l1 l2)
+      | .forallE _ st sb _ , .forallE n Tt Tb _ | .lam _ st sb _ , .lam n Tt Tb _  =>
+        if ← defEqForGen l1 l2 st Tt
+        then
+          let .mk fv l1 l2 ← WithLocalDeclU n Tt l1 l2
+          defEqForGen l1 l2 (Expr.instantiate1 Tb (.fvar fv)) (Expr.instantiate1 sb (.fvar fv))
+        else
+          return false
+      | .app sl sr, .app tl tr =>
+        if ← defEqForGen l1 l2 sl tl
+        then
+          defEqForGen l1 l2 sr tr
+        else
+          return false
+      | .proj ns is s, .proj nt it t =>
+        if ns == nt && is == it
+        then
+          defEqForGen l1 l2 s t
+        else
+          return false
+      | .mdata _ s, _ =>
+        defEqForGen l1 l2 s T
+      | _, .mdata _ t =>
+        defEqForGen l1 l2 s t
+      | .fvar .., .fvar .. | .const .., .const .. | .lit .., .lit .. | .bvar .., .bvar .. | .sort .., .sort .. =>
+        return (← defEqWiMv s T l1 l2).isSome
+      | _,_ =>
+        return false
+    else
       return (← defEqWiMv s T l1 l2).isSome
+
 
 
 
@@ -68,6 +88,7 @@ def generaliseToLnodesCore [Repr IdxCollType]
     mtracing
     let Res ← todo.foldlM ((.mk ListProd4.nil 0 #[]) : Prod3 (ListProd4 Expr Expr IdxCollType Nat) Nat (Array Nat)) (fun e is Res => do
       let T ← InferType e l1 l2
+      let T ← WhnfR T l1 l2
       let W := getCPIweights fold weights is
       return .mk (.cons e T is W Res.1) (W + Res.2) (Res.3.push W)
       )
@@ -639,3 +660,6 @@ def generalizePaInMain [Repr IdxCollType]
     return .mk T types lvlNum weights trans l1 l2
 
 #check PaIn.dedup
+
+
+-- todo : del to level mvars → fix weights

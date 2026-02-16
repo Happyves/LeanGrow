@@ -156,15 +156,14 @@ def testDelZet (printLift? : Bool) (thmName : Name)
 #check Nat.coprime_mul_right_add_right
 
 
--- #eval testNoDelZet false `Nat.coprime_mul_right_add_right 1 2 2
--- **fix** no iff refl ...
+#eval testNoDelZet false `Nat.coprime_mul_right_add_right 1 2 2
 
-#check Nat.pow_sub_one_mod_pow_sub_one
-
-
+#print Nat.pow_sub_one_mod_pow_sub_one
 
 -- #eval testNoDelZet false `Nat.pow_sub_one_mod_pow_sub_one 1 2 2
--- **fix** review after blacklisting omega ; undesired Eq.mpr backward samples
+-- **fix** undesired Eq.mpr backward samples ; Or.elim without an or in hyps ...
+
+
 
 #check Nat.pow_sub_one_gcd_pow_sub_one
 
@@ -250,9 +249,6 @@ def testDelZet (printLift? : Bool) (thmName : Name)
 
 /-
 Todo:
-- prohibit Lean.Omega
-- discard Iff.refl wrt ↓, as for Eq.refl
-  (also at sample, at same location as for test if private)
 - at `Coprime.mul_add_mul_ne_mul` terms in obtain seemingly not sampled
 - at `div_lcm_eq_div_gcd`, rcases on term (not fv) seems to cause term
   to be ignored (at least, as a hyp)
@@ -261,11 +257,8 @@ Todo:
   doesn't seem to do reverts in motive ??
 - delta in `length_erase_add_one`
 - `primeFactorsList_prime`delta seems to cause hyp duplication
-
+- `pow_sub_one_mod_pow_sub_one` Eq,mpr and Or.elim
 
 -/
-
-#check Iff.refl
-#check Iff.rfl
 
 #check Omega.LinearCombo.coordinate

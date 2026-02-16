@@ -10,6 +10,7 @@ import LeanGrow.Src.Data.CTrie.Basic
 import LeanGrow.Src.Utils.Tracing
 import LeanGrow.Src.Utils.Lean.Expr.Basic
 import LeanGrow.Src.Utils.Lean.MetaAPI
+import LeanGrow.Src.SampleGenScore.Utils
 
 open Lean Meta
 
@@ -701,9 +702,15 @@ partial def delab_simpGoal
           let extL := #[as[3]!]
           return .some l1 l2 inter lif1 extL .none
       | _ => -- not simp
-          return .none
+          -- if proof.shollowTestProhibit
+          -- then return .some l1 l2 .nil #[] #[] .none
+          -- else
+            return .none
   | _ => -- not simp
-     return .none
+    -- if proof.shollowTestProhibit
+    -- then return .some l1 l2 .nil #[] #[] .none
+    -- else
+      return .none
 
 
 #check 1

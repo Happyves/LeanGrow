@@ -138,3 +138,70 @@ partial def Lean.Expr.pseudoConst (l1 : LocalContext) (l2 : LocalInstances) : Ex
   | .proj _ _ e | .mdata _ e => e.pseudoConst l1 l2
   | .const n _ => return .some n
   | _ => return .none
+
+
+def mathlibTactic? : Name → Bool
+  | .str .anonymous s1 =>
+    s1 == "Lean" -- Lean.Omega for example
+  | .str (.str .anonymous s1) s2 =>
+    (s1 == "Mathlib" && s2 == "Tactic") || s1 == "Lean"
+  -- todo : Batteries ?
+  | .str p _ =>
+    mathlibTactic? p
+  | .num p _ =>
+     mathlibTactic? p
+  | .anonymous =>
+    false
+
+
+
+def Lean.Name.getPrefix! : Name → String
+  | anonymous => "anonymous"
+  | str .anonymous p => p
+  | num p _   => p.getPrefix!
+  | str p _   => p.getPrefix!
+
+@[inline]
+def Lean.Name.isRefl? (h : Name) : Bool :=
+  (h == ``Eq.refl || h == ``Iff.refl || h == ``Iff.rfl || h == ``rfl)
+
+
+@[inline]
+def Lean.Name.badSample? (sn : Name) : Bool :=
+  (sn.getPrefix! == "_private") || sn.isRefl?
+
+
+
+@[inline]
+partial def Lean.Expr.shollowTestProhibit (e : Expr)  : Bool :=
+  let rec go (fuel : Nat) : List Expr → Bool
+    | [] => false
+    | e :: more =>
+      if fuel = 0
+      then false
+      else
+        let nope? :=
+          match e with
+          | .const n _ => mathlibTactic? n
+          | _ => false
+        if nope?
+        then true
+        else
+          match e with
+          | .app .. =>
+            let rec foldPar (m : List Expr) : Expr → List Expr
+              | .app l r =>  foldPar (r :: m) l
+              | e => e :: m
+            go (fuel-1) (foldPar more e)
+          | .lam _ l r _ => go (fuel-1) (l :: r :: more)
+          | .forallE _ l r _ => go (fuel-1) (l :: r :: more)
+          | .letE _ l r z _ => go (fuel-1) (l :: r :: z :: more)
+          | .proj _ _ e => go (fuel-1) (e :: more)
+          | .mdata _ e => go (fuel-1) (e :: more)
+          | _ => go (fuel-1) more
+  go 32 [e]
+
+
+#check Lean.Omega.LinearCombo.sub_eval
+
+-- #eval mathlibTactic? `Lean.Omega.LinearCombo.sub_eval
