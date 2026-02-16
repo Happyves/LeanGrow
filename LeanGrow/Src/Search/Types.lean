@@ -5,18 +5,18 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Author: Yves Jäckle.
 -/
 
-import LeanGrowBeta.Data.SetTrie.Specialize
-import LeanGrowBeta.Search.IntroTree.Types
-import LeanGrowBeta.Search.BackTree.Types
-import LeanGrowBeta.Search.Score.Regularisation
-import LeanGrowBeta.Core.GeneralisePaIn.Types
+import LeanGrow.Src.Data.SetTrie.Specialize
+import LeanGrow.Src.Search.IntroTree.Types
+import LeanGrow.Src.Search.BackTree.Types
+import LeanGrow.Src.Search.Score.Regularisation
+import LeanGrow.Src.SampleGenScore.Types
 
-import LeanGrowBeta.Core.Induction.Detection
-import LeanGrowBeta.Core.Induction.FunctionalInd
-import LeanGrowBeta.Core.Induction.ElimInd
-import LeanGrowBeta.Core.Induction.StructuralInd
+import LeanGrow.Src.Core.Induction.Detection
+import LeanGrow.Src.Core.Induction.FunctionalInd
+import LeanGrow.Src.Core.Induction.ElimInd
+import LeanGrow.Src.Core.Induction.StructuralInd
 
-import LeanGrowBeta.Core.Embedding.EmbedQueryBackRW
+import LeanGrow.Src.Core.Embedding.EmbedQueryBackRW
 
 
 open Lean Meta

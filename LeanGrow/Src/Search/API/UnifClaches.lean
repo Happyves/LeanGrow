@@ -5,9 +5,9 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Author: Yves Jäckle.
 -/
 
-import LeanGrowBeta.Utils.Std.List
-import LeanGrowBeta.Data.Amalgames
-import LeanGrowBeta.Search.Types
+import LeanGrow.Src.Utils.Std.List
+import LeanGrow.Src.Data.Amalgames
+import LeanGrow.Src.Search.Types
 
 
 open Lean Meta

@@ -6,8 +6,8 @@ Author: Yves Jäckle.
 -/
 
 import Lean.Meta.Basic
-import LeanGrowBeta.Data.Amalgames
-import LeanGrowBeta.Utils.Std.String
+import LeanGrow.Src.Data.Amalgames
+import LeanGrow.Src.Utils.Std.String
 
 open Lean Meta
 
