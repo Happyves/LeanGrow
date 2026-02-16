@@ -171,7 +171,10 @@ partial def cvb_goal_hyp_genMain_subPat [Repr IdxCollType]
   mtrace on .one with s!" generalised PaIn {← T.pp l1 l2 [] 0 intersect empty?}"
   mtrace on .zero with s!" found freqInd {repr freqInd}, deduplicating"
   let .mk T weights trans ← T.dedup insert union empty size contains fold weights freqInd
-  mtrace on .zero with s!" running lnode garbadge collection"
+  mtrace on .zero with s!" deleting top mvars"
+  let .mk T weights ntrans ← T.removeTopMvars insert union empty size contains fold weights
+  let trans := translateMerge decl_name% trans ntrans
+  mtrace on .zero with s!" running lnode garbadge collection on\nT : {← T.pp l1 l2 [] 0 intersect empty?}\nallTypes: {← allTypes.mapM ppExpr}\ncleanTypes: {← cleanTypes.mapM ppExpr}"
   let (T,cleanTypes,_) := lnodeGarbageCollection T allTypes cleanTypes
   mtrace on .zero with s!" done with lnode garbadge collection"
   let total := weights.foldl (fun x y => x+y) 0

@@ -103,7 +103,7 @@ def thmNames := #[`material_1, `material_2_1, `material_2_2, `material_3, `mater
 -- #eval test_samples thmNames
 
 -- tracing_mode .std
--- tracing_flags [(`test_backSample_cvbThm, TracingFlags.all),
+-- tracing_flags [--(`test_backSample_cvbThm, TracingFlags.all),
 --                (`cvb_thms_genGoal, TracingFlags.all),
 --                (`cvb_thms_genHyps, TracingFlags.all),
 --                ]
@@ -112,10 +112,24 @@ def thmNames := #[`material_1, `material_2_1, `material_2_2, `material_3, `mater
 -- #eval test_T thmNames
 
 
--- tracing_mode .std
--- tracing_flags [(``test_backSample_cvbGoalHyp, TracingFlags.all),
---                (`cvb_goal_hyp_genGoal, TracingFlags.all),
---                (`cvb_goal_hyp_genHyps, TracingFlags.all),
---                ]
+tracing_mode .std
+tracing_flags [--(``test_backSample_cvbGoalHyp, TracingFlags.all),
+               (`cvb_goal_hyp_genGoal, TracingFlags.all),
+               (`cvb_goal_hyp_genHyps, TracingFlags.all),
+               ]
 
 -- #eval test_GH thmNames
+
+
+/-
+TODO
+- massive bug : `let pi := pi.mapInds (fun x => shiftAdd x hi) empty`
+  should be `let hyps := hyps.mapInds (fun x => shiftAdd x hi) empty`
+  in conveyorbelt ; fix here and elsewhere
+- in trans some indices have no translation : review whole code
+  to account for this
+- translateMerge has no more name arg
+
+
+
+-/

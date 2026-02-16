@@ -306,6 +306,76 @@ partial def PaIn.dedup
   return .mk (late T) A trans
 
 
+@[specialize, inline]
+partial def PaIn.removeTopMvars
+  (insert : Nat → IdxCollType → IdxCollType)
+  (union : IdxCollType → IdxCollType → IdxCollType) (empty : IdxCollType)
+  (size : IdxCollType → Nat) (contains : Nat → IdxCollType → Bool)
+  (fold : ∀ {β : Type _}, IdxCollType → (init : β) → (f : Nat → β → β) → β)
+  (T : PaIn IdxCollType) (weights : Array Nat)
+  : MetaM (Prod3 (PaIn IdxCollType) (Array Nat) (RBMap Nat Nat instOrdNat.compare)) :=
+  let toReInd :=
+    match T with
+    | .dead => empty
+    | .br _ mvs .. => mvs.fold empty (fun _ x y => union x y)
+  let off := weights.size - size toReInd
+  let A := Array.replicate off (0 : Nat)
+  let .mk trans A _ : Prod3 (RBMap Nat Nat instOrdNat.compare) (Array Nat) Nat :=
+    weights.size.fold (fun i _ P@(.mk rb A I) =>
+      if contains i toReInd
+      then P
+      else (.mk (rb.insert i I) (A.set! I (weights[i]!)) (I+1))) (.mk {} A 0)
+  let rec @[specialize, inline] fixInds (is : IdxCollType) : IdxCollType :=
+    fold is empty (fun n Is =>
+      match trans.find? n with
+      | .none => Is
+      | .some x => insert x Is)
+  let rec @[specialize] late : (PaIn IdxCollType) → (PaIn IdxCollType)
+    | .dead => .dead
+    | .br fvars mvars bvars sorts consts lits apf apa api laf laa lai alf ala ali lef lea lez lei projs proofsOf proofs =>
+        let nfvars := fvars.map (fun is => fixInds is)
+        let nmvars := mvars.map (fun is => fixInds is)
+        let nbvars := bvars.mapTR (fun is x => (fixInds is,x))
+        let nsorts := sorts.mapTR (fun is x => (fixInds is,x))
+        let nconsts := consts.map (fun L => .some (L.mapTR (fun is x => (fixInds is,x))))
+        let nlits := lits.mapTR (fun is x => (fixInds is,x))
+        let napf := late apf
+        let napa := late apa
+        let napi := fixInds api
+        let nlaf := late laf
+        let nlaa := late laa
+        let nlai := fixInds lai
+        let nalf := late alf
+        let nala := late ala
+        let nali := fixInds ali
+        let nlef := late lef
+        let nlea := late lea
+        let nlez := late lez
+        let nlei := fixInds lei
+        let nprojs := projs.map (fun L => .some (L.mapTR (fun is (x,t) => (fixInds is,x, late t))))
+        let nproofsOf := late proofsOf
+        let nproofs := late proofs
+        .br nfvars nmvars nbvars nsorts nconsts nlits napf napa napi nlaf nlaa nlai nalf nala nali nlef nlea nlez nlei nprojs nproofsOf nproofs
+  return .mk (late T) A trans
+  -- should we clean ?
+
+#check 1
+#check PaIn.clean
+-- #exit
+
+
+
+def translateMerge (fst snd : RBMap Nat Nat instOrdNat.compare) : RBMap Nat Nat instOrdNat.compare :=
+  fst.fold (fun st ini inter =>
+    match snd.find? inter with
+    | .none => st -- was deleted and is hence not in snd
+      --panic! s!"[translateMerge] untransaltable {inter} , call {panicName}"
+    | .some final => st.insert ini final
+    ) ({} : RBMap Nat Nat instOrdNat.compare)
+
+#check 1
+
+
 
 @[specialize]
 def PaIn.getTotalDistrib
@@ -636,6 +706,7 @@ def generalizePaInMain [Repr IdxCollType]
   (freqCondition : (occWeight : Nat) → (branchWeight : Nat) → (branchDistrib : Array Nat) → (branchDepth : Nat) → Bool)
   (sampleName : Name)
   (T : PaIn IdxCollType) (weights : Array Nat) (types : Array Expr) (lvlNum : Nat)
+  (delTopMvar? : Bool)
   : MetaM (Prod7 (PaIn IdxCollType) (Array Expr) Nat (Array Nat) (RBMap Nat Nat instOrdNat.compare) LocalContext LocalInstances) :=
     do
     mtracing
@@ -655,6 +726,15 @@ def generalizePaInMain [Repr IdxCollType]
     mtrace on .one with s!"[generalizePaInMain] generalised PaIn {← T.pp l1 l2 [] 0 intersect empty?}"
     mtrace on .zero with s!"[generalizePaInMain] found freqInd {repr freqInd}, deduplicating"
     let .mk T weights trans ← T.dedup insert union empty size contains fold weights freqInd
+    mtrace on .zero with s!"[generalizePaInMain] running deleting top mvars"
+    let .mk T weights trans ← (do
+      if delTopMvar?
+      then
+        let .mk T weights ntrans ← T.removeTopMvars insert union empty size contains fold weights
+        let trans := translateMerge trans ntrans
+        return Prod3.mk T weights trans
+      else return .mk T weights trans
+      )
     mtrace on .zero with s!"[generalizePaInMain] running lnode garbadge collection"
     let (T,types,lvlNum) := lnodeGarbageCollection T types #[]
     return .mk T types lvlNum weights trans l1 l2

@@ -54,6 +54,65 @@ def testSub_samples (thmNames : Array Name) : MetaM Unit := do
 
 #check 1
 
+open List
+
+theorem material_1' (l : List Nat) : l.dedup.dedup <+ l := by
+  rw [dedup_idem]
+  induction l with
+  | nil =>
+    dsimp
+    apply Sublist.refl
+  | _ =>
+    apply dedup_sublist
+
+
+theorem material_2_1' (l L : List Nat) : l.dedup.dedup.length + L.length ≤ (l ++ L).length:= by
+  rw [dedup_idem]
+  induction l with
+  | nil =>
+    dsimp
+    rw [Nat.zero_add]
+  | _ =>
+    rw [length_append]
+    apply Nat.add_le_add_right
+    apply Sublist.length_le
+    apply dedup_sublist
+
+
+theorem material_2_2' (l L : List Nat) : l.dedup.dedup.length + L.length ≤ (l ++ L).length:= by
+  rw [dedup_idem, length_append]
+  apply Nat.add_le_add_right
+  induction l with
+  | nil =>
+    dsimp
+    apply Nat.le_refl
+  | _ =>
+    apply Sublist.length_le
+    apply dedup_sublist
+
+
+theorem material_3' (l : List Nat) (a b : Nat) (h : a = b) :
+  (a :: b :: l).dedup.length ≤ (b :: l).length  := by
+  apply Sublist.length_le
+  rw [dedup_cons_of_mem]
+  · apply dedup_sublist
+  · rw [h]
+    apply Mem.head
+
+
+theorem material_4' (l : List Nat)
+  (a : Nat) (h1 : a ∈ l.dedup) : (a :: l).dedup.length ≤ l.length := by
+  apply Sublist.length_le
+  have := dedup_sublist l
+  rw [dedup_cons_of_mem]
+  · exact this
+  · apply Sublist.mem _ this
+    exact h1
+
+
+def thmNames' := #[`material_1', `material_2_1', `material_2_2', `material_3', `material_4']
+
+
 -- #eval testSub_samples thmNames
 
 -- #eval testSub_T false thmNames

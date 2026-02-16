@@ -321,6 +321,9 @@ def generalizePaInMainMulti [Repr IdxCollType]
     mtrace on .one with s!"[generalizePaInMain] generalised PaIn {← T.pp l1 l2 [] 0 intersect empty?}"
     mtrace on .zero with s!"[generalizePaInMain] found freqInd {repr freqInd}, deduplicating"
     let .mk T weights trans ← T.dedup insert union empty size contains fold weights freqInd
+    mtrace on .zero with s!"[generalizePaInMain] deleting top mvars"
+    let .mk T weights ntrans ← T.removeTopMvars insert union empty size contains fold weights
+    let trans := translateMerge trans ntrans
     mtrace on .zero with s!"[generalizePaInMain] running lnode garbadge collection"
     let (T,types,lvlNum) := lnodeGarbageCollectionMulti T types #[]
     return .mk T types lvlNum weights trans l1 l2

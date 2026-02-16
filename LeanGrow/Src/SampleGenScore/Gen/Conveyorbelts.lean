@@ -169,7 +169,10 @@ partial def cvb_thms_genGoal [Repr IdxCollType]
     mtrace on .one with s!" generalised PaIn {← T.pp l1 l2 [] 0 intersect empty?}"
     mtrace on .zero with s!" found freqInd {repr freqInd}, deduplicating"
     let .mk T weights trans ← T.dedup insert union empty size contains fold weights freqInd
-    mtrace on .zero with s!" running lnode garbadge collection on\nT : {← T.pp l1 l2 [] 0 intersect empty?}\nallTypes: {← allTypes.mapM ppExpr}\ncleanTypes: {← cleanTypes.mapM ppExpr}"
+    mtrace on .one with s!" deduped PaIn {← T.pp l1 l2 [] 0 intersect empty?}\ndeduped weights : {weights}\nremove top mvars"
+    let .mk T weights ntrans ← T.removeTopMvars insert union empty size contains fold weights
+    let trans := translateMerge trans ntrans
+    mtrace on .one with s!" clean PaIn {← T.pp l1 l2 [] 0 intersect empty?}\nclean weights : {weights}\nrunning lnode garbadge collection on\nT : {← T.pp l1 l2 [] 0 intersect empty?}\nallTypes: {← allTypes.mapM ppExpr}\ncleanTypes: {← cleanTypes.mapM ppExpr}"
     let (T,cleanTypes,_) := lnodeGarbageCollection T allTypes cleanTypes
     mtrace on .zero with s!" done with lnode garbadge collection on\nT : {← T.pp l1 l2 [] 0 intersect empty?}\nallTypes: {← allTypes.mapM ppExpr}\ncleanTypes: {← cleanTypes.mapM ppExpr}"
     let total := weights.foldl (fun x y => x+y) 0
@@ -207,18 +210,23 @@ partial def cvb_thms_genHyps [Repr IdxCollType] [EmptyCollection IdxCollType]
     mtrace on .one with s!" generalised PaIn {← T.pp l1 l2 [] 0 intersect empty?}"
     mtrace on .zero with s!" found freqInd {repr freqInd}, deduplicating"
     let .mk T weights trans ← T.dedup insert union empty size contains fold weights freqInd
-    mtrace on .zero with s!" running lnode garbadge collection on\nT : {← T.pp l1 l2 [] 0 intersect empty?}\nallTypes: {← allTypes.mapM ppExpr}\ncleanTypes: {← cleanTypes.mapM ppExpr}"
+    mtrace on .one with s!" deduped PaIn {← T.pp l1 l2 [] 0 intersect empty?}\ndeduped weights : {weights}\ndeleting top mvars"
+    let .mk T weights ntrans ← T.removeTopMvars insert union empty size contains fold weights
+    let trans := translateMerge trans ntrans
+    mtrace on .one with s!" clean PaIn {← T.pp l1 l2 [] 0 intersect empty?}\nclean weights : {weights}\nrunning lnode garbadge collection on\nT : {← T.pp l1 l2 [] 0 intersect empty?}\nallTypes: {← allTypes.mapM ppExpr}\ncleanTypes: {← cleanTypes.mapM ppExpr}"
     let (T,cleanTypes,_) := lnodeGarbageCollection T allTypes cleanTypes
     mtrace on .zero with s!" done with lnode garbadge collection on\nT : {← T.pp l1 l2 [] 0 intersect empty?}\nallTypes: {← allTypes.mapM ppExpr}\ncleanTypes: {← cleanTypes.mapM ppExpr}"
     let total := weights.foldl (fun x y => x+y) 0
     let Tis := T.getIndices empty union
-    let toST ← samHypDict.foldlM ListProd.nil (fun samIdx hs R => do
+    let toST ← samHypDict.foldlM (ListProd.nil : ListProd (PaIn IdxCollType) (Nat × Nat)) (fun samIdx hs R => do
       let ths : List Nat := translate hs trans
       let W := ths.foldl (fun w i => w + weights[i]!) 0
       let iths := ths.foldl (fun r i => insert i r) empty
       let compl := difference Tis iths
       let P := T.deleteOfInds compl difference empty empty?
-      return .cons P (samIdx, W) R
+      match P with
+      | .dead => return R
+      | _ => return ListProd.cons P (samIdx, W) R
       -- add samIdx to disambiguate leaves and to index thms
       )
     mtrace on .zero with s!" toST {← toST.foldlM [] (fun x y z => do return (← x.pp l1 l2 [] 0 intersect empty?, y) :: z)}"
@@ -256,6 +264,9 @@ partial def cvb_goal_hyp_genGoal [Repr IdxCollType]
   mtrace on .one with s!" generalised PaIn {← T.pp l1 l2 [] 0 intersect empty?}"
   mtrace on .zero with s!" found freqInd {repr freqInd}, deduplicating"
   let .mk T weights trans ← T.dedup insert union empty size contains fold weights freqInd
+  mtrace on .zero with s!"deleting top mvars"
+  let .mk T weights ntrans ← T.removeTopMvars insert union empty size contains fold weights
+  let trans := translateMerge trans ntrans
   mtrace on .zero with s!" running lnode garbadge collection on\nT : {← T.pp l1 l2 [] 0 intersect empty?}\nallTypes: {← allTypes.mapM ppExpr}\ncleanTypes: {← cleanTypes.mapM ppExpr}"
   let (T,cleanTypes,_) := lnodeGarbageCollection T allTypes cleanTypes
   mtrace on .zero with s!" done with lnode garbadge collection on\nT : {← T.pp l1 l2 [] 0 intersect empty?}\nallTypes: {← allTypes.mapM ppExpr}\ncleanTypes: {← cleanTypes.mapM ppExpr}"
@@ -265,7 +276,7 @@ partial def cvb_goal_hyp_genGoal [Repr IdxCollType]
     let .mk hypI _ dict hyps := sorted[ini]!
     next := next.modify new (fun (Prod3.mk hi di pi) =>
       let D := dict.foldl di (fun x y R => .cons x (y.map (· + hi)) R)
-      let pi := pi.mapInds (fun x => shiftAdd x hi) empty
+      let hyps := hyps.mapInds (fun x => shiftAdd x hi) empty
       let P := PaIn.merge union empty pi hyps
       .mk (hi + hypI) D P
       )
@@ -298,18 +309,22 @@ partial def cvb_goal_hyp_genHyps [Repr IdxCollType] [EmptyCollection IdxCollType
     mtrace on .one with s!" generalised PaIn {← T.pp l1 l2 [] 0 intersect empty?}"
     mtrace on .zero with s!" found freqInd {repr freqInd}, deduplicating"
     let .mk T weights trans ← T.dedup insert union empty size contains fold weights freqInd
+    mtrace on .zero with s!" deleting top mvars"
+    let .mk T weights ntrans ← T.removeTopMvars insert union empty size contains fold weights
+    let trans := translateMerge trans ntrans
     mtrace on .zero with s!" running lnode garbadge collection on\nT : {← T.pp l1 l2 [] 0 intersect empty?}\nallTypes: {← allTypes.mapM ppExpr}\ncleanTypes: {← cleanTypes.mapM ppExpr}"
     let (T,cleanTypes,_) := lnodeGarbageCollection T allTypes cleanTypes
-    mtrace on .zero with s!" running lnode garbadge collection on\nT : {← T.pp l1 l2 [] 0 intersect empty?}\nallTypes: {← allTypes.mapM ppExpr}\ncleanTypes: {← cleanTypes.mapM ppExpr}"
     let total := weights.foldl (fun x y => x+y) 0
     let Tis := T.getIndices empty union
-    let toST ← dict.foldlM ListProd.nil (fun thm hs R => do
+    let toST ← dict.foldlM (ListProd.nil : ListProd (PaIn IdxCollType) (ByteArray × Nat)) (fun thm hs R => do
       let ths : List Nat := translate hs trans
       let W := ths.foldl (fun w i => w + weights[i]!) 0
       let iths := ths.foldl (fun r i => insert i r) empty
       let compl := difference Tis iths
       let P := T.deleteOfInds compl difference empty empty?
-      return .cons P (thm, W) R
+      match P with
+      | .dead => return R
+      | _ => return .cons P (thm, W) R
       )
     mtrace on .zero with s!" toST {← toST.foldlM [] (fun x y z => do return (← x.pp l1 l2 [] 0 intersect empty?, y) :: z)}"
     let st := SetTriePnG.ofList
@@ -324,6 +339,8 @@ partial def cvb_goal_hyp_genHyps [Repr IdxCollType] [EmptyCollection IdxCollType
 
 #check 1
 #check SetTrie.map
+
+
 
 @[specialize, inline]
 partial def cvb_thms_genMain [Repr IdxCollType] [EmptyCollection IdxCollType]
