@@ -5,9 +5,9 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Author: Yves Jäckle.
 -/
 
-import LeanGrowBeta.Search.IntroTree.Types
-import LeanGrowBeta.Search.BackTree.Types
-import LeanGrowBeta.Search.API.UnifClaches
+import LeanGrow.Src.Search.IntroTree.Types
+import LeanGrow.Src.Search.BackTree.Types
+import LeanGrow.Src.Search.API.UnifClaches
 
 
 open Lean Meta
@@ -31,15 +31,14 @@ def Lean.Level.propagate
   (l1 : LocalContext) (l2 : LocalInstances)
   (u : Level) (affected : Bool) (la : ListProd3 Nat Nat Level)
   : MetaM (Prod4 Level Bool LocalContext LocalInstances) := do
-  let ⟨r,b,l1,l2⟩ ← u.onAllSubtermsWiWorkerCpsSkipTravState l1 l2 affected (fun l affected l1 l2 => do
+  u.onAllSubtermsWiWorkerCpsSkipTravState l1 l2 affected (fun l affected l1 l2 => do
     match l with
     | .param (.num (.num _ bI) pI) =>
         match la.find? (fun b p _ => b == bI && p == pI) with
         | .some _ _ e => return ⟨(.error e), true,l1,l2⟩
         | _ => return ⟨(.ok l), affected,l1,l2⟩
     | _ => return ⟨(.ok l), affected,l1,l2⟩)
-  match r with
-  | .ok r | .error r => return ⟨r,b,l1,l2⟩
+
 
 def Lean.Expr.propagate
   (l1 : LocalContext) (l2 : LocalInstances)
@@ -78,7 +77,8 @@ partial def BackTree.propagateForBackAssembly
   (propaGs: ListProd Nat Expr) (goalSpawn : Array (OptionProd Nat Nat))
   (ta : ListProd3 Nat Nat Expr) (unif_id : List Nat)
   : MetaM (Prod4 Nat (ListProd Nat Expr) BackTree (Array (OptionProd Nat Nat))) :=
-  -- trace set Tracing.Flags.none in
+  do
+  mtracing
   let goalPropaCase (id_gen_goal : Nat) (propaGs: ListProd Nat Expr) (goalSpawn : Array (OptionProd Nat Nat))
     (go : Nat → ListProd Nat Expr → Array (OptionProd Nat Nat) →  BackTree → MetaM (Prod5 BackTree Nat (ListProd Nat Expr) (List Nat) (Array (OptionProd Nat Nat) )))
     (pass goal_id : Nat) (type : Expr) (bdirs gdirs : List Nat) (args : List BackTree)

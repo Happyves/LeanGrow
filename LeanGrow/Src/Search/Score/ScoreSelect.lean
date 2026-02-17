@@ -4,8 +4,8 @@ Copyright (c) 2025 Yves Jäckle. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Author: Yves Jäckle.
 -/
-import LeanGrowBeta.Search.Types
-import LeanGrowBeta.Search.Score.Regularisation
+import LeanGrow.Src.Search.Types
+import LeanGrow.Src.Search.Score.Regularisation
 
 open Lean Meta
 
@@ -51,8 +51,8 @@ def Array.sInsert
 def ScoreType.avg : ScoreType → Float :=
   fun x => (x.back + x.forw + x.spe) / 3
 
-def selectBatchOfBestScoresCommon
-  (cfg : SearchConfig) (st : SearchState (List Nat))
+def selectBatchOfBestScoresCommon {IdxCollType : Type _}
+  (cfg : SearchConfig IdxCollType) (st : SearchState IdxCollType)
   : Array (Prod3 Float  SelectType Nat) :=
   let init : Array (Prod3 Float  SelectType Nat) := Array.replicate cfg.addBatchSize ⟨0, .none, 0⟩
   let (sofar,lowest) := st.backCandScores.foldl (init,0) (fun ci data time absolutScore _ (sofar,lowest) =>
@@ -99,8 +99,8 @@ def selectBatchOfBestScoresCommon
   sofar
 
 
-def selectBatchOfBestScoresSplit
-  (cfg : SearchConfig) (st : SearchState (List Nat))
+def selectBatchOfBestScoresSplit {IdxCollType : Type _}
+  (cfg : SearchConfig IdxCollType) (st : SearchState IdxCollType)
   : Array (Prod3 Float  SelectType Nat) :=
   let init : Array (Prod3 Float  SelectType Nat) := Array.replicate cfg.backBatchSize ⟨0, .none, 0⟩
   let (sofarB,_) := st.backCandScores.foldl (init,0) (fun ci data time absolutScore _ (sofar,lowest) =>
@@ -148,8 +148,8 @@ def selectBatchOfBestScoresSplit
     )
   (sofarB ++ sofarF ++ sofarI)
 
-def selectBatchOfBestScores
-  (cfg : SearchConfig) (st : SearchState (List Nat))
+def selectBatchOfBestScores {IdxCollType : Type _}
+  (cfg : SearchConfig IdxCollType) (st : SearchState IdxCollType)
   : Array (Prod3 Float  SelectType Nat) :=
   if cfg.splitBatches
   then

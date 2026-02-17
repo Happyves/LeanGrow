@@ -9,7 +9,7 @@ import LeanGrow.Src.Data.SetTrie.Specialize
 import LeanGrow.Src.Search.IntroTree.Types
 import LeanGrow.Src.Search.BackTree.Types
 import LeanGrow.Src.Search.Score.Regularisation
-import LeanGrow.Src.SampleGenScore.Types
+import LeanGrow.Src.Caching.Score.Types
 
 import LeanGrow.Src.Core.Induction.Detection
 import LeanGrow.Src.Core.Induction.FunctionalInd
@@ -88,7 +88,7 @@ def ForwMetaData.ofBackStepMetadata : BackStepMetadata → ForwMetaData
   | _ => .other
 
 
-structure SearchState (IndexColType : Type _) where
+structure SearchState (IdxCollType : Type _) where
   stdForwTimer : Nat := 0
   id_gen_forw : Nat := 0
   id_gen_back : Nat := 0
@@ -98,23 +98,24 @@ structure SearchState (IndexColType : Type _) where
   cycleAddForw : ListProd Nat Expr
   cycleAddBack : ListProd Nat Expr
   backTree : BackTree
-  introTree : IntroTree IndexColType
+  introTree : IntroTree IdxCollType
   uNodes : Array Nat
   goalSpawn : Array (OptionProd Nat Nat)
   unif_assign : Array ((ListProd3 Nat Nat Expr) × (ListProd3 Nat Nat Level))
     -- indexed by uni_id, tnode assignements, level tnode assignements
   unif_claches : ListProd Nat (List Nat)
-  depsCache : Array (List LocalDecl)
+  depsCache : Array DepCache
     -- indexed by u-g-inds ; contains decls that dependen on the indexes ugnode ; needed for induction and rw
 
   thm_data : Array ThmFormat
   thmData : CTrie (Array ThmFormat)
-  stdBackPaIn : PaIn IndexColType
-  stdForwSetTrie : SetTrie ThmFormat (PaIn IndexColType)
+  stdBackPaIn : PaInG IdxCollType
+  stdForwSetTrie : SetTrieP ThmFormat IdxCollType PaInG
   stdForwSetTrie_idxToThmIdx : Array Nat
-  rwBackPaIn : PaIn IndexColType
-  rwForwPaIn : PaIn IndexColType
-  thmNameToHypIdx : CTrie IndexColType
+  stdForwSetTrie_idxToSinkIdx : Array Nat
+  rwBackPaIn : PaInG IdxCollType
+  rwForwPaIn : PaInG IdxCollType
+  thmNameToHypIdx : CTrie IdxCollType
   ugnodeToThmIdx : (RBMap Nat Nat instOrdNat.compare)
   thmIdxToUGnode : (RBMap Nat Nat instOrdNat.compare)
     /- Initially, this should be the data loaded to mirror imports ;
@@ -128,10 +129,10 @@ structure SearchState (IndexColType : Type _) where
     -/
 
   id_gen_cand : Nat
-  backCandScores : ListProd5 Nat BackCandData Nat ScoreType (List (CSetTrie IndexColType Nat))
+  backCandScores : ListProd5 Nat BackCandData Nat ScoreType (List (SetTrieP (Nat × Nat) IdxCollType PaIn))
     -- cand id, data expected by `embedBackPreIntegrate`, timer, raw score, remaining feature branches
     -- don't forget to add hight depth score to initial score
-  forwCandScores : ListProd6 Nat ForwCandData Nat ScoreType (CPaIn IndexColType) (List (CSetTrie IndexColType Nat))
+  forwCandScores : ListProd6 Nat ForwCandData Nat ScoreType (PaIn IdxCollType) (List (SetTrieP (Nat × Nat) IdxCollType PaIn))
     -- cand id, forw data, timer, raw score, goal-score pain (not supposed to change) remaining feature branches
     -- don't forget to add hight depth score to initial score
   inductCandScores : ListProd6 Nat Nat TargetType Nat Expr Float
@@ -152,7 +153,7 @@ deriving Inhabited
 
 
 
-structure SearchConfig where
+structure SearchConfig (IdxCollType : Type _) where
   sandboxMode : Bool
 
   revCountMax : Nat
@@ -171,14 +172,17 @@ structure SearchConfig where
   baseLocalThmScore : Float
   sandboxModThmScore : Float
   cachelessThmScore : Float
-  customRegulariser_back : Float → Nat → BackCandData → (SearchState (List Nat)) →  Float
-  customRegulariser_forw : Float → Nat → ForwCandData → (SearchState (List Nat)) → Float
-  customRegulariser_indu : Float → Nat → TargetType → (SearchState (List Nat)) → Float
+  customRegulariser_back : Float → Nat → BackCandData → (SearchState IdxCollType) →  Float
+  customRegulariser_forw : Float → Nat → ForwCandData → (SearchState IdxCollType) → Float
+  customRegulariser_indu : Float → Nat → TargetType → (SearchState IdxCollType) → Float
 
-  thmPatternScores : CTrie (Prod3 (CPaIn (List Nat)) (CSetTrie (List Nat) Nat) (CSetTrie (List Nat) Nat))
   funrecus : CTrie FunRecursorCache
   elimrecus : CTrie (List RecursorCache)
-  recuSubpatternScores : CTrie (CPaIn (List Nat))
+
+  regularBack : CTrie (thmGenDataEntry IdxCollType)
+  regularForw : CTrie (thmGenDataEntry IdxCollType)
+  subpat : CTrie (Prod3 (PaIn IdxCollType) (Array Nat) Nat)
+  conj : CTrie (Prod3 (thmGenDataEntry IdxCollType) Nat (Array (ListProd ThmFormat Nat)))
 
   default_relevance_timer : Nat
   stdForwPeriod : Nat
@@ -190,17 +194,17 @@ deriving Inhabited
 
 
 
-abbrev GrowIM (IndexColType : Type _) := ReaderT SearchConfig $ StateRefT (SearchState IndexColType) MetaM
+abbrev GrowIM (IdxCollType : Type _) := ReaderT (SearchConfig IdxCollType) $ StateRefT (SearchState IdxCollType) MetaM
 
-variable {IndexColType : Type _}
+variable {IdxCollType : Type _}
 
 @[always_inline]
-instance : Monad (GrowIM IndexColType) := let i := inferInstanceAs (Monad (GrowIM IndexColType)); { pure := i.pure, bind := i.bind }
+instance : Monad (GrowIM IdxCollType) := let i := inferInstanceAs (Monad (GrowIM IdxCollType)); { pure := i.pure, bind := i.bind }
 
-instance {α}: Inhabited (GrowIM IndexColType α) where
+instance {α}: Inhabited (GrowIM IdxCollType α) where
   default := fun _ _ => default
 
-abbrev GrowM := GrowIM (List Nat)
+abbrev GrowM := GrowIM UInt32Array
 
 instance : MonadLift GrowM MetaM where
   monadLift := fun test => Prod.fst <$> (test default |>.run default)

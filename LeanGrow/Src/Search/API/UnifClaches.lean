@@ -29,7 +29,8 @@ def unifClashOfComp
   (unif_assign : Array ((ListProd3 Nat Nat Expr) × (ListProd3 Nat Nat Level)))
   (ta : ListProd3 Nat Nat Expr) (la : ListProd3 Nat Nat Level) ( u : Nat)
   : MetaM Bool :=
-  do --trace set Tracing.Flags.none in do
+  do
+  mtracing
   let rec @[specialize] clash? {α : Sort _} (eq : α → α → MetaM Bool) (ref : ListProd3 Nat Nat α) : ListProd3 Nat Nat α → MetaM Bool
     | .nil => return false
     | .cons i j e more => do
@@ -117,7 +118,8 @@ def computeNewClashesCore
   (unif_assign : Array ((ListProd3 Nat Nat Expr) × (ListProd3 Nat Nat Level)))
   (new_uni_id : Nat) (ta : ListProd3 Nat Nat Expr) (la : ListProd3 Nat Nat Level)
   : MetaM (ListProd Nat (List Nat)) :=
-  --trace set Tracing.Flags.none in
+  do
+  mtracing
   let rec @[specialize] clash? {α : Sort _} (eq : α → α → MetaM Bool) (ref : ListProd3 Nat Nat α) : ListProd3 Nat Nat α → MetaM Bool
     | .nil => return false
     | .cons i j e more => do
@@ -188,10 +190,10 @@ def computeNewClashesCore
 **Important** ta and la may contain tnodes : these should be mvarified, and we should make
 sure theat they're always in context after they're added, and always clear their assignement
 -/
-def computeNewClashesMain
+def computeNewClashesMain {IndexColType : Type _}
   (l1 : LocalContext) (l2 : LocalInstances)
-  (st : SearchState (List Nat))
+  (st : SearchState IndexColType)
   (ta : ListProd3 Nat Nat Expr) (la : ListProd3 Nat Nat Level)
-  : MetaM (SearchState (List Nat)) := do
+  : MetaM (SearchState IndexColType) := do
   let new ← computeNewClashesCore l1 l2 st.unif_claches st.unif_assign st.id_gen_uni ta la
   return {st with unif_claches:= new, unif_assign := st.unif_assign.push (ta, la), id_gen_uni := st.id_gen_uni + 1}

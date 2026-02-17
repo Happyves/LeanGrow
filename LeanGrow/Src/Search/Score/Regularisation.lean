@@ -7,6 +7,7 @@ Author: Yves Jäckle.
 
 import LeanGrow.Src.Data.Amalgames
 import LeanGrow.Src.Utils.Std.List
+import LeanGrow.FFI.Lffi
 
 
 open Lean Meta
@@ -26,25 +27,26 @@ def stdRegulariser2 (score : Float) (span treeScore : Nat) : Float :=
 
 -- # Heights
 
-def updateForwHeight (forwHeights : Array Nat) (ugInds : List Nat) : Array Nat :=
-  let rec go (M : Nat) (A : Array Nat) : List Nat → Array Nat
-    | [] => A.push (M+1)
-    | i :: is =>
-        let h := A[i]!
-        if h > M
-        then go h A is
-        else go M A is
-  go 0 forwHeights ugInds
+def updateForwHeight (forwHeights : Array Nat) (ugInds : UInt32Array) : Array Nat :=
+  let (resM,resA) := ugInds.foldl (Prod.mk 0 forwHeights) (fun i r@(M,A) =>
+    let h := A[i.toNat]!
+    if h > M
+    then (h, A)
+    else r
+    )
+  resA.push resM
 
-def getCandForwHeight (forwHeights : Array Nat) (ugInds : List Nat) : Nat :=
-  let rec go (M : Nat) : List Nat → Nat
-    | [] => (M+1)
-    | i :: is =>
-        let h := forwHeights[i]!
-        if h > M
-        then go h is
-        else go M is
-  go 0 ugInds
+
+
+def getCandForwHeight (forwHeights : Array Nat) (ugInds : UInt32Array) : Nat :=
+  let M := ugInds.foldl 0 (fun i M =>
+    let h := forwHeights[i.toNat]!
+    if h > M
+    then h
+    else M
+    )
+  M+1
+
 
 @[inline]
 def updateGoalHeight (goalHeights : Array Nat) (spawn_goal_id :  Nat) : Array Nat :=
@@ -61,7 +63,7 @@ def getCandGoalHeight (goalHeights : Array Nat) (spawn_goal_id :  Nat) : Nat :=
 structure depthForwData where
   depth : Nat
   outNei : ListProd Nat Nat
-  parents : List Nat
+  parents : UInt32Array
 deriving Inhabited, Repr, BEq
 
 
@@ -70,7 +72,7 @@ private def minimin (m : Nat) : ListProd Nat Nat → Nat
   | .cons _ d more => if d < m then minimin d more else minimin m more
 
 
-partial def updateForwDepth (forwDepths : Array depthForwData) (ugInds : List Nat) : Array depthForwData :=
+partial def updateForwDepth (forwDepths : Array depthForwData) (ugInds : UInt32Array) : Array depthForwData :=
   let new : depthForwData := ⟨0, .nil, ugInds⟩
   let rec fixNei (origin : Nat) (done : ListProd Nat Nat) : ListProd Nat Nat → ListProd Nat Nat
     | .nil => .cons origin 1 done
@@ -89,7 +91,7 @@ partial def updateForwDepth (forwDepths : Array depthForwData) (ugInds : List Na
               let newDep := minimin fd newNei
               if newDep > ToFix.depth
               then
-                let nx := ToFix.parents.foldl (fun more p => .cons p tofix more) more
+                let nx := ToFix.parents.foldl more (fun p more => .cons p.toNat tofix more)
                 let rep := {ToFix with depth := newDep, outNei :=  newNei}
                 let newDepths := depths.set! tofix rep
                 update newDepths nx
@@ -98,19 +100,22 @@ partial def updateForwDepth (forwDepths : Array depthForwData) (ugInds : List Na
                 let newDepths := depths.set! tofix rep
                 update newDepths more
   let newGUidx := forwDepths.size
-  let init := ugInds.foldl (fun R p => .cons p newGUidx R) .nil
+  let init := ugInds.foldl .nil (fun p R => .cons p.toNat newGUidx R)
   (update forwDepths init).push new
+
+
 
 /-- Minimum among depths of args ; incorporated depth will of course be 0-/
 @[inline]
-def getCandForwDepth (forwDepths : Array depthForwData) (ugInds : List Nat) : Nat :=
-  let ds := ugInds.mapTRR (fun x => forwDepths[x]!.depth)
-  let rec mini (m : Nat) : List Nat → Nat
-    | [] => m
-    | x :: xs => if x < m then mini x xs else mini m xs
-  match ds with
-  | [] => 0
-  | x :: xs => mini x xs
+def getCandForwDepth (forwDepths : Array depthForwData) (ugInds : UInt32Array) : Nat :=
+  if ugInds.isEmpty
+  then 0
+  else
+  ugInds.foldl forwDepths[ugInds[0]!.toNat]!.depth (fun x m =>
+    let x := forwDepths[x.toNat]!.depth
+    if x < m then x else m
+    )
+
 
 /-
 (old) **Note**

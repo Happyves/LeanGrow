@@ -12,6 +12,8 @@ open Lean Meta
 
 variable {IdxCollType : Type _}
 
+namespace PaIn
+
 inductive ListProd3SigL (α β γ δ: Type _) where
 | nil
 | sig (_ : ListProd3SigL α β γ δ)
@@ -38,8 +40,6 @@ def ListProd3S.getSpe {α β γ : Type _} : ListProd3S α β γ → OptionProd4 
   | .consSpe a b c nx => .some a b c nx
 
 
-
-namespace PaIn
 
 
 

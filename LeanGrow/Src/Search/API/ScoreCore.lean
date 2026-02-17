@@ -5,13 +5,13 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Author: Yves Jäckle.
 -/
 
-import LeanGrowBeta.Search.API.IntegrateForw
-import LeanGrowBeta.Search.API.IntegrateBack
-import LeanGrowBeta.Search.IntroTree.Operations
-import LeanGrowBeta.Search.BackTree.Operations
-import LeanGrowBeta.Core.GeneralisePaIn.GenQueryForw
-import LeanGrowBeta.Core.GeneralisePaIn.GenQueryBack
-import LeanGrowBeta.Core.Embedding.EmbedProcessBack
+import LeanGrow.Src.Search.API.IntegrateForw
+import LeanGrow.Src.Search.API.IntegrateBack
+import LeanGrow.Src.Search.IntroTree.Operations
+import LeanGrow.Src.Search.BackTree.Operations
+import LeanGrow.Src.SampleGenScore.Gen.GenQueryForw
+import LeanGrow.Src.SampleGenScore.Gen.GenQueryBack
+import LeanGrow.Src.Core.Embedding.EmbedProcessBack
 
 
 open Lean Meta
