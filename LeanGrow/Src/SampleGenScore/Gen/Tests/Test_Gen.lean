@@ -112,24 +112,14 @@ def thmNames := #[`material_1, `material_2_1, `material_2_2, `material_3, `mater
 -- #eval test_T thmNames
 
 
-tracing_mode .std
-tracing_flags [--(``test_backSample_cvbGoalHyp, TracingFlags.all),
-               (`cvb_goal_hyp_genGoal, TracingFlags.all),
-               (`cvb_goal_hyp_genHyps, TracingFlags.all),
-               ]
+-- tracing_mode .std
+-- tracing_flags [--(``test_backSample_cvbGoalHyp, TracingFlags.all),
+--                (`cvb_goal_hyp_genGoal, TracingFlags.all),
+--               --(`cvb_goal_hyp_genHyps, TracingFlags.all),
+--                ]
 
 -- #eval test_GH thmNames
 
-
-/-
-TODO
-- massive bug : `let pi := pi.mapInds (fun x => shiftAdd x hi) empty`
-  should be `let hyps := hyps.mapInds (fun x => shiftAdd x hi) empty`
-  in conveyorbelt ; fix here and elsewhere
-- in trans some indices have no translation : review whole code
-  to account for this
-- translateMerge has no more name arg
-
-
-
--/
+-- ↑ pretty printer bug straight from Mordor. ?_.6 is actually in an app with ?_.0
+-- but the latter doesn't get pretty printed ; refer to the dbg_trace sanity check in
+-- cvb_goal_hyp_genGoal to see the app

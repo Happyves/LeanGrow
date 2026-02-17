@@ -106,7 +106,7 @@ partial def Array.findIdxIdx? {α : Type _} (A : Array α) (p : Nat → α → B
 partial def lnodeGarbageCollectionMulti
   (T : PaIn IdxCollType) (allTypes cleanTypes: Array Expr)
   : ((PaIn IdxCollType) × Array Expr × Nat) :=
-  trace set TracingFlags.all in
+  trace set TracingFlags.none in
   let (liveE,_) := getLiveLnodes T
   trace on .zero with s!"[lnodeGarbageCollection] live {liveE}" in
   let rec @[specialize] extend (done : UInt32Array) : List Nat → UInt32Array

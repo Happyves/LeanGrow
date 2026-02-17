@@ -113,21 +113,17 @@ theorem material_4' (l : List Nat)
 def thmNames' := #[`material_1', `material_2_1', `material_2_2', `material_3', `material_4']
 
 
--- #eval testSub_samples thmNames
+-- #eval testSub_samples thmNames'
 
--- #eval testSub_T false thmNames
+-- #eval testSub_T false thmNames'
 
 
-tracing_mode .std
-tracing_flags [(``test_backSample_cvbGoalHyp, TracingFlags.all),
-               (`cvb_goal_hyp_genMain_subPat, TracingFlags.all),
-               (`cvb_goal_hyp_genHyps, TracingFlags.all),
-               ]
+-- tracing_mode .std
+-- tracing_flags [(``test_backSample_cvbGoalHyp, TracingFlags.all),
+--                (`cvb_goal_hyp_genMain_subPat, TracingFlags.all),
+--                (`cvb_goal_hyp_genHyps, TracingFlags.all),
+--                ]
 
--- #eval testSub_GH false thmNames
+-- #eval testSub_GH false thmNames'
 
 #check 1
-
-/-
-↑ pattern ?testSam.0 ≤ ?testSam.0 doesn't seem to get deduplicated properly ...
--/

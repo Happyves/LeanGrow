@@ -391,6 +391,7 @@ partial def sampleCoreBack
         let lifted := (fvs.foldl (fun x y => x.cons y.fvarId!) lifted)
         let .mk todo haveP l1 l2 ← digExpr preProcessed l1 l2 depthDig (.raw e) todo lifted
         let .mk postLift r l1 l2 ← delabTopBack preProcessed conjable e l1 l2 []
+        mtrace on .zero with s!" sampled {← r.pp}"
         let lifted := postLift ++ lifted
         match r with
         | .none =>
@@ -544,7 +545,7 @@ partial def sampleCoreBack
 
 #check 1
 
--- #exit
+
 
 partial def sampleCoreForw
   (preProcessed : CTrie SimpCongrTheorem) --(conjable : CTrie (List Nat))
@@ -559,12 +560,14 @@ partial def sampleCoreForw
     : ListProd (Option Expr) Expr → MetaM (Prod3 (ListProd4 SampleData (List FVarId) Expr (List Expr)) LocalContext LocalInstances)
     | .nil => return .mk samples l1 l2
     | .cons term type more => do
+        mtracing
         match term with
         | .none =>
           -- akward case to handle simp
           inner l1 l2 goal lifted presinks (type :: seenH) samples more
         | .some term =>
           let .mk dr subhyp l1 l2 ← (if withHyps then delabTopForw_withHyps preProcessed term l1 l2 else delabTopForw preProcessed term l1 l2)
+          mtrace on .zero with s!" sampled {← dr.pp}"
           match dr with
           | .none | .induc .. => inner l1 l2 goal lifted presinks (type :: seenH) samples more
           | .thm sn | .thmC sn .. =>

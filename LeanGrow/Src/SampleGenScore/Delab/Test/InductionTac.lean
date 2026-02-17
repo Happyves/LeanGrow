@@ -3,6 +3,10 @@
 import LeanGrow.Src.SampleGenScore.Delab.ObtainRcasesBycases
 import LeanGrow.Src.Utils.Lean.Expr.Basic
 
+
+import Mathlib.Data.Nat.GCD.Basic
+
+
 open Lean Meta
 
 
@@ -39,7 +43,7 @@ def test_main_topB (n : Name) : MetaM Unit := do
   lambdaTelescope info.value! <| fun _ b => do
     let b := b.zeta
     let sub ← delabSample_ObtRCaseIndCase_topBack b
-    IO.println s!"Sample: {repr sub}"
+    IO.println s!"Sample: {←  sub.pp}"
 
 def test_main_topF (n : Name) : MetaM Unit := do
   let .some info := (← getEnv).find? n | throwError "Bad name"
@@ -185,3 +189,24 @@ example (l : List Nat) (h : l = 37 :: l) : False := by
     obtain ⟨h1,h2⟩ := List.cons.inj h
     apply ih
     rwa [← h1]
+
+open Nat
+
+theorem test_11 {m n a b : ℕ} (cop : Coprime m n) (ha : a ≠ 0) (hb : b ≠ 0)
+    (h : a * m + b * n = m * n) : False := by
+  obtain ⟨x, rfl⟩ : n ∣ a :=
+    cop.symm.dvd_of_dvd_mul_right
+      ((Nat.dvd_add_iff_left (Nat.dvd_mul_left n b)).mpr
+        ((congr_arg _ h).mpr (Nat.dvd_mul_left n m)))
+  sorry
+
+#print test_11
+
+
+#eval test_main_sample `test_11
+#eval test_main_dig `test_11
+#eval test_main_topB `test_11
+#eval test_main_topF `test_11
+
+
+#check Exists.casesOn

@@ -184,9 +184,12 @@ partial def cvb_thms_genGoal [Repr IdxCollType]
 private def translate (hs : List Nat) (trans : (RBMap Nat Nat instOrdNat.compare)) : List Nat :=
   hs.foldl (fun ths i =>
       match Lean.RBMap.find? trans i with
-      | .none => panic! s!"[cvb_thms_genHyps] untranslatable {i}"
+      | .none => ths
+        -- was deleted at top-mvar-removal
+        --panic! s!"[cvb_thms_genHyps] untranslatable {i}"
       | .some t => ths.insert t
       ) []
+
 
 
 @[specialize, inline]
@@ -270,6 +273,7 @@ partial def cvb_goal_hyp_genGoal [Repr IdxCollType]
   mtrace on .zero with s!" running lnode garbadge collection on\nT : {← T.pp l1 l2 [] 0 intersect empty?}\nallTypes: {← allTypes.mapM ppExpr}\ncleanTypes: {← cleanTypes.mapM ppExpr}"
   let (T,cleanTypes,_) := lnodeGarbageCollection T allTypes cleanTypes
   mtrace on .zero with s!" done with lnode garbadge collection on\nT : {← T.pp l1 l2 [] 0 intersect empty?}\nallTypes: {← allTypes.mapM ppExpr}\ncleanTypes: {← cleanTypes.mapM ppExpr}"
+  -- dbg_trace  s!"sanity : {repr <| ← T.buildCore l1 l2 [] 0 id intersect empty?}"
   let total := weights.foldl (fun x y => x+y) 0
   let mut next := Array.replicate weights.size (Prod3.mk 0 (ListProd.nil : (ListProd ByteArray (List Nat))) PaIn.dead)
   for (ini,new) in trans do

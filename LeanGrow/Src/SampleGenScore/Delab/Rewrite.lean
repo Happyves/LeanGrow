@@ -55,6 +55,28 @@ def delabRW_core (h : Name) (as : Array Expr) : OptionProd Expr Expr :=
       .none
 
 
+partial def Lean.Expr.pseudoConstSpe (l1 : LocalContext) (l2 : LocalInstances) : Expr → MetaM (Option Name)
+  | .lam .. | .forallE .. => return .none
+  | .letE _ _ V B _ => (B.instantiate1 V).pseudoConst l1 l2
+  | e@(.app ..) => do
+      match ← e.getAppFn.pseudoConstSpe l1 l2 with
+      | R@(.some _) =>
+        let as ← e.getRelevantArgsBack l1 l2
+        if ← as.allM (fun a =>
+          if a.isAtomic
+          then return true
+          else return !(← IsProof a l1 l2)
+          )
+        then return R
+        else return .none
+      | R =>
+        return R
+  | .proj _ _ e | .mdata _ e => e.pseudoConst l1 l2
+  | .const n _ => return .some n
+  | _ => return .none
+
+
+
 @[inline]
 partial def delabSample_Rewrite_core (appH : Expr) (appA : Array Expr) (l1 : LocalContext) (l2 : LocalInstances)
   : MetaM (Prod5 (List FVarId) (Option (List Expr)) (Option Expr) LocalContext LocalInstances) := do
@@ -67,10 +89,10 @@ partial def delabSample_Rewrite_core (appH : Expr) (appA : Array Expr) (l1 : Loc
       | .some main ini =>
           mtrace on .zero with s!" main {← ppExpr main}"
           mtrace on .one with s!" ini {← ppExpr ini}"
-          let appH := main.getAppFn
-          let appA := main.getAppArgs
-          if ← appH.isPseudoAtomic l1 l2
+          if (← main.pseudoConstSpe l1 l2).isSome
           then -- case of standard rw
+            let appH := main.getAppFn
+            let appA := main.getAppArgs
             let rarg ← appH.withRelevantArgsBack l1 l2 appA [] (fun x xs => return x :: xs)
             return .mk [] (← (ini :: rarg).filterM (fun
                 | .fvar fvid => do
@@ -86,6 +108,7 @@ partial def delabSample_Rewrite_core (appH : Expr) (appA : Array Expr) (l1 : Loc
   | _ =>
       return .mk [] .none .none l1 l2
 
+
 @[inline]
 partial def delabDig_Rewrite_core (appH : Expr) (appA : Array Expr) (l1 : LocalContext) (l2 : LocalInstances)
   : MetaM (Option (List Expr)) := do
@@ -98,16 +121,19 @@ partial def delabDig_Rewrite_core (appH : Expr) (appA : Array Expr) (l1 : LocalC
       | .some main ini =>
           mtrace on .zero with s!" main {← ppExpr main}"
           mtrace on .one with s!" ini {← ppExpr ini}"
-          let appH := main.getAppFn
-          let appA := main.getAppArgs
-          if ← appH.isPseudoAtomic l1 l2
-          then -- case of standard rw
-            let rarg ← appH.withRelevantArgsBack l1 l2 appA [] (fun x xs => return x :: xs)
-            return (ini :: rarg).filter (fun x => !x.isAtomic)
-          else -- funky stuff like rw[(show _ from by _)]
-            return (if ini.isAtomic then [main] else [main,ini])
+          -- let appH := main.getAppFn
+          -- let appA := main.getAppArgs
+          -- if ← appH.isPseudoAtomic l1 l2
+          -- then -- case of standard rw
+          --   let rarg ← appH.withRelevantArgsBack l1 l2 appA [] (fun x xs => return x :: xs)
+          --   return (ini :: rarg).filter (fun x => !x.isAtomic)
+          -- else -- funky stuff like rw[(show _ from by _)]
+          return (if ini.isAtomic then [main] else [main,ini])
   | _ =>
       return .none
+
+
+#check 1
 
 
 @[inline]
@@ -123,8 +149,8 @@ partial def delabSample_Rewrite_topBack
           return .none
       | .some main _ =>
           mtrace on .zero with s!" main {← ppExpr main}"
-          let appH := main.getAppFn
-          match ← appH.pseudoConst l1 l2 with
+          match ← main.pseudoConstSpe l1 l2 with
+          -- needed because rw-thm could have been an inlined have that started as a thm appli
           | .some n => -- case of standard rw
               match conjable.find? n.toString.toUTF8 with
               | .none =>
@@ -150,8 +176,7 @@ partial def delabSample_Rewrite_topForw (appH : Expr) (appA : Array Expr) (l1 : 
       | .some main ini =>
           mtrace on .zero with s!" main {← ppExpr main}"
           mtrace on .one with s!" ini {← ppExpr ini}"
-          let appH := main.getAppFn
-          match ← appH.pseudoConst l1 l2 with
+          match ← main.pseudoConstSpe l1 l2 with
           | .some n => -- case of standard rw
             return .some <| .some n ini
           | _ => -- funky stuff like rw[(show _ from by _)] , .. or hyp fvar !
@@ -171,9 +196,9 @@ partial def delabSample_Rewrite_topForw_withHyps (appH : Expr) (appA : Array Exp
       | .some main ini =>
           mtrace on .zero with s!" main {← ppExpr main}"
           mtrace on .one with s!" ini {← ppExpr ini}"
-          let appH := main.getAppFn
-          match ← appH.pseudoConst l1 l2 with
+          match ← main.pseudoConstSpe l1 l2 with
           | .some n => -- case of standard rw
+            let appH := main.getAppFn
             let args ← appH.withRelevantArgsBack l1 l2 appA [ini] (fun x y => return x :: y)
             return .some <| .some n args
           | _ => -- funky stuff like rw[(show _ from by _)] , .. or hyp fvar !

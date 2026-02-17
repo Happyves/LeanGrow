@@ -107,7 +107,12 @@ partial def delabDig_ObtRCaseIndCase_core (e : Expr) (l1 : LocalContext) (l2 : L
           let info ← getElimInfo h
           let poses ← getElimSubproofsPos info
           let indPrfs := poses.foldl (fun L i => appA[i]! :: L) []
-          return .mk (.some (indPrfs ++ reverts)) l1 l2
+          let morePrfs := info.targetsPos.foldl (fun L i =>
+            let here := appA[i]!
+            if here.isAtomic then L else here :: L
+            ) indPrfs
+            -- for example `Nat.Coprime.mul_add_mul_ne_mul` has `obtain _ := proofterm
+          return .mk (.some (morePrfs ++ reverts)) l1 l2
         else
           return .mk .none l1 l2
   match e.getAppFn' with

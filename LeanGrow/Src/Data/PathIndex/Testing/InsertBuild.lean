@@ -47,3 +47,22 @@ With context (m : Nat × Nat) (n : Nat) (x : Fin n) (y : Fin (n+1) : Fin.mk 0 (N
 #check Nat.zero_lt_succ
 #print Fin
 #check Nat.lt_trans
+
+
+def sanity : MetaM Unit := do
+  let m0 ← mkMvarStdIndexNoCoE (.num `test 0) (.const `Nat []) 1
+  let m17 ← mkMvarStdIndexNoCoE (.num `test 17) (.forallE `b (.const `Nat [])  (.const `Nat []) .default) 0
+  let m18 ← mkMvarStdIndexNoCoE (.num `test 18) (.forallE `b (.const `Nat [])  (.const `Nat []) .default) 0
+  let ⟨T,l1,l2⟩ ← PaIn.insertMulti (← getLCtx) (← getLocalInstances) (.app m17 m0) (.mk #[0, 3, 4, 8]) PaIn.dead UInt32Array.empty
+      (fun x y => UInt32Array.union y x)
+  let ⟨T,l1,l2⟩ ← PaIn.insertMulti l1 l2 (.app m18 m0) (.mk #[2, 5, 7]) T UInt32Array.empty
+      (fun x y => UInt32Array.union y x)
+  withReader (fun ctx => {ctx with lctx := l1, localInstances := l2}) do
+      let built := (← T.buildCore l1 l2 [] 0 id UInt32Array.inter UInt32Array.isEmpty).toListOfProd
+      IO.println s!"{built}"
+      let built := ← built.mapM (fun (x,y) => return (← ppExpr x, y))
+      IO.println s!"{built}"
+      IO.println s!"{repr T}"
+
+
+#eval sanity

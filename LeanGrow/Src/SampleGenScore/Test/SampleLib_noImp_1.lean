@@ -121,6 +121,8 @@ def testDelZet (printLift? : Bool) (thmName : Name)
 #check MvPolynomial.combinatorial_nullstellensatz_exists_eval_nonzero
 
 -- #eval testNoDelZet false `MvPolynomial.combinatorial_nullstellensatz_exists_eval_nonzero 1 2 2
+-- **fix** undesired Eq.mp
+
 
 -- #eval testDelZet false `MvPolynomial.combinatorial_nullstellensatz_exists_eval_nonzero 1 2 2 2 2
 -- 10ish sec ...
@@ -156,13 +158,16 @@ def testDelZet (printLift? : Bool) (thmName : Name)
 #check Nat.coprime_mul_right_add_right
 
 
-#eval testNoDelZet false `Nat.coprime_mul_right_add_right 1 2 2
+-- #eval testNoDelZet false `Nat.coprime_mul_right_add_right 1 2 2
 
 #print Nat.pow_sub_one_mod_pow_sub_one
 
--- #eval testNoDelZet false `Nat.pow_sub_one_mod_pow_sub_one 1 2 2
--- **fix** undesired Eq.mpr backward samples ; Or.elim without an or in hyps ...
 
+-- #eval testNoDelZet false `Nat.pow_sub_one_mod_pow_sub_one 1 2 2
+-- Or.elim without an ∨ in hyps : the ∨ is made from `omega`, which gets delabed
+-- to a irreducible hyp, and since the sample-start-depth hasn't been reached,
+-- the hyp isn't taken into account, only binders are. ← is a guess ... should be
+-- checked
 
 
 #check Nat.pow_sub_one_gcd_pow_sub_one
@@ -178,7 +183,8 @@ def testDelZet (printLift? : Bool) (thmName : Name)
 #check Nat.Coprime.mul_add_mul_ne_mul
 
 -- #eval testNoDelZet false `Nat.Coprime.mul_add_mul_ne_mul 1 2 2
--- **fix** terms in obtain seemingly not sampled ?
+
+
 
 #check Nat.div_lcm_eq_div_gcd
 
@@ -220,7 +226,6 @@ def testDelZet (printLift? : Bool) (thmName : Name)
 #check Nat.eq_prime_pow_of_unique_prime_dvd
 
 -- #eval testNoDelZet false `Nat.eq_prime_pow_of_unique_prime_dvd 1 2 2
--- **fix** bad rfl back samples
 
 
 #check Nat.replicate_subperm_primeFactorsList_iff
@@ -247,17 +252,23 @@ def testDelZet (printLift? : Bool) (thmName : Name)
 --                ]
 
 
+
+-- tracing_mode .std
+-- tracing_flags [(`sampleCoreForw, TracingFlags.all),
+--                 (`sampleCoreForw.inner, TracingFlags.all),
+--                 (`delabTopForw, TracingFlags.all),
+--                 (`sampleHypsCore, TracingFlags.all)
+--                ]
+
+
 /-
 Todo:
-- at `Coprime.mul_add_mul_ne_mul` terms in obtain seemingly not sampled
 - at `div_lcm_eq_div_gcd`, rcases on term (not fv) seems to cause term
   to be ignored (at least, as a hyp)
-- `eq_prime_pow_of_unique_prime_dvd` weird rfl samples
 - `replicate_subperm_primeFactorsList_iff` generalising induction
   doesn't seem to do reverts in motive ??
 - delta in `length_erase_add_one`
 - `primeFactorsList_prime`delta seems to cause hyp duplication
-- `pow_sub_one_mod_pow_sub_one` Eq,mpr and Or.elim
 
 -/
 

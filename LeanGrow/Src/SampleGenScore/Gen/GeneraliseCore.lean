@@ -589,10 +589,10 @@ partial def getLiveLnodes (T : PaIn IdxCollType) : UInt32Array × UInt32Array :=
 
 
 
-partial def lnodeGarbageCollection
+partial def lnodeGarbageCollection [Repr IdxCollType]
   (T : PaIn IdxCollType) (allTypes cleanTypes: Array Expr)
   : ((PaIn IdxCollType) × Array Expr × Nat) :=
-  trace set TracingFlags.none in
+  trace set TracingFlags.all in
   let (liveE,_) := getLiveLnodes T
   trace on .zero with s!"[lnodeGarbageCollection] live {liveE}" in
   let rec @[specialize] extend (done : UInt32Array) : List Nat → UInt32Array
@@ -637,7 +637,7 @@ partial def lnodeGarbageCollection
   --   match transL.find? n with
   --   | .none => panic s!"[lnodeGarbageCollection] encountered non-extended-live index (level) {n}"
   --   | .some x => x
-  trace on .one with s!"[lnodeGarbageCollection] allTypes {allTypes}" in
+  trace on .one with s!"[lnodeGarbageCollection] transE {transE.toArray}\n[lnodeGarbageCollection] allTypes {allTypes.mapIdx Prod.mk}" in
   -- let ntypes : Array Expr := allTypes.size.fold (fun i _ A =>
   --   match transE.find? i.toUInt32 with
   --   | .none => A
@@ -655,7 +655,7 @@ partial def lnodeGarbageCollection
   --         | x => x)
   --       A.set! I.toNat nT
   --   ) (Array.replicate sizeE.toNat (failExpr "lnodeGarbageCollection"))
-  trace on .one with s!"[lnodeGarbageCollection] cleanTypes {cleanTypes}" in
+  trace on .one with s!"[lnodeGarbageCollection] cleanTypes {cleanTypes.mapIdx Prod.mk}" in
   let rec @[specialize] fixLnodes : (PaIn IdxCollType) → (PaIn IdxCollType)
     | x@(.dead) => x
     | .br fvars mvars bvars sorts consts lits apf apa api laf laa lai alf ala ali lef lea lez lei projs proofsOf proofs =>
@@ -663,8 +663,10 @@ partial def lnodeGarbageCollection
           match (String.fromUTF8! n).toName with
           | .num mod t =>
               match transE.find? t with
-              | .none => S
-              | .some I => S.insert (Name.num mod I).toString.toUTF8 is
+              | .none => --dbg_trace s!"didn't find {t}, is {repr is}"
+                S
+              | .some I => --dbg_trace s!"found {t}, replace with {I}, is {repr is}";
+                S.insert (Name.num mod I).toString.toUTF8 is
           | _ => S
           )
         -- let sorts := sorts.foldl ListProd.nil (fun is u R =>
@@ -687,7 +689,9 @@ partial def lnodeGarbageCollection
             (fixLnodes alf) (fixLnodes ala) ali (fixLnodes lef) (fixLnodes lea) (fixLnodes lez) lei
             (projs.map (fun L => .some (L.map (fun x (y,z) => (x,y, fixLnodes z)))))
             (fixLnodes proofsOf) (fixLnodes proofs)
-  (fixLnodes T, cleanTypes, 1)-- sizeL.toNat)
+  let resT := fixLnodes T
+  -- dbg_trace (repr resT)
+  (resT, cleanTypes, 1)-- sizeL.toNat)
 
 
 #check 1

@@ -50,7 +50,7 @@ def test_rewrite_topB (n : Name) : MetaM Unit := do
     let h := b.getAppFn'
     let as := b.getAppArgs
     let sub ← delabSample_Rewrite_topBack .empty h as (← getLCtx) (← getLocalInstances)
-    IO.println s!"Sample: {repr sub}"
+    IO.println s!"Sample: {← sub.mapM SampleData.pp}"
 
 
 def test_rewrite_topF (n : Name) : MetaM Unit := do

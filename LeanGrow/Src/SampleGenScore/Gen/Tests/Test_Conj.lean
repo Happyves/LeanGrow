@@ -140,13 +140,3 @@ def thmNames_2 := #[`material_4, `material_5, `material_6]
 
 
 -- #eval test thmNames_2
-
-
-/-
-TODO
-- query conj (+lg embed and non-lg-embed)
-- caching
-- dbg
-- test query
-
--/
