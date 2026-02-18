@@ -76,43 +76,41 @@ partial def buildCachDataForCore [Repr IdxCollType]
           let formats := formats.push d
           let ⟨sofarBack,_,_⟩ ← sofarBack.insert (← getLCtx) (← getLocalInstances) goal countThm emptyCol singleton insert
           mtrace on .zero with s!" add goal to back"
-          -- let ciN := cinfo.name.toString.toUTF8
           let thmNameToIdx := thmNameToIdx.insert ciN (singleton countThm)
           let countThm := countThm + 1
           inner ciN sofarBack formats sofarBackRW countThm sofarFwd hyptothm hyptosink sofarFwdRW countHyps thmNameToIdx thmNameToHypIdx rwWithSinkNotInGoal more
         | .bckOnly =>
           let formats := formats.push d
-          let HforFwdPaIn : ListProd Expr Nat := sinks.foldl (fun S s => match hyps[s]! with | .inst .. => S | .reg type => .cons type s S) .nil
+          let (hfp_len, HforFwdPaIn) : Nat × ListProd Expr Nat := sinks.foldl (fun S s => match hyps[s]! with | .inst .. => S | .reg type => (S.1 + 1, .cons type s S.2)) (0,.nil)
           let .mk FwdPaIn hyptosink _ ← HforFwdPaIn.foldlM (Prod3.mk PaInG.dead hyptosink countHyps) (fun e si (.mk T hyptosink i) => do
             let ⟨res,_,_⟩ ← T.insert (← getLCtx) (← getLocalInstances) e i emptyCol singleton insert
             mtrace on .zero with s!" for forw, added hyp {← ppExpr e}"
             let hyptosink := hyptosink.push si
             return (.mk res hyptosink (i+1)))
           let sofarFwd := .cons FwdPaIn d sofarFwd
-          let hyptothm := (hyptothm.pushN countThm) sinks.length
-          -- let ciN := cinfo.name.toString.toUTF8
+          let hyptothm := (hyptothm.pushN countThm) hfp_len
           let thmNameToIdx := thmNameToIdx.insert ciN (singleton countThm)
           let countThm := countThm + 1
-          let thmNameToHypIdx := thmNameToHypIdx.insert ciN ((List.Ico countHyps (countHyps + sinks.length)).foldl (fun R i => insert i R) emptyCol)
-          let countHyps := countHyps + sinks.length
+          let thmNameToHypIdx := thmNameToHypIdx.insert ciN ((List.Ico countHyps (countHyps + hfp_len)).foldl (fun R i => insert i R) emptyCol)
+          let countHyps := countHyps + hfp_len
           inner ciN sofarBack formats sofarBackRW countThm sofarFwd hyptothm hyptosink sofarFwdRW countHyps thmNameToIdx thmNameToHypIdx rwWithSinkNotInGoal more
         | .no =>
           let formats := formats.push d
           let ⟨sofarBack,_,_⟩ ← sofarBack.insert (← getLCtx) (← getLocalInstances) goal countThm emptyCol singleton insert
           mtrace on .zero with s!" add goal to back"
-          let HforFwdPaIn : ListProd Expr Nat := sinks.foldl (fun S s => match hyps[s]! with | .inst .. => S | .reg type => .cons type s S) .nil
+          let (hfp_len, HforFwdPaIn) : Nat × ListProd Expr Nat := sinks.foldl (fun S s => match hyps[s]! with | .inst .. => S | .reg type => (S.1 + 1, .cons type s S.2)) (0,.nil)
           let .mk FwdPaIn hyptosink _ ← HforFwdPaIn.foldlM (Prod3.mk PaInG.dead hyptosink countHyps) (fun e si (.mk T hyptosink i) => do
             let ⟨res,_,_⟩ ← T.insert (← getLCtx) (← getLocalInstances) e i emptyCol singleton insert
             mtrace on .zero with s!" for forw, added hyp {← ppExpr e}"
             let hyptosink := hyptosink.push si
             return (.mk res hyptosink (i+1)))
           let sofarFwd := .cons FwdPaIn d sofarFwd
-          let hyptothm := (hyptothm.pushN countThm) sinks.length
+          let hyptothm := (hyptothm.pushN countThm) hfp_len
           -- let ciN := cinfo.name.toString.toUTF8
           let thmNameToIdx := thmNameToIdx.insert ciN (singleton countThm)
           let countThm := countThm + 1
-          let thmNameToHypIdx := thmNameToHypIdx.insert ciN ((List.Ico countHyps (countHyps + sinks.length)).foldl (fun R i => insert i R) emptyCol)
-          let countHyps := countHyps + sinks.length
+          let thmNameToHypIdx := thmNameToHypIdx.insert ciN ((List.Ico countHyps (countHyps + hfp_len)).foldl (fun R i => insert i R) emptyCol)
+          let countHyps := countHyps + hfp_len
           inner ciN sofarBack formats sofarBackRW countThm sofarFwd hyptothm hyptosink sofarFwdRW countHyps thmNameToIdx thmNameToHypIdx rwWithSinkNotInGoal more
     | .cons badu fst@(.rw _ _ _ goal ..) more => do
         mtrace on .zero with s!" rw case"

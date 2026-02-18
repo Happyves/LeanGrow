@@ -115,6 +115,7 @@ structure SearchState (IdxCollType : Type _) where
   stdForwSetTrie_idxToSinkIdx : Array Nat
   rwBackPaIn : PaInG IdxCollType
   rwForwPaIn : PaInG IdxCollType
+  thmNameToThmIdx : CTrie IdxCollType
   thmNameToHypIdx : CTrie IdxCollType
   ugnodeToThmIdx : (RBMap Nat Nat instOrdNat.compare)
   thmIdxToUGnode : (RBMap Nat Nat instOrdNat.compare)

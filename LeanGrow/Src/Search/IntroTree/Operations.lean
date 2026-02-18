@@ -561,7 +561,8 @@ partial def forwardDuplicateG?' [Repr IndexColType]
   (contains : Nat → IndexColType → Bool) (empty? : IndexColType → Bool)
   (intersect union : IndexColType → IndexColType → IndexColType) (empty : IndexColType) (revCountMax : Nat)
   (l1 : LocalContext)
-  (ce : Expr) (T : IntroTree IndexColType)
+  (ce : Expr) (ceGU : IndexColType)
+  (T : IntroTree IndexColType)
   : MetaM (Prod Bool LocalContext) :=
   let rec @[specialize] inner :
     ListProd3 IndexColType IndexColType (IntroTree IndexColType) → (Option (IntroTree IndexColType))
@@ -570,27 +571,46 @@ partial def forwardDuplicateG?' [Repr IndexColType]
         if contains target_goal_id gods
         then (.some t)
         else inner more
+  let rec @[specialize] skip? : ListProd3 IndexColType IndexColType (IntroTree IndexColType) → Bool
+    | .nil => false
+    | .cons _ fdirs _ mo =>
+        if empty? (intersect fdirs ceGU) then skip? mo else true
   let rec @[specialize] go (l1 : LocalContext) (l2 : LocalInstances) : (IntroTree IndexColType) → MetaM (Prod Bool LocalContext)
     | .leaf ll2 _ is _ ltx => do
-        let ⟨qase,_,_,l1,_⟩ ← ltx.findCore l1 (l2 ++ ll2)
-          empty? intersect union empty is revCountMax
-          ce
-        if qase == 3
-        then return ⟨true,l1⟩
-        else return ⟨false,l1⟩
-    | .node ll2 _ is _ ltx kidsWdirs => do
-        let nl2 := (l2 ++ ll2)
+      let nl2 := (l2 ++ ll2)
+      if ← IsProp ce l1 nl2
+      then
         let ⟨qase,_,_,l1,_⟩ ← ltx.findCore l1 nl2
           empty? intersect union empty is revCountMax
           ce
         if qase == 3
         then return ⟨true,l1⟩
-        else
-          let nx :=
-              match inner kidsWdirs with
-              | .some x => x
-              | .none => panic s!"[hasForwAtGoalId?] goal {target_goal_id} is not among kidsWdirs"
-          go l1 nl2 nx
+        else return ⟨false,l1⟩
+      else return ⟨false,l1⟩
+    | .node ll2 _ is _ ltx kidsWdirs => do
+      let nl2 := (l2 ++ ll2)
+      if skip? kidsWdirs
+      then
+        let nx :=
+          match inner kidsWdirs with
+          | .some x => x
+          | .none => panic s!"[hasForwAtGoalId?] goal {target_goal_id} is not among kidsWdirs"
+        go l1 nl2 nx
+      else
+        if ← IsProp ce l1 nl2
+        then
+          let ⟨qase,_,_,l1,_⟩ ← ltx.findCore l1 nl2
+            empty? intersect union empty is revCountMax
+            ce
+          if qase == 3
+          then return ⟨true,l1⟩
+          else
+            let nx :=
+                match inner kidsWdirs with
+                | .some x => x
+                | .none => panic s!"[hasForwAtGoalId?] goal {target_goal_id} is not among kidsWdirs"
+            go l1 nl2 nx
+        else return ⟨false,l1⟩
   go l1 #[] T
 
 
@@ -601,7 +621,8 @@ partial def forwardDuplicateF?' [Repr IndexColType]
   (empty? : IndexColType → Bool)
   (intersect union diff : IndexColType → IndexColType → IndexColType) (empty : IndexColType) (revCountMax : Nat)
   (l1 : LocalContext)
-  (target_forw_ids : IndexColType) (ce : Expr) (IT : IntroTree IndexColType)
+  (target_forw_ids : IndexColType) (ce : Expr) (ceGU : IndexColType)
+  (IT : IntroTree IndexColType)
   : MetaM (Prod Bool LocalContext) :=
   -- let target_forw_ids := target_forw_ids.mergeSort
   let rec @[specialize] inner (target_forw_ids : IndexColType) :
@@ -613,6 +634,10 @@ partial def forwardDuplicateF?' [Repr IndexColType]
           (.some t)
         else
           inner target_forw_ids more
+  let rec @[specialize] skip? : ListProd3 IndexColType IndexColType (IntroTree IndexColType) → Bool
+    | .nil => false
+    | .cons _ fdirs _ mo =>
+        if empty? (intersect fdirs ceGU) then skip? mo else true
   let rec @[specialize] go (l1 : LocalContext) (l2 : LocalInstances) (target_forw_ids : IndexColType) : (IntroTree IndexColType) → MetaM (Prod Bool LocalContext)
     | .leaf ll2 _ is _ ltx => do
         let nl2 := (l2 ++ ll2)
@@ -626,38 +651,39 @@ partial def forwardDuplicateF?' [Repr IndexColType]
           else return ⟨false,l1⟩
         else return ⟨false,l1⟩
     | .node ll2 _ is _ ltx kidsWdirs => do
-        let nl2 := (l2 ++ ll2)
-        let ⟨qase,_,_,l1,_⟩ ← ltx.findCore l1 nl2
-          empty? intersect union empty is revCountMax
-          ce
-        if qase == 3
-        then return ⟨true,l1⟩
+      let nl2 := (l2 ++ ll2)
+      if skip? kidsWdirs
+      then
+        let nx := (diff target_forw_ids is)
+        if empty? nx
+        then return ⟨false,l1⟩
         else
-          let nx := (diff target_forw_ids is)
-          if empty? nx
-          then return ⟨false,l1⟩
+          match inner nx kidsWdirs with
+          | .some x => go l1 nl2 nx x
+          | .none => panic s!"[hasForwEAtForwIds?] forws {repr nx} is not among kidsWdirs"
+      else
+        if ← IsProp ce l1 nl2
+        then
+          let ⟨qase,_,_,l1,_⟩ ← ltx.findCore l1 nl2
+            empty? intersect union empty is revCountMax
+            ce
+          if qase == 3
+          then return ⟨true,l1⟩
           else
-            match inner nx kidsWdirs with
-            | .some x => go l1 nl2 nx x
-            | .none => panic s!"[hasForwEAtForwIds?] forws {repr nx} is not among kidsWdirs"
+            let nx := (diff target_forw_ids is)
+            if empty? nx
+            then return ⟨false,l1⟩
+            else
+              match inner nx kidsWdirs with
+              | .some x => go l1 nl2 nx x
+              | .none => panic s!"[hasForwEAtForwIds?] forws {repr nx} is not among kidsWdirs"
+        else return ⟨false,l1⟩
+        -- don't check duplicates for type-typed vals
   go l1 #[] target_forw_ids IT
 
 #check 1
 
 
-/-
-Todo
-
-forwardDuplicateF?' should also take ce's guInds and  first look if there are some
-at the kids dirs, in which case we skip the node, and if not, check if proof in
-local l2, and if not proceed at is ↑
-
-forwardDuplicateG?' should be similar
-
--/
-
-
-#exit
 
 
 /-- Assumes `target_forw_ids` is consistent, ie. are on a same path on the introtree-/

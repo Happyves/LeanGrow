@@ -123,7 +123,7 @@ def integrateForwardStd (l1 : LocalContext) (l2 : LocalInstances) (revCountMax :
 #check mvarifyLTnodesIn
 
 #check IntroTree.hasForwEAtForwIds?
-
+#check Expr.getGUFVarsIds
 
 
 
@@ -136,16 +136,33 @@ def hasForwAtGoalIdS (l1 : LocalContext)
 
 def forwardDuplicateG? (l1 : LocalContext) (target_goal_id : Nat) (revCountMax : Nat) (ce : Expr) (T : IntroTree UInt32Array)
   : MetaM (Prod Bool LocalContext) := do
-  if ← IsProp ce l1 then hasForwAtGoalIdS l1 target_goal_id revCountMax ce T else return .mk false l1 l2
+  let gufv := ce.getGUFVarsIds
+  let guInds := gufv.foldl (fun R i =>
+    match i.name with
+    | .num _ i => R.oInsert i.toUInt32
+    | _ => panic! s!"[forwardDuplicateG?] bad fvar {i.name}"
+    ) UInt32Array.empty
+  @IntroTree.forwardDuplicateG?' _ _ _ target_goal_id
+    (fun x y => y.oContains x.toUInt32) UInt32Array.isEmpty
+    UInt32Array.inter UInt32Array.union UInt32Array.empty
+    revCountMax l1 ce guInds T
 
 
-def hasForwEAtForwIdsS (l1 : LocalContext) (l2 : LocalInstances)
-  (revCountMax : Nat) (target_forw_ids : List Nat) (ce : Expr) (IT : IntroTree UInt32Array) :=
+def hasForwEAtForwIdsS (l1 : LocalContext)
+  (revCountMax : Nat) (target_forw_ids : UInt32Array) (ce : Expr) (IT : IntroTree UInt32Array) :=
   @IntroTree.hasForwEAtForwIds? UInt32Array _ UInt32Array.isEmpty
     UInt32Array.inter UInt32Array.union UInt32Array.diff UInt32Array.empty
-    revCountMax l1 l2 target_forw_ids ce IT
+    revCountMax l1 target_forw_ids ce IT
 
 def forwardDuplicateF? (l1 : LocalContext)
-  (target_forw_ids : List Nat) (revCountMax : Nat) (ce : Expr) (T : IntroTree UInt32Array)
-  : MetaM (Prod3 Bool LocalContext LocalInstances) := do
-  if ← IsProp ce l1 l2 then hasForwEAtForwIdsS l1 revCountMax target_forw_ids ce T else return .mk false l1 l2
+  (target_forw_ids : UInt32Array) (revCountMax : Nat) (ce : Expr) (T : IntroTree UInt32Array)
+  : MetaM (Prod Bool LocalContext) := do
+  let gufv := ce.getGUFVarsIds
+  let guInds := gufv.foldl (fun R i =>
+    match i.name with
+    | .num _ i => R.oInsert i.toUInt32
+    | _ => panic! s!"[forwardDuplicateG?] bad fvar {i.name}"
+    ) UInt32Array.empty
+  @IntroTree.forwardDuplicateF?' _ _ UInt32Array.isEmpty
+    UInt32Array.inter UInt32Array.union UInt32Array.diff UInt32Array.empty
+    revCountMax l1 target_forw_ids ce guInds T
