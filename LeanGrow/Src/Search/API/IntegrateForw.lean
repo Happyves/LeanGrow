@@ -56,7 +56,7 @@ Continuation takes ugId of new addition and the state
 def integrateForwardStd (l1 : LocalContext) (l2 : LocalInstances) (revCountMax : Nat)
   (fmd : ForwMetaData) (term : Expr) (termUGnodes : UInt32Array)
   (st : SearchState UInt32Array)
-  : MetaM (Prod5 Nat Expr (SearchState UInt32Array) LocalContext LocalInstances) :=
+  : MetaM (Prod6 Nat FVarId Expr (SearchState UInt32Array) LocalContext LocalInstances) :=
   do
   mtracing
   -- adding decl
@@ -91,7 +91,7 @@ def integrateForwardStd (l1 : LocalContext) (l2 : LocalInstances) (revCountMax :
   if yes? != 3
   then
     mtrace on .zero with s!"[integrateForwardStd] uniFEwBTMainS fail "
-    return .mk (st.id_gen_forw - 1) type st l1 l2
+    return .mk (st.id_gen_forw - 1) (.mk name) type st l1 l2
   else
     mtrace on .zero with s!"[integrateForwardStd] uniFEwBTMainS success: {← unifs.foldlM [] (fun is ta la R => return (is, ← ta.foldlM [] (fun x y z w => return (x,y, ← ppExpr z) :: w)) :: R)}"
     let .mk st l1 l2 : Prod3  (SearchState UInt32Array) LocalContext LocalInstances := ← unifs.foldlM (.mk st l1 l2) (fun goalInds ta la (.mk st l1 l2) => do
@@ -107,17 +107,17 @@ def integrateForwardStd (l1 : LocalContext) (l2 : LocalInstances) (revCountMax :
         | .some b p =>
             let ta := ListProd3.cons b p (.fvar ⟨name⟩) ta
             let st ← computeNewClashesMain l1 l2 st ta la -- bumps id_gen_uni
-            let st := {st with backTree := st.backTree.addUnis st.id_gen_apass [st.id_gen_uni - 1] ta}
+            let st := {st with backTree := st.backTree.addUnis st.id_gen_apass (.single (st.id_gen_uni - 1).toUInt32) ta}
             return st
         | .none =>
             let st ← computeNewClashesMain l1 l2 st ta la -- bumps id_gen_uni
-            let st := {st with backTree := st.backTree.addUnis st.id_gen_apass [st.id_gen_uni - 1] ta}
+            let st := {st with backTree := st.backTree.addUnis st.id_gen_apass (.single (st.id_gen_uni - 1).toUInt32) ta}
             return st
         )
       return .mk st l1 l2
       )
     mtrace on .zero with s!"[integrateForwardStd] backTree : {← st.backTree.pp 0}"
-    return .mk (st.id_gen_forw - 1) type st l1 l2
+    return .mk (st.id_gen_forw - 1) (.mk name) type st l1 l2
 
 
 #check mvarifyLTnodesIn

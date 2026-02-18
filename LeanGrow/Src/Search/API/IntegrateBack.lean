@@ -6,37 +6,41 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Author: Yves Jäckle.
 -/
 
-import LeanGrowBeta.Search.IntroTree.Operations
-import LeanGrowBeta.Search.BackTree.Operations
-import LeanGrowBeta.Search.Types
-import LeanGrowBeta.Search.API.UnifyCore
-import LeanGrowBeta.Search.API.UnifClaches
-import LeanGrowBeta.Search.API.Intro
-import LeanGrowBeta.Search.Score.Regularisation
-import LeanGrowBeta.Core.Embedding.UnifyBEFT
+import LeanGrow.Src.Search.IntroTree.Operations
+import LeanGrow.Src.Search.BackTree.Operations
+import LeanGrow.Src.Search.Types
+import LeanGrow.Src.Search.API.UnifyCore
+import LeanGrow.Src.Search.API.UnifClaches
+import LeanGrow.Src.Search.API.Intro
+import LeanGrow.Src.Search.Score.Regularisation
+import LeanGrow.Src.Core.Embedding.UnifyBEFT
 
 
 open Lean Meta
 
 
-#check PaIn.uniBEwFTMain
+#check PaInG.uniBEwFTMain
+#check IntroTree.mergeLtxForGoalId
+#check IntroTree.insertGoalsAtGoalId
+
 
 
 def uniBEwFTMainS
-  (l1 : LocalContext) (l2 : LocalInstances) (constr : List Nat)
-  (revCountMax : Nat) (E : Expr) (T : PaIn (List Nat))
-  : MetaM (Prod5 UInt8 (List Nat) (ListProd3 (List Nat) (ListProd3 Nat Nat Expr) (ListProd3 Nat Nat Level)) LocalContext LocalInstances) :=
-  PaIn.uniBEwFTMain
-    List.isEmpty (List.orderedIntersect) (List.orderedUnion) (List.orderedDiff)
-    [] l1 l2 constr revCountMax E T
+  (l1 : LocalContext) (l2 : LocalInstances) (constr : UInt32Array)
+  (revCountMax : Nat) (E : Expr) (T : PaInG UInt32Array)
+  : MetaM (Prod5 UInt8 UInt32Array (ListProd3 UInt32Array (ListProd3 Nat Nat Expr) (ListProd3 Nat Nat Level)) LocalContext LocalInstances) :=
+  PaInG.uniBEwFTMain
+    UInt32Array.isEmpty UInt32Array.inter UInt32Array.union UInt32Array.diff
+    UInt32Array.empty l1 l2 constr revCountMax E T
 
 
 #check 1
 
 
-def mergeLtxForGoalIdS (target_goal_id : Nat) (IT : IntroTree (List Nat)):=
+def mergeLtxForGoalIdS (target_goal_id : Nat) (IT : IntroTree UInt32Array):=
   @IntroTree.mergeLtxForGoalId
-    (List Nat) MetaM _ _ (List.orderedContains) (List.orderedUnion) []
+    UInt32Array MetaM _ _
+    (fun x y => y.oContains x.toUInt32) UInt32Array.union UInt32Array.empty
     target_goal_id IT .dead
 
 
@@ -45,9 +49,10 @@ def mergeLtxForGoalIdS (target_goal_id : Nat) (IT : IntroTree (List Nat)):=
 
 
 
-def mergeLtxForGoalIdTruelyS (target_goal_id : Nat) (IT : IntroTree (List Nat)):=
+def mergeLtxForGoalIdTruelyS (target_goal_id : Nat) (IT : IntroTree UInt32Array):=
   @IntroTree.mergeLtxForGoalIdTruely
-    (List Nat) MetaM _ _ (List.orderedContains) (List.orderedUnion) []
+    UInt32Array MetaM _ _
+    (fun x y => y.oContains x.toUInt32) UInt32Array.union UInt32Array.empty
     target_goal_id IT .dead
 
 
@@ -57,29 +62,32 @@ def mergeLtxForGoalIdTruelyS (target_goal_id : Nat) (IT : IntroTree (List Nat)):
 
 
 def IntroTree.insertGoalsAtGoalIdS :=
-  @IntroTree.insertGoalsAtGoalId (List Nat) _
-    (List.orderedContains) id (List.orderedUnion)
-    (fun n => [n]) [] (List.orderedInsertOrLeave)
+  @IntroTree.insertGoalsAtGoalId UInt32Array _ _
+    (fun x y => y.oContains x.toUInt32) UInt32Array.union
+    (fun x => UInt32Array.single x.toUInt32) UInt32Array.empty
+    (fun x y => y.oInsert x.toUInt32)
 
 
 #check 1
 
 
-def IntroTree.addBackStep (l1 : LocalContext) (l2 : LocalInstances)
-  (target_goal_id savedGoalId : Nat) (backTypes : Array Expr) (IT : IntroTree (List Nat))
-  : MetaM (Prod3 (IntroTree (List Nat)) LocalContext LocalInstances) := do
-  let target_goal := IT.getGoalOfGoalId target_goal_id -- akward
+def IntroTree.addBackStep (l1 : LocalContext)
+  (target_goal_id savedGoalId : Nat) (backTypes : Array Expr) (IT : IntroTree UInt32Array)
+  : MetaM (Prod (IntroTree UInt32Array) LocalContext) := do
+  let target_goal ← IT.getGoalOfGoalId (fun x y => y.oContains x.toUInt32)
+    UInt32Array.isEmpty UInt32Array.inter (fun x => UInt32Array.single x.toUInt32)
+    l1 target_goal_id -- akward
   let newGoals : ListProd Nat Expr := (List.range backTypes.size).foldl (fun R i =>
     .cons (savedGoalId + i) backTypes[i]! R
     ) (ListProd.cons (savedGoalId + backTypes.size) target_goal .nil) -- because at `BackTree.addBackStep`, propa will have save type as initial goal
-  IT.insertGoalsAtGoalIdS l1 l2 target_goal_id newGoals
+  IT.insertGoalsAtGoalIdS l1 target_goal_id newGoals
 
 #check 1
 
 def potentialFixHelp (A : Array (OptionProd Nat Nat)) (backId tnodeRange : Nat) : Array (OptionProd Nat Nat) :=
   tnodeRange.fold (fun i _ A => A.push (.some backId i)) A
 
--- #exit
+
 /--
 todo from here :
 - for goal ids passed in continuation, add to ranking system, ie. find applicables and their scores
@@ -87,9 +95,10 @@ todo from here :
 def integrateBackwardStd (l1 : LocalContext) (l2 : LocalInstances) (revCountMax : Nat)
   (target_goal_id : Nat) (term : Expr) (metadata : BackStepMetadata) (tnodeRange : Nat)
   (ta : ListProd3 Nat Nat Expr) (la : ListProd3 Nat Nat Level)
-  (st : SearchState (List Nat))
-  : MetaM (Prod5 (ListProd Nat Expr) (ListProd Nat Expr) (SearchState (List Nat)) LocalContext LocalInstances) :=
-  do -- trace set Tracing.Flags.none in do
+  (st : SearchState UInt32Array)
+  : MetaM (Prod5 (ListProd3 Nat FVarId Expr) (ListProd Nat Expr) (SearchState UInt32Array) LocalContext LocalInstances) :=
+  do
+  mtracing
   let ltxPaIn ← mergeLtxForGoalIdTruelyS target_goal_id st.introTree
   mtrace on .one with s!"[integrateBackwardStd] ltxPaIn{← ltxPaIn.ppS l1 l2 [] 0}"
   let st := {st with id_gen_back := st.id_gen_back + 1}
@@ -105,7 +114,7 @@ def integrateBackwardStd (l1 : LocalContext) (l2 : LocalInstances) (revCountMax 
   let st := {st with goalSpawn := potentialFixHelp st.goalSpawn (st.id_gen_back - 1) (tnodeRange + 1)}
   mtrace on .one with s!"[integrateBackwardStd] new goalSpawn {repr st.goalSpawn}"
   let .mk ta l1 l2 ← ta.foldlM ((.mk ListProd3.nil l1 l2) : Prod3 (ListProd3 Nat Nat Expr) _ _) (fun x y z (.mk R l1 l2) => do
-    let .mk z l1 l2 ← mvarifyTnodesRecWiContextIn z l1 l2
+    let .mk z l1 l2 ← mvarifyTnodesRec z l1 l2
     return .mk (.cons x y z R) l1 l2)
   let .mk la l1 l2 ← la.foldlM ((.mk ListProd3.nil l1 l2) : Prod3 (ListProd3 Nat Nat Level) _ _) (fun x y z (.mk R l1 l2) => do
     let .mk z l1 l2 ← mvarifyLTnodesIn z l1 l2
@@ -117,15 +126,15 @@ def integrateBackwardStd (l1 : LocalContext) (l2 : LocalInstances) (revCountMax 
   let (idgg,bt) :=
     st.backTree.addBackstep
       st.id_gen_apass target_goal_id st.id_gen_goal (st.id_gen_back - 1)
-      tnodeRange [st.id_gen_uni - 1] backTypes metadata term
+      tnodeRange (.single (st.id_gen_uni - 1).toUInt32) backTypes metadata term
   mtrace on .one with s!"[integrateBackwardStd] backtree after addBackstep {← bt.pp 0}"
   let st := {st with id_gen_goal := idgg + 1, backTree := bt} -- +1 to account for the ofPropa on top of the backstep at `addBackstep` ; very akward ... id_gen_goal only increases by exactly (tnodeRange+1)
-  let .mk IT l1 l2 ←  st.introTree.addBackStep l1 l2 target_goal_id save backTypes
+  let .mk IT l1 ←  st.introTree.addBackStep l1 target_goal_id save backTypes
   mtrace on .one with s!"[integrateBackwardStd] backtree after addBackstep {IT.pp 0}"
   let st := {st with introTree := IT}
-  let st := {st with backTree := st.backTree.addUnis st.id_gen_apass [st.id_gen_uni - 1] ta}
+  let st := {st with backTree := st.backTree.addUnis st.id_gen_apass (.single (st.id_gen_uni - 1).toUInt32) ta}
   mtrace on .one with s!"[integrateBackwardStd] backtree after addUnis {← st.backTree.pp 0}"
-  (List.range tnodeRange).foldlMcps ((.mk st (.nil : ListProd3 Nat Expr (PaIn (List Nat))) (.nil : ListProd Nat Expr) l1 l2) : Prod5 _ _ _ _ _ ) (fun i (.mk st introNewGs introFs l1 l2) q => do
+  (List.range tnodeRange).foldlMcps ((.mk st (.nil : ListProd3 Nat Expr (PaInG UInt32Array)) (.nil : ListProd3 Nat FVarId Expr) l1 l2) : Prod5 _ _ _ _ _ ) (fun i (.mk st introNewGs introFs l1 l2) q => do
     mtrace on .one with s!"[integrateBackwardStd] introing new goal correpsonding to {i}th arg of backstep"
     let BT ← WhnfR (backTypes[i]!) l1 l2
     mtrace on .one with s!"[integrateBackwardStd] cleaned goal type to {← ppExpr BT}"
@@ -148,12 +157,13 @@ def integrateBackwardStd (l1 : LocalContext) (l2 : LocalInstances) (revCountMax 
           mtrace on .zero with s!"[integrateBackwardStd] uniBEwFTMainS success with unifs {unifs} "-- {unifs.foldl [] (fun x _ _ R => x :: R)}
           let .mk st l1 l2 ← unifs.foldlM (.mk st l1 l2 : Prod3 _ _ _) (fun forwInds ta la (.mk st l1 l2) => do
             let .mk ta l1 l2 ← ta.foldlM ((.mk ListProd3.nil l1 l2) : Prod3 (ListProd3 Nat Nat Expr) _ _) (fun x y z (.mk R l1 l2) => do
-              let .mk z l1 l2 ← mvarifyTnodesRecWiContextIn z l1 l2
+              let .mk z l1 l2 ← mvarifyTnodesRec z l1 l2
               return .mk (.cons x y z R) l1 l2)
             let .mk la l1 l2 ← la.foldlM ((.mk ListProd3.nil l1 l2) : Prod3 (ListProd3 Nat Nat Level) _ _) (fun x y z (.mk R l1 l2) => do
               let .mk z l1 l2 ← mvarifyLTnodesIn z l1 l2
               return .mk (.cons x y z R) l1 l2)
-            let st ← forwInds.foldlM (fun st foId => do
+            let st ← forwInds.foldlM st (fun foId st => do
+              let foId := foId.toNat
               match st.goalSpawn[gi]! with
               | .some b p =>
                   mtrace on .zero with s!" adding backstep {b} {p} to ta"
@@ -161,16 +171,16 @@ def integrateBackwardStd (l1 : LocalContext) (l2 : LocalInstances) (revCountMax 
                   let ta := ListProd3.cons b p (.fvar ⟨name⟩) ta
                   let st ← computeNewClashesMain l1 l2 st ta la -- bumps id_gen_uni
                   mtrace on .zero with s!" clashes {st.unif_claches.toListOfProd}"
-                  let st := {st with backTree := st.backTree.addUnis st.id_gen_apass [st.id_gen_uni - 1] ta}
+                  let st := {st with backTree := st.backTree.addUnis st.id_gen_apass (.single (st.id_gen_uni - 1).toUInt32) ta}
                   mtrace on .three with s!" sanity {st.backTree.ppDirs 0}"
                   return st
               | .none =>
                   let st ← computeNewClashesMain l1 l2 st ta la -- bumps id_gen_uni
                   mtrace on .zero with s!" clashes {st.unif_claches.toListOfProd}"
-                  let st := {st with backTree := st.backTree.addUnis st.id_gen_apass [st.id_gen_uni - 1] ta}
+                  let st := {st with backTree := st.backTree.addUnis st.id_gen_apass (.single (st.id_gen_uni - 1).toUInt32) ta}
                   mtrace on .three with s!" sanity {st.backTree.ppDirs 0}"
                   return st
-              ) st
+              )
             return (.mk st l1 l2)
             )
           mtrace on .zero with s!"[integrateBackwardStd] backTree : {← st.backTree.pp 0}"
@@ -185,14 +195,15 @@ def integrateBackwardStd (l1 : LocalContext) (l2 : LocalInstances) (revCountMax 
 #check IntroTree.insertGoalsAtGoalId
 #check BackTree.addUnis
 
--- #exit
+
 
 #check 1
 
 def integratePropaedGoalStd (l1 : LocalContext) (l2 : LocalInstances) (revCountMax : Nat)
-  (target_goal_id : Nat) (type : Expr) (st : SearchState (List Nat))
-  : MetaM (Prod5 (ListProd Nat Expr) (ListProd Nat Expr) (SearchState (List Nat)) LocalContext LocalInstances) :=
-  do -- trace set Tracing.Flags.none in do
+  (target_goal_id : Nat) (type : Expr) (st : SearchState UInt32Array)
+  : MetaM (Prod5 (ListProd3 Nat FVarId Expr) (ListProd Nat Expr) (SearchState UInt32Array) LocalContext LocalInstances) :=
+  do
+  mtracing
   let ltxPaIn ← mergeLtxForGoalIdTruelyS target_goal_id st.introTree
   mtrace on .one with s!"[integratePropaedGoalStd] ltxPaIn {← ltxPaIn.ppS l1 l2 [] 0}"
   let st := {st with goalHeights := updateGoalHeight st.goalHeights target_goal_id}
@@ -216,24 +227,25 @@ def integratePropaedGoalStd (l1 : LocalContext) (l2 : LocalInstances) (revCountM
     else
       let st ← unifs.foldlM st (fun forwInds ta la st => do
         let .mk ta l1 l2 ← ta.foldlM ((.mk ListProd3.nil l1 l2) : Prod3 (ListProd3 Nat Nat Expr) _ _) (fun x y z (.mk R l1 l2) => do
-          let .mk z l1 l2 ← mvarifyTnodesRecWiContextIn z l1 l2
+          let .mk z l1 l2 ← mvarifyTnodesRec z l1 l2
           return .mk (.cons x y z R) l1 l2)
         let .mk la l1 l2 ← la.foldlM ((.mk ListProd3.nil l1 l2) : Prod3 (ListProd3 Nat Nat Level) _ _) (fun x y z (.mk R l1 l2) => do
           let .mk z l1 l2 ← mvarifyLTnodesIn z l1 l2
           return .mk (.cons x y z R) l1 l2)
-        let st ← forwInds.foldlM (fun st foId => do
+        let st ← forwInds.foldlM st (fun foId st => do
+          let foId := foId.toNat
           match st.goalSpawn[gi]! with
           | .some b p =>
               let name := if st.uNodes.contains foId then unode foId else gnode foId
               let ta := ListProd3.cons b p (.fvar ⟨name⟩) ta
               let st ← computeNewClashesMain l1 l2 st ta la -- bumps id_gen_uni
-              let st := {st with backTree := st.backTree.addUnis st.id_gen_apass [st.id_gen_uni - 1] ta}
+              let st := {st with backTree := st.backTree.addUnis st.id_gen_apass (.single (st.id_gen_uni - 1).toUInt32) ta}
               return st
           | .none =>
               let st ← computeNewClashesMain l1 l2 st ta la -- bumps id_gen_uni
-              let st := {st with backTree := st.backTree.addUnis st.id_gen_apass [st.id_gen_uni - 1] ta}
+              let st := {st with backTree := st.backTree.addUnis st.id_gen_apass (.single (st.id_gen_uni - 1).toUInt32) ta}
               return st
-          ) st
+          )
         return st
         )
       mtrace on .zero with s!"[integratePropaedGoalStd] backTree : {← st.backTree.pp 0}"
@@ -248,9 +260,10 @@ def integratePropaedGoalStd (l1 : LocalContext) (l2 : LocalInstances) (revCountM
 /-- like `integratePropaedGoalStd`, but no height and depth bump -/
 def integrateInitialGoal (l1 : LocalContext) (l2 : LocalInstances) (revCountMax : Nat)
   (target_goal_id : Nat) (type : Expr)
-  (st : SearchState (List Nat))
-  : MetaM (Prod5 (ListProd Nat Expr) (ListProd Nat Expr) (SearchState (List Nat)) LocalContext LocalInstances) :=
-  do --trace set Tracing.Flags.none in do
+  (st : SearchState UInt32Array)
+  : MetaM (Prod5 (ListProd3 Nat FVarId Expr) (ListProd Nat Expr) (SearchState UInt32Array) LocalContext LocalInstances) :=
+  do
+  mtracing
   let ltxPaIn ← mergeLtxForGoalIdTruelyS target_goal_id st.introTree
   mtrace on .one with s!"[integrateInitialGoal] ltxPaIn {← ltxPaIn.ppS l1 l2 [] 0}"
   let type ← WhnfR type l1 l2
@@ -269,24 +282,25 @@ def integrateInitialGoal (l1 : LocalContext) (l2 : LocalInstances) (revCountMax 
     else
       let (.mk st l1 l2) ← unifs.foldlM ((.mk st l1 l2) : Prod3 _ _ _) (fun forwInds ta la (.mk st l1 l2) => do
         let .mk ta l1 l2 ← ta.foldlM ((.mk ListProd3.nil l1 l2) : Prod3 (ListProd3 Nat Nat Expr) _ _) (fun x y z (.mk R l1 l2) => do
-          let .mk z l1 l2 ← mvarifyTnodesRecWiContextIn z l1 l2
+          let .mk z l1 l2 ← mvarifyTnodesRec z l1 l2
           return .mk (.cons x y z R) l1 l2)
         let .mk la l1 l2 ← la.foldlM ((.mk ListProd3.nil l1 l2) : Prod3 (ListProd3 Nat Nat Level) _ _) (fun x y z (.mk R l1 l2) => do
           let .mk z l1 l2 ← mvarifyLTnodesIn z l1 l2
           return .mk (.cons x y z R) l1 l2)
-        let st ← forwInds.foldlM (fun st foId => do
+        let st ← forwInds.foldlM st (fun foId st => do
+          let foId := foId.toNat
           match st.goalSpawn[gi]! with
           | .some b p =>
               let name := if st.uNodes.contains foId then unode foId else gnode foId
               let ta := ListProd3.cons b p (.fvar ⟨name⟩) ta
               let st ← computeNewClashesMain l1 l2 st ta la -- bumps id_gen_uni
-              let st := {st with backTree := st.backTree.addUnis st.id_gen_apass [st.id_gen_uni - 1] ta}
+              let st := {st with backTree := st.backTree.addUnis st.id_gen_apass (.single (st.id_gen_uni - 1).toUInt32) ta}
               return st
           | .none =>
               let st ← computeNewClashesMain l1 l2 st ta la -- bumps id_gen_uni
-              let st := {st with backTree := st.backTree.addUnis st.id_gen_apass [st.id_gen_uni - 1] ta}
+              let st := {st with backTree := st.backTree.addUnis st.id_gen_apass (.single (st.id_gen_uni - 1).toUInt32) ta}
               return st
-          ) st
+          )
         return (.mk st l1 l2)
         )
       mtrace on .zero with s!"[integrateInitialGoal] backTree : {← st.backTree.pp 0}"

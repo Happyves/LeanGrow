@@ -62,7 +62,7 @@ structure ForwCandData where
   isProp : Bool
   type : Expr
   term : Expr
-  UGinds : List Nat
+  UGinds : UInt32Array
   md : ForwMetaData
 deriving Inhabited
 
@@ -95,7 +95,7 @@ structure SearchState (IdxCollType : Type _) where
   id_gen_goal : Nat := 0
   id_gen_uni : Nat := 0
   id_gen_apass : Nat := 0
-  cycleAddForw : ListProd Nat Expr
+  cycleAddForw : ListProd3 Nat FVarId Expr
   cycleAddBack : ListProd Nat Expr
   backTree : BackTree
   introTree : IntroTree IdxCollType
@@ -103,7 +103,7 @@ structure SearchState (IdxCollType : Type _) where
   goalSpawn : Array (OptionProd Nat Nat)
   unif_assign : Array ((ListProd3 Nat Nat Expr) × (ListProd3 Nat Nat Level))
     -- indexed by uni_id, tnode assignements, level tnode assignements
-  unif_claches : ListProd Nat (List Nat)
+  unif_claches : ListProd Nat IdxCollType
   depsCache : Array DepCache
     -- indexed by u-g-inds ; contains decls that dependen on the indexes ugnode ; needed for induction and rw
 

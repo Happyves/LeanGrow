@@ -82,7 +82,6 @@ def addThms (l1 : LocalContext) (l2 : LocalInstances)
               (Prod5.mk PaInG.dead st.stdForwSetTrie_idxToSinkIdx st.stdForwSetTrie_idxToThmIdx.size l1 l2)
               (fun e si (.mk T hyptosink i l1 l2) => do
                 let ⟨res,l1,l2⟩ ← T.insertS l1 l2 e i
-                mtrace on .zero with s!" for forw, added hyp {← ppExpr e}"
                 let hyptosink := hyptosink.push si
                 return (.mk res hyptosink (i+1) l1 l2))
             let st := {st with stdForwSetTrie := st.stdForwSetTrie.easyInsert FwdPaIn d}
@@ -143,7 +142,7 @@ def addThms (l1 : LocalContext) (l2 : LocalInstances)
         | _ =>
           addThms l1 l2 st sg? locThmIdx ugNode more
 
-#exit
+
 
 
 -- The mtraces cause masive increased compilation time
@@ -151,22 +150,23 @@ def introCore
   (l1 : LocalContext) (l2 : LocalInstances)
   (st : SearchState UInt32Array) (ugNode : Name) (unode? : Option Expr) (T : Expr)
   : MetaM (Prod3 (SearchState UInt32Array) LocalContext LocalInstances) :=
-  do --trace set Tracing.Flags.none in do
-  --mtrace on .zero with s!"[introCore] call to add {ugNode} of type {← ppExpr T}"
+  do
+  mtracing
+  mtrace on .zero with s!"[introCore] call to add {ugNode} of type {← ppExpr T}"
   let ugIs := UInt32Array.empty  --T.getGUFVarsIds.foldl (fun R fid => match fid with | ⟨.num _ i⟩ => i :: R | _ => R) []
   -- ↑ change to [] yielded much better result in sandbox 1
-  --mtrace on .zero with s!"[introCore] ugIs {ugIs}"
+  mtrace on .zero with s!"[introCore] ugIs {ugIs}"
   let st := {st with forwHeights := updateForwHeight st.forwHeights ugIs}
   let st := {st with forwDepths := updateForwDepth st.forwDepths ugIs}
-  --mtrace on .one with s!"[introCore] new forwHeights {st.forwHeights}"
+  mtrace on .one with s!"[introCore] new forwHeights {st.forwHeights}"
   let st := {st with forwMetadata := st.forwMetadata.push .intro}
-  --mtrace on .one with s!"[introCore] new forwMetadata {repr st.forwMetadata}"
-  --mtrace on .one with s!"[introCore] new forwDepths {st.forwDepths.map (fun x => x.depth)}"
+  mtrace on .one with s!"[introCore] new forwMetadata {repr st.forwMetadata}"
+  mtrace on .one with s!"[introCore] new forwDepths {st.forwDepths.map (fun x => x.depth)}"
   let locThmIdx :=
     match st.thmData.find? introModuleB with
     | .none => 0
     | .some thms => thms.size
-  --mtrace on .zero with s!"[introCore] locThmIdx {locThmIdx}"
+  mtrace on .zero with s!"[introCore] locThmIdx {locThmIdx}"
   let .mk sg? thms l1 l2 := ← (do
     match T.zeta with
     | x@(.forallE ..) => processForMain l1 l2 introModule locThmIdx (.inr ⟨ugNode⟩) #[] 0 x
@@ -174,96 +174,26 @@ def introCore
         match parseEqIff x with
         | .some .. => processForMain l1 l2 introModule locThmIdx (.inr ⟨ugNode⟩) #[] 0 x
         | .none => return .mk false .nil l1 l2)
-  --mtrace on .zero with s!"[introCore] generated local theorems {thms.map (fun x => repr x.name)}"
-  let addThms (l1 : LocalContext) (l2 : LocalInstances) : MetaM (Prod3 (SearchState UInt32Array) LocalContext LocalInstances) := do
-    Meta.withResetRecDepth do
-      --mtrace on .zero with s!"[introCore] reset rec depth"
-      match thms with
-      | d@(.std _ _ _ hyps mctx _ goal sinks) :: [] =>
-          --mtrace on .zero with s!"[introCore] std case"
-          --mtrace on .one with s!"[introCore] sinks {sinks}"
-          mctx.load -- paranoina ?
-          let ⟨sofarBack,l1,l2⟩ ← st.stdBackPaIn.insertS l1 l2 goal st.thm_data.size
-          let st := {st with stdBackPaIn := sofarBack}
-          --mtrace on .zero with s!"[introCore] add goal to back"
-          let HforFwdPaIn := sinks.foldl (fun S s => match hyps[s]! with | .inst .. => S | .reg type => (type) :: S) []
-          HforFwdPaIn.foldlMcps (⟨PaIn.dead, st.stdForwSetTrie_idxToThmIdx.size,l1,l2⟩ : Prod4 _ _ _ _)  (fun e ⟨T,i,l1,l2⟩ q => do
-            let ⟨res,l1,l2⟩ ← T.insertS l1 l2 e i
-            --mtrace on .zero with s!"[introCore] for forw, added hyp {← ppExpr e}"
-            q ⟨res, i+1,l1,l2⟩)
-              <| fun ⟨FwdPaIn,_,l1,l2⟩ => do
-                let st := {st with stdForwSetTrie := st.stdForwSetTrie.easyInsert FwdPaIn d}
-                  -- TODO make efficient version of ↑ that merges more
-                let st := {st with ugnodeToThmIdx := st.ugnodeToThmIdx.insert locThmIdx st.thm_data.size}
-                let st := {st with thmIdxToUGnode := st.thmIdxToUGnode.insert st.thm_data.size locThmIdx}
-                let st := {st with thmData := st.thmData.upsert introModuleB (fun | .none => (.some #[d]) | .some A => .some (A.push d))}
-                let st := {st with thmNameToHypIdx := st.thmNameToHypIdx.insert ugNode.toString.toUTF8 (List.Ico st.stdForwSetTrie_idxToThmIdx.size (st.stdForwSetTrie_idxToThmIdx.size + HforFwdPaIn.length))}
-                let st := {st with stdForwSetTrie_idxToThmIdx := (st.stdForwSetTrie_idxToThmIdx.pushN st.thm_data.size) HforFwdPaIn.length}
-                let st := {st with thm_data := st.thm_data.push d}
-                return ⟨st,l1,l2⟩
-      | fst@(.rw _ _ _ goal replacement _ mctx _ _) :: snd :: [] => do
-          --mtrace on .zero with s!"[introCore] rw case"
-          mctx.load -- paranoina ?
-          --mtrace on .zero with s!"[introCore] sg? {sg?} "
-          if !sg?
-          then
-            let ⟨sofarBackRW,l1,l2⟩ ← st.rwBackPaIn.insertS l1 l2 goal st.thm_data.size
-            let st := {st with rwBackPaIn := sofarBackRW}
-            --mtrace on .zero with s!"[introCore] added left to back"
-            let ⟨sofarFwdRW,l1,l2⟩ ← st.rwForwPaIn.insertS l1 l2 goal st.thm_data.size
-            let st := {st with rwForwPaIn := sofarFwdRW}
-            --mtrace on .zero with s!"[introCore] added left to forw"
-            let st := {st with ugnodeToThmIdx := st.ugnodeToThmIdx.insert locThmIdx st.thm_data.size}
-            let st := {st with thmIdxToUGnode := st.thmIdxToUGnode.insert st.thm_data.size locThmIdx}
-            let st := {st with thm_data := st.thm_data.push fst}
-            let ⟨sofarBackRW,l1,l2⟩ ← st.rwBackPaIn.insertS l1 l2 replacement st.thm_data.size
-            let st := {st with rwBackPaIn := sofarBackRW}
-            --mtrace on .zero with s!"[introCore] added right to back"
-            let ⟨sofarFwdRW,l1,l2⟩ ← st.rwForwPaIn.insertS l1 l2 replacement st.thm_data.size
-            let st := {st with rwForwPaIn := sofarFwdRW}
-            --mtrace on .zero with s!"[introCore] added rigth to forw"
-            let st := {st with ugnodeToThmIdx := st.ugnodeToThmIdx.insert (locThmIdx+1) st.thm_data.size}
-            let st := {st with thmIdxToUGnode := st.thmIdxToUGnode.insert st.thm_data.size (locThmIdx+1)}
-            let st := {st with thmData := st.thmData.upsert introModuleB (fun | .none => (.some #[fst,snd]) | .some A => .some ((A.push fst).push snd))}
-            let st := {st with thm_data := st.thm_data.push snd}
-            return ⟨st,l1,l2⟩
-          else
-            let ⟨sofarBackRW,l1,l2⟩ ← st.rwBackPaIn.insertS l1 l2 goal st.thm_data.size
-            let st := {st with rwBackPaIn := sofarBackRW}
-            --mtrace on .zero with s!"[introCore] added left to back"
-            let st := {st with ugnodeToThmIdx := st.ugnodeToThmIdx.insert locThmIdx st.thm_data.size}
-            let st := {st with thmIdxToUGnode := st.thmIdxToUGnode.insert st.thm_data.size locThmIdx}
-            let st := {st with thm_data := st.thm_data.push fst}
-            let ⟨sofarBackRW,l1,l2⟩ ← st.rwBackPaIn.insertS l1 l2 replacement st.thm_data.size
-            let st := {st with rwBackPaIn := sofarBackRW}
-            --mtrace on .zero with s!"[introCore] added right to back"
-            let st := {st with ugnodeToThmIdx := st.ugnodeToThmIdx.insert (locThmIdx+1) st.thm_data.size}
-            let st := {st with thmIdxToUGnode := st.thmIdxToUGnode.insert st.thm_data.size (locThmIdx+1)}
-            let st := {st with thmData := st.thmData.upsert introModuleB (fun | .none => (.some #[fst,snd]) | .some A => .some ((A.push fst).push snd))}
-            let st := {st with thm_data := st.thm_data.push snd}
-            return ⟨st,l1,l2⟩
-      | _ => return ⟨st,l1,l2⟩
-  let ⟨st,l1,l2⟩  ← addThms l1 l2
+  mtrace on .zero with s!"[introCore] generated local theorems {thms.foldl [] (fun _ x L => x.name :: L)}"
+  let ⟨st,l1,l2⟩  ← addThms l1 l2 st sg? locThmIdx ugNode.toString.toUTF8 thms
   match unode? with
   | .none =>
       let ⟨ufv,l1,l2⟩ ← WithLocalDecl ugNode T l1 l2
-      let dec ← FVarId.GetDecl ufv l1 l2
-      let st := updateDepsCachesPreCompNoMonad dec ugIs st
-      --mtrace on .zero with s!"[introCore] updated deps to {st.depsCache.map (fun x => x.mapTRR (fun y => y.userName))}"
+      let st ← updateDepsCachesPreCompNoMonad l1 l2 ufv st
+      mtrace on .zero with s!"[introCore] updated deps to {st.depsCache.map (fun x => x.fTrans)}"
       let st := {st with id_gen_forw := st.id_gen_forw + 1}
       return ⟨st,l1,l2⟩
   | .some val =>
       let ⟨ufv,l1,l2⟩ ← WithLetDecl ugNode T val l1 l2
-      let dec ← FVarId.GetDecl ufv l1 l2
-      let st := updateDepsCachesPreCompNoMonad dec ugIs st
-      --mtrace on .zero with s!"[introCore] updated deps to {st.depsCache.map (fun x => x.mapTRR (fun y => y.userName))}"
+      let st ← updateDepsCachesPreCompNoMonad l1 l2 ufv st
+      mtrace on .zero with s!"[introCore] updated deps to {st.depsCache.map (fun x => x.fTrans)}"
       let st := {st with id_gen_forw := st.id_gen_forw + 1}
       return ⟨st,l1,l2⟩
 
 
 #check 1
 #check IntroTree.integrateIntro
-#exit
+
 
 def IntroTree.integrateIntroS (l1 : LocalContext)
   (spawn_goal_id : Nat) (IT : IntroTree UInt32Array) (head_goal_id : Nat) (head_goal : Expr) (newIntroForw : ListProd3 Nat FVarId Expr)
@@ -279,12 +209,12 @@ def IntroTree.integrateIntroS (l1 : LocalContext)
 def BackTree.integrateIntroS
   (pass spawn_goal_id : Nat) (BT : BackTree) (head_back_id head_goal_id : Nat) (head_goal : Expr) (newIntroForw : ListProd FVarId Expr)
   : BackTree :=
-  let introB : BackTree := .ofIntro pass head_back_id newIntroForw [] [head_goal_id] [.ofGoal pass head_goal_id head_goal [] [] []]
-  BT.modifyAtGoalId spawn_goal_id (fun _ => pass) (fun l => l ++ [head_back_id]) (fun l => l ++ [head_goal_id])
+  let introB : BackTree := .ofIntro pass head_back_id newIntroForw .empty (.single head_goal_id.toUInt32) [.ofGoal pass head_goal_id head_goal .empty .empty []]
+  BT.modifyAtGoalId spawn_goal_id (fun _ => pass) (fun l => l.push head_back_id.toUInt32) (fun l => l.push head_goal_id.toUInt32)
   (fun
-    | .ofGoal _ i t bd gd sols => .ofGoal pass i t (bd ++ [head_back_id]) (gd ++ [head_goal_id]) (introB :: sols)
-    | .ofPropa _ j i t bd gd sols => .ofPropa pass j i t (bd ++ [head_back_id]) (gd ++ [head_goal_id]) (introB :: sols)
-    | .ofIntro _ i bins bd gd sols => .ofIntro pass i bins (bd ++ [head_back_id]) (gd ++ [head_goal_id]) (introB :: sols) -- don't really expect this, but no issue if we do ?
+    | .ofGoal _ i t bd gd sols => .ofGoal pass i t (bd.push head_back_id.toUInt32) (gd.push head_goal_id.toUInt32) (introB :: sols)
+    | .ofPropa _ j i t bd gd sols => .ofPropa pass j i t (bd.push head_back_id.toUInt32) (gd.push head_goal_id.toUInt32) (introB :: sols)
+    | .ofIntro _ i bins bd gd sols => .ofIntro pass i bins (bd.push head_back_id.toUInt32) (gd.push head_goal_id.toUInt32) (introB :: sols) -- don't really expect this, but no issue if we do ?
     | x => panic s!"[BackTree.integrateIntroS] reached an branch {repr x} despite targeting goal {spawn_goal_id}"
     )
 

@@ -5,12 +5,12 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Author: Yves Jäckle.
 -/
 
-import LeanGrowBeta.Search.IntroTree.Operations
-import LeanGrowBeta.Search.BackTree.Types
-import LeanGrowBeta.Search.Types
-import LeanGrowBeta.Search.API.UnifyCore
-import LeanGrowBeta.Search.API.IntegrateForw
-import LeanGrowBeta.Search.API.IntegrateBack
+import LeanGrow.Src.Search.IntroTree.Operations
+import LeanGrow.Src.Search.BackTree.Types
+import LeanGrow.Src.Search.Types
+import LeanGrow.Src.Search.API.UnifyCore
+import LeanGrow.Src.Search.API.IntegrateForw
+import LeanGrow.Src.Search.API.IntegrateBack
 
 
 open Lean Meta
@@ -21,13 +21,13 @@ open Lean Meta
 
 structure AssembleData where
   id_gen_goal : Nat
-  fullVals : ListProd Expr (List Nat)
-  partialVals : ListProd Expr (List Nat)
+  fullVals : ListProd Expr UInt32Array
+  partialVals : ListProd Expr UInt32Array
   backTree : BackTree
-  fullValsToAssign : ListProd3 Expr (List Nat) ForwMetaData
+  fullValsToAssign : ListProd3 Expr UInt32Array ForwMetaData
   propaGs : ListProd Nat Expr
   goalSpawn : Array (OptionProd Nat Nat)
-  proGIs : List Nat
+  proGIs : UInt32Array
 deriving Inhabited, Repr
 
 
@@ -36,7 +36,7 @@ deriving Inhabited, Repr
 partial def instaLvlTnodeAndAbstractBindTnodes
   (l1 : LocalContext) (l2 : LocalInstances)
   (unif_assign : Array ((ListProd3 Nat Nat Expr) × (ListProd3 Nat Nat Level)))
-  (unis : List Nat) (e : Expr) (backIdx argNum : Nat) : MetaM (Prod4 Expr Bool LocalContext LocalInstances) :=
+  (unis : UInt32Array) (e : Expr) (backIdx argNum : Nat) : MetaM (Prod4 Expr Bool LocalContext LocalInstances) :=
   let rec bind (i : Nat) (e : Expr) : MetaM Expr := do
     if i != 0
     then
@@ -48,16 +48,16 @@ partial def instaLvlTnodeAndAbstractBindTnodes
     else
       return e
   let relevantLvL : ListProd3 Nat Nat Level :=
-    unis.foldl (fun R i =>
-      let U := (unif_assign[i]!).2
+    unis.foldl .nil (fun i R =>
+      let U := (unif_assign[i.toNat]!).2
       U.foldl R ListProd3.cons
-      ) .nil
+      )
   let relevantE : ListProd3 Nat Nat Expr :=
-    unis.foldl (fun R i =>
-      let U := (unif_assign[i]!).1
+    unis.foldl .nil (fun i R =>
+      let U := (unif_assign[i.toNat]!).1
       U.foldl R ListProd3.cons
-      ) .nil
-  let onLvl (l1 : LocalContext) (l2 : LocalInstances) (lvl : Level) : MetaM (Prod4 (Except Level Level) Bool LocalContext LocalInstances) :=
+      )
+  let onLvl (l1 : LocalContext) (l2 : LocalInstances) (lvl : Level) : MetaM (Prod4 Level Bool LocalContext LocalInstances) :=
     lvl.onAllSubtermsWiWorkerCpsSkipTravState l1 l2 false (fun l B l1 l2 => do
     match l with
     | .param (.num (.num _ b) p) | .mvar ⟨.num (.num _ b) p⟩ =>
@@ -72,14 +72,12 @@ partial def instaLvlTnodeAndAbstractBindTnodes
     match e with
     | .sort u =>
         let .mk l B  l1 l2 ← onLvl l1 l2 u
-        let l := match l with | .ok l => l | .error l => l
         if B
         then return .mk (.error e) B l1 l2
         else return .mk (.ok (.sort l)) b l1 l2
     | .const n us =>
         us.foldlMcps (.mk [] l1 l2 : Prod3 _ _ _) (fun u (.mk us l1 l2) k => do
           let .mk u B  l1 l2 ← onLvl l1 l2 u
-          let u := match u with | .ok l => l | .error l => l
           if B
           then return .mk (.error e) B l1 l2
           else k (.mk (u :: us) l1 l2)) <| fun (.mk us l1 l2) => do
@@ -101,7 +99,7 @@ partial def instaLvlTnodeAndAbstractBindTnodes
   return .mk e B l1 l2
 
 
--- #exit
+
 
 def getFirstGoalIdFromIntroArgs (args : List BackTree) : Nat :=
   match args with
@@ -117,7 +115,7 @@ def getFirstGoalIdFromIntroArgs (args : List BackTree) : Nat :=
 def expandUGnodesATIntro
   (l1 : LocalContext) (l2 : LocalInstances) (meaningfulUGnode : List Nat) (e : Expr)
   : MetaM (Prod3 Expr LocalContext LocalInstances) :=
-  e.onAllSubtermsMTR l1 l2 (fun e l1 l2 => do
+  e.onAllSubtermsMTR l1 l2 (fun e _ l1 l2 => do
     match e with
     | x@(.fvar y@⟨.num kind idx⟩) =>
         if kind != `g || kind != `u
@@ -178,24 +176,26 @@ def Lean.Expr.getGUFVarsIdsRec (e : Expr) (l1 : LocalContext) (l2 : LocalInstanc
       | _ => return .mk (.std sofar) l1 l2
       )
 
+#check 1
 
 
 def introAssemble (l1 : LocalContext) (l2 : LocalInstances) (uNodes : Array Nat)
-  (IT : IntroTree (List Nat))
+  (IT : IntroTree UInt32Array)
   (id_gen_goal : Nat) (goalSpawn : Array (OptionProd Nat Nat))
   (go : LocalContext → LocalInstances → Nat → BackTree → Array (OptionProd Nat Nat) → MetaM (Prod3 AssembleData LocalContext LocalInstances))
-  (pass back_id : Nat ) (gnIdxAndTy : ListProd FVarId Expr) (bdirs gdirs : List Nat)
+  (pass back_id : Nat ) (gnIdxAndTy : ListProd FVarId Expr) (bdirs gdirs : UInt32Array)
   (args : List BackTree) : MetaM (Prod3 AssembleData LocalContext LocalInstances) :=
-  do -- trace set Tracing.Flags.none in do
+  do
+  mtracing
   let someg := getFirstGoalIdFromIntroArgs args
   mtrace on .zero with s!"[introAssemble] getFirstGoalIdFromIntroArgs found {someg}"
   --let meaningfulUGnode := IT.gatherUGidsToGoalId someg []
-  let meaningfulUGnode := IT.gatherUGidsAtGoalId someg
+  let meaningfulUGnode := IT.gatherUGidsAtGoalId (fun x y => y.oContains x.toUInt32) UInt32Array.union someg
   -- let meaningfulUGnode := meaningfulUGnode.reverse
   -- -- `meaningfulUGnode` inds are in increasing order, and since ug-ind can only depend on smaller ug-ind reversing does the job
   mtrace on .zero with s!"[introAssemble] meaningfulUGnode {meaningfulUGnode}"
-  let rec loop (id_gen_goal : Nat) (goalSpawn : Array (OptionProd Nat Nat)) (fV pV : ListProd Expr (List Nat)) (as : List BackTree)
-    (fVtA : ListProd3 Expr (List Nat) ForwMetaData) (propaGs : ListProd Nat Expr) (proGIs : List Nat) : List BackTree → MetaM (Prod3 AssembleData LocalContext LocalInstances)
+  let rec loop (id_gen_goal : Nat) (goalSpawn : Array (OptionProd Nat Nat)) (fV pV : ListProd Expr UInt32Array) (as : List BackTree)
+    (fVtA : ListProd3 Expr UInt32Array ForwMetaData) (propaGs : ListProd Nat Expr) (proGIs : UInt32Array) : List BackTree → MetaM (Prod3 AssembleData LocalContext LocalInstances)
     | a :: moa => do
         let .mk ⟨id_gen_goal,lfV,lpV,nBT,lfVtA,newpropaGs,goalSpawn,prGI⟩ l1 l2 ← go l1 l2 id_gen_goal a goalSpawn
         mtrace on .zero with s!"[introAssemble] local return:"
@@ -209,12 +209,13 @@ def introAssemble (l1 : LocalContext) (l2 : LocalInstances) (uNodes : Array Nat)
           mtrace on .zero with s!"[introAssemble] expanding {← ppExpr e}"
           -- We could do ↓ but ↓ ↓  is much more readable and efficient
           -- expandUGnodesATIntro meaningfulUGnode e <| fun e => do
-          --   mtrace on .zero with s!"[introAssemble] expanded to {← ppExpr e}"
+            -- mtrace on .zero with s!"[introAssemble] expanded to {← ppExpr e}"
           let .mk bfvs l1 l2 ← e.getGUFVarsIdsRec l1 l2
           let localFvs := (gnIdxAndTy.foldl bfvs (fun x _ y => x :: y)).map (fun | ⟨.num _ i⟩ => i | _ => panic! "[introAssemble] incorrect fvar format")
-          let localFvs := localFvs.mergeSort (· ≤ ·)
-          let meaningfulUGnode := List.orderedIntersect meaningfulUGnode localFvs
-          let res ← helpBind' l1 l2 meaningfulUGnode.reverse uNodes e
+          let localFvs := localFvs.foldl (fun R i => R.oInsert i.toUInt32) UInt32Array.empty
+          let meaningfulUGnode := UInt32Array.inter meaningfulUGnode localFvs
+          let meaningfulUGnode_rev := meaningfulUGnode.foldl [] (fun i L => i.toNat :: L)
+          let res ← helpBind' l1 l2 meaningfulUGnode_rev uNodes e
           mtrace on .zero with s!"[introAssemble] expanded to {← ppExpr res}"
           -- let res ← helpBind l1 l2 gnIdxAndTy e
           -- mtrace on .zero with s!"[introAssemble] bounded to {← ppExpr res}"
@@ -227,9 +228,10 @@ def introAssemble (l1 : LocalContext) (l2 : LocalInstances) (uNodes : Array Nat)
               --   mtrace on .zero with s!"[introAssemble] expanded to {← ppExpr e}"
               let .mk bfvs l1 l2 ← e.getGUFVarsIdsRec l1 l2
               let localFvs := (gnIdxAndTy.foldl bfvs (fun x _ y => x :: y)).map (fun | ⟨.num _ i⟩ => i | _ => panic! "[introAssemble] incorrect fvar format")
-              let localFvs := localFvs.mergeSort (· ≤ ·)
-              let meaningfulUGnode := List.orderedIntersect meaningfulUGnode localFvs
-              let res ← helpBind' l1 l2 meaningfulUGnode.reverse uNodes e
+              let localFvs := localFvs.foldl (fun R i => R.oInsert i.toUInt32) UInt32Array.empty
+              let meaningfulUGnode := UInt32Array.inter meaningfulUGnode localFvs
+              let meaningfulUGnode_rev := meaningfulUGnode.foldl [] (fun i L => i.toNat :: L)
+              let res ← helpBind' l1 l2 meaningfulUGnode_rev uNodes e
               mtrace on .zero with s!"[introAssemble] expanded to {← ppExpr res}"
               -- let res ← helpBind l1 l2 gnIdxAndTy e
               -- mtrace on .zero with s!"[introAssemble] bounded to {← ppExpr res}"
@@ -240,14 +242,14 @@ def introAssemble (l1 : LocalContext) (l2 : LocalInstances) (uNodes : Array Nat)
                 let fVtA := lfVtA.append fVtA
                 loop id_gen_goal goalSpawn fV pV as fVtA
                   (newpropaGs.append propaGs)
-                  (proGIs ++ prGI) -- we expect prGI to have larger indices, so add it at back to maintain sorted
+                  (.union proGIs prGI) -- we expect prGI to have larger indices, so add it at back to maintain sorted
                     moa
     | [] => do
-      let new := BackTree.ofIntro pass back_id gnIdxAndTy bdirs (gdirs ++ proGIs) as
+      let new := BackTree.ofIntro pass back_id gnIdxAndTy bdirs (.union gdirs proGIs) as
       -- let fVtA := fV.foldl fVtA (fun e unis R => .cons back_id 0 e unis R)
       mtrace on .zero with s!"[introAssemble] new replacement branch {← new.pp 0}"
       return .mk ⟨id_gen_goal,fV,pV,new, fVtA, propaGs, goalSpawn, proGIs⟩ l1 l2
-  loop id_gen_goal goalSpawn .nil .nil [] .nil .nil .nil args
+  loop id_gen_goal goalSpawn .nil .nil [] .nil .nil .empty args
 
 
 #check 1
@@ -256,10 +258,11 @@ def introAssemble (l1 : LocalContext) (l2 : LocalInstances) (uNodes : Array Nat)
 partial def backAssemble
   (l1 : LocalContext) (l2 : LocalInstances)
   (go : LocalContext → LocalInstances → Nat → BackTree → Array (OptionProd Nat Nat) → MetaM (Prod3 AssembleData LocalContext LocalInstances))
-  (id_gen_goal : Nat) (goalSpawn : Array (OptionProd Nat Nat)) (unif_claches : ListProd Nat (List Nat)) (unif_assign : Array (ListProd3 Nat Nat Expr × ListProd3 Nat Nat Level))
-  (point : BackTree) (pass back_id : Nat ) (mdata : BackStepMetadata) (backExpr : Expr) (bdirs gdirs : Array (List Nat))
+  (id_gen_goal : Nat) (goalSpawn : Array (OptionProd Nat Nat)) (unif_claches : ListProd Nat UInt32Array) (unif_assign : Array (ListProd3 Nat Nat Expr × ListProd3 Nat Nat Level))
+  (point : BackTree) (pass back_id : Nat ) (mdata : BackStepMetadata) (backExpr : Expr) (bdirs gdirs : Array UInt32Array)
   (args : Array BackTree) : MetaM (Prod3 AssembleData LocalContext LocalInstances) :=
-  -- trace set Tracing.Flags.none in
+  do
+  mtracing
   let rec nonTrivialAssigns (A : Array Expr) (i : Nat) : Bool :=
     if i < A.size
     then
@@ -270,8 +273,8 @@ partial def backAssemble
     else
       true
   let rec loop (id_gen_goal : Nat) (goalSpawn : Array (OptionProd Nat Nat))
-    (fV pV : ListProd (Array Expr) (List Nat)) (args : Array BackTree) (fVtA : ListProd3 Expr (List Nat) ForwMetaData)
-    (propa : ListProd (ListProd3 Nat Nat Expr) (List Nat)) (propaGs : ListProd Nat Expr) (proGIs : Array (List Nat))
+    (fV pV : ListProd (Array Expr) UInt32Array) (args : Array BackTree) (fVtA : ListProd3 Expr UInt32Array ForwMetaData)
+    (propa : ListProd (ListProd3 Nat Nat Expr) UInt32Array) (propaGs : ListProd Nat Expr) (proGIs : Array UInt32Array)
     (i : Nat) : MetaM (Prod3 AssembleData LocalContext LocalInstances) := do
       mtrace on .zero with s!"[backAssemble] loop with fV {← fV.foldlM ListProd.nil (fun x y z => return .cons (← x.mapM ppExpr) y z)}"
       mtrace on .zero with s!"[backAssemble] loop with pV {← pV.foldlM ListProd.nil (fun x y z => return .cons (← x.mapM ppExpr) y z)}"
@@ -291,9 +294,9 @@ partial def backAssemble
         let fVtA := lfVtA.append fVtA
         -- let fVtA := lfV.foldl fVtA (fun e is R => .cons back_id i e is R)
         let fV ← fV.foldlM ListProd.nil (fun candArgs cstr R => do -- in MetaM for tracing
-          lfV.foldlM (R : ListProd (Array Expr) (List Nat)) (fun e locCstr R => do
+          lfV.foldlM (R : ListProd (Array Expr) UInt32Array) (fun e locCstr R => do
             -- not type anontating R in ↑ results in universe issue in 4.18
-            let relCstr := List.orderedDiff locCstr cstr
+            let relCstr := UInt32Array.diff locCstr cstr
             mtrace on .zero with s!"[backAssemble] (fV) testing for clash {relCstr} vs {cstr} for extention by {← ppExpr e}"
             if unifClashOfMemoMulti relCstr cstr unif_claches
             then
@@ -301,12 +304,12 @@ partial def backAssemble
               return R
             else
               mtrace on .zero with s!"[backAssemble] no clash! "
-              return ListProd.cons (candArgs.set! i e) (List.orderedUnion relCstr cstr) R
+              return ListProd.cons (candArgs.set! i e) (.union relCstr cstr) R
             )
           )
         let pV ← pV.foldlM ListProd.nil (fun candArgs cstr R => do
           (lfV.append lpV).foldlM (.cons (candArgs.set! i (Expr.fvar ⟨tnode back_id i⟩)) cstr R) (fun e locCstr R => do
-            let relCstr := List.orderedDiff locCstr cstr
+            let relCstr := UInt32Array.diff locCstr cstr
             mtrace on .zero with s!"[backAssemble] (pV) testing for clash {relCstr} vs {cstr} for extention by {← ppExpr e}"
             if unifClashOfMemoMulti relCstr cstr unif_claches
             then
@@ -314,14 +317,14 @@ partial def backAssemble
               return R
             else
               mtrace on .zero with s!"[backAssemble] no clash! "
-              return .cons (candArgs.set! i e) (List.orderedUnion relCstr cstr) R
+              return .cons (candArgs.set! i e) (.union relCstr cstr) R
             )
           )
         let pV := pV.foldl ListProd.nil (fun as is R => if nonTrivialAssigns as 0 then .cons as is R else R)
         mtrace on .zero with s!"[backAssemble] pV after cleaning trivial assigements {← pV.foldlM ListProd.nil (fun x y z => return .cons (← x.mapM ppExpr) y z)}"
         let propa ← propa.foldlM ListProd.nil (fun candPropa cstr R => do
-          (lfV.append lpV).foldlM (R : ListProd (ListProd3 Nat Nat Expr) (List Nat)) (fun e locCstr R => do
-            let relCstr := List.orderedDiff locCstr cstr
+          (lfV.append lpV).foldlM (R : ListProd (ListProd3 Nat Nat Expr) UInt32Array) (fun e locCstr R => do
+            let relCstr := UInt32Array.diff locCstr cstr
             mtrace on .zero with s!"[backAssemble] (propa) testing for clash {relCstr} vs {cstr} for extention by {← ppExpr e}"
             if unifClashOfMemoMulti relCstr cstr unif_claches
             then
@@ -329,7 +332,7 @@ partial def backAssemble
               return R
             else
               mtrace on .zero with s!"[backAssemble] no clash! "
-              return .cons (ListProd3.cons back_id i e candPropa) (List.orderedUnion relCstr cstr) R
+              return .cons (ListProd3.cons back_id i e candPropa) (.union relCstr cstr) R
             )
           )
         propa.foldlMcps (⟨nBT,id_gen_goal,propaGs,goalSpawn⟩ : Prod4 _ _ _ _) (fun ta unif_id ⟨nBT,id_gen_goal,propaGs,goalSpawn⟩ q => do
@@ -341,7 +344,7 @@ partial def backAssemble
             mtrace on .zero with s!"[backAssemble] next loop"
             loop id_gen_goal goalSpawn fV pV (args.set! i nBT) fVtA propa propaGs (proGIs.set! i prGI) (i+1)
       else
-        let gdirs := gdirs.size.fold (fun i _ A => A.modify i (fun l => l ++ proGIs[i]!)) gdirs
+        let gdirs := gdirs.size.fold (fun i _ A => A.modify i (fun l => .union l proGIs[i]!)) gdirs
         let new := BackTree.ofBack pass back_id mdata backExpr bdirs gdirs args
         mtrace on .zero with s!"[backAssemble] new replacement branch: {← new.pp 0}"
         let .mk (fV, ipV) l1 l2 ← fV.foldlM (.mk (.nil, .nil) l1 l2 : Prod3 _ _ _) (fun as is (.mk R l1 l2) => do
@@ -361,7 +364,7 @@ partial def backAssemble
           return .mk (ListProd.cons (mkAppN pre as) is R) l1 l2
           )
         mtrace on .zero with s!"[backAssemble] pV : {← pV.foldlM ListProd.nil (fun x y z => return .cons (← ppExpr x) y z)}"
-        let proGIs := args.size.fold (fun i _ gs => proGIs[args.size - i - 1]! ++ gs) []
+        let proGIs := args.size.fold (fun i _ gs => .union proGIs[args.size - i - 1]! gs) .empty
         mtrace on .zero with s!"[backAssemble] prGI : {proGIs}"
         let md := ForwMetaData.ofBackStepMetadata mdata
         let fVtA := fV.foldl fVtA (fun e u r => .cons e u md r)
@@ -369,20 +372,20 @@ partial def backAssemble
   do
   if args.size != 0
   then
-    let ini := (.cons (Array.replicate args.size (failExpr "backAssemble")) [] .nil)
-    loop id_gen_goal goalSpawn ini ini args .nil .nil .nil (Array.replicate gdirs.size []) 0
+    let ini := (.cons (Array.replicate args.size (failExpr "backAssemble")) .empty .nil)
+    loop id_gen_goal goalSpawn ini ini args .nil .nil .nil (Array.replicate gdirs.size .empty) 0
   else
     let .mk pre hasTN l1 l2 ← instaLvlTnodeAndAbstractBindTnodes
-      l1 l2 unif_assign [] backExpr back_id args.size
+      l1 l2 unif_assign .empty backExpr back_id args.size
     mtrace on .zero with s!"[backAssemble] instaLvlTnodeAndAbstractBindTnodes hasTN {hasTN} pre {← ppExpr pre}"
     if hasTN
     then
-      return .mk ⟨id_gen_goal, .nil, .cons pre [] .nil, point, .nil, .nil, goalSpawn,[]⟩ l1 l2
+      return .mk ⟨id_gen_goal, .nil, .cons pre .empty .nil, point, .nil, .nil, goalSpawn,.empty⟩ l1 l2
     else
-      let fV := .cons pre [] .nil
+      let fV := .cons pre .empty .nil
       let md := ForwMetaData.ofBackStepMetadata mdata
       let fVtA := fV.foldl .nil (fun e u r => .cons e u md r)
-      return .mk ⟨id_gen_goal, fV, .nil, point, fVtA, .nil, goalSpawn,[]⟩ l1 l2
+      return .mk ⟨id_gen_goal, fV, .nil, point, fVtA, .nil, goalSpawn,.empty⟩ l1 l2
 
 
 
@@ -390,13 +393,14 @@ partial def backAssemble
 
 
 partial def BackTree.assembleGather (l1 : LocalContext) (l2 : LocalInstances)
-  (unif_claches : ListProd Nat (List Nat)) (unif_assign : Array (ListProd3 Nat Nat Expr × ListProd3 Nat Nat Level))
-  (uNodes : Array Nat) (IT : IntroTree (List Nat)) (bt : BackTree)
-  : MetaM (Prod3 (ListProd Expr (List Nat)) LocalContext LocalInstances) :=
-  -- trace set Tracing.Flags.none in do
+  (unif_claches : ListProd Nat UInt32Array) (unif_assign : Array (ListProd3 Nat Nat Expr × ListProd3 Nat Nat Level))
+  (uNodes : Array Nat) (IT : IntroTree UInt32Array) (bt : BackTree)
+  : MetaM (Prod3 (ListProd Expr UInt32Array) LocalContext LocalInstances) :=
+  do
+  mtracing
   let rec @[specialize] introLoop (l1 : LocalContext) (l2 : LocalInstances) (gnIdxAndTy : ListProd FVarId Expr) (meaningfulUGnode : List Nat)
-    (go : LocalContext → LocalInstances → BackTree → MetaM (Prod3 (ListProd Expr (List Nat)) LocalContext LocalInstances))
-    (fV : ListProd Expr (List Nat)) : List BackTree → MetaM (Prod3 (ListProd Expr (List Nat)) LocalContext LocalInstances)
+    (go : LocalContext → LocalInstances → BackTree → MetaM (Prod3 (ListProd Expr UInt32Array) LocalContext LocalInstances))
+    (fV : ListProd Expr UInt32Array) : List BackTree → MetaM (Prod3 (ListProd Expr UInt32Array) LocalContext LocalInstances)
     | a :: moa => do
         let .mk lfV l1 l2 ← go l1 l2 a
         mtrace on .zero with s!"[assembleGather] lfV : {← lfV.foldlM ListProd.nil (fun x y z => return .cons (← ppExpr x) y z)}"
@@ -412,15 +416,15 @@ partial def BackTree.assembleGather (l1 : LocalContext) (l2 : LocalInstances)
     | [] => do
         return .mk fV l1 l2
   let rec @[specialize] backLoop (l1 : LocalContext) (l2 : LocalInstances) (back_id : Nat) (exp : Expr) (args : Array BackTree)
-    (go : LocalContext → LocalInstances → BackTree → MetaM (Prod3 (ListProd Expr (List Nat)) LocalContext LocalInstances))
-    (fV : ListProd (Array Expr) (List Nat)) (i : Nat) : MetaM (Prod3 (ListProd Expr (List Nat)) LocalContext LocalInstances) := do
+    (go : LocalContext → LocalInstances → BackTree → MetaM (Prod3 (ListProd Expr UInt32Array) LocalContext LocalInstances))
+    (fV : ListProd (Array Expr) UInt32Array) (i : Nat) : MetaM (Prod3 (ListProd Expr UInt32Array) LocalContext LocalInstances) := do
     if i < args.size
     then
       let .mk lfV l1 l2 ← go l1 l2 args[i]!
       mtrace on .zero with s!"[assembleGather] lfV : {← lfV.foldlM ListProd.nil (fun x y z => return .cons (← ppExpr x) y z)}"
       let fV ← fV.foldlM ListProd.nil (fun candArgs cstr R => do -- in MetaM for tracing
-        lfV.foldlM (R : ListProd (Array Expr) (List Nat)) (fun e locCstr R => do
-          let relCstr := List.orderedDiff locCstr cstr
+        lfV.foldlM (R : ListProd (Array Expr) UInt32Array) (fun e locCstr R => do
+          let relCstr := UInt32Array.diff locCstr cstr
           mtrace on .zero with s!"[assembleGather] (fV) testing for clash {relCstr} vs {cstr} for extention by {← ppExpr e}"
           if unifClashOfMemoMulti relCstr cstr unif_claches
           then
@@ -428,7 +432,7 @@ partial def BackTree.assembleGather (l1 : LocalContext) (l2 : LocalInstances)
             return R
           else
             mtrace on .zero with s!"[assembleGather] no clash! "
-            return ListProd.cons (candArgs.set! i e) (List.orderedUnion relCstr cstr) R
+            return ListProd.cons (candArgs.set! i e) (.union relCstr cstr) R
           )
         )
       backLoop l1 l2 back_id exp args go fV (i+1)
@@ -446,11 +450,11 @@ partial def BackTree.assembleGather (l1 : LocalContext) (l2 : LocalInstances)
         return .mk fV l1 l2
       else
         let .mk pre hasTN  l1 l2 ← instaLvlTnodeAndAbstractBindTnodes
-            l1 l2 unif_assign [] exp back_id args.size
+            l1 l2 unif_assign .empty exp back_id args.size
         if hasTN
         then return .mk .nil l1 l2
-        else return .mk (ListProd.cons pre [] .nil) l1 l2
-  let rec go (l1 : LocalContext) (l2 : LocalInstances) : BackTree → MetaM (Prod3 (ListProd Expr (List Nat)) LocalContext LocalInstances)
+        else return .mk (ListProd.cons pre .empty .nil) l1 l2
+  let rec go (l1 : LocalContext) (l2 : LocalInstances) : BackTree → MetaM (Prod3 (ListProd Expr UInt32Array) LocalContext LocalInstances)
     | .fail .. => return .mk .nil l1 l2
     | .ofUni _ ui val => return .mk (.cons val ui .nil) l1 l2
     | .ofGoal _ _ _ _ _ args =>
@@ -460,15 +464,15 @@ partial def BackTree.assembleGather (l1 : LocalContext) (l2 : LocalInstances)
     | .ofPropa _ unis _ _ _ _ args =>
         args.foldlM (fun (.mk R l1 l2) t => do
           let .mk r l1 l2 ← go l1 l2 t
-          return .mk ((r.foldl ListProd.nil (fun x y z => ListProd.cons x (List.orderedUnion unis y) z)).append R) l1 l2) (.mk ListProd.nil l1 l2 : Prod3 _ _ _)
+          return .mk ((r.foldl ListProd.nil (fun x y z => ListProd.cons x (.union unis y) z)).append R) l1 l2) (.mk ListProd.nil l1 l2 : Prod3 _ _ _)
     | .ofIntro _ _ gnIdxAndTy _ _ args => do
         let someg := getFirstGoalIdFromIntroArgs args
         mtrace on .zero with s!"[assembleGather] getFirstGoalIdFromIntroArgs found {someg}"
-        let meaningfulUGnode := IT.gatherUGidsToGoalIdStrict someg []
-        let meaningfulUGnode := meaningfulUGnode.reverse
+        let meaningfulUGnode := IT.gatherUGidsToGoalIdStrict (fun x y => y.oContains x.toUInt32) UInt32Array.union someg .empty
+        let meaningfulUGnode_rev := meaningfulUGnode.foldl [] (fun i L => i.toNat :: L)
         -- `meaningfulUGnode` inds are in increasing order, and since ug-ind can only depend on smaller ug-ind reversing does the job
         mtrace on .zero with s!"[assembleGather] meaningfulUGnode {meaningfulUGnode}"
-        introLoop l1 l2 gnIdxAndTy meaningfulUGnode go .nil args
+        introLoop l1 l2 gnIdxAndTy meaningfulUGnode_rev go .nil args
     | .ofBack _ back_id  _ exp _ _ args =>
         backLoop l1 l2 back_id exp args go .nil 0
   go l1 l2 bt
@@ -477,31 +481,32 @@ partial def BackTree.assembleGather (l1 : LocalContext) (l2 : LocalInstances)
 
 
 
-partial def BackTree.assembleCore (l1 : LocalContext) (l2 : LocalInstances) (uNodes : Array Nat) (IT : IntroTree (List Nat))
-  (id_gen_goal : Nat) (goalSpawn : Array (OptionProd Nat Nat)) (unif_claches : ListProd Nat (List Nat)) (unif_assign : Array (ListProd3 Nat Nat Expr × ListProd3 Nat Nat Level))
+partial def BackTree.assembleCore (l1 : LocalContext) (l2 : LocalInstances) (uNodes : Array Nat) (IT : IntroTree UInt32Array)
+  (id_gen_goal : Nat) (goalSpawn : Array (OptionProd Nat Nat)) (unif_claches : ListProd Nat UInt32Array) (unif_assign : Array (ListProd3 Nat Nat Expr × ListProd3 Nat Nat Level))
   (passNum : Nat) (bt : BackTree) : MetaM (Prod3 AssembleData LocalContext LocalInstances) :=
-  -- trace set Tracing.Flags.none in
+  do
+  mtracing
   let rec go (l1 : LocalContext) (l2 : LocalInstances) (id_gen_goal : Nat) (bt : BackTree) (goalSpawn : Array (OptionProd Nat Nat)) : MetaM (Prod3 AssembleData LocalContext LocalInstances) := do
     match bt with
-    | x@(.fail _) => return .mk ⟨id_gen_goal, .nil, .nil, x, .nil, .nil, goalSpawn,[]⟩ l1 l2
+    | x@(.fail _) => return .mk ⟨id_gen_goal, .nil, .nil, x, .nil, .nil, goalSpawn, .empty⟩ l1 l2
     | x@(.ofUni _ uniId val) => do
         mtrace on .one with s!"[assembleCore] ofUni {uniId} {← ppExpr val}"
-        return .mk ⟨id_gen_goal,.cons val uniId .nil, .nil, x, .nil,.nil, goalSpawn,[]⟩ l1 l2
+        return .mk ⟨id_gen_goal,.cons val uniId .nil, .nil, x, .nil,.nil, goalSpawn, .empty⟩ l1 l2
     | x@(.ofGoal pass goal_id type bdirs gdirs args) => do
         if pass != passNum
         then
           mtrace on .one with s!"[assembleCore] enter gather mode on ofGoal {goal_id} {← ppExpr type}"
           let .mk fV l1 l2 ← x.assembleGather l1 l2 unif_claches unif_assign uNodes IT
           mtrace on .one with s!"[assembleCore] gather mode returned {← fV.foldlM ListProd.nil (fun x y z => return .cons (← ppExpr x) y z)}"
-          return .mk ⟨id_gen_goal, fV, .nil, x, .nil, .nil, goalSpawn,[]⟩ l1 l2
+          return .mk ⟨id_gen_goal, fV, .nil, x, .nil, .nil, goalSpawn, .empty⟩ l1 l2
         else
           let mut idgg := id_gen_goal
-          let mut fV : ListProd Expr (List Nat) := .nil
-          let mut pV : ListProd Expr (List Nat) := .nil
+          let mut fV : ListProd Expr UInt32Array := .nil
+          let mut pV : ListProd Expr UInt32Array := .nil
           let mut as : List BackTree := []
-          let mut fVtA : ListProd3 Expr (List Nat) ForwMetaData := .nil
+          let mut fVtA : ListProd3 Expr UInt32Array ForwMetaData := .nil
           let mut pGs := .nil
-          let mut pGI := []
+          let mut pGI := .empty
           let mut gS := goalSpawn
           mtrace on .zero with s!"[assembleCore] at ofGoal, go-ing on args"
           let mut l1 := l1
@@ -524,8 +529,8 @@ partial def BackTree.assembleCore (l1 : LocalContext) (l2 : LocalInstances) (uNo
             fVtA := lfVtA.append fVtA
             pGs := npGs.append pGs
             gS := ngoalSpawn
-            pGI := pGI ++ prGI
-          let new := BackTree.ofGoal pass goal_id type bdirs (gdirs ++ pGI) as
+            pGI := .union pGI prGI
+          let new := BackTree.ofGoal pass goal_id type bdirs (.union gdirs pGI) as
           mtrace on .two with s!"[assembleCore] returning branch {← new.pp 0}"
           return .mk ⟨idgg,fV,pV,new,fVtA,pGs,gS,pGI⟩ l1 l2
     | x@(.ofPropa pass uni_id goal_id type bdirs gdirs args) => do
@@ -534,15 +539,15 @@ partial def BackTree.assembleCore (l1 : LocalContext) (l2 : LocalInstances) (uNo
           mtrace on .one with s!"[assembleCore] enter gather mode on ofPropa {goal_id} {← ppExpr type}"
           let .mk fV l1 l2 ← x.assembleGather l1 l2 unif_claches unif_assign uNodes IT
           mtrace on .one with s!"[assembleCore] gather mode returned {← fV.foldlM ListProd.nil (fun x y z => return .cons (← ppExpr x) y z)}"
-          return .mk ⟨id_gen_goal, fV, .nil, x, .nil, .nil, goalSpawn,[]⟩ l1 l2
+          return .mk ⟨id_gen_goal, fV, .nil, x, .nil, .nil, goalSpawn, .empty⟩ l1 l2
         else
           let mut idgg := id_gen_goal
-          let mut fV : ListProd Expr (List Nat) := .nil
-          let mut pV : ListProd Expr (List Nat) := .nil
+          let mut fV : ListProd Expr UInt32Array := .nil
+          let mut pV : ListProd Expr UInt32Array := .nil
           let mut as : List BackTree := []
-          let mut fVtA : ListProd3 Expr (List Nat) ForwMetaData := .nil
+          let mut fVtA : ListProd3 Expr UInt32Array ForwMetaData := .nil
           let mut pGs := .nil
-          let mut pGI := []
+          let mut pGI := .empty
           let mut gS := goalSpawn
           mtrace on .zero with s!"[assembleCore] at ofPropa, go-ing on args"
           let mut l1 := l1
@@ -558,16 +563,16 @@ partial def BackTree.assembleCore (l1 : LocalContext) (l2 : LocalInstances) (uNo
             mtrace on .zero with s!"[assembleCore] lfVtA : {← lfVtA.foldlM ListProd.nil (fun x y _ z => return .cons (← ppExpr x) y z)}"
             mtrace on .zero with s!"[assembleCore] npGs : {← npGs.foldlM ListProd.nil (fun y x z => return .cons (← ppExpr x) y z)}"
             idgg := id_gen_goal
-            let lfV := (lfV.foldl ListProd.nil (fun x y z => .cons x (y.orderedUnion uni_id) z))
+            let lfV := (lfV.foldl ListProd.nil (fun x y z => .cons x (y.union uni_id) z))
             fV := lfV.append fV
             fVtA := lfVtA.append fVtA
             -- fVtA := lfV.foldl fVtA (fun e is R => .cons goal_id e is R)
-            pV := (lpV.foldl ListProd.nil (fun x y z => .cons x (y.orderedUnion uni_id) z)).append pV
+            pV := (lpV.foldl ListProd.nil (fun x y z => .cons x (y.union uni_id) z)).append pV
             as := nBT :: as
             pGs := npGs.append pGs
             gS := ngoalSpawn
-            pGI := pGI ++ prGI
-          let new := BackTree.ofPropa pass uni_id goal_id type bdirs (gdirs ++ pGI) as
+            pGI := .union pGI prGI
+          let new := BackTree.ofPropa pass uni_id goal_id type bdirs (.union gdirs pGI) as
           mtrace on .two with s!"[assembleCore] returning branch {← new.pp 0}"
           return .mk ⟨idgg,fV,pV,new, fVtA, pGs,gS,pGI⟩ l1 l2
     | x@(.ofIntro pass back_id gnIdxAndTy bdirs gdirs args) => do
@@ -576,7 +581,7 @@ partial def BackTree.assembleCore (l1 : LocalContext) (l2 : LocalInstances) (uNo
           mtrace on .one with s!"[assembleCore] enter gather mode ofIntro {back_id}"
           let .mk fV l1 l2 ← x.assembleGather l1 l2 unif_claches unif_assign uNodes IT
           mtrace on .one with s!"[assembleCore] gather mode returned {← fV.foldlM ListProd.nil (fun x y z => return .cons (← ppExpr x) y z)}"
-          return .mk ⟨id_gen_goal, fV, .nil, x, .nil, .nil, goalSpawn,[]⟩ l1 l2
+          return .mk ⟨id_gen_goal, fV, .nil, x, .nil, .nil, goalSpawn, .empty⟩ l1 l2
         else
           mtrace on .one with s!"[assembleCore] calling introAssemble"
           introAssemble l1 l2 uNodes IT id_gen_goal goalSpawn go pass back_id gnIdxAndTy bdirs gdirs args
@@ -586,7 +591,7 @@ partial def BackTree.assembleCore (l1 : LocalContext) (l2 : LocalInstances) (uNo
           mtrace on .one with s!"[assembleCore] enter gather mode ofBack {back_id}"
           let .mk fV l1 l2 ← x.assembleGather l1 l2 unif_claches unif_assign uNodes IT
           mtrace on .one with s!"[assembleCore] gather mode returned {← fV.foldlM ListProd.nil (fun x y z => return .cons (← ppExpr x) y z)}"
-          return .mk ⟨id_gen_goal, fV, .nil, x, .nil, .nil, goalSpawn,[]⟩ l1 l2
+          return .mk ⟨id_gen_goal, fV, .nil, x, .nil, .nil, goalSpawn, .empty⟩ l1 l2
         else
           mtrace on .one with s!"[assembleCore] calling backAssemble"
           backAssemble l1 l2 go id_gen_goal goalSpawn unif_claches unif_assign x pass back_id mdata thm bdirs gdirs args
@@ -606,11 +611,12 @@ partial def BackTree.assembleCore (l1 : LocalContext) (l2 : LocalInstances) (uNo
 -/
 partial def BackTree.assembleMain
   (l1 : LocalContext) (l2 : LocalInstances)  (revCountMax : Nat)
-  (st : SearchState (List Nat))
-  : MetaM (Prod4 (SearchState (List Nat)) (ListProd Expr (List Nat)) LocalContext LocalInstances) :=
-  do -- trace set Tracing.Flags.none in do
-  let rec @[inline] proG (l1 : LocalContext) (l2 : LocalInstances)  (st : SearchState (List Nat))
-    (q : SearchState (List Nat) → MetaM (Prod4 (SearchState (List Nat)) (ListProd Expr (List Nat)) LocalContext LocalInstances)) : ListProd Nat Expr → MetaM (Prod4 (SearchState (List Nat)) (ListProd Expr (List Nat)) LocalContext LocalInstances)
+  (st : SearchState UInt32Array)
+  : MetaM (Prod4 (SearchState UInt32Array) (ListProd Expr UInt32Array) LocalContext LocalInstances) :=
+  do
+  mtracing
+  let rec @[inline] proG (l1 : LocalContext) (l2 : LocalInstances)  (st : SearchState UInt32Array)
+    (q : SearchState UInt32Array → MetaM (Prod4 (SearchState UInt32Array) (ListProd Expr UInt32Array) LocalContext LocalInstances)) : ListProd Nat Expr → MetaM (Prod4 (SearchState UInt32Array) (ListProd Expr UInt32Array) LocalContext LocalInstances)
     | .nil => q st
     | .cons tar exp more => do
         mtrace on .two with s!"[assembleMain] call integratePropaedGoalStd target goal {tar} and type {← ppExpr exp}"
@@ -642,8 +648,8 @@ partial def BackTree.assembleMain
     | _, _ =>
         fVtA.foldlMcps (.mk st l1 l2 : Prod3 _ _ _) (fun term _ md (.mk st l1 l2) q => do
           let ty ← InferType term l1 l2
-          let ugis := term.getGUFVarsIds.map (fun | ⟨.num _ i⟩ => i | _ => panic s!"[BackTree.assembleMain] getGUFVarsIds return incorrect patterns ?!?")
-          let .mk alreadyThere? l1 l2 ← forwardDuplicateF? l1 l2 ugis revCountMax ty st.introTree
+          let ugis := term.getGUFVarsIds.foldl (fun | R,  ⟨.num _ i⟩ => R.oInsert i.toUInt32 | _, _ => panic s!"[BackTree.assembleMain] getGUFVarsIds return incorrect patterns ?!?") .empty
+          let .mk alreadyThere? l1 ← forwardDuplicateF? l1 ugis revCountMax ty st.introTree
           if alreadyThere?
           then
             mtrace on .two with s!"[assembleMain] not adding term {← ppExpr term} of type {← ppExpr ty} since it's a forward duplicate"
@@ -651,11 +657,11 @@ partial def BackTree.assembleMain
           else
             let ugis := term.getGUFVarsIds.foldl (fun R i =>
               match FVarId.name i with
-              | .num _ j => List.orderedInsertOrLeave j R
-              | _ => R) []
+              | .num _ j => R.oInsert j.toUInt32
+              | _ => R) .empty
             mtrace on .two with s!"[assembleMain] adding term {← ppExpr term} of type {← ppExpr ty} with u-g-inds {ugis}"
-            let .mk addedForwId addedForwE st l1 l2 ← integrateForwardStd l1 l2 revCountMax md term ugis st
-            let st := {st with cycleAddForw := .cons addedForwId addedForwE st.cycleAddForw }
+            let .mk addedForwId addedForwFv addedForwE st l1 l2 ← integrateForwardStd l1 l2 revCountMax md term ugis st
+            let st := {st with cycleAddForw := .cons addedForwId addedForwFv addedForwE st.cycleAddForw }
             mtrace on .two with s!"[assembleMain] adding type {← ppExpr addedForwE} with u-g-ind {addedForwId} to cycleAddForw"
             q (.mk st l1 l2)
           ) <| fun (.mk st l1 l2) => do

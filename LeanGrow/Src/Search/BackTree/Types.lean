@@ -8,6 +8,7 @@ Author: Yves Jäckle.
 import Lean.Meta.Basic
 import LeanGrow.Src.Data.Amalgames
 import LeanGrow.Src.Utils.Std.String
+import LeanGrow.FFI.Lffi
 
 open Lean Meta
 
@@ -21,11 +22,11 @@ deriving Inhabited, BEq, Repr
 /-- Ids are assumed to be sorted-/
 inductive BackTree where
 | fail (msg : String)
-| ofUni (pass : Nat) (uni_ids : List Nat) (value : Expr)
-| ofPropa (pass : Nat) (uni_ids : List Nat) (goal_id : Nat) (newType : Expr) (bdirs : (List Nat)) (gdirs : (List Nat)) (args : List BackTree)
-| ofGoal (pass goal_id : Nat) (type : Expr) (bdirs : (List Nat)) (gdirs : (List Nat)) (args : List BackTree)
-| ofBack (pass back_id : Nat) (mdata : BackStepMetadata) (thm : Expr) (bdirs : Array (List Nat)) (gdirs : Array (List Nat)) (args : Array BackTree)
-| ofIntro (pass back_id : Nat) (gnIdxAndTy : ListProd FVarId Expr) (bdirs : (List Nat)) (gdirs : (List Nat)) (args : List BackTree)
+| ofUni (pass : Nat) (uni_ids : UInt32Array) (value : Expr)
+| ofPropa (pass : Nat) (uni_ids : UInt32Array) (goal_id : Nat) (newType : Expr) (bdirs : UInt32Array) (gdirs : UInt32Array) (args : List BackTree)
+| ofGoal (pass goal_id : Nat) (type : Expr) (bdirs : UInt32Array) (gdirs : UInt32Array) (args : List BackTree)
+| ofBack (pass back_id : Nat) (mdata : BackStepMetadata) (thm : Expr) (bdirs : Array UInt32Array) (gdirs : Array UInt32Array) (args : Array BackTree)
+| ofIntro (pass back_id : Nat) (gnIdxAndTy : ListProd FVarId Expr) (bdirs : UInt32Array) (gdirs : UInt32Array) (args : List BackTree)
 deriving Inhabited, BEq, Repr
 
 
@@ -36,7 +37,7 @@ def BackStepMetadata.pp : BackStepMetadata → MetaM String
 
 partial def BackTree.pp (ind : Nat) : BackTree → MetaM String
 | .fail s => return (Blank ind) ++ s!"fail {s}"
-| .ofUni pass (uniId : List Nat) (value : Expr) =>
+| .ofUni pass (uniId : UInt32Array) (value : Expr) =>
     return (Blank ind) ++ s!"ofU ({pass}) ({uniId}) {← ppExpr value}"
 | .ofPropa pass u g (newtype : Expr) _ _ (args : List BackTree) =>
     return (Blank ind) ++s!"ofP ({pass}) ({u}) ({g}) {← ppExpr newtype}\n" ++ (← BlankJumpM (ind +3) args (BackTree.pp (ind + 3)))
@@ -50,7 +51,7 @@ partial def BackTree.pp (ind : Nat) : BackTree → MetaM String
 
 partial def BackTree.ppDirs (ind : Nat) : BackTree → String
 | .fail s => (Blank ind) ++ s!"fail {s}"
-| .ofUni pass (uniId : List Nat) _ =>
+| .ofUni pass (uniId : UInt32Array) _ =>
     (Blank ind) ++ s!"ofU ({pass}) ({uniId})"
 | .ofPropa pass u g _ bd gd (args : List BackTree) =>
     (Blank ind) ++s!"ofP ({pass}) ({u}) ({g}) ({bd}) ({gd})\n" ++ (BlankJump (ind +3) args (BackTree.ppDirs (ind + 3)))
