@@ -260,6 +260,17 @@ partial def genQueryForwNoLoadMain [Repr IndexColType]
 
 #check 1
 
+def genQueryForwNoLoadMain_S (l1 : LocalContext) (l2 : LocalInstances)
+  (Q : PaIn UInt32Array)
+  {valType : Type _} (scores : SetTrieP valType UInt32Array PaIn)
+  : MetaM (Prod3 Bool (List valType) (List (SetTrieP valType UInt32Array PaIn))) :=
+    genQueryForwNoLoadMain UInt32Array.inter UInt32Array.diff UInt32Array.union
+      UInt32Array.isEmpty UInt32Array.empty UInt32Array.subsetOf l1 l2 Q scores
+
+#check 1
+
+
+
 /-- Q is ltx, l is hyps with lnodes-/
 @[specialize, inline]
 partial def genQueryForwInterLGCore [Repr IndexColType]
@@ -350,5 +361,90 @@ partial def genQueryForwInterLGCore [Repr IndexColType]
           mtrace on .zero with s!"[genQueryForwInterCore] final : {repr final}"
           return final
     go Q l
+
+#check 1
+
+
+#check List.queryPassM
+
+
+@[inline, specialize]
+partial def SetTrieP.queryPassNotifyMlg [Repr IdxCollType]
+  (containedIn : PaIn IdxCollType → PaInG IdxCollType → β → MetaM (IdxCollType × β)) (subsetOf : IdxCollType → IdxCollType → Bool)
+  (ini : β) (Q : PaInG IdxCollType) (T : SetTrieP α IdxCollType PaIn) : MetaM (Prod4 Bool (List α) (List (SetTrieP α IdxCollType PaIn)) β) :=
+  trace set TracingFlags.none in
+  let rec @[specialize] go (done : List α) (ret : List (SetTrieP α IdxCollType PaIn)) (prog? : Bool) (state : β)
+    : List (SetTrieP α IdxCollType PaIn) → MetaM (Prod4 Bool (List α) (List (SetTrieP α IdxCollType PaIn)) β)
+    | [] => return .mk prog? done ret state
+    | nx :: more =>
+        match nx with
+        | .root K c | .node _ K c => do
+            let (I,state) ← containedIn K Q state
+            trace on .zero with s!"[query] root, containedIn {repr I}" in
+            let s := more.length
+            let next := c.foldl (fun (nx,nr) k =>
+              match k with
+              | .leaf key .. | .node key .. => if subsetOf key I then (k :: nx,nr) else (nx, k :: nr)
+              | .root .. => panic! s!"[query] ill formed tree"
+              ) (more, ret)
+            go done next.2 (if prog? then true else next.1.length > s) state next.1
+        | .leaf _ a => go (a :: done) ret prog? state more
+  go [] [] false ini [T]
+
+#check 1
+
+@[specialize, inline]
+partial def genQueryForwWiLoadMainLG [Repr IndexColType]
+  (intersect difference union : IndexColType → IndexColType → IndexColType) (empty? : IndexColType → Bool)
+  (empty : IndexColType) (subsetOf : IndexColType → IndexColType → Bool)
+  (l1 : LocalContext) (l2 : LocalInstances)
+  (sampleName : Name) (types : Array Expr)
+  (Q : PaInG IndexColType)
+  {valType : Type _} (scores : SetTrieP valType IndexColType PaIn)
+  : MetaM (Prod3 Bool (List valType) (List (SetTrieP valType IndexColType PaIn))) :=
+    do
+    let _ ← mkLevelMVarOfName (.num sampleName 0)
+    let mut i := 0
+    for T in types do
+      let _ ← mkMvarStdNoCoI (.num sampleName i) T
+      i := i+1
+    let res ← SetTrieP.queryPassNotifyMlg
+      (fun x y  _ => do
+          let I ← genQueryForwInterLGCore intersect difference empty? l1 l2 y x
+          let U := I.foldl empty (fun _ l U => union l U)
+          return (U,())
+          )
+      subsetOf
+      () Q scores
+    return .mk res.1 res.2 res.3
+
+
+@[specialize, inline]
+partial def genQueryForwNoLoadMainLG [Repr IndexColType]
+  (intersect difference union : IndexColType → IndexColType → IndexColType) (empty? : IndexColType → Bool)
+  (empty : IndexColType) (subsetOf : IndexColType → IndexColType → Bool)
+  (l1 : LocalContext) (l2 : LocalInstances)
+  (Q : PaInG IndexColType)
+  {valType : Type _} (scores : SetTrieP valType IndexColType PaIn)
+  : MetaM (Prod3 Bool (List valType) (List (SetTrieP valType IndexColType PaIn))) :=
+    do
+    let res ← SetTrieP.queryPassNotifyMlg
+      (fun x y  _ => do
+          let I ← genQueryForwInterLGCore intersect difference empty? l1 l2 y x
+          let U := I.foldl empty (fun _ l U => union l U)
+          return (U,())
+          )
+      subsetOf
+      () Q scores
+    return .mk res.1 res.2 res.3
+
+#check 1
+
+def genQueryForwNoLoadMainLG_S (l1 : LocalContext) (l2 : LocalInstances)
+  (Q : PaInG UInt32Array)
+  {valType : Type _} (scores : SetTrieP valType UInt32Array PaIn)
+  : MetaM (Prod3 Bool (List valType) (List (SetTrieP valType UInt32Array PaIn))) :=
+    genQueryForwNoLoadMainLG UInt32Array.inter UInt32Array.diff UInt32Array.union
+      UInt32Array.isEmpty UInt32Array.empty UInt32Array.subsetOf l1 l2 Q scores
 
 #check 1

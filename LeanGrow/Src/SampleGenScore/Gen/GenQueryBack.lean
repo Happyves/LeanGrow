@@ -345,3 +345,37 @@ partial def genQueryBackWiLoadMain
       return .mk inds l1 l2
     else
       return .mk empty l1 l2
+
+#check 1
+
+
+
+@[specialize, inline]
+partial def genQueryBackNoLoadMain
+    [Repr IdxCollType] [ToString IdxCollType] [Inhabited IdxCollType]
+    (empty? : IdxCollType → Bool) (intersect union : IdxCollType → IdxCollType → IdxCollType) (empty : IdxCollType)
+    (l1 : LocalContext) (l2 : LocalInstances)
+    (constr : IdxCollType)
+    (revCountMax : Nat)
+    (E : Expr) (T : PaIn IdxCollType)
+    : MetaM (Prod3 IdxCollType LocalContext LocalInstances) :=
+    do
+    let .mk yes? _ inds l1 l2 ← genQueryBackCore empty? intersect union empty l1 l2 constr revCountMax E T
+    if yes? == 3
+    then
+      return .mk inds l1 l2
+    else
+      return .mk empty l1 l2
+
+
+#check 1
+
+
+def genQueryBackNoLoadMain_S
+    (l1 : LocalContext) (l2 : LocalInstances)
+    (constr : UInt32Array)
+    (revCountMax : Nat)
+    (E : Expr) (T : PaIn UInt32Array)
+    : MetaM (Prod3 UInt32Array LocalContext LocalInstances) :=
+    genQueryBackNoLoadMain UInt32Array.isEmpty UInt32Array.inter UInt32Array.union
+      UInt32Array.empty l1 l2 constr revCountMax E T
