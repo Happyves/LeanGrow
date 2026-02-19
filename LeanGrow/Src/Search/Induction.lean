@@ -4,9 +4,9 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Author: Yves Jäckle.
 -/
 
-import LeanGrowBeta.Search.API.IntegrateBack
-import LeanGrowBeta.Search.API.ScoreCore
-import LeanGrowBeta.Core.GeneralisePaIn.Subpattern
+import LeanGrow.Src.Search.API.IntegrateBack
+import LeanGrow.Src.Search.API.ScoreCore
+import LeanGrow.Src.Core.GeneralisePaIn.Subpattern
 
 
 open Lean Meta

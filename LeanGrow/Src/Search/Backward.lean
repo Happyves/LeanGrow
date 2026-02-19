@@ -5,17 +5,17 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Author: Yves Jäckle.
 -/
 
-import LeanGrowBeta.Search.API.IntegrateBack
-import LeanGrowBeta.Core.Embedding.EmbedProcessBack
-import LeanGrowBeta.Core.Embedding.EmbedQueryBack
-import LeanGrowBeta.Search.API.ScoreCore
+import LeanGrow.Src.Search.API.IntegrateBack
+import LeanGrow.Src.Core.Embedding.EmbedProcessBack
+import LeanGrow.Src.Core.Embedding.EmbedQueryBack
+import LeanGrow.Src.Search.API.ScoreCore
 
 
 open Lean Meta
 
 
 -- Query with
-#check PaIn.embedBackMain
+#check PaInG.embedBackMain
 
 
 def PaIn.embedBackMainS

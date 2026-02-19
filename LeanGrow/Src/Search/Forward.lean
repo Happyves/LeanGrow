@@ -5,11 +5,11 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Author: Yves Jäckle.
 -/
 
-import LeanGrowBeta.Core.Embedding.EmbedProcessForwAPI
-import LeanGrowBeta.Core.Embedding.EmbedQueryForwRW
-import LeanGrowBeta.Core.Embedding.EmbedProcessForwRW
-import LeanGrowBeta.Core.Induction.Detection
-import LeanGrowBeta.Search.API.ScoreCore
+import LeanGrow.Src.Core.Embedding.EmbedProcessForwAPI
+import LeanGrow.Src.Core.Embedding.EmbedQueryForwRW
+import LeanGrow.Src.Core.Embedding.EmbedProcessForwRW
+import LeanGrow.Src.Core.Induction.Detection
+import LeanGrow.Src.Search.API.ScoreCore
 
 open Lean Meta
 

@@ -32,11 +32,20 @@ structure thmGenDataEntry (IdxCollType : Type _) where
   hypTotal : Nat
 deriving Inhabited
 
+instance (IdxCollType : Type _) : EmptyCollection (thmGenDataEntry IdxCollType) where
+  emptyCollection := ⟨.dead, #[], 0, .root .dead #[], 0⟩
+
+
 structure goalhypGenDataEntry (IdxCollType : Type _) where
   hypSetTrie : SetTrieP (CTrie Nat) IdxCollType PaIn
   hypWeights : Array Nat
   hypTotal : Nat
 deriving Inhabited
+
+instance (IdxCollType : Type _) : EmptyCollection (goalhypGenDataEntry IdxCollType) where
+  emptyCollection := ⟨ .root .dead #[], #[], 0⟩
+
+
 
 structure goalhypGenData (IdxCollType : Type _) where
   goalPain : PaIn IdxCollType
@@ -44,3 +53,7 @@ structure goalhypGenData (IdxCollType : Type _) where
   goalTotal : Nat
   hypEntries : Array (goalhypGenDataEntry IdxCollType)
 deriving Inhabited
+
+
+instance (IdxCollType : Type _) : EmptyCollection (goalhypGenData IdxCollType) where
+  emptyCollection := ⟨.dead, #[], 0, #[]⟩

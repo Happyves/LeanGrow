@@ -5,13 +5,13 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Author: Yves Jäckle.
 -/
 
-import LeanGrowBeta.Search.Forward
-import LeanGrowBeta.Search.Backward
-import LeanGrowBeta.Search.Induction
-import LeanGrowBeta.Search.API.Assembly
-import LeanGrowBeta.Search.Score.ScoreSelect
-import LeanGrowBeta.Search.API.ScoreUpdate
--- import LeanGrowBeta.Search.TacticSupport.SupportMain -- not ported yet
+import LeanGrow.Src.Search.Forward
+import LeanGrow.Src.Search.Backward
+import LeanGrow.Src.Search.Induction
+import LeanGrow.Src.Search.API.Assembly
+import LeanGrow.Src.Search.Score.ScoreSelect
+import LeanGrow.Src.Search.API.ScoreUpdate
+-- import LeanGrow.Src.Search.TacticSupport.SupportMain -- not ported yet
 
 
 open Lean Meta

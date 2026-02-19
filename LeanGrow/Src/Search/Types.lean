@@ -130,10 +130,10 @@ structure SearchState (IdxCollType : Type _) where
     -/
 
   id_gen_cand : Nat
-  backCandScores : ListProd5 Nat BackCandData Nat ScoreType (List (SetTrieP (Nat × Nat) IdxCollType PaIn))
+  backCandScores : ListProd6 Nat BackCandData Nat ScoreType (thmGenDataEntry IdxCollType) (List (SetTrieP (Nat × Nat) IdxCollType PaIn))
     -- cand id, data expected by `embedBackPreIntegrate`, timer, raw score, remaining feature branches
     -- don't forget to add hight depth score to initial score
-  forwCandScores : ListProd6 Nat ForwCandData Nat ScoreType (PaIn IdxCollType) (List (SetTrieP (Nat × Nat) IdxCollType PaIn))
+  forwCandScores : ListProd6 Nat ForwCandData Nat ScoreType (thmGenDataEntry IdxCollType) (List (SetTrieP (Nat × Nat) IdxCollType PaIn))
     -- cand id, forw data, timer, raw score, goal-score pain (not supposed to change) remaining feature branches
     -- don't forget to add hight depth score to initial score
   inductCandScores : ListProd6 Nat Nat TargetType Nat Expr Float
