@@ -18,11 +18,11 @@ open Lean Meta
 
 
 def SearchState.pp (l1 : LocalContext) (l2 : LocalInstances)
-  (st : SearchState (List Nat)) : MetaM String := do
+  (st : SearchState UInt32Array) : MetaM String := do
   withReader (fun ctx => {ctx with lctx := l1, localInstances := l2}) do
   let mut msg := "[searchCore] state:\n\n"
   msg := msg ++ s!"[searchCore] back-tree :\n{← st.backTree.pp 0}\n\n"
-  msg := msg ++ s!"[searchCore] intro-tree :\n{st.introTree.ppDirs 0}\n\n"
+  msg := msg ++ s!"[searchCore] intro-tree :\n{st.introTree.ppDirsLocInst 0}\n\n"
   msg := msg ++ "[searchCore] forward decls:\n"
   for ug in [:st.id_gen_forw] do
     let node := if st.uNodes.binSearchContains ug (· < ·) then unode ug else gnode ug
@@ -35,23 +35,23 @@ def SearchState.pp (l1 : LocalContext) (l2 : LocalInstances)
 -- #exit
 
 @[inline]
-def runTacticSupportOrNot (cfg : SearchConfig)  (st : SearchState (List Nat))
-  {α : Sort _} (k : SearchState (List Nat) → MetaM α) : MetaM α :=
+def runTacticSupportOrNot (cfg : SearchConfig UInt32Array)  (st : SearchState UInt32Array)
+  {α : Sort _} (k : SearchState UInt32Array → MetaM α) : MetaM α :=
   if cfg.tacticSupport
   then k st --runTacticSupport cfg st k -- reactivate after port
   else k st
 
-def SearchState.printBackCand (l1 : LocalContext) (l2 : LocalInstances) (st : SearchState (List Nat)) : MetaM String := do
+def SearchState.printBackCand (l1 : LocalContext) (l2 : LocalInstances) (st : SearchState UInt32Array) : MetaM String := do
   withReader (fun ctx => {ctx with lctx := l1, localInstances := l2}) do
-  st.backCandScores.foldlM "[printBackCand]\n" (fun candid data time score _ msg => do
+  st.backCandScores.foldlM "[printBackCand]\n" (fun candid data time score _ _ msg => do
     return msg ++ s!"candid {candid}, thm {repr data.thmData} on goal {data.targetGoal} with time {time} and score {repr score}\n")
 
-def SearchState.printForwCand (l1 : LocalContext) (l2 : LocalInstances) (st : SearchState (List Nat)) : MetaM String := do
+def SearchState.printForwCand (l1 : LocalContext) (l2 : LocalInstances) (st : SearchState UInt32Array) : MetaM String := do
   withReader (fun ctx => {ctx with lctx := l1, localInstances := l2}) do
   st.forwCandScores.foldlM "[printForwCand]\n" (fun candid data time score _ _ msg => do
     return msg ++ s!"candid {candid}, term of type {← ppExpr data.type} with ugIs {data.UGinds} with time {time} and score {repr score}\n")
 
-def SearchState.printInduCand (l1 : LocalContext) (l2 : LocalInstances) (st : SearchState (List Nat)) : MetaM String := do
+def SearchState.printInduCand (l1 : LocalContext) (l2 : LocalInstances) (st : SearchState UInt32Array) : MetaM String := do
   withReader (fun ctx => {ctx with lctx := l1, localInstances := l2}) do
   st.inductCandScores.foldlM "[printInduCand]\n" (fun candid time data targetI targetE score msg => do
     return msg ++ s!"candid {candid}, thm {repr data.pp} on goal {targetI} of type {← ppExpr targetE} with time {time} and score {repr score}\n")
@@ -63,9 +63,10 @@ def SearchState.printInduCand (l1 : LocalContext) (l2 : LocalInstances) (st : Se
 
 
 partial def searchCore (l1 : LocalContext) (l2 : LocalInstances)
-  (cfg : SearchConfig)  (st : SearchState (List Nat)) (fuel : Nat)
-  : MetaM (Prod4 (SearchState (List Nat)) (ListProd Expr (List Nat)) LocalContext LocalInstances) :=
-  do -- trace set Tracing.Flags.all in do
+  (cfg : SearchConfig UInt32Array)  (st : SearchState UInt32Array) (fuel : Nat)
+  : MetaM (Prod4 (SearchState UInt32Array) (ListProd Expr UInt32Array) LocalContext LocalInstances) :=
+  do
+  mtracing
   mtrace on .zero with (← st.pp l1 l2)
   mtrace on .two with s!"[searchCore] back tree with dirs : {st.backTree.ppDirs 0}"
   mtrace on .zero with s!"[searchCore] fuel : {fuel}"
@@ -73,14 +74,14 @@ partial def searchCore (l1 : LocalContext) (l2 : LocalInstances)
   mtrace on .three with s!"[searchCore] goalHeights : {st.goalHeights.mapIdx (fun i s => (i,s))}"
   mtrace on .three with s!"[searchCore] forwDepths : {st.forwDepths.mapIdx (fun i s => (i,s.depth))}"
   mtrace on .three with s!"[searchCore] backDepths : {st.backDepths.mapIdx (fun i s => (i,s.depth))}"
-  mtrace on .three with s!"[searchCore] depsCache : {st.depsCache.mapIdx (fun i s => (i,s.map (FVarId.name <| LocalDecl.fvarId · )))}"
+  mtrace on .three with s!"[searchCore] depsCache (ftrans) : {st.depsCache.mapIdx (fun i s => (i,s.fTrans))}"
   if fuel == 0
   then return .mk st .nil l1 l2
   else
     runTacticSupportOrNot cfg st <| fun st => do
       let cAF := st.cycleAddForw
-      mtrace on .one with s!"[searchCore] cAF : {← cAF.foldlM ListProd.nil (fun x y z => return .cons x (← PpExpr y l1 l2) z)}"
-      let .mk st l1 l2 ← cAF.foldlM (.mk st l1 l2 : Prod3 _ _ _) (fun fid fT (.mk st l1 l2) => do
+      mtrace on .one with s!"[searchCore] cAF : {← cAF.foldlM ListProd.nil (fun x _ y z => return .cons x (← PpExpr y l1 l2) z)}"
+      let .mk st l1 l2 ← cAF.foldlM (.mk st l1 l2 : Prod3 _ _ _) (fun fid _ fT (.mk st l1 l2) => do
         let .mk st l1 l2 ← addForwCandOfRW l1 l2  cfg st fid fT
         --let .mk st l1 l2 ← addBackCandOfInductForw l1 l2 cfg st fid
         return (.mk st l1 l2))
@@ -145,6 +146,6 @@ partial def searchCore (l1 : LocalContext) (l2 : LocalInstances)
 
 
 #check updateScores
-#check PaIn.insertS
+#check PaInG.insertS
 #check Array.mapIdx
 #check FVarId.name

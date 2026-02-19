@@ -55,7 +55,7 @@ def selectBatchOfBestScoresCommon {IdxCollType : Type _}
   (cfg : SearchConfig IdxCollType) (st : SearchState IdxCollType)
   : Array (Prod3 Float  SelectType Nat) :=
   let init : Array (Prod3 Float  SelectType Nat) := Array.replicate cfg.addBatchSize ⟨0, .none, 0⟩
-  let (sofar,lowest) := st.backCandScores.foldl (init,0) (fun ci data time absolutScore _ (sofar,lowest) =>
+  let (sofar,lowest) := st.backCandScores.foldl (init,0) (fun ci data time absolutScore _ _ (sofar,lowest) =>
     let absolutScore := absolutScore.avg
     let hs := cfg.regulariser_bH absolutScore (getCandGoalHeight st.goalHeights data.targetGoal)
     let ds := cfg.regulariser_bD absolutScore (getCandBackDepth st.backDepths data.targetGoal)
@@ -103,7 +103,7 @@ def selectBatchOfBestScoresSplit {IdxCollType : Type _}
   (cfg : SearchConfig IdxCollType) (st : SearchState IdxCollType)
   : Array (Prod3 Float  SelectType Nat) :=
   let init : Array (Prod3 Float  SelectType Nat) := Array.replicate cfg.backBatchSize ⟨0, .none, 0⟩
-  let (sofarB,_) := st.backCandScores.foldl (init,0) (fun ci data time absolutScore _ (sofar,lowest) =>
+  let (sofarB,_) := st.backCandScores.foldl (init,0) (fun ci data time absolutScore _ _ (sofar,lowest) =>
     let absolutScore := absolutScore.avg
     let hs := cfg.regulariser_bH absolutScore (getCandGoalHeight st.goalHeights data.targetGoal)
     let ds := cfg.regulariser_bD absolutScore (getCandBackDepth st.backDepths data.targetGoal)
@@ -158,10 +158,10 @@ def selectBatchOfBestScores {IdxCollType : Type _}
     selectBatchOfBestScoresCommon cfg st
 
 
-def removeCand (st : SearchState (List Nat)) (rawCandInds : List Nat) : SearchState (List Nat) :=
+def removeCand {IdxCollType : Type _} (st : SearchState IdxCollType) (rawCandInds : List Nat) : SearchState IdxCollType :=
   let inds := rawCandInds.mergeSort
-  let nb := st.backCandScores.foldl ListProd5.nil (fun id a b c d e =>
-    if inds.orderedContains id then e else .cons id a b c d e)
+  let nb := st.backCandScores.foldl ListProd6.nil (fun id a b c d e f =>
+    if inds.orderedContains id then f else .cons id a b c d e f)
   let nf := st.forwCandScores.foldl ListProd6.nil (fun id a b c d e f =>
     if inds.orderedContains id then f else .cons id a b c d e f)
   let ni := st.inductCandScores.foldl ListProd6.nil (fun id x a b c d e =>
@@ -173,16 +173,16 @@ def removeCand (st : SearchState (List Nat)) (rawCandInds : List Nat) : SearchSt
 
 -- # Custom regularisers
 
-def regBackBreadth
+def regBackBreadth {IdxCollType}
   (maxTime : Nat)
-  (score : Float) (time : Nat) (data : BackCandData) (st : SearchState (List Nat)) : Float :=
+  (score : Float) (time : Nat) (data : BackCandData) (st : SearchState IdxCollType) : Float :=
   let timeFac := 1 - ((maxTime.toFloat - time.toFloat) / maxTime.toFloat)
   let idFac := 1 - ((st.id_gen_goal.toFloat - data.targetGoal.toFloat) / st.id_gen_goal.toFloat)
   timeFac * idFac * score
 
-def regBackDepth
+def regBackDepth {IdxCollType}
   (maxTime : Nat)
-  (score : Float) (time : Nat) (data : BackCandData) (st : SearchState (List Nat)) : Float :=
+  (score : Float) (time : Nat) (data : BackCandData) (st : SearchState IdxCollType) : Float :=
   let timeFac := ((maxTime.toFloat - time.toFloat) / maxTime.toFloat)
   let idFac := ((st.id_gen_goal.toFloat - data.targetGoal.toFloat) / st.id_gen_goal.toFloat)
   timeFac * idFac * score

@@ -6,7 +6,7 @@ Author: Yves Jäckle.
 
 import LeanGrow.Src.Search.API.IntegrateBack
 import LeanGrow.Src.Search.API.ScoreCore
-import LeanGrow.Src.Core.GeneralisePaIn.Subpattern
+import LeanGrow.Src.SampleGenScore.Gen.Subpattern
 
 
 open Lean Meta
@@ -23,26 +23,27 @@ open Lean Meta
 #check IntroTree.topGoalForForwId
 -- these unduction will be handled the same as the backwards case
 
-#check genQuerySubpat
+#check PaIn.genQueryBackSubpatMain
 
 
 
 def genQuerySubpatS (l1 : LocalContext)
-  (l2 : LocalInstances) (revCountMax : Nat) (toLoad : Array loadDataType) (T : PaIn (List Nat)) (weights : Array Float)
-  (e : Expr): MetaM (Prod3 Float LocalContext LocalInstances) :=
-  @genQuerySubpat (List Nat) _ _ _ id
-    List.isEmpty (List.orderedIntersect) (List.orderedUnion) []
-    l1 l2 revCountMax toLoad T weights e
+  (l2 : LocalInstances) (constr : UInt32Array) (revCountMax : Nat)  (T : PaIn UInt32Array)
+  (e : Expr): MetaM (Prod3 UInt32Array LocalContext LocalInstances) :=
+  PaIn.genQueryBackSubpatMain
+    UInt32Array.isEmpty UInt32Array.inter UInt32Array.union UInt32Array.empty
+    l1 l2 constr revCountMax e T
 
 
 #check 1
 
 
 
-def addBackCandOfInductGoal (l1 : LocalContext) (l2 : LocalInstances) (cfg : SearchConfig) (st : SearchState (List Nat))
+def addBackCandOfInductGoal (l1 : LocalContext) (l2 : LocalInstances) (cfg : SearchConfig UInt32Array) (st : SearchState UInt32Array)
   (target_goal_id : Nat) (target_goal_type : Expr)
-  : MetaM (Prod3 (SearchState (List Nat)) LocalContext LocalInstances) :=
-  do -- trace set Tracing.Flags.none in do
+  : MetaM (Prod3 (SearchState UInt32Array) LocalContext LocalInstances) :=
+  do
+  mtracing
   let .mk tars l1 l2 ← detectIndGoal l1 l2 cfg.funrecus cfg.elimrecus target_goal_type
   mtrace on .one with s!"[addBackCandOfInductGoal] found targets {repr tars}"
   tars.foldlMcps (.mk st l1 l2) (fun tar (.mk st l1 l2) q => do
@@ -59,25 +60,31 @@ def addBackCandOfInductGoal (l1 : LocalContext) (l2 : LocalInstances) (cfg : Sea
       let st := {st with id_gen_cand := st.id_gen_cand + 1, inductCandScores := .cons st.id_gen_cand cfg.default_relevance_timer tar target_goal_id target_goal_type cfg.sandboxModThmScore st.inductCandScores}
       q (.mk st l1 l2)
     else
-      match cfg.recuSubpatternScores.find? name.toString.toUTF8 with
+      match cfg.subpat.find? name.toString.toUTF8 with
       | .none => panic s!"[addBackCandOfInductGoal] no score data found for {name}"
-      | .some subPats =>
-          let .mk score l1 l2 ← genQuerySubpatS l1 l2 cfg.revCountMax subPats.loadData subPats.pi subPats.weights target_goal_type
+      | .some (.mk subPats weights totalWeight) =>
+          let .mk score l1 l2 ← genQuerySubpatS l1 l2 subPats.getIndicesS cfg.revCountMax subPats target_goal_type
+          let score := score.foldl 0 (fun i r => weights[i.toNat]! + r)
           mtrace on .one with s!"[addBackCandOfInductGoal] absolut score {score}"
-          let score := score / subPats.totalWeight
+          let score := score.toFloat / totalWeight.toFloat
           mtrace on .one with s!"[addBackCandOfInductGoal] looking at {score}"
           let st := {st with id_gen_cand := st.id_gen_cand + 1, inductCandScores := .cons st.id_gen_cand cfg.default_relevance_timer tar target_goal_id target_goal_type score st.inductCandScores}
           q (.mk st l1 l2)
     ) (fun x => return x)
 
 
-def addBackCandOfInductForw (l1 : LocalContext) (l2 : LocalInstances)  (cfg : SearchConfig) (st : SearchState (List Nat))
+
+def addBackCandOfInductForw (l1 : LocalContext) (l2 : LocalInstances)  (cfg : SearchConfig UInt32Array) (st : SearchState UInt32Array)
   (target_forw_id : Nat)
-  : MetaM (Prod3 (SearchState (List Nat)) LocalContext LocalInstances) :=
-  do -- trace set Tracing.Flags.none in do
+  : MetaM (Prod3 (SearchState UInt32Array) LocalContext LocalInstances) :=
+  do
+  mtracing
   let fvid : FVarId := if st.uNodes.binSearchContains target_forw_id (· < ·) then ⟨unode target_forw_id⟩ else ⟨gnode target_forw_id⟩
   let .mk tars l1 l2 ← detectIndHyp l1 l2 cfg.funrecus cfg.elimrecus fvid
-  let (target_goal_id, target_goal_type) := st.introTree.topGoalForForwId target_forw_id
+  let .mk target_goal_id target_goal_type l1 ← st.introTree.topGoalForForwId
+    (fun x y => y.oContains x.toUInt32) UInt32Array.isEmpty UInt32Array.inter
+    (fun x => .single x.toUInt32) (fun x => x[0]!.toNat)
+    l1 target_forw_id
   -- ↓ identical to `addBackCandOfInductGoal`
   mtrace on .one with s!"[addBackCandOfInductForw] found targets {repr tars}"
   tars.foldlMcps (.mk st l1 l2) (fun tar (.mk st l1 l2) q => do
@@ -94,42 +101,39 @@ def addBackCandOfInductForw (l1 : LocalContext) (l2 : LocalInstances)  (cfg : Se
       let st := {st with id_gen_cand := st.id_gen_cand + 1, inductCandScores := .cons st.id_gen_cand cfg.default_relevance_timer tar target_goal_id target_goal_type cfg.sandboxModThmScore st.inductCandScores}
       q (.mk st l1 l2)
     else
-      match cfg.recuSubpatternScores.find? name.toString.toUTF8 with
+      match cfg.subpat.find? name.toString.toUTF8 with
       | .none => panic s!"[addBackCandOfInductForw] no score data found for {name}"
-      | .some subPats =>
-          let .mk score l1 l2 ← genQuerySubpatS l1 l2 cfg.revCountMax subPats.loadData subPats.pi subPats.weights target_goal_type
-          mtrace on .one with s!"[addBackCandOfInductForw] absolut score {score}"
-          let score := score / subPats.totalWeight
+      | .some (.mk subPats weights totalWeight) =>
+          let .mk score l1 l2 ← genQuerySubpatS l1 l2 subPats.getIndicesS cfg.revCountMax subPats target_goal_type
+          let score := score.foldl 0 (fun i r => weights[i.toNat]! + r)
+          mtrace on .one with s!"[addBackCandOfInductGoal] absolut score {score}"
+          let score := score.toFloat / totalWeight.toFloat
           mtrace on .one with s!"[addBackCandOfInductForw] looking at {score}"
           let st := {st with id_gen_cand := st.id_gen_cand + 1, inductCandScores := .cons st.id_gen_cand cfg.default_relevance_timer tar target_goal_id target_goal_type score st.inductCandScores}
           q (.mk st l1 l2)
     ) (fun x => return x)
 
 
--- for inductions ↓
-#check inductiveInductionData
-#check functionalInductionData
--- In ↓, size of subgoal array correponds to tnodeRange
-#check elimInductionData
+#check inductiveInductionMain
 
-
--- ↓ + its docs suggestions
-#check integrateBackwardStd
 
 
 def integrateInduction (l1 : LocalContext) (l2 : LocalInstances)
-  (cfg : SearchConfig) (st : SearchState (List Nat))
+  (cfg : SearchConfig UInt32Array) (st : SearchState UInt32Array)
   (tar : TargetType) (target_goal_id : Nat) (target_goal_type : Expr)
-  : MetaM (Prod3 (SearchState (List Nat)) LocalContext LocalInstances) :=
-  do -- trace set Tracing.Flags.none in do
-  let introAd := st.introTree.gatherUGidsToGoalId target_goal_id []
-  let admi := fun n : Nat => introAd.orderedContains n
+  : MetaM (Prod3 (SearchState UInt32Array) LocalContext LocalInstances) :=
+  do
+  mtracing
+  let introAd := st.introTree.gatherUGidsToGoalId
+    (fun x y => y.oContains x.toUInt32) UInt32Array.union
+    target_goal_id .empty
+  let admi := fun n : Nat => introAd.oContains n.toUInt32
   match tar with
   | .indu major =>
       let mT ← Whnf (← InferType major l1 l2) l1 l2
       let .const n .. := mT.getAppFn | throwError s!"[integrateInduction] major type isn't constant headed {← ppExpr mT}"
-      let .mk r l1 l2 ← inductiveInductionData
-        admi st.depsCache #[] cfg.sinkRevCutOff l1 l2 st.id_gen_back
+      let .mk r l1 l2 ← inductiveInductionMain
+        admi cfg.sinkRevCutOff st.depsCache l1 l2 st.id_gen_back
         major target_goal_type
       match r with
       | .none => return .mk {st with id_gen_back := st.id_gen_back + 1} l1 l2 -- don't know if bump is necessary ?
@@ -139,12 +143,12 @@ def integrateInduction (l1 : LocalContext) (l2 : LocalInstances)
             (.recu n.toString)
             subgs.size .nil .nil st
           mtrace on .one with s!"[integrateInduction] adding to cycleAddBack : {← nGs.foldlM ListProd.nil (fun x y z => return .cons x (← ppExpr y) z)}"
-          mtrace on .one with s!"[integrateInduction] adding to cycleAddForw : {← nIs.foldlM ListProd.nil (fun x y z => return .cons x (← ppExpr y) z)}"
+          mtrace on .one with s!"[integrateInduction] adding to cycleAddForw : {← nIs.foldlM ListProd.nil (fun x _ y z => return .cons x (← ppExpr y) z)}"
           let st := {st with cycleAddForw := nIs.append st.cycleAddForw, cycleAddBack := nGs.append st.cycleAddBack}
           return .mk st l1 l2
   | .func targets recu =>
-      let .mk r l1 l2 ← functionalInductionData
-        admi st.depsCache #[] cfg.sinkRevCutOff l1 l2 st.id_gen_back
+      let .mk r l1 l2 ← functionalInductionMain
+        admi cfg.sinkRevCutOff st.depsCache  l1 l2 st.id_gen_back
         target_goal_type targets recu
       match r with
       | .none => return .mk {st with id_gen_back := st.id_gen_back + 1} l1 l2 -- don't know if bump is necessary ?
@@ -154,12 +158,12 @@ def integrateInduction (l1 : LocalContext) (l2 : LocalInstances)
             (.recu recu.name.toString)
             subgs .nil .nil st
           mtrace on .one with s!"[integrateInduction] adding to cycleAddBack : {← nGs.foldlM ListProd.nil (fun x y z => return .cons x (← ppExpr y) z)}"
-          mtrace on .one with s!"[integrateInduction] adding to cycleAddForw : {← nIs.foldlM ListProd.nil (fun x y z => return .cons x (← ppExpr y) z)}"
+          mtrace on .one with s!"[integrateInduction] adding to cycleAddForw : {← nIs.foldlM ListProd.nil (fun x _ y z => return .cons x (← ppExpr y) z)}"
           let st := {st with cycleAddForw := nIs.append st.cycleAddForw, cycleAddBack := nGs.append st.cycleAddBack}
           return .mk st l1 l2
   | .elim targets recu =>
-      let .mk r l1 l2 ← elimInductionData
-        admi st.depsCache #[] cfg.sinkRevCutOff l1 l2 st.id_gen_back
+      let .mk r l1 l2 ← elimInductionMain
+        admi cfg.sinkRevCutOff st.depsCache l1 l2 st.id_gen_back
         target_goal_type targets recu
       match r with
       | .none => return .mk {st with id_gen_back := st.id_gen_back + 1} l1 l2 -- don't know if bump is necessary ?
@@ -169,6 +173,6 @@ def integrateInduction (l1 : LocalContext) (l2 : LocalInstances)
             (.recu recu.name.toString)
             subgs .nil .nil st
           mtrace on .one with s!"[integrateInduction] adding to cycleAddBack : {← nGs.foldlM ListProd.nil (fun x y z => return .cons x (← ppExpr y) z)}"
-          mtrace on .one with s!"[integrateInduction] adding to cycleAddForw : {← nIs.foldlM ListProd.nil (fun x y z => return .cons x (← ppExpr y) z)}"
+          mtrace on .one with s!"[integrateInduction] adding to cycleAddForw : {← nIs.foldlM ListProd.nil (fun x _ y z => return .cons x (← ppExpr y) z)}"
           let st := {st with cycleAddForw := nIs.append st.cycleAddForw, cycleAddBack := nGs.append st.cycleAddBack}
           return .mk st l1 l2

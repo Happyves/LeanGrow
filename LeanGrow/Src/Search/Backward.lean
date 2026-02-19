@@ -18,19 +18,21 @@ open Lean Meta
 #check PaInG.embedBackMain
 
 
-def PaIn.embedBackMainS
+def PaInG.embedBackMainS
   (l1 : LocalContext) (l2 : LocalInstances) (thmData : CTrie (Array ThmFormat)) :=
-    @PaIn.embedBackMain (List Nat) l1 l2 thmData _ _
-    List.isEmpty List.orderedIntersect List.orderedUnion List.orderedDiff []
+    @PaInG.embedBackMain UInt32Array l1 l2 thmData _ _
+      UInt32Array.isEmpty UInt32Array.inter UInt32Array.union
+      UInt32Array.diff UInt32Array.empty
 
 
 #check embedBackRWMain
 
 def addBackCandOfStd (l1 : LocalContext) (l2 : LocalInstances)
-  (cfg : SearchConfig) (st : SearchState (List Nat))
+  (cfg : SearchConfig UInt32Array) (st : SearchState UInt32Array)
   (target_goal_id : Nat) (target_goal_type : Expr)
-  : MetaM (Prod3 (SearchState (List Nat)) LocalContext LocalInstances) :=
-  do --trace set Tracing.Flags.none in do
+  : MetaM (Prod3 (SearchState UInt32Array) LocalContext LocalInstances) :=
+  do
+  mtracing
   let .mk yes? _ embs l1 l2 ← st.stdBackPaIn.embedBackMainS l1 l2
     st.thmData st.stdBackPaIn.getIndicesS cfg.revCountMax [] target_goal_type
   if yes? != 3
@@ -38,16 +40,17 @@ def addBackCandOfStd (l1 : LocalContext) (l2 : LocalInstances)
     mtrace on .one with s!"[addBackCandOfStd] embedBackMainS failed"
     return .mk st l1 l2
   else
-    embs.foldlMcps (.mk (.nil : ListProd5 Nat BackCandData Nat ScoreType (List (CSetTrie (List Nat) Nat))) st.id_gen_cand l1 l2 : Prod4 _ _ _ _) (fun thmInds embData (.mk cand igc l1 l2) q0 => do
+    embs.foldlMcps (.mk (.nil : ListProd6 Nat BackCandData Nat ScoreType (thmGenDataEntry UInt32Array) (List (SetTrieP (Nat × Nat) UInt32Array PaIn))) st.id_gen_cand l1 l2 : Prod4 _ _ _ _) (fun thmInds embData (.mk cand igc l1 l2) q0 => do
       do
       mtrace on .one with s!"[addBackCandOfStd] looking at embedding (ln) {← embData.ln.foldlM ListProd.nil (fun x y z => return .cons x (← ppExpr y) z)}"
       mtrace on .one with s!"[addBackCandOfStd] looking at embedding (tn) {← embData.tn.foldlM ListProd3.nil (fun x w y z => return .cons x w (← ppExpr y) z)}"
-      thmInds.foldlMcps (.mk cand igc l1 l2 : Prod4 _ _ _ _) (fun i (.mk cand igc l1 l2) q1 => do
+      let res ← thmInds.foldlM (.mk cand igc l1 l2 : Prod4 _ _ _ _) (fun i (.mk cand igc l1 l2) => do
+        let i := i.toNat
         mtrace on .one with s!"[addBackCandOfStd] igc {igc}"
         let thm := st.thm_data[i]!
         mtrace on .one with s!"[addBackCandOfStd] looking at thm {repr thm.name}"
         let .mk ta l1 l2 ← embData.tn.foldlM ((.mk ListProd3.nil l1 l2) : Prod3 (ListProd3 Nat Nat Expr) _ _) (fun x y z (.mk R l1 l2) => do
-          let .mk z l1 l2 ← mvarifyTnodesRecWiContextIn z l1 l2
+          let .mk z l1 l2 ← mvarifyTnodesRec z l1 l2
           return .mk (.cons x y z R) l1 l2)
         let .mk la l1 l2 ← embData.tlv.foldlM ((.mk ListProd3.nil l1 l2) : Prod3 (ListProd3 Nat Nat Level) _ _) (fun x y z (.mk R l1 l2) => do
           let .mk z l1 l2 ← mvarifyLTnodesIn z l1 l2
@@ -58,25 +61,36 @@ def addBackCandOfStd (l1 : LocalContext) (l2 : LocalInstances)
           | .inl x => .std x.toString
         mtrace on .one with s!" calling addBackCandidate"
         let (x,y) ← addBackCandidate l1 l2 cfg st igc cand ta la target_goal_id thm embData .none md
-        q1 (.mk y x l1 l2)
-        ) q0
+        return (.mk y x l1 l2)
+        )
+      q0 res
       ) <| fun (.mk cand igc l1 l2) => do
-        mtrace on .one with s!"[addBackCandOfStd] adding candidates {← cand.foldlM ListProd4.nil (fun v x y z _ w => return .cons v (repr  x.thmData) y (repr z) w)}"
-        let st := {st with id_gen_cand := igc, backCandScores := cand.append st.backCandScores}
-        return .mk st l1 l2
+      mtrace on .one with s!"[addBackCandOfStd] adding candidates {← cand.foldlM ListProd4.nil (fun v x y z _ _ w => return .cons v (repr  x.thmData) y (repr z) w)}"
+      let st := {st with id_gen_cand := igc, backCandScores := cand.append st.backCandScores}
+      return .mk st l1 l2
 
 
-#check mvarifyLTnodesIn
-#check mvarifyTnodesRecWiContextIn
+#check embedBackRWMain
 
 -- #exit
 
 
+def embedBackRWMainS
+  (l1 : LocalContext) (l2 : LocalInstances) (thmData : CTrie (Array ThmFormat)) :=
+    embedBackRWMain l1 l2 thmData
+      (fun x y z => x.foldl y (fun i s => z i.toNat s))
+      UInt32Array.isEmpty UInt32Array.inter UInt32Array.union
+      UInt32Array.diff UInt32Array.empty
+
+#check 1
+
+
 def addBackCandOfRW (l1 : LocalContext) (l2 : LocalInstances)
-  (cfg : SearchConfig) (st : SearchState (List Nat))
+  (cfg : SearchConfig UInt32Array) (st : SearchState UInt32Array)
   (target_goal_id : Nat) (target_goal_type : Expr)
-  : MetaM (Prod3 (SearchState (List Nat)) LocalContext LocalInstances) :=
-  do --trace set Tracing.Flags.none in do
+  : MetaM (Prod3 (SearchState UInt32Array) LocalContext LocalInstances) :=
+  do
+  mtracing
   mtrace on .two with s!"[addBackCandOfRW] call embedBackRWMain' on {← PpExpr target_goal_type l1 l2}"
   match target_goal_type with
   | .forallE .. | .letE .. =>
@@ -85,16 +99,16 @@ def addBackCandOfRW (l1 : LocalContext) (l2 : LocalInstances)
     return .mk st l1 l2
   | _ =>
     mtrace on .two with s!"[addBackCandOfRW] call embedBackRWMain' on {← st.rwBackPaIn.ppS l1 l2 [] 0}"
-    let .mk embs l1 l2 ← embedBackRWMain l1 l2
-      st.thmData st.rwBackPaIn.getIndicesS cfg.revCountMax [] target_goal_type st.rwBackPaIn
-    embs.foldlMcps (.mk (.nil : ListProd5 Nat BackCandData Nat ScoreType (List (CSetTrie (List Nat) Nat))) st.id_gen_cand l1 l2 : Prod4 _ _ _ _) (fun thmInd embDatas (.mk cand igc l1 l2) q0 => do
+    let .mk _ embs l1 l2 ← embedBackRWMainS l1 l2
+      st.thmData st.rwBackPaIn.getIndicesS UInt32Array.empty cfg.revCountMax [] target_goal_type st.rwBackPaIn
+    embs.foldlMcps (.mk (.nil : ListProd6 Nat BackCandData Nat ScoreType (thmGenDataEntry UInt32Array) (List (SetTrieP (Nat × Nat) UInt32Array PaIn))) st.id_gen_cand l1 l2 : Prod4 _ _ _ _) (fun thmInd embDatas (.mk cand igc l1 l2) q0 => do
       let thm := st.thm_data[thmInd]!
       embDatas.foldlMcps (.mk cand igc l1 l2 : Prod4 _ _ _ _) (fun emb dirs extW (.mk cand igc l1 l2) q1 => do
         mtrace on .one with s!"[addBackCandOfRW] emb via ln {← emb.ln.foldlM ListProd.nil (fun y z w => return .cons y (← PpExpr z l1 l2) w)}"
         mtrace on .one with s!"[addBackCandOfRW] igc {igc}"
         mtrace on .one with s!"[addBackCandOfRW] looking at thm {repr thm.name}"
         let .mk ta l1 l2 ← emb.tn.foldlM ((.mk ListProd3.nil l1 l2) : Prod3 (ListProd3 Nat Nat Expr) _ _) (fun x y z (.mk R l1 l2) => do
-          let .mk z l1 l2 ← mvarifyTnodesRecWiContextIn z l1 l2
+          let .mk z l1 l2 ← mvarifyTnodesRec z l1 l2
           return .mk (.cons x y z R) l1 l2)
         mtrace on .one with s!"[addBackCandOfRW] ta {← ta.foldlM ListProd3.nil (fun x y z w => return .cons x y (← PpExpr z l1 l2) w)}"
         let .mk la l1 l2 ← emb.tlv.foldlM ((.mk ListProd3.nil l1 l2) : Prod3 (ListProd3 Nat Nat Level) _ _) (fun x y z (.mk R l1 l2) => do
@@ -107,44 +121,24 @@ def addBackCandOfRW (l1 : LocalContext) (l2 : LocalInstances)
           | .inr x => .string s!"{repr x}"
           | .inl x => .std x.toString
         let (x,y) ← addBackCandidate l1 l2 cfg st igc cand ta la target_goal_id thm emb (.some dirs target_goal_type extW) md
-        q1 (.mk y x l1 l2)) q0
+        q1 (.mk y x l1 l2)
+        ) q0
       ) <| fun (.mk cand igc l1 l2) => do
-        mtrace on .one with s!"[addBackCandOfRW] adding candidates {← cand.foldlM ListProd4.nil (fun v x y z _ w => return .cons v (repr  x.thmData) y (repr z) w)}"
+        mtrace on .one with s!"[addBackCandOfRW] adding candidates {← cand.foldlM ListProd4.nil (fun v x y z _ _ w => return .cons v (repr  x.thmData) y (repr z) w)}"
         let st := {st with id_gen_cand := igc, backCandScores := cand.append st.backCandScores}
         return .mk st l1 l2
 
 
-
-#print embedBackData
-
--- Select
-
--- pre integrate with
-#check embedBackPreIntegrate
--- In ↓ follow docs suggestion
-#check embedBackRWPreIntegrate
-
--- for inductions ↓
-#check inductiveInductionData
-#check functionalInductionData
--- In ↓, size of subgoal array correponds to tnodeRange
-#check elimInductionData
-
-
--- ↓ + its docs suggestions
-#check integrateBackwardStd
-
--- update ranks
-
--- query forw backwards applicable to new goals
-
-
 #print BackCandData
 
-def integrateBackwardFull (l1 : LocalContext) (l2 : LocalInstances) (cfg : SearchConfig) (st : SearchState (List Nat))
+
+
+def integrateBackwardFull (l1 : LocalContext) (l2 : LocalInstances)
+  (cfg : SearchConfig UInt32Array) (st : SearchState UInt32Array)
   (data : BackCandData)
-  : MetaM (Prod3 (SearchState (List Nat)) LocalContext LocalInstances) :=
-  --trace set Tracing.Flags.none in
+  : MetaM (Prod3 (SearchState UInt32Array) LocalContext LocalInstances) :=
+  do
+  mtracing
   match data.rwdata with
   | .none => do
       mtrace on .one with s!"[integrateBackwardFull] embedBackPreIntegrate"
@@ -154,26 +148,28 @@ def integrateBackwardFull (l1 : LocalContext) (l2 : LocalInstances) (cfg : Searc
       let .mk nIs nGs st l1 l2 ← integrateBackwardStd l1 l2
         cfg.revCountMax data.targetGoal term data.md  tnodeRange data.ta data.la st
       mtrace on .one with s!"[integrateBackwardFull] adding to cycleAddBack : {← nGs.foldlM ListProd.nil (fun x y z => return .cons x (← PpExpr y l1 l2) z)}"
-      mtrace on .one with s!"[integrateBackwardFull] adding to cycleAddForw : {← nIs.foldlM ListProd.nil (fun x y z => return .cons x (← PpExpr y l1 l2) z)}"
+      mtrace on .one with s!"[integrateBackwardFull] adding to cycleAddForw : {← nIs.foldlM ListProd.nil (fun x _ y z => return .cons x (← PpExpr y l1 l2) z)}"
       let st := {st with cycleAddForw := nIs.append st.cycleAddForw, cycleAddBack := nGs.append st.cycleAddBack}
       return .mk st l1 l2
   | .some dirs target_goal_type extW => do
-      let ia := st.introTree.gatherUGidsToGoalId data.targetGoal []
-      let iaf := fun n => ia.orderedContains n
+      let ia := st.introTree.gatherUGidsToGoalId
+        (fun x y => y.oContains x.toUInt32) UInt32Array.union
+        data.targetGoal .empty
+      let iaf := fun n : Nat => ia.oContains n.toUInt32
       mtrace on .one with s!"[integrateBackwardFull] embedBackRWPreIntegrate"
-      embedBackRWPreIntegrate
-        iaf l1 l2 st.depsCache dirs st.id_gen_back target_goal_type extW data.thmData data.arg_lvls data.todo_lvls data.arg_exprs data.todo_expr
-        (fun l1 l2 => do
-          mtrace on .one with s!"[integrateBackwardFull] fail"
-          let st := {st with id_gen_back := st.id_gen_back + 1} -- necessary
-          return .mk st l1 l2
-          )
-        <| fun term tnodeRange l1 l2 => do
+      let .mk res l1 l2 ← embedBackRWPreIntegrate
+        iaf l1 l2 st.depsCache cfg.sinkRevCutOff dirs st.id_gen_back target_goal_type extW data.thmData data.arg_lvls data.todo_lvls data.arg_exprs data.todo_expr
+      match res with
+      | .none =>
+        mtrace on .one with s!"[integrateBackwardFull] fail"
+        let st := {st with id_gen_back := st.id_gen_back + 1} -- necessary
+        return .mk st l1 l2
+      | .some term tnodeRange =>
           mtrace on .one with s!"[integrateBackwardFull] term {← PpExpr term l1 l2}"
           let .mk nIs nGs st l1 l2 ← integrateBackwardStd l1 l2
             cfg.revCountMax data.targetGoal term data.md tnodeRange data.ta data.la st
           mtrace on .one with s!"[integrateBackwardFull] adding to cycleAddBack : {← nGs.foldlM ListProd.nil (fun x y z => return .cons x (← PpExpr y l1 l2) z)}"
-          mtrace on .one with s!"[integrateBackwardFull] adding to cycleAddForw : {← nIs.foldlM ListProd.nil (fun x y z => return .cons x (← PpExpr y l1 l2) z)}"
+          mtrace on .one with s!"[integrateBackwardFull] adding to cycleAddForw : {← nIs.foldlM ListProd.nil (fun x _ y z => return .cons x (← PpExpr y l1 l2) z)}"
           let st := {st with cycleAddForw := nIs.append st.cycleAddForw, cycleAddBack := nGs.append st.cycleAddBack}
           return .mk st l1 l2
 
