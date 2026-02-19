@@ -141,6 +141,7 @@ partial def sampleHypsCore
               | .some delZet =>
                 match ← deltaZetaBeta? l1 l2 depthStop deltaFuzz zetaFuzz delZet with
                 | .some pdd E fv? =>
+                  mtrace on .zero with s!" delaZetaed {← ppExpr delZet}\nTo {← ppExpr E}\nDepths: pdd {pdd} hdepth {hdepth}"
                   let dd := max hdepth pdd
                   let para := .cons dd (.raw E) (sh.foldl hs .cons)
                   let Lifted' := (match fv? with | .none => Lifted | .some fv => Lifted.erase fv)
@@ -148,6 +149,7 @@ partial def sampleHypsCore
                 | _ =>
                   inner l1 l2 d Lifted (.cons hdepth (.irreducible h) sh) todo hs (count+1)
               | _ =>
+                mtrace on .zero with s!" no delta zeta"
                 inner l1 l2 d Lifted (.cons hdepth (.irreducible h) sh) todo hs (count+1)
           | _ =>
               mtrace on .zero with s!" delaborated to {← subp.mapM (fun x => x.pp l1 l2)}"
@@ -156,6 +158,7 @@ partial def sampleHypsCore
               | .some delZet =>
                 match ← deltaZetaBeta? l1 l2 depthStop deltaFuzz zetaFuzz delZet with
                 | .some pdd E fv? =>
+                  mtrace on .zero with s!" delaZetaed {← ppExpr delZet}\nTo {← ppExpr E}\nDepths: pdd {pdd} hdepth {hdepth}"
                   let dd := max hdepth pdd
                   let para := .cons dd (.raw E) (sh.foldl hs .cons)
                   let Lifted' := (match fv? with | .none => Lifted | .some fv => Lifted.erase fv)
@@ -164,7 +167,8 @@ partial def sampleHypsCore
                 | _ =>
                   inner l1 l2 d Lifted (.cons hdepth H sh) (.cons (if hdepth + 1 > d then hdepth + 1 else d) count (lifted ++ Lifted) nx todo) hs (count+1)
               | _ =>
-                  inner l1 l2 d Lifted (.cons hdepth H sh) (.cons (if hdepth + 1 > d then hdepth + 1 else d) count (lifted ++ Lifted) nx todo) hs (count+1)
+                mtrace on .zero with s!" no delta zeta"
+                inner l1 l2 d Lifted (.cons hdepth H sh) (.cons (if hdepth + 1 > d then hdepth + 1 else d) count (lifted ++ Lifted) nx todo) hs (count+1)
         | H@(.simp simpSteps nonTerminal usedFv) =>
           mtrace on .zero with s!" inner at hdepth {hdepth} simp {← H.pp l1 l2}"
           match simpSteps with

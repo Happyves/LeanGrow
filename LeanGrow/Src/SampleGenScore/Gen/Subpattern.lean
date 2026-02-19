@@ -211,6 +211,7 @@ partial def genQueryBackSubpatWiLoadMain
       let _ ← mkMvarStdNoCoI (.num sampleName i) T
       i := i+1
     let .mk subp l1 l2 ← E.getSubPat l1 l2 []
+    -- **fix** we should also add hyps !
     subp.foldlM (fun (.mk I l1 l2) E => do
       let .mk yes? _ inds l1 l2 ← genQueryBackCore empty? intersect union empty l1 l2 constr revCountMax E T
       if yes? == 3
@@ -232,6 +233,7 @@ partial def genQueryBackSubpatMain
     : MetaM (Prod3 IdxCollType LocalContext LocalInstances) :=
     do
     let .mk subp l1 l2 ← E.getSubPat l1 l2 []
+    -- **fix** we should also add hyps !
     subp.foldlM (fun (.mk I l1 l2) E => do
       let .mk yes? _ inds l1 l2 ← genQueryBackCore empty? intersect union empty l1 l2 constr revCountMax E T
       if yes? == 3

@@ -62,7 +62,10 @@ def testDelZet (printLift? : Bool) (thmName : Name)
 -- #eval testNoDelZet false `List.length_erase_add_one 1 2 2
 
 -- #eval testDelZet false `List.length_erase_add_one 1 2 2 2 2
--- **fix** delta should do something here ?!?
+-- delta does nothing because deltas are induction and grind
+-- this is also why we get duplicate samples
+
+
 
 #check List.forall_map_iff
 
@@ -191,6 +194,8 @@ def testDelZet (printLift? : Bool) (thmName : Name)
 -- #eval testNoDelZet false `Nat.div_lcm_eq_div_gcd 1 2 2
 -- **fix** have ∨ hyp at backward Or.casesOn sample
 
+
+
 #check Nat.prod_primeFactorsList
 
 -- #eval testNoDelZet false `Nat.prod_primeFactorsList 1 2 2
@@ -232,6 +237,8 @@ def testDelZet (printLift? : Bool) (thmName : Name)
 
 -- #eval testNoDelZet false `Nat.replicate_subperm_primeFactorsList_iff 1 2 2
 -- **fix** induc Nat.recAux should have generalised b in goal ???
+
+
 
 #check Nat.dvd_of_primeFactorsList_subperm
 

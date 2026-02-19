@@ -39,6 +39,22 @@ def mod1 := `LeanGrow.Src.Caching.Score.Test.DummySamples
 -- #eval explore_gen_thm_core_S mod1
 
 
+#check generalize_back_cvbGoalHyp_ofModule_S
+#check generalize_back_cvbGoalHyp_ofModule_inEnv_S
+
+
+-- #eval generalize_back_cvbGoalHyp_ofModule_S mod1
+-- overflow..
+
+-- #eval generalize_back_cvbGoalHyp_ofModule_inEnv_S mod1
+-- here too ... use trace har here ...
+
+#check explore_gen_gh_core_S
+
+
+--#eval explore_gen_gh_core_S mod1
+
+
 /-
 
 
