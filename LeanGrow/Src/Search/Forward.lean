@@ -26,7 +26,7 @@ def embedForwInterMainS (l1 : LocalContext)
     (fun x y z => x.foldlM y (fun i s => z i.toNat s))
     UInt32Array.inter UInt32Array.union UInt32Array.diff
     UInt32Array.isEmpty UInt32Array.empty UInt32Array.subsetOf
-    st.stdForwSetTrie_idxToThmIdx st.thm_data
+    st.stdForwSetTrie_idxToSinkIdx st.thm_data
     st.stdForwSetTrie_idxToThmIdx st.thmNameToHypIdx
     st.uNodes l1 st.introTree
     st.stdForwSetTrie

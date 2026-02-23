@@ -47,14 +47,25 @@ grow_load_sandbox stdSanbox ; elimSandbox ; funIndSandbox
 #check 1
 
 tracing_mode .std
-tracing_flags [(`growImpl, TracingFlags.all)]
+tracing_flags [(`growImpl, TracingFlags.all),
+                -- (`searchCore, TracingFlags.all),
+                -- (`integrateInduction, TracingFlags.all),
+                -- (`integrateBackwardStd, TracingFlags.all),
+                -- (`introWiLtxMain, TracingFlags.all),
+                -- (`introPass, TracingFlags.all),
+                -- (`addForwCandOfStdStep, TracingFlags.all),
+                -- (`embedForwInterMain, TracingFlags.all),
+                -- (`embedPropaInter, TracingFlags.all),
+                ]
 
+-- #exit
 
 
 #check growImpl
 
 theorem test_0 (l : List Nat) : l.dedup <+ l := by
   grows -- yay
+
 #print test_0
 
 theorem test_0_sol (l : List Nat) : l.dedup <+ l := by
@@ -66,45 +77,25 @@ theorem test_0_sol (l : List Nat) : l.dedup <+ l := by
 
 -- #exit
 
--- tracing_flags [(`mainBackRW, TracingFlags.all)]
-
--- set_option pp.rawOnError true
--- set_option diagnostics true
 
 theorem test_1 {α : Type _} [DecidableEq α] (l : List (Nat × α)) : l.dedup <+ l := by
   grows --yay
+
 #print test_1
 
 theorem test_1_sol {α : Type _} [DecidableEq α] (l : List (Nat × α)) : l.dedup <+ l := by
   apply dedup_sublist
 
 
-#check Lean.Meta.forallTelescope
-#check IO.print
-#check getNextBoundedTerm
-
--- tracing_flags [(`searchCore, TracingFlags.all),
---                 (`growImpl, TracingFlags.all),
---                 (`integrateBackwardFull, TracingFlags.all),
---                 (`embedBackRWPreIntegrate, TracingFlags.all),
---                 (`mainBackRW, TracingFlags.all)
---                 --(`addBackCandOfRW, TracingFlags.all),
---                 --(`embedBackRWMain, TracingFlags.all),
---                 --(`PaIn.embedBackCore, TracingFlags.all)
---                 ]
-
--- set_option pp.explicit true
-#exit
 
 theorem test_2 (l : List Nat) : let L := l ++ l ; L.dedup <+ L := by
   grows --yay
+
 #print test_2
 
 
 theorem test_2_sol (l : List Nat) : let L := l ++ l ; L.dedup <+ L := by
   apply dedup_sublist
-
-
 
 
 -- #exit
@@ -118,23 +109,20 @@ theorem test_3_sol (l : List Nat) : let L := l ++ l ; L.dedup <+ (l ++ l) := by
   apply dedup_sublist
 
 
+-- #exit
+
 def Even (n : Nat) : Prop := ∃ k, n = 2*k
-
--- tracing_flags [(`integrateBackwardStd, TracingFlags.all)]
-
 
 
 theorem test_4 (l L : List Nat) (h : Even (l ++ L).length) : Even (l.length + L.length) := by
   grows -- yay
+
 #print test_4
 
 theorem test_4_sol (l L : List Nat) (h : Even (l ++ L).length) : Even (l.length + L.length) := by
   rw [← length_append]
   exact h
 
-/-
-Problem seems to be that goalSpawn isn't handled properly
--/
 
 -- #exit
 
@@ -142,9 +130,9 @@ Problem seems to be that goalSpawn isn't handled properly
 
 theorem test_5 {α : Type _} [DecidableEq α] (l L : List (Nat × α)) (h : Even (l ++ L).length) : Even (l.length + L.length) := by
   grows
+
 #print test_5
 
--- #exit
 
 theorem test_5_sol {α : Type _} [DecidableEq α] (l L : List (Nat × α)) (h : Even (l ++ L).length) : Even (l.length + L.length) := by
   rw [← length_append]
@@ -155,6 +143,7 @@ theorem test_5_sol {α : Type _} [DecidableEq α] (l L : List (Nat × α)) (h : 
 
 theorem test_6 (l L : List Nat) (h : Even (l.length + L.length)) : let  X := l ++ L ; Even X.length := by
   grows -- yay
+
 #print test_6
 
 theorem test_6_sol (l L : List Nat) (h : Even (l.length + L.length)) : let  X := l ++ L ; Even X.length := by
@@ -166,8 +155,10 @@ theorem test_6_sol (l L : List Nat) (h : Even (l.length + L.length)) : let  X :=
 -- #exit
 
 
+
 theorem test_7 (l L : List Nat) (P : Nat → Prop) (h : P (l.length + L.length)) : P (l ++ L).length := by
   grows -- yay
+
 #print test_7
 
 
@@ -180,15 +171,13 @@ theorem test_7_sol (l L : List Nat) (P : Nat → Prop) (h : P (l.length + L.leng
 
 
 
--- set_option pp.explicit true
--- set_option pp.funBinderTypes true
-
-
 theorem test_8 (l : List Nat) (a : Nat) (h : a ∈ l) : a ∈ l.dedup := by
   grows -- yay
+
 #print test_8
 
--- #exit
+
+
 theorem test_8_sol (l : List Nat) (a : Nat) (h : a ∈ l) : a ∈ l.dedup := by
   rw [mem_dedup]
   exact h
@@ -198,6 +187,7 @@ theorem test_8_sol (l : List Nat) (a : Nat) (h : a ∈ l) : a ∈ l.dedup := by
 
 theorem test_9 (l : List Nat) (h : 42 ∈ l) : 42 ∈ l.dedup := by
   grows
+
 #print test_9
 
 
@@ -212,13 +202,14 @@ theorem test_9_sol (l : List Nat) (h : 42 ∈ l) : 42 ∈ l.dedup := by
 
 theorem test_11 (l L : List Nat) (P : List Nat → Prop) (h₁ : l = L) (h₂ : P l) : P L := by
   grows
+
 #print test_11
 
 theorem test_11_sol (l L : List Nat) (P : List Nat → Prop) (h₁ : l = L) (h₂ : P l) : P L := by
   rw [← h₁]
   exact h₂
 
--- #exit
+#exit
 
 theorem test_12 (l L : List Nat) (P : List Nat → Prop) (h₀ : 42 = 42) (h₁ : 42 = 42 → l = L) (h₂ : P l) : P L := by
   grows

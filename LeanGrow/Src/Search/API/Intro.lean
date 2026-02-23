@@ -277,13 +277,15 @@ partial def introPass
               let un := gnode forwId
               mtrace on .zero with s!"[introPass] calling core"
               let ⟨st,l1,l2⟩ ← introCore l1 l2 st un (.some V) T
-              go l1 l2 final? st (Expr.instantiate1 B (.fvar ⟨un⟩)) gnIdxAndTy (.cons forwId ⟨un⟩ T gnIdxAndTy')
-            else -- ↑↓ not added to `gnIdxAndTy` because we don't want them in the backtree, only in the introtree
+              go l1 l2 final? st (Expr.instantiate1 B (.fvar ⟨un⟩)) (.cons ⟨un⟩ T gnIdxAndTy) (.cons forwId ⟨un⟩ T gnIdxAndTy')
+            else
+              -- At some point: ↑↓ not added to `gnIdxAndTy` because we don't want them in the backtree, only in the introtree
+              -- lead to bugs, first occurence in test_3 of snadbox one ...
               let un := unode forwId
               let st := {st with uNodes := st.uNodes.push forwId}
               mtrace on .zero with s!"[introPass] calling core"
               let ⟨st,l1,l2⟩ ← introCore l1 l2 st un (.some V) T
-              go l1 l2 final? st (Expr.instantiate1 B (.fvar ⟨un⟩)) gnIdxAndTy (.cons forwId ⟨un⟩ T gnIdxAndTy')
+              go l1 l2 final? st (Expr.instantiate1 B (.fvar ⟨un⟩)) (.cons ⟨un⟩ T gnIdxAndTy) (.cons forwId ⟨un⟩ T gnIdxAndTy')
       | .forallE _ T B _ => do
           if T.hasTnodes
           then
@@ -364,7 +366,8 @@ partial def introWiLtxMain (l1 : LocalContext) (l2 : LocalInstances) (st : Searc
     mtrace on .zero with s!"[introWiLtxMain] ltxAdd:"
     ltxAdd.foldlM () (fun ugi _ T _ => do mtrace on .zero with s!"[introWiLtxMain] index {ugi} type {← ppExpr T}" ; pure ())
     ltxAdd.foldlMcps (.mk spawn_goal_ltx l1 l2 : Prod3 _ _ _) (fun ugi _ e (.mk T l1 l2) q => do
-      q (← T.insertS l1 l2 e ugi)) <| fun (.mk ltxHere l1 l2) => do
+      q (← T.insertS l1 l2 e ugi)
+      ) <| fun (.mk ltxHere l1 l2) => do
         if head == ohead
         then
           return .mk (ltxAdd.append newForw) (.cons headId head ltxHere initNewGoals) st l1 l2

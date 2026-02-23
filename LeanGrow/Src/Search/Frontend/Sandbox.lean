@@ -83,6 +83,8 @@ unsafe def mkGrowExtSandbox
 
 
 #check SearchConfig
+-- #exit
+
 
 elab "grow_load_sandbox" std:term ";" eli:term ";" funi:term : command => unsafe do
   Command.liftTermElabM do

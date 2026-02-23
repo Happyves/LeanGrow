@@ -187,6 +187,7 @@ def introAssemble (l1 : LocalContext) (l2 : LocalInstances) (uNodes : Array Nat)
   (args : List BackTree) : MetaM (Prod3 AssembleData LocalContext LocalInstances) :=
   do
   mtracing
+  mtrace on .one with s!"[introAssemble] gnIdxAndTy to {gnIdxAndTy.foldl [] (fun x _ y => x.name :: y)}"
   let someg := getFirstGoalIdFromIntroArgs args
   mtrace on .zero with s!"[introAssemble] getFirstGoalIdFromIntroArgs found {someg}"
   --let meaningfulUGnode := IT.gatherUGidsToGoalId someg []
@@ -211,6 +212,7 @@ def introAssemble (l1 : LocalContext) (l2 : LocalInstances) (uNodes : Array Nat)
           -- expandUGnodesATIntro meaningfulUGnode e <| fun e => do
             -- mtrace on .zero with s!"[introAssemble] expanded to {← ppExpr e}"
           let .mk bfvs l1 l2 ← e.getGUFVarsIdsRec l1 l2
+          mtrace on .one with s!"[introAssemble] bfvs {bfvs.map FVarId.name}"
           let localFvs := (gnIdxAndTy.foldl bfvs (fun x _ y => x :: y)).map (fun | ⟨.num _ i⟩ => i | _ => panic! "[introAssemble] incorrect fvar format")
           let localFvs := localFvs.foldl (fun R i => R.oInsert i.toUInt32) UInt32Array.empty
           let meaningfulUGnode := UInt32Array.inter meaningfulUGnode localFvs
@@ -253,7 +255,7 @@ def introAssemble (l1 : LocalContext) (l2 : LocalInstances) (uNodes : Array Nat)
 
 
 #check 1
-
+-- #exit
 
 partial def backAssemble
   (l1 : LocalContext) (l2 : LocalInstances)

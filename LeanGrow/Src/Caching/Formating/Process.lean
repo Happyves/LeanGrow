@@ -73,7 +73,8 @@ def badUniRW? (goal : Expr) (hyps : Array HypType) (sinks : List Nat) : badUniTy
 /-- An argument is conjecturable for a back-step if it isn't a proof (its type is a prop),
 it isn't in the goal, and it has no other non-proof-argument dependning on it.
 -/
-def getConjecturablePos_ofProcessed (hyps : Array HypType) (goal : Expr) : MetaM (List Nat) := do
+def getConjecturablePos_ofProcessed (l1 : LocalContext) (l2 : LocalInstances)
+  (hyps : Array HypType) (goal : Expr) : MetaM (List Nat) := do
   let gdeps := goal.onAllSubtermsFold [] (fun e l =>
     match e with
     | .mvar (.mk (.num _ pos)) => l.insert pos
@@ -89,7 +90,7 @@ def getConjecturablePos_ofProcessed (hyps : Array HypType) (goal : Expr) : MetaM
       match h with
       | .inst .. => i := i+1
       | .reg T =>
-        if !(← isProp T)
+        if !(← IsProp T l1 l2)
         then
           let tdeps := T.onAllSubtermsFold [] (fun e l =>
             match e with
@@ -101,6 +102,7 @@ def getConjecturablePos_ofProcessed (hyps : Array HypType) (goal : Expr) : MetaM
   return res.mergeSort (· ≤ ·) -- important that sorted !
 
 #check 1
+
 
 
 /-- Bool in output is true if its an rw-thm which has a sink not in the goal-/
@@ -117,7 +119,7 @@ partial def processForMain (l1 : LocalContext) (l2 : LocalInstances)
     | .letE _ _ V B _ => do
         go l1 l2 hyps decls userNames (Expr.instantiate1 B V) pos sinkCand
     | .forallE _ T nx bi => do
-        let T ← withTransparency .reducible <| reduce (skipTypes := false) T
+        let T ← withLCtx l1 l2 <| withTransparency .reducible <| reduce (skipTypes := false) T
         let lid := lnode module thmIdx pos
         let T := T.cleanupAnnotations
         let mv ← mkMvarStdNoCoE lid T
@@ -136,7 +138,7 @@ partial def processForMain (l1 : LocalContext) (l2 : LocalInstances)
           | _ => (pos, affected.length) :: (sinkCand.filter (fun (x,_) => !(affected.contains x)))
         go l1 l2 hyps decls userNames nx (pos + 1) sinkCand
     | goal =>
-        let goal ← withTransparency .reducible <| reduce (skipTypes := false) goal -- no need for ltx
+        let goal ← withLCtx l1 l2 <| withTransparency .reducible <| reduce (skipTypes := false) goal -- no need for ltx
         match goal with
         | .forallE .. | .letE .. =>
           go l1 l2 hyps decls userNames goal pos sinkCand
@@ -154,7 +156,7 @@ partial def processForMain (l1 : LocalContext) (l2 : LocalInstances)
                 let pred? ← IsProp goal l1 l2
                 let bf ← isBadForForw l1 l2 sinks hyps goal
                 let bb ← isBadForBack l1 l2 sinks hyps goal
-                let cjs ← getConjecturablePos_ofProcessed hyps goal
+                let cjs ← getConjecturablePos_ofProcessed l1 l2 hyps goal
                 let res : ThmFormat :=
                   .std thmName lvlN pred? hyps ⟨lvlC, decls, userNames⟩ hyps.size goal sinks bf bb cjs
                 return .mk false (.cons badu res .nil) l1 l2
@@ -167,11 +169,11 @@ partial def processForMain (l1 : LocalContext) (l2 : LocalInstances)
               let pred? ← IsProp goal l1 l2
               let bf ← isBadForForw l1 l2 sinks hyps goal
               let bb ← isBadForBack l1 l2 sinks hyps goal
-              let cjs ← getConjecturablePos_ofProcessed hyps goal
+              let cjs ← getConjecturablePos_ofProcessed l1 l2  hyps goal
               let resI : ThmFormat :=
                 .std thmName lvlN pred? hyps ⟨lvlC, decls, userNames⟩ hyps.size goal sinks bf bb cjs
-              let left ← withTransparency .reducible <| reduce (skipTypes := false) left
-              let right ← withTransparency .reducible <| reduce (skipTypes := false) right
+              let left ← withLCtx l1 l2 <| withTransparency .reducible <| reduce (skipTypes := false) left
+              let right ← withLCtx l1 l2 <| withTransparency .reducible <| reduce (skipTypes := false) right
               if left == right
               then
                 return .mk true .nil l1 l2
@@ -268,7 +270,7 @@ partial def processForMainSpe (l1 : LocalContext) (l2 : LocalInstances)
     | .letE _ _ V B _ => do
         go l1 l2 hyps decls userNames (Expr.instantiate1 B V) pos sinkCand
     | .forallE _ T nx bi => do
-        let T ← withTransparency .reducible <| reduce (skipTypes := false) T
+        let T ← withLCtx l1 l2 <| withTransparency .reducible <| reduce (skipTypes := false) T
         let lid := lnode module thmIdx pos
         let T := T.cleanupAnnotations
         let mv ← mkMvarStdNoCoE lid T
@@ -287,7 +289,7 @@ partial def processForMainSpe (l1 : LocalContext) (l2 : LocalInstances)
           | _ => (pos, affected.length) :: (sinkCand.filter (fun (x,_) => !(affected.contains x)))
         go l1 l2 hyps decls userNames nx (pos + 1) sinkCand
     | goal =>
-        let goal ← withTransparency .reducible <| reduce (skipTypes := false) goal -- no need for ltx
+        let goal ← withLCtx l1 l2 <| withTransparency .reducible <| reduce (skipTypes := false) goal -- no need for ltx
         match goal with
         | .forallE .. | .letE .. =>
           go l1 l2 hyps decls userNames goal pos sinkCand
@@ -299,7 +301,7 @@ partial def processForMainSpe (l1 : LocalContext) (l2 : LocalInstances)
           let pred? ← IsProp goal l1 l2
           let bf ← isBadForForw l1 l2 sinks hyps goal
           let bb ← isBadForBack l1 l2 sinks hyps goal
-          let cjs ← getConjecturablePos_ofProcessed hyps goal
+          let cjs ← getConjecturablePos_ofProcessed l1 l2  hyps goal
           let res : ThmFormat :=
             .std thmName lvlN pred? hyps ⟨lvlC, decls, userNames⟩ hyps.size goal sinks bf bb cjs
           return .mk false (.cons badu res .nil) l1 l2
