@@ -71,24 +71,24 @@ def generalize_back_cvbGoalHyp_core
     fold empty shiftAdd insert insertMulti intersect union difference
     empty? size contains (← getLCtx) (← getLocalInstances) genCondition freqCondition
     init.sampleName init.types #[] init.regularBack
-  --dbg_trace "Done with resRegB"
+  dbg_trace "Done with resRegB"
   let .mk _ cleanTypes resRegF ← cvb_goal_hyp_genMain
     fold empty shiftAdd insert insertMulti intersect union difference
     empty? size contains (← getLCtx) (← getLocalInstances) genCondition freqCondition
     init.sampleName init.types cleanTypes init.regularForw
-  --dbg_trace "Done with resRegF"
+  dbg_trace "Done with resRegF"
   let .mk sT W tw _ cleanTypes ← cvb_goal_hyp_genMain_subPat
     fold empty insert insertMulti intersect union difference
     empty? size contains (← getLCtx) (← getLocalInstances)
     genCondition freqCondition
     init.sampleName init.types cleanTypes init.subpat
-  --dbg_trace "Done with subpat"
+  dbg_trace "Done with subpat"
   let .mk (_,cleanTypes) resConj ← cvb_thmConj_genMain
     fold empty insert insertMulti intersect union difference
     empty? size contains (← getLCtx) (← getLocalInstances)
     genCondition freqCondition
     init.sampleName init.types cleanTypes init.conj
-  --dbg_trace "Done with conj"
+  dbg_trace "Done with conj"
   return .mk init.sampleName resRegB resRegF sT W tw resConj init.levelNum cleanTypes
 
 #check 1
@@ -198,7 +198,7 @@ unsafe def generalize_back_cvbGoalHyp_ofModule
   (mod : Name)
   : IO Unit := do
   let cachePath ← findLeanGrowCacheDir
-  let loadpath := FilePath.join cachePath ((FilePath.toString (LeanGrow.sampleNameOfModuleName_thmKey mod)))
+  let loadpath := FilePath.join cachePath ((FilePath.toString (LeanGrow.sampleNameOfModuleName_ghKey mod)))
   let (sams,reg) ← unpickle (ProcessedSamplesGHKey IdxCollType) loadpath
   let modules := #[mod]
   WithImportModules (modules.map (fun x => {module := x})) {} <| fun env => do
@@ -217,7 +217,7 @@ unsafe def generalize_back_cvbGoalHyp_ofModule
         (fun w tot _ T _ => (w.toFloat / tot.toFloat ≥ 0.33) && (T != .sort 0))
         (fun w tot _ _ => (w.toFloat / tot.toFloat ≥ 0.33))
         sams
-      let writepath := FilePath.join cachePath ((FilePath.toString (LeanGrow.genOfModuleName_thmKey mod)))
+      let writepath := FilePath.join cachePath ((FilePath.toString (LeanGrow.genOfModuleName_ghKey mod)))
       pickle writepath res
   reg.free
 
@@ -236,7 +236,7 @@ unsafe def generalize_back_cvbGoalHyp_ofModule_inEnv
   (mod : Name)
   : MetaM Unit := do
   let cachePath ← findLeanGrowCacheDir
-  let loadpath := FilePath.join cachePath ((FilePath.toString (LeanGrow.sampleNameOfModuleName_thmKey mod)))
+  let loadpath := FilePath.join cachePath ((FilePath.toString (LeanGrow.sampleNameOfModuleName_ghKey mod)))
   let (sams,reg) ← unpickle (ProcessedSamplesGHKey IdxCollType) loadpath
   let modules := #[mod]
   for j in Array.range sams.levelNum do
@@ -253,7 +253,7 @@ unsafe def generalize_back_cvbGoalHyp_ofModule_inEnv
     (fun w tot _ T _ => (w.toFloat / tot.toFloat ≥ 0.33) && (T != .sort 0))
     (fun w tot _ _ => (w.toFloat / tot.toFloat ≥ 0.33))
     sams
-  let writepath := FilePath.join cachePath ((FilePath.toString (LeanGrow.genOfModuleName_thmKey mod)))
+  let writepath := FilePath.join cachePath ((FilePath.toString (LeanGrow.genOfModuleName_ghKey mod)))
   pickle writepath res
 
 

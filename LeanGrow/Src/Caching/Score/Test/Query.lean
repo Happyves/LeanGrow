@@ -47,4 +47,10 @@ unsafe def q_gh (mod : Name) (back? : Bool) : Array Expr → Array Expr → Meta
 unsafe def test1 := q_thm `LeanGrow.Src.Caching.Score.Test.DummySamples true `List.getElem?_eq_getElem
 
 open List
+
 -- With context (α : Type) (inst1 : BEq α) (a : α) (b : α) (inst2 : LawfulBEq α) (l : List α) (i : Nat) (h : i < l.length) and objects (Option.some (l.replace a b)[i]? = .some (if (l[i] == a) = true then if a ∈ take i l then a else b else l[i])) run test1
+
+
+unsafe def test2 := q_gh `LeanGrow.Src.Caching.Score.Test.DummySamples true
+
+-- With context (α : Type) (inst1 : BEq α) (a : α) (b : α) (inst2 : LawfulBEq α) (l : List α) (i : Nat) (h : i < l.length) and objects (Option.some (l.replace a b)[i]? = .some (if (l[i] == a) = true then if a ∈ take i l then a else b else l[i])) run test2

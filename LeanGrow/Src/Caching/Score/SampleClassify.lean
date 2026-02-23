@@ -177,7 +177,7 @@ def sampleClass_back_cvbGoalHyp_core
     let .mk res _ l1 l2 ← sampleCoreBack preS conjPosTree l1 l2 depthDig depthStart depthStop deltaFuzz zetaFuzz (.cons (.raw p) (fvs.map Expr.fvarId!).toList .nil) samplesB .nil
     samplesB := res
     let .mk res l1 l2 ← sampleCoreForw preS l1 l2 true depthDig depthStart depthStop deltaFuzz zetaFuzz (.cons (.raw p) (fvs.map Expr.fvarId!).toList .nil) samplesF
-    samplesB := res
+    samplesF := res
     L1 := l1
     L2 := l2
   mtrace on .zero with s!" done sampling"
