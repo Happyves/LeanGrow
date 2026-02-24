@@ -51,99 +51,113 @@ def addThms (l1 : LocalContext) (l2 : LocalInstances)
   (thms : ListProd badUniType ThmFormat)
   : MetaM (Prod3 (SearchState UInt32Array) LocalContext LocalInstances) := do
     mtracing
-    Meta.withResetRecDepth do
-      mtrace on .zero with s!"[introCore] reset rec depth"
-      match thms with
-      | .nil => return ⟨st,l1,l2⟩
-      | .cons badu d@(.std _ _ _ hyps _ _ goal sinks ..) more =>
-          mtrace on .zero with s!" std case"
-          mtrace on .zero with s!" badu {repr badu}"
-          mtrace on .one with s!" sinks {sinks}"
-          match badu with
-          | .both =>
-            addThms l1 l2 st sg? locThmIdx ugNode more
-          | .fwdOnly =>
-            let st := {st with ugnodeToThmIdx := st.ugnodeToThmIdx.insert locThmIdx st.thm_data.size}
-            let st := {st with thmIdxToUGnode := st.thmIdxToUGnode.insert st.thm_data.size locThmIdx}
-            let thmIdx := (match (st.thmData.find? introModuleB) with | .none => 0 | .some A => A.size)
-            let st := {st with thmNameToThmIdx := st.thmNameToThmIdx.upsert ugNode (fun | .none => UInt32Array.single thmIdx.toUInt32 | .some is => is.oInsert thmIdx.toUInt32)}
-            let st := {st with thmData := st.thmData.upsert introModuleB (fun | .none => (.some #[d]) | .some A => .some (A.push d))}
-            let ⟨sofarBack,l1,l2⟩ ← st.stdBackPaIn.insertS l1 l2 goal st.thm_data.size
-            let st := {st with stdBackPaIn := sofarBack}
-            addThms l1 l2 st sg? locThmIdx ugNode more
-          | .bckOnly =>
-            let st := {st with ugnodeToThmIdx := st.ugnodeToThmIdx.insert locThmIdx st.thm_data.size}
-            let st := {st with thmIdxToUGnode := st.thmIdxToUGnode.insert st.thm_data.size locThmIdx}
-            let thmIdx := (match (st.thmData.find? introModuleB) with | .none => 0 | .some A => A.size)
-            let st := {st with thmNameToThmIdx := st.thmNameToThmIdx.upsert ugNode (fun | .none => UInt32Array.single thmIdx.toUInt32 | .some is => is.oInsert thmIdx.toUInt32)}
-            let st := {st with thmData := st.thmData.upsert introModuleB (fun | .none => (.some #[d]) | .some A => .some (A.push d))}
-            let (hfp_len, HforFwdPaIn) : Nat × ListProd Expr Nat := sinks.foldl (fun S s => match hyps[s]! with | .inst .. => S | .reg type => (S.1 + 1, .cons type s S.2)) (0,.nil)
-            let .mk FwdPaIn hyptosink _ l1 l2 ← HforFwdPaIn.foldlM
-              (Prod5.mk PaInG.dead st.stdForwSetTrie_idxToSinkIdx st.stdForwSetTrie_idxToThmIdx.size l1 l2)
-              (fun e si (.mk T hyptosink i l1 l2) => do
-                let ⟨res,l1,l2⟩ ← T.insertS l1 l2 e i
-                let hyptosink := hyptosink.push si
-                return (.mk res hyptosink (i+1) l1 l2))
-            let st := {st with stdForwSetTrie := st.stdForwSetTrie.easyInsert FwdPaIn d}
-            let st := {st with stdForwSetTrie_idxToSinkIdx := hyptosink}
-            let interval := (List.Ico st.stdForwSetTrie_idxToThmIdx.size (st.stdForwSetTrie_idxToThmIdx.size + hfp_len)).foldl (fun R i =>
-              R.push i.toUInt32) UInt32Array.empty
-            let st := {st with thmNameToHypIdx := st.thmNameToHypIdx.insert ugNode interval}
-            let st := {st with stdForwSetTrie_idxToThmIdx := (st.stdForwSetTrie_idxToThmIdx.pushN st.thm_data.size) hfp_len}
-            addThms l1 l2 st sg? locThmIdx ugNode more
-          | .no =>
-            let st := {st with ugnodeToThmIdx := st.ugnodeToThmIdx.insert locThmIdx st.thm_data.size}
-            let st := {st with thmIdxToUGnode := st.thmIdxToUGnode.insert st.thm_data.size locThmIdx}
-            let thmIdx := (match (st.thmData.find? introModuleB) with | .none => 0 | .some A => A.size)
-            let st := {st with thmNameToThmIdx := st.thmNameToThmIdx.upsert ugNode (fun | .none => UInt32Array.single thmIdx.toUInt32 | .some is => is.oInsert thmIdx.toUInt32)}
-            let st := {st with thmData := st.thmData.upsert introModuleB (fun | .none => (.some #[d]) | .some A => .some (A.push d))}
-            let ⟨sofarBack,l1,l2⟩ ← st.stdBackPaIn.insertS l1 l2 goal st.thm_data.size
-            let st := {st with stdBackPaIn := sofarBack}
-            let (hfp_len, HforFwdPaIn) : Nat × ListProd Expr Nat := sinks.foldl (fun S s => match hyps[s]! with | .inst .. => S | .reg type => (S.1 + 1, .cons type s S.2)) (0,.nil)
-            let .mk FwdPaIn hyptosink _ l1 l2 ← HforFwdPaIn.foldlM
-              (Prod5.mk PaInG.dead st.stdForwSetTrie_idxToSinkIdx st.stdForwSetTrie_idxToThmIdx.size l1 l2)
-              (fun e si (.mk T hyptosink i l1 l2) => do
-                let ⟨res,l1,l2⟩ ← T.insertS l1 l2 e i
-                mtrace on .zero with s!" for forw, added hyp {← ppExpr e}"
-                let hyptosink := hyptosink.push si
-                return (.mk res hyptosink (i+1) l1 l2))
-            let st := {st with stdForwSetTrie := st.stdForwSetTrie.easyInsert FwdPaIn d}
-            let st := {st with stdForwSetTrie_idxToSinkIdx := hyptosink}
-            let interval := (List.Ico st.stdForwSetTrie_idxToThmIdx.size (st.stdForwSetTrie_idxToThmIdx.size + hfp_len)).foldl (fun R i =>
-              R.push i.toUInt32) UInt32Array.empty
-            let st := {st with thmNameToHypIdx := st.thmNameToHypIdx.insert ugNode interval}
-            let st := {st with stdForwSetTrie_idxToThmIdx := (st.stdForwSetTrie_idxToThmIdx.pushN st.thm_data.size) hfp_len}
-            addThms l1 l2 st sg? locThmIdx ugNode more
-      | .cons badu d@(.rw _ _ _ goal ..) more => do
-        mtrace on .zero with s!" rw case"
+    -- Meta.withResetRecDepth do -- is a withReader and breakes TR :(
+    mtrace on .zero with s!"[introCore] reset rec depth"
+    match thms with
+    | .nil => return ⟨st,l1,l2⟩
+    | .cons badu d@(.std _ _ _ hyps _ _ goal sinks ..) more =>
+        mtrace on .zero with s!" std case"
         mtrace on .zero with s!" badu {repr badu}"
+        mtrace on .one with s!" sinks {sinks}"
         match badu with
-        | .no =>
+        | .both =>
+          addThms l1 l2 st sg? locThmIdx ugNode more
+        | .fwdOnly =>
           let st := {st with ugnodeToThmIdx := st.ugnodeToThmIdx.insert locThmIdx st.thm_data.size}
           let st := {st with thmIdxToUGnode := st.thmIdxToUGnode.insert st.thm_data.size locThmIdx}
           let thmIdx := (match (st.thmData.find? introModuleB) with | .none => 0 | .some A => A.size)
-            let st := {st with thmNameToThmIdx := st.thmNameToThmIdx.upsert ugNode (fun | .none => UInt32Array.single thmIdx.toUInt32 | .some is => is.oInsert thmIdx.toUInt32)}
+          let st := {st with thmNameToThmIdx := st.thmNameToThmIdx.upsert ugNode (fun | .none => UInt32Array.single thmIdx.toUInt32 | .some is => is.oInsert thmIdx.toUInt32)}
           let st := {st with thmData := st.thmData.upsert introModuleB (fun | .none => (.some #[d]) | .some A => .some (A.push d))}
-          mtrace on .zero with s!" sg? {sg?} "
-          if ! sg?
-          then
-            let ⟨sofarBack,l1,l2⟩ ← st.rwBackPaIn.insertS l1 l2 goal st.thm_data.size
-            let st := {st with rwBackPaIn := sofarBack}
-            mtrace on .zero with s!" added left to back"
-            let ⟨sofarF,l1,l2⟩ ← st.rwForwPaIn.insertS l1 l2 goal st.thm_data.size
-            let st := {st with rwForwPaIn := sofarF}
-            mtrace on .zero with s!" added left to forw"
-            addThms l1 l2 st sg? locThmIdx ugNode more
-          else
-            let ⟨sofarBack,l1,l2⟩ ← st.rwBackPaIn.insertS l1 l2 goal st.thm_data.size
-            let st := {st with rwBackPaIn := sofarBack}
-            mtrace on .zero with s!" added left to back"
-            addThms l1 l2 st sg? locThmIdx ugNode more
-        | _ =>
+          let ⟨sofarBack,l1,l2⟩ ← st.stdBackPaIn.insertS l1 l2 goal st.thm_data.size
+          let st := {st with stdBackPaIn := sofarBack}
+          let st := {st with thm_data := st.thm_data.push d}
           addThms l1 l2 st sg? locThmIdx ugNode more
+        | .bckOnly =>
+          let st := {st with ugnodeToThmIdx := st.ugnodeToThmIdx.insert locThmIdx st.thm_data.size}
+          let st := {st with thmIdxToUGnode := st.thmIdxToUGnode.insert st.thm_data.size locThmIdx}
+          let thmIdx := (match (st.thmData.find? introModuleB) with | .none => 0 | .some A => A.size)
+          let st := {st with thmNameToThmIdx := st.thmNameToThmIdx.upsert ugNode (fun | .none => UInt32Array.single thmIdx.toUInt32 | .some is => is.oInsert thmIdx.toUInt32)}
+          let st := {st with thmData := st.thmData.upsert introModuleB (fun | .none => (.some #[d]) | .some A => .some (A.push d))}
+          let (hfp_len, HforFwdPaIn) : Nat × ListProd Expr Nat := sinks.foldl (fun S s => match hyps[s]! with | .inst .. => S | .reg type => (S.1 + 1, .cons type s S.2)) (0,.nil)
+          let .mk FwdPaIn hyptosink _ l1 l2 ← HforFwdPaIn.foldlM
+            (Prod5.mk PaInG.dead st.stdForwSetTrie_idxToSinkIdx st.stdForwSetTrie_idxToThmIdx.size l1 l2)
+            (fun e si (.mk T hyptosink i l1 l2) => do
+              let ⟨res,l1,l2⟩ ← T.insertS l1 l2 e i
+              let hyptosink := hyptosink.push si
+              return (.mk res hyptosink (i+1) l1 l2))
+          let st := {st with stdForwSetTrie := st.stdForwSetTrie.easyInsert FwdPaIn d}
+          let st := {st with stdForwSetTrie_idxToSinkIdx := hyptosink}
+          let interval := (List.Ico st.stdForwSetTrie_idxToThmIdx.size (st.stdForwSetTrie_idxToThmIdx.size + hfp_len)).foldl (fun R i =>
+            R.push i.toUInt32) UInt32Array.empty
+          let st := {st with thmNameToHypIdx := st.thmNameToHypIdx.insert ugNode interval}
+          let st := {st with stdForwSetTrie_idxToThmIdx := (st.stdForwSetTrie_idxToThmIdx.pushN st.thm_data.size) hfp_len}
+          let st := {st with thm_data := st.thm_data.push d}
+          addThms l1 l2 st sg? locThmIdx ugNode more
+        | .no =>
+          let st := {st with ugnodeToThmIdx := st.ugnodeToThmIdx.insert locThmIdx st.thm_data.size}
+          mtrace on .zero with "sanity 1"
+          let st := {st with thmIdxToUGnode := st.thmIdxToUGnode.insert st.thm_data.size locThmIdx}
+          mtrace on .zero with "sanity 2"
+          let thmIdx := (match (st.thmData.find? introModuleB) with | .none => 0 | .some A => A.size)
+          mtrace on .zero with "sanity 3"
+          let st := {st with thmNameToThmIdx := st.thmNameToThmIdx.upsert ugNode (fun | .none => UInt32Array.single thmIdx.toUInt32 | .some is => is.oInsert thmIdx.toUInt32)}
+          mtrace on .zero with "sanity 4"
+          let st := {st with thmData := st.thmData.upsert introModuleB (fun | .none => (.some #[d]) | .some A => .some (A.push d))}
+          mtrace on .zero with "sanity 5"
+          let ⟨sofarBack,l1,l2⟩ ← st.stdBackPaIn.insertS l1 l2 goal st.thm_data.size
+          mtrace on .zero with "sanity 6"
+          let st := {st with stdBackPaIn := sofarBack}
+          let (hfp_len, HforFwdPaIn) : Nat × ListProd Expr Nat := sinks.foldl (fun S s => match hyps[s]! with | .inst .. => S | .reg type => (S.1 + 1, .cons type s S.2)) (0,.nil)
+          mtrace on .zero with "sanity 7"
+          let .mk FwdPaIn hyptosink _ l1 l2 ← HforFwdPaIn.foldlM
+            (Prod5.mk PaInG.dead st.stdForwSetTrie_idxToSinkIdx st.stdForwSetTrie_idxToThmIdx.size l1 l2)
+            (fun e si (.mk T hyptosink i l1 l2) => do
+              let ⟨res,l1,l2⟩ ← T.insertS l1 l2 e i
+              mtrace on .zero with s!" for forw, added hyp {← ppExpr e}"
+              let hyptosink := hyptosink.push si
+              return (.mk res hyptosink (i+1) l1 l2))
+          mtrace on .zero with "sanity 8"
+          let st := {st with stdForwSetTrie := st.stdForwSetTrie.easyInsert FwdPaIn d}
+          let st := {st with stdForwSetTrie_idxToSinkIdx := hyptosink}
+          let interval := (List.Ico st.stdForwSetTrie_idxToThmIdx.size (st.stdForwSetTrie_idxToThmIdx.size + hfp_len)).foldl (fun R i =>
+            R.push i.toUInt32) UInt32Array.empty
+          let st := {st with thmNameToHypIdx := st.thmNameToHypIdx.insert ugNode interval}
+          let st := {st with stdForwSetTrie_idxToThmIdx := (st.stdForwSetTrie_idxToThmIdx.pushN st.thm_data.size) hfp_len}
+          let st := {st with thm_data := st.thm_data.push d}
+          mtrace on .zero with "sanity 9"
+          addThms l1 l2 st sg? locThmIdx ugNode more
+    | .cons badu d@(.rw _ _ _ goal ..) more => do
+      mtrace on .zero with s!" rw case"
+      mtrace on .zero with s!" badu {repr badu}"
+      match badu with
+      | .no =>
+        let st := {st with ugnodeToThmIdx := st.ugnodeToThmIdx.insert locThmIdx st.thm_data.size}
+        let st := {st with thmIdxToUGnode := st.thmIdxToUGnode.insert st.thm_data.size locThmIdx}
+        let thmIdx := (match (st.thmData.find? introModuleB) with | .none => 0 | .some A => A.size)
+        let st := {st with thmNameToThmIdx := st.thmNameToThmIdx.upsert ugNode (fun | .none => UInt32Array.single thmIdx.toUInt32 | .some is => is.oInsert thmIdx.toUInt32)}
+        let st := {st with thmData := st.thmData.upsert introModuleB (fun | .none => (.some #[d]) | .some A => .some (A.push d))}
+        mtrace on .zero with s!" sg? {sg?} "
+        if ! sg?
+        then
+          let ⟨sofarBack,l1,l2⟩ ← st.rwBackPaIn.insertS l1 l2 goal st.thm_data.size
+          let st := {st with rwBackPaIn := sofarBack}
+          mtrace on .zero with s!" added left to back"
+          let ⟨sofarF,l1,l2⟩ ← st.rwForwPaIn.insertS l1 l2 goal st.thm_data.size
+          let st := {st with rwForwPaIn := sofarF}
+          let st := {st with thm_data := st.thm_data.push d}
+          mtrace on .zero with s!" added left to forw"
+          addThms l1 l2 st sg? locThmIdx ugNode more
+        else
+          let ⟨sofarBack,l1,l2⟩ ← st.rwBackPaIn.insertS l1 l2 goal st.thm_data.size
+          let st := {st with rwBackPaIn := sofarBack}
+          let st := {st with thm_data := st.thm_data.push d}
+          mtrace on .zero with s!" added left to back"
+          addThms l1 l2 st sg? locThmIdx ugNode more
+      | _ =>
+        addThms l1 l2 st sg? locThmIdx ugNode more
 
 
-
+-- #exit
 
 -- The mtraces cause masive increased compilation time
 def introCore
@@ -365,12 +379,12 @@ partial def introWiLtxMain (l1 : LocalContext) (l2 : LocalInstances) (st : Searc
     mtrace on .zero with s!"[introWiLtxMain] whnfed to {← ppExpr head}"
     mtrace on .zero with s!"[introWiLtxMain] ltxAdd:"
     ltxAdd.foldlM () (fun ugi _ T _ => do mtrace on .zero with s!"[introWiLtxMain] index {ugi} type {← ppExpr T}" ; pure ())
-    ltxAdd.foldlMcps (.mk spawn_goal_ltx l1 l2 : Prod3 _ _ _) (fun ugi _ e (.mk T l1 l2) q => do
-      q (← T.insertS l1 l2 e ugi)
-      ) <| fun (.mk ltxHere l1 l2) => do
-        if head == ohead
-        then
-          return .mk (ltxAdd.append newForw) (.cons headId head ltxHere initNewGoals) st l1 l2
-        else
-          introWiLtxMain l1 l2 st (.cons headId ohead ltxHere initNewGoals) (ltxAdd.append newForw) headId head ltxHere
+    let .mk ltxHere l1 l2 ← ltxAdd.foldlM (.mk spawn_goal_ltx l1 l2 : Prod3 _ _ _) (fun ugi _ e (.mk T l1 l2) => do
+      (T.insertS l1 l2 e ugi)
+      )
+    if head == ohead
+    then
+      return .mk (ltxAdd.append newForw) (.cons headId head ltxHere initNewGoals) st l1 l2
+    else
+      introWiLtxMain l1 l2 st (.cons headId ohead ltxHere initNewGoals) (ltxAdd.append newForw) headId head ltxHere
   | _ => return .mk newForw initNewGoals st l1 l2

@@ -1,0 +1,1058 @@
+[growImpl] reverted goal type ∀ (l L : List ℕ) (P : ℕ → Prop), P (l.length + L.length) → P (l ++ L).length
+[introWiLtxMain] call on goal 0 of type ∀ (l L : List ℕ) (P : ℕ → Prop), P (l.length + L.length) → P (l ++ L).length
+[introWiLtxMain] reduced goal to type ∀ (l L : List ℕ) (P : ℕ → Prop), P (l.length + L.length) → P (l ++ L).length
+[introPass] looking at ∀ (l L : List ℕ) (P : ℕ → Prop), P (l.length + L.length) → P (l ++ L).length
+[introPass] calling core
+[introCore] call to add g.0 of type List ℕ
+[introCore] ugIs #[]
+[introCore] new forwHeights #[0]
+[introCore] new forwMetadata #[ForwMetaData.intro]
+[introCore] new forwDepths #[0]
+[introCore] locThmIdx 0
+[introCore] generated local theorems []
+[introCore] reset rec depth
+[introCore] updated deps to #[#[]]
+[introPass] looking at ∀ (L : List ℕ) (P : ℕ → Prop), P (length g.0 + L.length) → P (g.0 ++ L).length
+[introPass] calling core
+[introCore] call to add g.1 of type List ℕ
+[introCore] ugIs #[]
+[introCore] new forwHeights #[0, 0]
+[introCore] new forwMetadata #[ForwMetaData.intro, ForwMetaData.intro]
+[introCore] new forwDepths #[0, 0]
+[introCore] locThmIdx 0
+[introCore] generated local theorems []
+[introCore] reset rec depth
+[introCore] updated deps to #[#[], #[]]
+[introPass] looking at ∀ (P : ℕ → Prop), P (length g.0 + length g.1) → P (g.0 ++ g.1).length
+[introPass] calling core
+[introCore] call to add g.2 of type ℕ → Prop
+[introCore] ugIs #[]
+[introCore] new forwHeights #[0, 0, 0]
+[introCore] new forwMetadata #[ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.intro]
+[introCore] new forwDepths #[0, 0, 0]
+[introCore] locThmIdx 0
+[introCore] generated local theorems [g.2]
+[introCore] reset rec depth
+ std case
+ badu badUniType.no
+ sinks [0]
+sanity 1
+sanity 2
+sanity 3
+sanity 4
+sanity 5
+sanity 6
+sanity 7
+ for forw, added hyp ℕ
+sanity 8
+sanity 9
+[introCore] reset rec depth
+[introCore] updated deps to #[#[], #[], #[]]
+[introPass] looking at @g.2 (length g.0 + length g.1) → @g.2 (g.0 ++ g.1).length
+[introPass] calling core
+[introCore] call to add g.3 of type @g.2 (length g.0 + length g.1)
+[introCore] ugIs #[]
+[introCore] new forwHeights #[0, 0, 0, 0]
+[introCore] new forwMetadata #[ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.intro]
+[introCore] new forwDepths #[0, 0, 0, 0]
+[introCore] locThmIdx 1
+[introCore] generated local theorems []
+[introCore] reset rec depth
+[introCore] updated deps to #[#[3], #[3], #[3], #[]]
+[introPass] looking at @g.2 (g.0 ++ g.1).length
+[introPass] looking at @g.2 (g.0 ++ g.1).length
+[introPass] new goalHeights #[1, 2]
+[introPass] new backDepths #[1, 0]
+[introPass] new goalSpawn #[OptionProd.none, OptionProd.some 0 0]
+[introPass] integrating to introtree
+[introPass] new introtree node #[0] #[]
+      leaf #[1] #[0, 1, 2, 3]
+[introPass] integrating to backtree
+[introPass] new back ofG (0) (0) ∀ (l L : List ℕ) (P : ℕ → Prop), P (l.length + L.length) → P (l ++ L).length
+      ofI (0) (0) ([@g.2 (length g.0 + length g.1), ℕ → Prop, List ℕ, List ℕ])
+            ofG (0) (1) @g.2 (g.0 ++ g.1).length
+         
+[introPass] bump goal and back id
+[introPass] pass concluded
+[introWiLtxMain] head @g.2 (g.0 ++ g.1).length
+[introWiLtxMain] whnfed to @g.2 (g.0 ++ g.1).length
+[introWiLtxMain] ltxAdd:
+[introWiLtxMain] index 3 type @g.2 (length g.0 + length g.1)
+[introWiLtxMain] index 2 type ℕ → Prop
+[introWiLtxMain] index 1 type List ℕ
+[introWiLtxMain] index 0 type List ℕ
+[growImpl] Initial state:
+[growImpl] introTree: node #[0] #[]
+      leaf #[1] #[0, 1, 2, 3]
+[growImpl] backTree: ofG (0) (0) ∀ (l L : List ℕ) (P : ℕ → Prop), P (l.length + L.length) → P (l ++ L).length
+      ofI (0) (0) ([@g.2 (length g.0 + length g.1), ℕ → Prop, List ℕ, List ℕ])
+            ofG (0) (1) @g.2 (g.0 ++ g.1).length
+         
+[searchCore] state:
+
+[searchCore] back-tree :
+ofG (0) (0) ∀ (l L : List ℕ) (P : ℕ → Prop), P (l.length + L.length) → P (l ++ L).length
+      ofI (0) (0) ([g.2 (g.0.length + g.1.length), ℕ → Prop, List ℕ, List ℕ])
+            ofG (0) (1) g.2 (g.0 ++ g.1).length
+         
+
+[searchCore] intro-tree :
+node #[] #[0] #[]
+      node #[1] #[0, 1, 2, 3]
+   leaf #[] #[1] #[0, 1, 2, 3]
+
+[searchCore] forward decls:
+0 : List ℕ
+1 : List ℕ
+2 : ℕ → Prop
+3 : g.2 (g.0.length + g.1.length)
+
+[searchCore] back tree with dirs : ofG (0) (0) (#[0]) (#[1])
+      ofI (0) (0) (#[]) (#[1])
+            ofG (0) (1) (#[]) (#[])
+         
+[searchCore] fuel : 16
+[searchCore] forwHeights : #[(0, 0), (1, 0), (2, 0), (3, 0)]
+[searchCore] goalHeights : #[(0, 1), (1, 2)]
+[searchCore] forwDepths : #[(0, 0), (1, 0), (2, 0), (3, 0)]
+[searchCore] backDepths : #[(0, 1), (1, 0)]
+[searchCore] depsCache (ftrans) : #[(0, #[3]), (1, #[3]), (2, #[3]), (3, #[])]
+[searchCore] cAF : [(0, List ℕ), (1, List ℕ), (2, ℕ → Prop), (3, g.2 (g.0.length + g.1.length))]
+[searchCore] added cadidates from forward cycle additions
+[searchCore] cBF : [(0, ∀ (l L : List ℕ) (P : ℕ → Prop), P (l.length + L.length) → P (l ++ L).length), (1, g.2 (g.0 ++ g.1).length)]
+[searchCore] looking at cycle addition g.2 (g.0 ++ g.1).length
+[searchCore] id_gen_cand 1
+[searchCore] id_gen_cand 2
+[searchCore] id_gen_cand 2
+[searchCore] looking at cycle addition ∀ (l L : List ℕ) (P : ℕ → Prop), P (l.length + L.length) → P (l ++ L).length
+[searchCore] id_gen_cand 4
+[searchCore] id_gen_cand 4
+[searchCore] id_gen_cand 4
+[searchCore] added cadidates from backward cycle additions
+[searchCore] back candidates
+[printBackCand]
+candid 1, thm "Sum.inl `List.length_append" on goal 1 with time 3 and score { back := 0.000000, forw := 0.000000, spe := 10.000000 }
+
+[searchCore] forw candidates
+[printForwCand]
+candid 0, term of type g.2 (g.0 ++ g.1).length with ugIs #[0, 1] with time 3 and score { back := 0.000000, forw := 0.000000, spe := 10.000000 }
+
+[searchCore] induct candidates
+[printInduCand]
+candid 3, thm "indu g.0" on goal 1 of type g.2 (g.0 ++ g.1).length with time 3 and score 10.000000
+candid 2, thm "indu g.1" on goal 1 of type g.2 (g.0 ++ g.1).length with time 3 and score 10.000000
+
+[searchCore] flushed cycle additions
+[searchCore] possibly added cadidates from standard forward step
+[searchCore] forw candidates
+[printForwCand]
+candid 0, term of type g.2 (g.0 ++ g.1).length with ugIs #[0, 1] with time 3 and score { back := 0.000000, forw := 0.000000, spe := 10.000000 }
+
+[searchCore] best batch #[{ fst := 3.996528, snd := "back Sum.inl `List.length_append", thd := 1 },
+  { fst := 0.000000, snd := "none", thd := 0 }, { fst := 0.000000, snd := "none", thd := 0 },
+  { fst := 0.000000, snd := "none", thd := 0 },
+  { fst := 4.913194,
+    snd := "forw Lean.Expr.const `Eq.ndrec [Lean.Level.zero, Lean.Level.succ (Lean.Level.zero)]",
+    thd := 0 },
+  { fst := 0.000000, snd := "none", thd := 0 }, { fst := 0.000000, snd := "none", thd := 0 },
+  { fst := 0.000000, snd := "none", thd := 0 }, { fst := 14.322917, snd := "indu \"indu g.0\"", thd := 3 },
+  { fst := 14.322917, snd := "indu \"indu g.1\"", thd := 2 }] 
+[searchCore] remove best batch from candidates
+[searchCore] goalSpawn #[OptionProd.none, OptionProd.some 0 0]
+[searchCore] integrate back with thm Sum.inl `List.length_append and target 1
+[searchCore] and arg_exprs #[ℕ, g.0, g.1] 
+[searchCore] id_gen_goal 2
+[integrateBackwardStd] ltxPaIn(g.2 (g.0.length + g.1.length) ::: #[3]) ;;; (List ℕ ::: #[0, 1]) ;;; (ℕ → Prop ::: #[2])
+[integrateBackwardStd] new goalHeights #[1, 2, 3, 3]
+[integrateBackwardStd] new backDepths #[2, 1, 0, 0]
+[integrateBackwardStd] new goalSpawn #[OptionProd.none, OptionProd.some 0 0, OptionProd.some 1 0, OptionProd.some 1 1]
+[integrateBackwardStd] backtree after addBackstep ofG (0) (0) ∀ (l L : List ℕ) (P : ℕ → Prop), P (l.length + L.length) → P (l ++ L).length
+      ofI (0) (0) ([@g.2 (length g.0 + length g.1), ℕ → Prop, List ℕ, List ℕ])
+            ofG (0) (1) @g.2 (g.0 ++ g.1).length
+                  ofP (0) (#[0]) (3) @g.2 (g.0 ++ g.1).length
+                        ofB (0) (1) List.length_append
+                              ofG (0) (2) @g.2 (length g.0 + length g.1)
+                  
+[integrateBackwardStd] backtree after addBackstep node #[0] #[]
+      leaf #[1, 2, 3] #[0, 1, 2, 3]
+[integrateBackwardStd] backtree after addUnis ofG (0) (0) ∀ (l L : List ℕ) (P : ℕ → Prop), P (l.length + L.length) → P (l ++ L).length
+      ofI (0) (0) ([@g.2 (length g.0 + length g.1), ℕ → Prop, List ℕ, List ℕ])
+            ofG (0) (1) @g.2 (g.0 ++ g.1).length
+                  ofP (0) (#[0]) (3) @g.2 (g.0 ++ g.1).length
+                        ofB (0) (1) List.length_append
+                              ofG (0) (2) @g.2 (length g.0 + length g.1)
+                  
+[integrateBackwardStd] introing new goal correpsonding to 0th arg of backstep
+[integrateBackwardStd] cleaned goal type to @g.2 (length g.0 + length g.1)
+[introWiLtxMain] call on goal 2 of type @g.2 (length g.0 + length g.1)
+[introWiLtxMain] reduced goal to type @g.2 (length g.0 + length g.1)
+[integrateBackwardStd] after intro, new goals [(2, @g.2 (length g.0 + length g.1))]
+[integrateBackwardStd] unifying goal 2 ot type @g.2 (length g.0 + length g.1) wrt. (g.2 (g.0.length + g.1.length) ::: #[3]) ;;; (List ℕ ::: #[0, 1]) ;;; (ℕ → Prop ::: #[2])
+[integrateBackwardStd] uniBEwFTMainS success with unifs [(#[3], ([], []))] 
+ adding backstep 1 0 to ta
+ clashes []
+ sanity ofG (0) (0) (#[0, 1]) (#[1, 2, 3])
+      ofI (0) (0) (#[1]) (#[1, 2, 3])
+            ofG (0) (1) (#[1]) (#[2, 3])
+                  ofP (0) (#[0]) (3) (#[1]) (#[2])
+                        ofB (0) (1) (#[#[]]) (#[#[2]])
+                              ofG (0) (2) (#[]) (#[])
+                                    ofU (0) (#[1])
+[integrateBackwardStd] backTree : ofG (0) (0) ∀ (l L : List ℕ) (P : ℕ → Prop), P (l.length + L.length) → P (l ++ L).length
+      ofI (0) (0) ([@g.2 (length g.0 + length g.1), ℕ → Prop, List ℕ, List ℕ])
+            ofG (0) (1) @g.2 (g.0 ++ g.1).length
+                  ofP (0) (#[0]) (3) @g.2 (g.0 ++ g.1).length
+                        ofB (0) (1) List.length_append
+                              ofG (0) (2) @g.2 (length g.0 + length g.1)
+                                    ofU (0) (#[1]) g.3
+[searchCore] integrate forw with type g.2 (g.0 ++ g.1).length and ugis #[0, 1]
+[searchCore] integrate indu with tar indu g.0 target 1 of type g.2 (g.0 ++ g.1).length
+[integrateInduction] built term : @rec ℕ (fun x => @g.2 (x.length + length g.1) → @g.2 (x ++ g.1).length → @g.2 (x ++ g.1).length) t.2.0 t.2.1 g.0 g.3 g.4
+[integrateBackwardStd] ltxPaIn(g.2 (g.0.length + g.1.length) ::: #[3]) ;;; (g.2 (g.0 ++ g.1).length ::: #[4]) ;;; (List ℕ ::: #[0, 1]) ;;; (ℕ → Prop ::: #[2])
+[integrateBackwardStd] new goalHeights #[1, 2, 3, 3, 3, 3, 3]
+[integrateBackwardStd] new backDepths #[2, 1, 0, 0, 0, 0, 0]
+[integrateBackwardStd] new goalSpawn #[OptionProd.none, OptionProd.some 0 0, OptionProd.some 1 0, OptionProd.some 1 1, OptionProd.some 2 0,
+  OptionProd.some 2 1, OptionProd.some 2 2]
+[integrateBackwardStd] backtree after addBackstep ofG (0) (0) ∀ (l L : List ℕ) (P : ℕ → Prop), P (l.length + L.length) → P (l ++ L).length
+      ofI (0) (0) ([@g.2 (length g.0 + length g.1), ℕ → Prop, List ℕ, List ℕ])
+            ofU (0) (#[2]) g.4
+            ofG (0) (1) @g.2 (g.0 ++ g.1).length
+                  ofP (0) (#[4]) (6) @g.2 (g.0 ++ g.1).length
+                        ofB (0) (2) List
+                              ofG (0) (4) @g.2 ([].length + length g.1) → @g.2 ([] ++ g.1).length → @g.2 ([] ++ g.1).length
+                  
+                              ofG (0) (5) (head : ℕ) →
+  (tail : List ℕ) →
+    (@g.2 (tail.length + length g.1) → @g.2 (tail ++ g.1).length → @g.2 (tail ++ g.1).length) →
+      @g.2 ((head :: tail).length + length g.1) → @g.2 (head :: tail ++ g.1).length → @g.2 (head :: tail ++ g.1).length
+                  
+                  ofP (0) (#[0]) (3) @g.2 (g.0 ++ g.1).length
+                        ofB (0) (1) List.length_append
+                              ofG (0) (2) @g.2 (length g.0 + length g.1)
+                                    ofU (0) (#[1]) g.3
+[integrateBackwardStd] backtree after addBackstep node #[0] #[]
+      leaf #[1, 2, 3, 4, 5, 6] #[0, 1, 2, 3, 4]
+[integrateBackwardStd] backtree after addUnis ofG (0) (0) ∀ (l L : List ℕ) (P : ℕ → Prop), P (l.length + L.length) → P (l ++ L).length
+      ofI (0) (0) ([@g.2 (length g.0 + length g.1), ℕ → Prop, List ℕ, List ℕ])
+            ofU (0) (#[2]) g.4
+            ofG (0) (1) @g.2 (g.0 ++ g.1).length
+                  ofP (0) (#[4]) (6) @g.2 (g.0 ++ g.1).length
+                        ofB (0) (2) List
+                              ofG (0) (4) @g.2 ([].length + length g.1) → @g.2 ([] ++ g.1).length → @g.2 ([] ++ g.1).length
+                  
+                              ofG (0) (5) (head : ℕ) →
+  (tail : List ℕ) →
+    (@g.2 (tail.length + length g.1) → @g.2 (tail ++ g.1).length → @g.2 (tail ++ g.1).length) →
+      @g.2 ((head :: tail).length + length g.1) → @g.2 (head :: tail ++ g.1).length → @g.2 (head :: tail ++ g.1).length
+                  
+                  ofP (0) (#[0]) (3) @g.2 (g.0 ++ g.1).length
+                        ofB (0) (1) List.length_append
+                              ofG (0) (2) @g.2 (length g.0 + length g.1)
+                                    ofU (0) (#[1]) g.3
+[integrateBackwardStd] introing new goal correpsonding to 0th arg of backstep
+[integrateBackwardStd] cleaned goal type to @g.2 ([].length + length g.1) → @g.2 ([] ++ g.1).length → @g.2 ([] ++ g.1).length
+[introWiLtxMain] call on goal 4 of type @g.2 ([].length + length g.1) → @g.2 ([] ++ g.1).length → @g.2 ([] ++ g.1).length
+[introWiLtxMain] reduced goal to type @g.2 ([].length + length g.1) → @g.2 ([] ++ g.1).length → @g.2 ([] ++ g.1).length
+[introPass] looking at @g.2 ([].length + length g.1) → @g.2 ([] ++ g.1).length → @g.2 ([] ++ g.1).length
+[introPass] calling core
+[introCore] call to add g.5 of type @g.2 ([].length + length g.1)
+[introCore] ugIs #[]
+[introCore] new forwHeights #[0, 0, 0, 0, 0, 0]
+[introCore] new forwMetadata #[ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.std "List.length_append",
+  ForwMetaData.intro]
+[introCore] new forwDepths #[1, 1, 0, 0, 0, 0]
+[introCore] locThmIdx 1
+[introCore] generated local theorems []
+[introCore] reset rec depth
+[introCore] updated deps to #[#[3, 4], #[3, 4, 5], #[3, 4, 5], #[], #[], #[]]
+[introPass] looking at @g.2 ([] ++ g.1).length → @g.2 ([] ++ g.1).length
+[introPass] calling core
+[introCore] call to add g.6 of type @g.2 ([] ++ g.1).length
+[introCore] ugIs #[]
+[introCore] new forwHeights #[0, 0, 0, 0, 0, 0, 0]
+[introCore] new forwMetadata #[ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.std "List.length_append",
+  ForwMetaData.intro, ForwMetaData.intro]
+[introCore] new forwDepths #[1, 1, 0, 0, 0, 0, 0]
+[introCore] locThmIdx 1
+[introCore] generated local theorems []
+[introCore] reset rec depth
+[introCore] updated deps to #[#[3, 4], #[3, 4, 5, 6], #[3, 4, 5, 6], #[], #[], #[], #[]]
+[introPass] looking at @g.2 ([] ++ g.1).length
+[introPass] looking at @g.2 ([] ++ g.1).length
+[introPass] new goalHeights #[1, 2, 3, 3, 3, 3, 3, 4]
+[introPass] new backDepths #[3, 2, 0, 0, 1, 0, 0, 0]
+[introPass] new goalSpawn #[OptionProd.none, OptionProd.some 0 0, OptionProd.some 1 0, OptionProd.some 1 1, OptionProd.some 2 0,
+  OptionProd.some 2 1, OptionProd.some 2 2, OptionProd.some 3 0]
+[introPass] integrating to introtree
+[introPass] new introtree node #[0] #[]
+      node #[1, 2, 3, 4, 5, 6] #[0, 1, 2, 3, 4]
+            leaf #[7] #[5, 6]
+[introPass] integrating to backtree
+[introPass] new back ofG (0) (0) ∀ (l L : List ℕ) (P : ℕ → Prop), P (l.length + L.length) → P (l ++ L).length
+      ofI (0) (0) ([@g.2 (length g.0 + length g.1), ℕ → Prop, List ℕ, List ℕ])
+            ofG (0) (1) @g.2 (g.0 ++ g.1).length
+                  ofP (0) (#[0]) (3) @g.2 (g.0 ++ g.1).length
+                        ofB (0) (1) List.length_append
+                              ofG (0) (2) @g.2 (length g.0 + length g.1)
+                                    ofU (0) (#[1]) g.3
+                  ofP (0) (#[4]) (6) @g.2 (g.0 ++ g.1).length
+                        ofB (0) (2) List
+                              ofG (0) (4) @g.2 ([].length + length g.1) → @g.2 ([] ++ g.1).length → @g.2 ([] ++ g.1).length
+                                    ofI (0) (3) ([@g.2 ([] ++ g.1).length, @g.2 ([].length + length g.1)])
+                                          ofG (0) (7) @g.2 ([] ++ g.1).length
+                        
+                              ofG (0) (5) (head : ℕ) →
+  (tail : List ℕ) →
+    (@g.2 (tail.length + length g.1) → @g.2 (tail ++ g.1).length → @g.2 (tail ++ g.1).length) →
+      @g.2 ((head :: tail).length + length g.1) → @g.2 (head :: tail ++ g.1).length → @g.2 (head :: tail ++ g.1).length
+                  
+            ofU (0) (#[2]) g.4
+[introPass] bump goal and back id
+[introPass] pass concluded
+[introWiLtxMain] head @g.2 ([] ++ g.1).length
+[introWiLtxMain] whnfed to @g.2 ([] ++ g.1).length
+[introWiLtxMain] ltxAdd:
+[introWiLtxMain] index 6 type @g.2 ([] ++ g.1).length
+[introWiLtxMain] index 5 type @g.2 ([].length + length g.1)
+[integrateBackwardStd] introing new goal correpsonding to 1th arg of backstep
+[integrateBackwardStd] cleaned goal type to (head : ℕ) →
+  (tail : List ℕ) →
+    (@g.2 (tail.length + length g.1) → @g.2 (tail ++ g.1).length → @g.2 (tail ++ g.1).length) →
+      @g.2 ((head :: tail).length + length g.1) → @g.2 (head :: tail ++ g.1).length → @g.2 (head :: tail ++ g.1).length
+[introWiLtxMain] call on goal 5 of type (head : ℕ) →
+  (tail : List ℕ) →
+    (@g.2 (tail.length + length g.1) → @g.2 (tail ++ g.1).length → @g.2 (tail ++ g.1).length) →
+      @g.2 ((head :: tail).length + length g.1) → @g.2 (head :: tail ++ g.1).length → @g.2 (head :: tail ++ g.1).length
+[introWiLtxMain] reduced goal to type (head : ℕ) →
+  (tail : List ℕ) →
+    (@g.2 (tail.length + length g.1) → @g.2 (tail ++ g.1).length → @g.2 (tail ++ g.1).length) →
+      @g.2 ((head :: tail).length + length g.1) → @g.2 (head :: tail ++ g.1).length → @g.2 (head :: tail ++ g.1).length
+[introPass] looking at (head : ℕ) →
+  (tail : List ℕ) →
+    (@g.2 (tail.length + length g.1) → @g.2 (tail ++ g.1).length → @g.2 (tail ++ g.1).length) →
+      @g.2 ((head :: tail).length + length g.1) → @g.2 (head :: tail ++ g.1).length → @g.2 (head :: tail ++ g.1).length
+[introPass] calling core
+[introCore] call to add g.7 of type ℕ
+[introCore] ugIs #[]
+[introCore] new forwHeights #[0, 0, 0, 0, 0, 0, 0, 0]
+[introCore] new forwMetadata #[ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.std "List.length_append",
+  ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.intro]
+[introCore] new forwDepths #[1, 1, 0, 0, 0, 0, 0, 0]
+[introCore] locThmIdx 1
+[introCore] generated local theorems []
+[introCore] reset rec depth
+[introCore] updated deps to #[#[3, 4], #[3, 4, 5, 6], #[3, 4, 5, 6], #[], #[], #[], #[], #[]]
+[introPass] looking at (tail : List ℕ) →
+  (@g.2 (tail.length + length g.1) → @g.2 (tail ++ g.1).length → @g.2 (tail ++ g.1).length) →
+    @g.2 ((g.7 :: tail).length + length g.1) → @g.2 (g.7 :: tail ++ g.1).length → @g.2 (g.7 :: tail ++ g.1).length
+[introPass] calling core
+[introCore] call to add g.8 of type List ℕ
+[introCore] ugIs #[]
+[introCore] new forwHeights #[0, 0, 0, 0, 0, 0, 0, 0, 0]
+[introCore] new forwMetadata #[ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.std "List.length_append",
+  ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.intro]
+[introCore] new forwDepths #[1, 1, 0, 0, 0, 0, 0, 0, 0]
+[introCore] locThmIdx 1
+[introCore] generated local theorems []
+[introCore] reset rec depth
+[introCore] updated deps to #[#[3, 4], #[3, 4, 5, 6], #[3, 4, 5, 6], #[], #[], #[], #[], #[], #[]]
+[introPass] looking at (@g.2 (length g.8 + length g.1) → @g.2 (g.8 ++ g.1).length → @g.2 (g.8 ++ g.1).length) →
+  @g.2 ((g.7 :: g.8).length + length g.1) → @g.2 (g.7 :: g.8 ++ g.1).length → @g.2 (g.7 :: g.8 ++ g.1).length
+[introPass] calling core
+[introCore] call to add g.9 of type @g.2 (length g.8 + length g.1) → @g.2 (g.8 ++ g.1).length → @g.2 (g.8 ++ g.1).length
+[introCore] ugIs #[]
+[introCore] new forwHeights #[0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+[introCore] new forwMetadata #[ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.std "List.length_append",
+  ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.intro]
+[introCore] new forwDepths #[1, 1, 0, 0, 0, 0, 0, 0, 0, 0]
+[introCore] locThmIdx 1
+[introCore] generated local theorems [g.9]
+[introCore] reset rec depth
+ std case
+ badu badUniType.no
+ sinks [1, 0]
+sanity 1
+sanity 2
+sanity 3
+sanity 4
+sanity 5
+sanity 6
+sanity 7
+ for forw, added hyp @g.2 (length g.8 + length g.1)
+ for forw, added hyp @g.2 (g.8 ++ g.1).length
+sanity 8
+sanity 9
+[introCore] reset rec depth
+[introCore] updated deps to #[#[3, 4], #[3, 4, 5, 6, 9], #[3, 4, 5, 6, 9], #[], #[], #[], #[], #[], #[9], #[]]
+[introPass] looking at @g.2 ((g.7 :: g.8).length + length g.1) → @g.2 (g.7 :: g.8 ++ g.1).length → @g.2 (g.7 :: g.8 ++ g.1).length
+[introPass] calling core
+[introCore] call to add g.10 of type @g.2 ((g.7 :: g.8).length + length g.1)
+[introCore] ugIs #[]
+[introCore] new forwHeights #[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+[introCore] new forwMetadata #[ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.std "List.length_append",
+  ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.intro,
+  ForwMetaData.intro]
+[introCore] new forwDepths #[1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+[introCore] locThmIdx 2
+[introCore] generated local theorems []
+[introCore] reset rec depth
+[introCore] updated deps to #[#[3, 4], #[3, 4, 5, 6, 9, 10], #[3, 4, 5, 6, 9, 10], #[], #[], #[], #[], #[10], #[9, 10], #[], #[]]
+[introPass] looking at @g.2 (g.7 :: g.8 ++ g.1).length → @g.2 (g.7 :: g.8 ++ g.1).length
+[introPass] calling core
+[introCore] call to add g.11 of type @g.2 (g.7 :: g.8 ++ g.1).length
+[introCore] ugIs #[]
+[introCore] new forwHeights #[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+[introCore] new forwMetadata #[ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.std "List.length_append",
+  ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.intro,
+  ForwMetaData.intro, ForwMetaData.intro]
+[introCore] new forwDepths #[1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+[introCore] locThmIdx 2
+[introCore] generated local theorems []
+[introCore] reset rec depth
+[introCore] updated deps to #[#[3, 4], #[3, 4, 5, 6, 9, 10, 11], #[3, 4, 5, 6, 9, 10, 11], #[], #[], #[], #[], #[10, 11], #[9, 10, 11], #[], #[], #[]]
+[introPass] looking at @g.2 (g.7 :: g.8 ++ g.1).length
+[introPass] looking at @g.2 (g.7 :: g.8 ++ g.1).length
+[introPass] new goalHeights #[1, 2, 3, 3, 3, 3, 3, 4, 4]
+[introPass] new backDepths #[4, 3, 0, 0, 1, 1, 0, 0, 0]
+[introPass] new goalSpawn #[OptionProd.none, OptionProd.some 0 0, OptionProd.some 1 0, OptionProd.some 1 1, OptionProd.some 2 0,
+  OptionProd.some 2 1, OptionProd.some 2 2, OptionProd.some 3 0, OptionProd.some 4 0]
+[introPass] integrating to introtree
+[introPass] new introtree node #[0] #[]
+      node #[1, 2, 3, 4, 5, 6] #[0, 1, 2, 3, 4]
+            leaf #[7] #[5, 6]
+            leaf #[8] #[7, 8, 9, 10, 11]
+[introPass] integrating to backtree
+[introPass] new back ofG (0) (0) ∀ (l L : List ℕ) (P : ℕ → Prop), P (l.length + L.length) → P (l ++ L).length
+      ofI (0) (0) ([@g.2 (length g.0 + length g.1), ℕ → Prop, List ℕ, List ℕ])
+            ofU (0) (#[2]) g.4
+            ofG (0) (1) @g.2 (g.0 ++ g.1).length
+                  ofP (0) (#[4]) (6) @g.2 (g.0 ++ g.1).length
+                        ofB (0) (2) List
+                              ofG (0) (4) @g.2 ([].length + length g.1) → @g.2 ([] ++ g.1).length → @g.2 ([] ++ g.1).length
+                                    ofI (0) (3) ([@g.2 ([] ++ g.1).length, @g.2 ([].length + length g.1)])
+                                          ofG (0) (7) @g.2 ([] ++ g.1).length
+                        
+                              ofG (0) (5) (head : ℕ) →
+  (tail : List ℕ) →
+    (@g.2 (tail.length + length g.1) → @g.2 (tail ++ g.1).length → @g.2 (tail ++ g.1).length) →
+      @g.2 ((head :: tail).length + length g.1) → @g.2 (head :: tail ++ g.1).length → @g.2 (head :: tail ++ g.1).length
+                                    ofI (0) (4) ([@g.2 (g.7 :: g.8 ++ g.1).length, @g.2 ((g.7 :: g.8).length + length g.1), @g.2 (length g.8 + length g.1) → @g.2 (g.8 ++ g.1).length → @g.2 (g.8 ++ g.1).length, List ℕ, ℕ])
+                                          ofG (0) (8) @g.2 (g.7 :: g.8 ++ g.1).length
+                        
+                  ofP (0) (#[0]) (3) @g.2 (g.0 ++ g.1).length
+                        ofB (0) (1) List.length_append
+                              ofG (0) (2) @g.2 (length g.0 + length g.1)
+                                    ofU (0) (#[1]) g.3
+[introPass] bump goal and back id
+[introPass] pass concluded
+[introWiLtxMain] head @g.2 (g.7 :: g.8 ++ g.1).length
+[introWiLtxMain] whnfed to @g.2 (g.7 :: g.8 ++ g.1).length
+[introWiLtxMain] ltxAdd:
+[introWiLtxMain] index 11 type @g.2 (g.7 :: g.8 ++ g.1).length
+[introWiLtxMain] index 10 type @g.2 ((g.7 :: g.8).length + length g.1)
+[introWiLtxMain] index 9 type @g.2 (length g.8 + length g.1) → @g.2 (g.8 ++ g.1).length → @g.2 (g.8 ++ g.1).length
+[introWiLtxMain] index 8 type List ℕ
+[introWiLtxMain] index 7 type ℕ
+[integrateBackwardStd] after intro, new goals [(7, @g.2 ([] ++ g.1).length), (4, @g.2 ([].length + length g.1) → @g.2 ([] ++ g.1).length → @g.2 ([] ++ g.1).length), (8, @g.2 (g.7 :: g.8 ++ g.1).length), (5, (head : ℕ) →
+  (tail : List ℕ) →
+    (@g.2 (tail.length + length g.1) → @g.2 (tail ++ g.1).length → @g.2 (tail ++ g.1).length) →
+      @g.2 ((head :: tail).length + length g.1) → @g.2 (head :: tail ++ g.1).length → @g.2 (head :: tail ++ g.1).length)]
+[integrateBackwardStd] unifying goal 5 ot type (head : ℕ) →
+  (tail : List ℕ) →
+    (@g.2 (tail.length + length g.1) → @g.2 (tail ++ g.1).length → @g.2 (tail ++ g.1).length) →
+      @g.2 ((head :: tail).length + length g.1) → @g.2 (head :: tail ++ g.1).length → @g.2 (head :: tail ++ g.1).length wrt. (g.2 (g.0.length + g.1.length) ::: #[3]) ;;; (g.2 (g.0 ++ g.1).length ::: #[4]) ;;; (List ℕ ::: #[0, 1]) ;;; (ℕ → Prop ::: #[2])
+[integrateBackwardStd] uniBEwFTMainS fail
+[integrateBackwardStd] unifying goal 8 ot type @g.2 (g.7 :: g.8 ++ g.1).length wrt. (ℕ ::: #[7]) ;;; (g.2 (g.0.length + g.1.length) ::: #[3]) ;;; (g.2 ((g.7 :: g.8).length + g.1.length) ::: #[10]) ;;; (g.2 (g.0 ++ g.1).length ::: #[4]) ;;; (g.2 (g.7 :: g.8 ++ g.1).length ::: #[11]) ;;; (List ℕ ::: #[0, 1, 8]) ;;; (g.2 (g.8.length + g.1.length) → g.2 (g.8 ++ g.1).length → g.2 (g.8 ++ g.1).length ::: #[9]) ;;; (ℕ → Prop ::: #[2])
+[integrateBackwardStd] uniBEwFTMainS success with unifs [(#[11], ([], []))] 
+ adding backstep 4 0 to ta
+ clashes []
+ sanity ofG (0) (0) (#[0, 1, 2, 3, 4]) (#[1, 2, 3, 4, 5, 6, 7, 8])
+      ofI (0) (0) (#[1, 2, 3, 4]) (#[1, 2, 3, 4, 5, 6, 7, 8])
+            ofG (0) (1) (#[1, 2, 3, 4]) (#[2, 3, 4, 5, 6, 7, 8])
+                  ofP (0) (#[0]) (3) (#[1]) (#[2])
+                        ofB (0) (1) (#[#[]]) (#[#[2]])
+                              ofG (0) (2) (#[]) (#[])
+                                    ofU (0) (#[1])
+                  ofP (0) (#[4]) (6) (#[2, 3, 4]) (#[4, 5, 7, 8])
+                        ofB (0) (2) (#[#[3], #[4]]) (#[#[4, 7], #[5, 8]])
+                              ofG (0) (4) (#[3]) (#[7])
+                                    ofI (0) (3) (#[]) (#[7])
+                                          ofG (0) (7) (#[]) (#[])
+                        
+                              ofG (0) (5) (#[4]) (#[8])
+                                    ofI (0) (4) (#[]) (#[8])
+                                          ofU (0) (#[5])
+                                          ofG (0) (8) (#[]) (#[])
+                        
+            ofU (0) (#[2])
+[integrateBackwardStd] backTree : ofG (0) (0) ∀ (l L : List ℕ) (P : ℕ → Prop), P (l.length + L.length) → P (l ++ L).length
+      ofI (0) (0) ([@g.2 (length g.0 + length g.1), ℕ → Prop, List ℕ, List ℕ])
+            ofG (0) (1) @g.2 (g.0 ++ g.1).length
+                  ofP (0) (#[0]) (3) @g.2 (g.0 ++ g.1).length
+                        ofB (0) (1) List.length_append
+                              ofG (0) (2) @g.2 (length g.0 + length g.1)
+                                    ofU (0) (#[1]) g.3
+                  ofP (0) (#[4]) (6) @g.2 (g.0 ++ g.1).length
+                        ofB (0) (2) List
+                              ofG (0) (4) @g.2 ([].length + length g.1) → @g.2 ([] ++ g.1).length → @g.2 ([] ++ g.1).length
+                                    ofI (0) (3) ([@g.2 ([] ++ g.1).length, @g.2 ([].length + length g.1)])
+                                          ofG (0) (7) @g.2 ([] ++ g.1).length
+                        
+                              ofG (0) (5) (head : ℕ) →
+  (tail : List ℕ) →
+    (@g.2 (tail.length + length g.1) → @g.2 (tail ++ g.1).length → @g.2 (tail ++ g.1).length) →
+      @g.2 ((head :: tail).length + length g.1) → @g.2 (head :: tail ++ g.1).length → @g.2 (head :: tail ++ g.1).length
+                                    ofI (0) (4) ([@g.2 (g.7 :: g.8 ++ g.1).length, @g.2 ((g.7 :: g.8).length + length g.1), @g.2 (length g.8 + length g.1) → @g.2 (g.8 ++ g.1).length → @g.2 (g.8 ++ g.1).length, List ℕ, ℕ])
+                                          ofU (0) (#[5]) g.11
+                                          ofG (0) (8) @g.2 (g.7 :: g.8 ++ g.1).length
+                        
+            ofU (0) (#[2]) g.4
+[integrateBackwardStd] unifying goal 4 ot type @g.2 ([].length + length g.1) → @g.2 ([] ++ g.1).length → @g.2 ([] ++ g.1).length wrt. (g.2 (g.0.length + g.1.length) ::: #[3]) ;;; (g.2 (g.0 ++ g.1).length ::: #[4]) ;;; (List ℕ ::: #[0, 1]) ;;; (ℕ → Prop ::: #[2])
+[integrateBackwardStd] uniBEwFTMainS fail
+[integrateBackwardStd] unifying goal 7 ot type @g.2 ([] ++ g.1).length wrt. (g.2 (g.0.length + g.1.length) ::: #[3]) ;;; (g.2 ([].length + g.1.length) ::: #[5]) ;;; (g.2 (g.0 ++ g.1).length ::: #[4]) ;;; (g.2 ([] ++ g.1).length ::: #[6]) ;;; (List ℕ ::: #[0, 1]) ;;; (ℕ → Prop ::: #[2])
+[integrateBackwardStd] uniBEwFTMainS success with unifs [(#[6], ([], []))] 
+ adding backstep 3 0 to ta
+ clashes []
+ sanity ofG (0) (0) (#[0, 1, 2, 3, 4]) (#[1, 2, 3, 4, 5, 6, 7, 8])
+      ofI (0) (0) (#[1, 2, 3, 4]) (#[1, 2, 3, 4, 5, 6, 7, 8])
+            ofU (0) (#[2])
+            ofG (0) (1) (#[1, 2, 3, 4]) (#[2, 3, 4, 5, 6, 7, 8])
+                  ofP (0) (#[4]) (6) (#[2, 3, 4]) (#[4, 5, 7, 8])
+                        ofB (0) (2) (#[#[3], #[4]]) (#[#[4, 7], #[5, 8]])
+                              ofG (0) (4) (#[3]) (#[7])
+                                    ofI (0) (3) (#[]) (#[7])
+                                          ofU (0) (#[6])
+                                          ofG (0) (7) (#[]) (#[])
+                        
+                              ofG (0) (5) (#[4]) (#[8])
+                                    ofI (0) (4) (#[]) (#[8])
+                                          ofU (0) (#[5])
+                                          ofG (0) (8) (#[]) (#[])
+                        
+                  ofP (0) (#[0]) (3) (#[1]) (#[2])
+                        ofB (0) (1) (#[#[]]) (#[#[2]])
+                              ofG (0) (2) (#[]) (#[])
+                                    ofU (0) (#[1])
+[integrateBackwardStd] backTree : ofG (0) (0) ∀ (l L : List ℕ) (P : ℕ → Prop), P (l.length + L.length) → P (l ++ L).length
+      ofI (0) (0) ([@g.2 (length g.0 + length g.1), ℕ → Prop, List ℕ, List ℕ])
+            ofU (0) (#[2]) g.4
+            ofG (0) (1) @g.2 (g.0 ++ g.1).length
+                  ofP (0) (#[4]) (6) @g.2 (g.0 ++ g.1).length
+                        ofB (0) (2) List
+                              ofG (0) (4) @g.2 ([].length + length g.1) → @g.2 ([] ++ g.1).length → @g.2 ([] ++ g.1).length
+                                    ofI (0) (3) ([@g.2 ([] ++ g.1).length, @g.2 ([].length + length g.1)])
+                                          ofU (0) (#[6]) g.6
+                                          ofG (0) (7) @g.2 ([] ++ g.1).length
+                        
+                              ofG (0) (5) (head : ℕ) →
+  (tail : List ℕ) →
+    (@g.2 (tail.length + length g.1) → @g.2 (tail ++ g.1).length → @g.2 (tail ++ g.1).length) →
+      @g.2 ((head :: tail).length + length g.1) → @g.2 (head :: tail ++ g.1).length → @g.2 (head :: tail ++ g.1).length
+                                    ofI (0) (4) ([@g.2 (g.7 :: g.8 ++ g.1).length, @g.2 ((g.7 :: g.8).length + length g.1), @g.2 (length g.8 + length g.1) → @g.2 (g.8 ++ g.1).length → @g.2 (g.8 ++ g.1).length, List ℕ, ℕ])
+                                          ofU (0) (#[5]) g.11
+                                          ofG (0) (8) @g.2 (g.7 :: g.8 ++ g.1).length
+                        
+                  ofP (0) (#[0]) (3) @g.2 (g.0 ++ g.1).length
+                        ofB (0) (1) List.length_append
+                              ofG (0) (2) @g.2 (length g.0 + length g.1)
+                                    ofU (0) (#[1]) g.3
+[integrateInduction] adding to cycleAddBack : [(5, (head : ℕ) →
+  (tail : List ℕ) →
+    (@g.2 (tail.length + length g.1) → @g.2 (tail ++ g.1).length → @g.2 (tail ++ g.1).length) →
+      @g.2 ((head :: tail).length + length g.1) → @g.2 (head :: tail ++ g.1).length → @g.2 (head :: tail ++ g.1).length), (8, @g.2 (g.7 :: g.8 ++ g.1).length), (4, @g.2 ([].length + length g.1) → @g.2 ([] ++ g.1).length → @g.2 ([] ++ g.1).length), (7, @g.2 ([] ++ g.1).length)]
+[integrateInduction] adding to cycleAddForw : [(5, @g.2 ([].length + length g.1)), (6, @g.2 ([] ++ g.1).length), (7, ℕ), (8, List ℕ), (9, @g.2 (length g.8 + length g.1) → @g.2 (g.8 ++ g.1).length → @g.2 (g.8 ++ g.1).length), (10, @g.2 ((g.7 :: g.8).length + length g.1)), (11, @g.2 (g.7 :: g.8 ++ g.1).length)]
+[searchCore] integrate indu with tar indu g.1 target 1 of type g.2 (g.0 ++ g.1).length
+[integrateInduction] built term : @rec ℕ
+  (fun x =>
+    @g.2 (length g.0 + x.length) →
+      @g.2 (g.0 ++ x).length →
+        @g.2 ([].length + x.length) →
+          @g.2 ([] ++ x).length →
+            (@g.2 (length g.8 + x.length) → @g.2 (g.8 ++ x).length → @g.2 (g.8 ++ x).length) →
+              @g.2 ((g.7 :: g.8).length + x.length) → @g.2 (g.7 :: g.8 ++ x).length → @g.2 (g.0 ++ x).length)
+  t.5.0 t.5.1 g.1 g.3 g.4 g.5 g.6 g.9 g.10 g.11
+[integrateBackwardStd] ltxPaIn(g.2 (g.0.length + g.1.length) ::: #[3]) ;;; (g.2 (g.0 ++ g.1).length ::: #[4]) ;;; (List ℕ ::: #[0, 1]) ;;; (ℕ → Prop ::: #[2])
+[integrateBackwardStd] new goalHeights #[1, 2, 3, 3, 3, 3, 3, 4, 4, 3, 3, 3]
+[integrateBackwardStd] new backDepths #[4, 3, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0]
+[integrateBackwardStd] new goalSpawn #[OptionProd.none, OptionProd.some 0 0, OptionProd.some 1 0, OptionProd.some 1 1, OptionProd.some 2 0,
+  OptionProd.some 2 1, OptionProd.some 2 2, OptionProd.some 3 0, OptionProd.some 4 0, OptionProd.some 5 0,
+  OptionProd.some 5 1, OptionProd.some 5 2]
+[integrateBackwardStd] backtree after addBackstep ofG (0) (0) ∀ (l L : List ℕ) (P : ℕ → Prop), P (l.length + L.length) → P (l ++ L).length
+      ofI (0) (0) ([@g.2 (length g.0 + length g.1), ℕ → Prop, List ℕ, List ℕ])
+            ofG (0) (1) @g.2 (g.0 ++ g.1).length
+                  ofP (0) (#[7]) (11) @g.2 (g.0 ++ g.1).length
+                        ofB (0) (5) List
+                              ofG (0) (9) @g.2 (length g.0 + [].length) →
+  @g.2 (g.0 ++ []).length →
+    @g.2 ([].length + [].length) →
+      @g.2 ([] ++ []).length →
+        (@g.2 (length g.8 + [].length) → @g.2 (g.8 ++ []).length → @g.2 (g.8 ++ []).length) →
+          @g.2 ((g.7 :: g.8).length + [].length) → @g.2 (g.7 :: g.8 ++ []).length → @g.2 (g.0 ++ []).length
+                  
+                              ofG (0) (10) (head : ℕ) →
+  (tail : List ℕ) →
+    (@g.2 (length g.0 + tail.length) →
+        @g.2 (g.0 ++ tail).length →
+          @g.2 ([].length + tail.length) →
+            @g.2 ([] ++ tail).length →
+              (@g.2 (length g.8 + tail.length) → @g.2 (g.8 ++ tail).length → @g.2 (g.8 ++ tail).length) →
+                @g.2 ((g.7 :: g.8).length + tail.length) →
+                  @g.2 (g.7 :: g.8 ++ tail).length → @g.2 (g.0 ++ tail).length) →
+      @g.2 (length g.0 + (head :: tail).length) →
+        @g.2 (g.0 ++ head :: tail).length →
+          @g.2 ([].length + (head :: tail).length) →
+            @g.2 ([] ++ head :: tail).length →
+              (@g.2 (length g.8 + (head :: tail).length) →
+                  @g.2 (g.8 ++ head :: tail).length → @g.2 (g.8 ++ head :: tail).length) →
+                @g.2 ((g.7 :: g.8).length + (head :: tail).length) →
+                  @g.2 (g.7 :: g.8 ++ head :: tail).length → @g.2 (g.0 ++ head :: tail).length
+                  
+                  ofP (0) (#[4]) (6) @g.2 (g.0 ++ g.1).length
+                        ofB (0) (2) List
+                              ofG (0) (4) @g.2 ([].length + length g.1) → @g.2 ([] ++ g.1).length → @g.2 ([] ++ g.1).length
+                                    ofI (0) (3) ([@g.2 ([] ++ g.1).length, @g.2 ([].length + length g.1)])
+                                          ofU (0) (#[6]) g.6
+                                          ofG (0) (7) @g.2 ([] ++ g.1).length
+                        
+                              ofG (0) (5) (head : ℕ) →
+  (tail : List ℕ) →
+    (@g.2 (tail.length + length g.1) → @g.2 (tail ++ g.1).length → @g.2 (tail ++ g.1).length) →
+      @g.2 ((head :: tail).length + length g.1) → @g.2 (head :: tail ++ g.1).length → @g.2 (head :: tail ++ g.1).length
+                                    ofI (0) (4) ([@g.2 (g.7 :: g.8 ++ g.1).length, @g.2 ((g.7 :: g.8).length + length g.1), @g.2 (length g.8 + length g.1) → @g.2 (g.8 ++ g.1).length → @g.2 (g.8 ++ g.1).length, List ℕ, ℕ])
+                                          ofU (0) (#[5]) g.11
+                                          ofG (0) (8) @g.2 (g.7 :: g.8 ++ g.1).length
+                        
+                  ofP (0) (#[0]) (3) @g.2 (g.0 ++ g.1).length
+                        ofB (0) (1) List.length_append
+                              ofG (0) (2) @g.2 (length g.0 + length g.1)
+                                    ofU (0) (#[1]) g.3
+            ofU (0) (#[2]) g.4
+[integrateBackwardStd] backtree after addBackstep node #[0] #[]
+      node #[1, 2, 3, 4, 5, 6, 9, 10, 11] #[0, 1, 2, 3, 4]
+            leaf #[7] #[5, 6]
+            leaf #[8] #[7, 8, 9, 10, 11]
+[integrateBackwardStd] backtree after addUnis ofG (0) (0) ∀ (l L : List ℕ) (P : ℕ → Prop), P (l.length + L.length) → P (l ++ L).length
+      ofI (0) (0) ([@g.2 (length g.0 + length g.1), ℕ → Prop, List ℕ, List ℕ])
+            ofG (0) (1) @g.2 (g.0 ++ g.1).length
+                  ofP (0) (#[7]) (11) @g.2 (g.0 ++ g.1).length
+                        ofB (0) (5) List
+                              ofG (0) (9) @g.2 (length g.0 + [].length) →
+  @g.2 (g.0 ++ []).length →
+    @g.2 ([].length + [].length) →
+      @g.2 ([] ++ []).length →
+        (@g.2 (length g.8 + [].length) → @g.2 (g.8 ++ []).length → @g.2 (g.8 ++ []).length) →
+          @g.2 ((g.7 :: g.8).length + [].length) → @g.2 (g.7 :: g.8 ++ []).length → @g.2 (g.0 ++ []).length
+                  
+                              ofG (0) (10) (head : ℕ) →
+  (tail : List ℕ) →
+    (@g.2 (length g.0 + tail.length) →
+        @g.2 (g.0 ++ tail).length →
+          @g.2 ([].length + tail.length) →
+            @g.2 ([] ++ tail).length →
+              (@g.2 (length g.8 + tail.length) → @g.2 (g.8 ++ tail).length → @g.2 (g.8 ++ tail).length) →
+                @g.2 ((g.7 :: g.8).length + tail.length) →
+                  @g.2 (g.7 :: g.8 ++ tail).length → @g.2 (g.0 ++ tail).length) →
+      @g.2 (length g.0 + (head :: tail).length) →
+        @g.2 (g.0 ++ head :: tail).length →
+          @g.2 ([].length + (head :: tail).length) →
+            @g.2 ([] ++ head :: tail).length →
+              (@g.2 (length g.8 + (head :: tail).length) →
+                  @g.2 (g.8 ++ head :: tail).length → @g.2 (g.8 ++ head :: tail).length) →
+                @g.2 ((g.7 :: g.8).length + (head :: tail).length) →
+                  @g.2 (g.7 :: g.8 ++ head :: tail).length → @g.2 (g.0 ++ head :: tail).length
+                  
+                  ofP (0) (#[4]) (6) @g.2 (g.0 ++ g.1).length
+                        ofB (0) (2) List
+                              ofG (0) (4) @g.2 ([].length + length g.1) → @g.2 ([] ++ g.1).length → @g.2 ([] ++ g.1).length
+                                    ofI (0) (3) ([@g.2 ([] ++ g.1).length, @g.2 ([].length + length g.1)])
+                                          ofU (0) (#[6]) g.6
+                                          ofG (0) (7) @g.2 ([] ++ g.1).length
+                        
+                              ofG (0) (5) (head : ℕ) →
+  (tail : List ℕ) →
+    (@g.2 (tail.length + length g.1) → @g.2 (tail ++ g.1).length → @g.2 (tail ++ g.1).length) →
+      @g.2 ((head :: tail).length + length g.1) → @g.2 (head :: tail ++ g.1).length → @g.2 (head :: tail ++ g.1).length
+                                    ofI (0) (4) ([@g.2 (g.7 :: g.8 ++ g.1).length, @g.2 ((g.7 :: g.8).length + length g.1), @g.2 (length g.8 + length g.1) → @g.2 (g.8 ++ g.1).length → @g.2 (g.8 ++ g.1).length, List ℕ, ℕ])
+                                          ofU (0) (#[5]) g.11
+                                          ofG (0) (8) @g.2 (g.7 :: g.8 ++ g.1).length
+                        
+                  ofP (0) (#[0]) (3) @g.2 (g.0 ++ g.1).length
+                        ofB (0) (1) List.length_append
+                              ofG (0) (2) @g.2 (length g.0 + length g.1)
+                                    ofU (0) (#[1]) g.3
+            ofU (0) (#[2]) g.4
+[integrateBackwardStd] introing new goal correpsonding to 0th arg of backstep
+[integrateBackwardStd] cleaned goal type to @g.2 (length g.0 + [].length) →
+  @g.2 (g.0 ++ []).length →
+    @g.2 ([].length + [].length) →
+      @g.2 ([] ++ []).length →
+        (@g.2 (length g.8 + [].length) → @g.2 (g.8 ++ []).length → @g.2 (g.8 ++ []).length) →
+          @g.2 ((g.7 :: g.8).length + [].length) → @g.2 (g.7 :: g.8 ++ []).length → @g.2 (g.0 ++ []).length
+[introWiLtxMain] call on goal 9 of type @g.2 (length g.0 + [].length) →
+  @g.2 (g.0 ++ []).length →
+    @g.2 ([].length + [].length) →
+      @g.2 ([] ++ []).length →
+        (@g.2 (length g.8 + [].length) → @g.2 (g.8 ++ []).length → @g.2 (g.8 ++ []).length) →
+          @g.2 ((g.7 :: g.8).length + [].length) → @g.2 (g.7 :: g.8 ++ []).length → @g.2 (g.0 ++ []).length
+[introWiLtxMain] reduced goal to type @g.2 (length g.0 + [].length) →
+  @g.2 (g.0 ++ []).length →
+    @g.2 ([].length + [].length) →
+      @g.2 ([] ++ []).length →
+        (@g.2 (length g.8 + [].length) → @g.2 (g.8 ++ []).length → @g.2 (g.8 ++ []).length) →
+          @g.2 ((g.7 :: g.8).length + [].length) → @g.2 (g.7 :: g.8 ++ []).length → @g.2 (g.0 ++ []).length
+[introPass] looking at @g.2 (length g.0 + [].length) →
+  @g.2 (g.0 ++ []).length →
+    @g.2 ([].length + [].length) →
+      @g.2 ([] ++ []).length →
+        (@g.2 (length g.8 + [].length) → @g.2 (g.8 ++ []).length → @g.2 (g.8 ++ []).length) →
+          @g.2 ((g.7 :: g.8).length + [].length) → @g.2 (g.7 :: g.8 ++ []).length → @g.2 (g.0 ++ []).length
+[introPass] calling core
+[introCore] call to add g.12 of type @g.2 (length g.0 + [].length)
+[introCore] ugIs #[]
+[introCore] new forwHeights #[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+[introCore] new forwMetadata #[ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.std "List.length_append",
+  ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.intro,
+  ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.intro]
+[introCore] new forwDepths #[1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+[introCore] locThmIdx 2
+[introCore] generated local theorems []
+[introCore] reset rec depth
+[introCore] updated deps to #[#[3, 4, 12], #[3, 4, 5, 6, 9, 10, 11], #[3, 4, 5, 6, 9, 10, 11, 12], #[], #[], #[], #[], #[10, 11], #[9, 10, 11], #[], #[], #[], #[]]
+[introPass] looking at @g.2 (g.0 ++ []).length →
+  @g.2 ([].length + [].length) →
+    @g.2 ([] ++ []).length →
+      (@g.2 (length g.8 + [].length) → @g.2 (g.8 ++ []).length → @g.2 (g.8 ++ []).length) →
+        @g.2 ((g.7 :: g.8).length + [].length) → @g.2 (g.7 :: g.8 ++ []).length → @g.2 (g.0 ++ []).length
+[introPass] calling core
+[introCore] call to add g.13 of type @g.2 (g.0 ++ []).length
+[introCore] ugIs #[]
+[introCore] new forwHeights #[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+[introCore] new forwMetadata #[ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.std "List.length_append",
+  ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.intro,
+  ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.intro]
+[introCore] new forwDepths #[1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+[introCore] locThmIdx 2
+[introCore] generated local theorems []
+[introCore] reset rec depth
+[introCore] updated deps to #[#[3, 4, 12, 13], #[3, 4, 5, 6, 9, 10, 11], #[3, 4, 5, 6, 9, 10, 11, 12, 13], #[], #[], #[], #[], #[10, 11], #[9, 10, 11], #[], #[], #[], #[], #[]]
+[introPass] looking at @g.2 ([].length + [].length) →
+  @g.2 ([] ++ []).length →
+    (@g.2 (length g.8 + [].length) → @g.2 (g.8 ++ []).length → @g.2 (g.8 ++ []).length) →
+      @g.2 ((g.7 :: g.8).length + [].length) → @g.2 (g.7 :: g.8 ++ []).length → @g.2 (g.0 ++ []).length
+[introPass] calling core
+[introCore] call to add g.14 of type @g.2 ([].length + [].length)
+[introCore] ugIs #[]
+[introCore] new forwHeights #[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+[introCore] new forwMetadata #[ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.std "List.length_append",
+  ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.intro,
+  ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.intro]
+[introCore] new forwDepths #[1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+[introCore] locThmIdx 2
+[introCore] generated local theorems []
+[introCore] reset rec depth
+[introCore] updated deps to #[#[3, 4, 12, 13], #[3, 4, 5, 6, 9, 10, 11], #[3, 4, 5, 6, 9, 10, 11, 12, 13, 14], #[], #[], #[], #[], #[10, 11], #[9, 10, 11], #[], #[], #[], #[], #[], #[]]
+[introPass] looking at @g.2 ([] ++ []).length →
+  (@g.2 (length g.8 + [].length) → @g.2 (g.8 ++ []).length → @g.2 (g.8 ++ []).length) →
+    @g.2 ((g.7 :: g.8).length + [].length) → @g.2 (g.7 :: g.8 ++ []).length → @g.2 (g.0 ++ []).length
+[introPass] calling core
+[introCore] call to add g.15 of type @g.2 ([] ++ []).length
+[introCore] ugIs #[]
+[introCore] new forwHeights #[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+[introCore] new forwMetadata #[ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.std "List.length_append",
+  ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.intro,
+  ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.intro,
+  ForwMetaData.intro]
+[introCore] new forwDepths #[1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+[introCore] locThmIdx 2
+[introCore] generated local theorems []
+[introCore] reset rec depth
+[introCore] updated deps to #[#[3, 4, 12, 13], #[3, 4, 5, 6, 9, 10, 11], #[3, 4, 5, 6, 9, 10, 11, 12, 13, 14, 15], #[], #[], #[], #[], #[10, 11], #[9, 10, 11], #[], #[], #[], #[], #[], #[], #[]]
+[introPass] looking at (@g.2 (length g.8 + [].length) → @g.2 (g.8 ++ []).length → @g.2 (g.8 ++ []).length) →
+  @g.2 ((g.7 :: g.8).length + [].length) → @g.2 (g.7 :: g.8 ++ []).length → @g.2 (g.0 ++ []).length
+[introPass] calling core
+[introCore] call to add g.16 of type @g.2 (length g.8 + [].length) → @g.2 (g.8 ++ []).length → @g.2 (g.8 ++ []).length
+[introCore] ugIs #[]
+[introCore] new forwHeights #[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+[introCore] new forwMetadata #[ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.std "List.length_append",
+  ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.intro,
+  ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.intro,
+  ForwMetaData.intro, ForwMetaData.intro]
+[introCore] new forwDepths #[1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+[introCore] locThmIdx 2
+[introCore] generated local theorems [g.16]
+[introCore] reset rec depth
+ std case
+ badu badUniType.no
+ sinks [1, 0]
+sanity 1
+sanity 2
+sanity 3
+sanity 4
+sanity 5
+sanity 6
+sanity 7
+ for forw, added hyp @g.2 (length g.8 + [].length)
+ for forw, added hyp @g.2 (g.8 ++ []).length
+sanity 8
+sanity 9
+[introCore] reset rec depth
+[introCore] updated deps to #[#[3, 4, 12, 13], #[3, 4, 5, 6, 9, 10, 11], #[3, 4, 5, 6, 9, 10, 11, 12, 13, 14, 15, 16], #[], #[], #[], #[], #[10, 11], #[9, 10, 11, 16], #[], #[], #[], #[], #[], #[], #[], #[]]
+[introPass] looking at @g.2 ((g.7 :: g.8).length + [].length) → @g.2 (g.7 :: g.8 ++ []).length → @g.2 (g.0 ++ []).length
+[introPass] calling core
+[introCore] call to add g.17 of type @g.2 ((g.7 :: g.8).length + [].length)
+[introCore] ugIs #[]
+[introCore] new forwHeights #[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+[introCore] new forwMetadata #[ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.std "List.length_append",
+  ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.intro,
+  ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.intro,
+  ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.intro]
+[introCore] new forwDepths #[1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+[introCore] locThmIdx 3
+[introCore] generated local theorems []
+[introCore] reset rec depth
+[introCore] updated deps to #[#[3, 4, 12, 13], #[3, 4, 5, 6, 9, 10, 11], #[3, 4, 5, 6, 9, 10, 11, 12, 13, 14, 15, 16, 17], #[], #[], #[], #[], #[10, 11, 17], #[9, 10, 11, 16, 17], #[], #[], #[], #[], #[], #[], #[], #[], #[]]
+[introPass] looking at @g.2 (g.7 :: g.8 ++ []).length → @g.2 (g.0 ++ []).length
+[introPass] calling core
+[introCore] call to add g.18 of type @g.2 (g.7 :: g.8 ++ []).length
+[introCore] ugIs #[]
+[introCore] new forwHeights #[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+[introCore] new forwMetadata #[ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.std "List.length_append",
+  ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.intro,
+  ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.intro,
+  ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.intro]
+[introCore] new forwDepths #[1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+[introCore] locThmIdx 3
+[introCore] generated local theorems []
+[introCore] reset rec depth
+[introCore] updated deps to #[#[3, 4, 12, 13], #[3, 4, 5, 6, 9, 10, 11], #[3, 4, 5, 6, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18], #[], #[], #[], #[], #[10, 11, 17, 18], #[9, 10, 11, 16, 17, 18], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[]]
+[introPass] looking at @g.2 (g.0 ++ []).length
+[introPass] looking at @g.2 (g.0 ++ []).length
+[introPass] new goalHeights #[1, 2, 3, 3, 3, 3, 3, 4, 4, 3, 3, 3, 4]
+[introPass] new backDepths #[4, 3, 0, 0, 1, 1, 0, 0, 0, 1, 0, 0, 0]
+[introPass] new goalSpawn #[OptionProd.none, OptionProd.some 0 0, OptionProd.some 1 0, OptionProd.some 1 1, OptionProd.some 2 0,
+  OptionProd.some 2 1, OptionProd.some 2 2, OptionProd.some 3 0, OptionProd.some 4 0, OptionProd.some 5 0,
+  OptionProd.some 5 1, OptionProd.some 5 2, OptionProd.some 6 0]
+[introPass] integrating to introtree
+[introPass] new introtree node #[0] #[]
+      node #[1, 2, 3, 4, 5, 6, 9, 10, 11] #[0, 1, 2, 3, 4]
+            leaf #[7] #[5, 6]
+            leaf #[8] #[7, 8, 9, 10, 11]
+            leaf #[12] #[12, 13, 14, 15, 16, 17, 18]
+[introPass] integrating to backtree
+[introPass] new back ofG (0) (0) ∀ (l L : List ℕ) (P : ℕ → Prop), P (l.length + L.length) → P (l ++ L).length
+      ofI (0) (0) ([@g.2 (length g.0 + length g.1), ℕ → Prop, List ℕ, List ℕ])
+            ofU (0) (#[2]) g.4
+            ofG (0) (1) @g.2 (g.0 ++ g.1).length
+                  ofP (0) (#[0]) (3) @g.2 (g.0 ++ g.1).length
+                        ofB (0) (1) List.length_append
+                              ofG (0) (2) @g.2 (length g.0 + length g.1)
+                                    ofU (0) (#[1]) g.3
+                  ofP (0) (#[4]) (6) @g.2 (g.0 ++ g.1).length
+                        ofB (0) (2) List
+                              ofG (0) (4) @g.2 ([].length + length g.1) → @g.2 ([] ++ g.1).length → @g.2 ([] ++ g.1).length
+                                    ofI (0) (3) ([@g.2 ([] ++ g.1).length, @g.2 ([].length + length g.1)])
+                                          ofU (0) (#[6]) g.6
+                                          ofG (0) (7) @g.2 ([] ++ g.1).length
+                        
+                              ofG (0) (5) (head : ℕ) →
+  (tail : List ℕ) →
+    (@g.2 (tail.length + length g.1) → @g.2 (tail ++ g.1).length → @g.2 (tail ++ g.1).length) →
+      @g.2 ((head :: tail).length + length g.1) → @g.2 (head :: tail ++ g.1).length → @g.2 (head :: tail ++ g.1).length
+                                    ofI (0) (4) ([@g.2 (g.7 :: g.8 ++ g.1).length, @g.2 ((g.7 :: g.8).length + length g.1), @g.2 (length g.8 + length g.1) → @g.2 (g.8 ++ g.1).length → @g.2 (g.8 ++ g.1).length, List ℕ, ℕ])
+                                          ofU (0) (#[5]) g.11
+                                          ofG (0) (8) @g.2 (g.7 :: g.8 ++ g.1).length
+                        
+                  ofP (0) (#[7]) (11) @g.2 (g.0 ++ g.1).length
+                        ofB (0) (5) List
+                              ofG (0) (9) @g.2 (length g.0 + [].length) →
+  @g.2 (g.0 ++ []).length →
+    @g.2 ([].length + [].length) →
+      @g.2 ([] ++ []).length →
+        (@g.2 (length g.8 + [].length) → @g.2 (g.8 ++ []).length → @g.2 (g.8 ++ []).length) →
+          @g.2 ((g.7 :: g.8).length + [].length) → @g.2 (g.7 :: g.8 ++ []).length → @g.2 (g.0 ++ []).length
+                                    ofI (0) (6) ([@g.2 (g.7 :: g.8 ++ []).length, @g.2 ((g.7 :: g.8).length + [].length), @g.2 (length g.8 + [].length) → @g.2 (g.8 ++ []).length → @g.2 (g.8 ++ []).length, @g.2 ([] ++ []).length, @g.2 ([].length + [].length), @g.2 (g.0 ++ []).length, @g.2 (length g.0 + [].length)])
+                                          ofG (0) (12) @g.2 (g.0 ++ []).length
+                        
+                              ofG (0) (10) (head : ℕ) →
+  (tail : List ℕ) →
+    (@g.2 (length g.0 + tail.length) →
+        @g.2 (g.0 ++ tail).length →
+          @g.2 ([].length + tail.length) →
+            @g.2 ([] ++ tail).length →
+              (@g.2 (length g.8 + tail.length) → @g.2 (g.8 ++ tail).length → @g.2 (g.8 ++ tail).length) →
+                @g.2 ((g.7 :: g.8).length + tail.length) →
+                  @g.2 (g.7 :: g.8 ++ tail).length → @g.2 (g.0 ++ tail).length) →
+      @g.2 (length g.0 + (head :: tail).length) →
+        @g.2 (g.0 ++ head :: tail).length →
+          @g.2 ([].length + (head :: tail).length) →
+            @g.2 ([] ++ head :: tail).length →
+              (@g.2 (length g.8 + (head :: tail).length) →
+                  @g.2 (g.8 ++ head :: tail).length → @g.2 (g.8 ++ head :: tail).length) →
+                @g.2 ((g.7 :: g.8).length + (head :: tail).length) →
+                  @g.2 (g.7 :: g.8 ++ head :: tail).length → @g.2 (g.0 ++ head :: tail).length
+                  
+[introPass] bump goal and back id
+[introPass] pass concluded
+[introWiLtxMain] head @g.2 (g.0 ++ []).length
+[introWiLtxMain] whnfed to @g.2 (g.0 ++ []).length
+[introWiLtxMain] ltxAdd:
+[introWiLtxMain] index 18 type @g.2 (g.7 :: g.8 ++ []).length
+[introWiLtxMain] index 17 type @g.2 ((g.7 :: g.8).length + [].length)
+[introWiLtxMain] index 16 type @g.2 (length g.8 + [].length) → @g.2 (g.8 ++ []).length → @g.2 (g.8 ++ []).length
+[introWiLtxMain] index 15 type @g.2 ([] ++ []).length
+[introWiLtxMain] index 14 type @g.2 ([].length + [].length)
+[introWiLtxMain] index 13 type @g.2 (g.0 ++ []).length
+[introWiLtxMain] index 12 type @g.2 (length g.0 + [].length)
+[integrateBackwardStd] introing new goal correpsonding to 1th arg of backstep
+[integrateBackwardStd] cleaned goal type to (head : ℕ) →
+  (tail : List ℕ) →
+    (@g.2 (length g.0 + tail.length) →
+        @g.2 (g.0 ++ tail).length →
+          @g.2 ([].length + tail.length) →
+            @g.2 ([] ++ tail).length →
+              (@g.2 (length g.8 + tail.length) → @g.2 (g.8 ++ tail).length → @g.2 (g.8 ++ tail).length) →
+                @g.2 ((g.7 :: g.8).length + tail.length) →
+                  @g.2 (g.7 :: g.8 ++ tail).length → @g.2 (g.0 ++ tail).length) →
+      @g.2 (length g.0 + (head :: tail).length) →
+        @g.2 (g.0 ++ head :: tail).length →
+          @g.2 ([].length + (head :: tail).length) →
+            @g.2 ([] ++ head :: tail).length →
+              (@g.2 (length g.8 + (head :: tail).length) →
+                  @g.2 (g.8 ++ head :: tail).length → @g.2 (g.8 ++ head :: tail).length) →
+                @g.2 ((g.7 :: g.8).length + (head :: tail).length) →
+                  @g.2 (g.7 :: g.8 ++ head :: tail).length → @g.2 (g.0 ++ head :: tail).length
+[introWiLtxMain] call on goal 10 of type (head : ℕ) →
+  (tail : List ℕ) →
+    (@g.2 (length g.0 + tail.length) →
+        @g.2 (g.0 ++ tail).length →
+          @g.2 ([].length + tail.length) →
+            @g.2 ([] ++ tail).length →
+              (@g.2 (length g.8 + tail.length) → @g.2 (g.8 ++ tail).length → @g.2 (g.8 ++ tail).length) →
+                @g.2 ((g.7 :: g.8).length + tail.length) →
+                  @g.2 (g.7 :: g.8 ++ tail).length → @g.2 (g.0 ++ tail).length) →
+      @g.2 (length g.0 + (head :: tail).length) →
+        @g.2 (g.0 ++ head :: tail).length →
+          @g.2 ([].length + (head :: tail).length) →
+            @g.2 ([] ++ head :: tail).length →
+              (@g.2 (length g.8 + (head :: tail).length) →
+                  @g.2 (g.8 ++ head :: tail).length → @g.2 (g.8 ++ head :: tail).length) →
+                @g.2 ((g.7 :: g.8).length + (head :: tail).length) →
+                  @g.2 (g.7 :: g.8 ++ head :: tail).length → @g.2 (g.0 ++ head :: tail).length
+[introWiLtxMain] reduced goal to type (head : ℕ) →
+  (tail : List ℕ) →
+    (@g.2 (length g.0 + tail.length) →
+        @g.2 (g.0 ++ tail).length →
+          @g.2 ([].length + tail.length) →
+            @g.2 ([] ++ tail).length →
+              (@g.2 (length g.8 + tail.length) → @g.2 (g.8 ++ tail).length → @g.2 (g.8 ++ tail).length) →
+                @g.2 ((g.7 :: g.8).length + tail.length) →
+                  @g.2 (g.7 :: g.8 ++ tail).length → @g.2 (g.0 ++ tail).length) →
+      @g.2 (length g.0 + (head :: tail).length) →
+        @g.2 (g.0 ++ head :: tail).length →
+          @g.2 ([].length + (head :: tail).length) →
+            @g.2 ([] ++ head :: tail).length →
+              (@g.2 (length g.8 + (head :: tail).length) →
+                  @g.2 (g.8 ++ head :: tail).length → @g.2 (g.8 ++ head :: tail).length) →
+                @g.2 ((g.7 :: g.8).length + (head :: tail).length) →
+                  @g.2 (g.7 :: g.8 ++ head :: tail).length → @g.2 (g.0 ++ head :: tail).length
+[introPass] looking at (head : ℕ) →
+  (tail : List ℕ) →
+    (@g.2 (length g.0 + tail.length) →
+        @g.2 (g.0 ++ tail).length →
+          @g.2 ([].length + tail.length) →
+            @g.2 ([] ++ tail).length →
+              (@g.2 (length g.8 + tail.length) → @g.2 (g.8 ++ tail).length → @g.2 (g.8 ++ tail).length) →
+                @g.2 ((g.7 :: g.8).length + tail.length) →
+                  @g.2 (g.7 :: g.8 ++ tail).length → @g.2 (g.0 ++ tail).length) →
+      @g.2 (length g.0 + (head :: tail).length) →
+        @g.2 (g.0 ++ head :: tail).length →
+          @g.2 ([].length + (head :: tail).length) →
+            @g.2 ([] ++ head :: tail).length →
+              (@g.2 (length g.8 + (head :: tail).length) →
+                  @g.2 (g.8 ++ head :: tail).length → @g.2 (g.8 ++ head :: tail).length) →
+                @g.2 ((g.7 :: g.8).length + (head :: tail).length) →
+                  @g.2 (g.7 :: g.8 ++ head :: tail).length → @g.2 (g.0 ++ head :: tail).length
+[introPass] calling core
+[introCore] call to add g.19 of type ℕ
+[introCore] ugIs #[]
+[introCore] new forwHeights #[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+[introCore] new forwMetadata #[ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.std "List.length_append",
+  ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.intro,
+  ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.intro,
+  ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.intro]
+[introCore] new forwDepths #[1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+[introCore] locThmIdx 3
+[introCore] generated local theorems []
+[introCore] reset rec depth
+[introCore] updated deps to #[#[3, 4, 12, 13], #[3, 4, 5, 6, 9, 10, 11], #[3, 4, 5, 6, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18], #[], #[], #[], #[], #[10, 11, 17, 18], #[9, 10, 11, 16, 17, 18], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[]]
+[introPass] looking at (tail : List ℕ) →
+  (@g.2 (length g.0 + tail.length) →
+      @g.2 (g.0 ++ tail).length →
+        @g.2 ([].length + tail.length) →
+          @g.2 ([] ++ tail).length →
+            (@g.2 (length g.8 + tail.length) → @g.2 (g.8 ++ tail).length → @g.2 (g.8 ++ tail).length) →
+              @g.2 ((g.7 :: g.8).length + tail.length) → @g.2 (g.7 :: g.8 ++ tail).length → @g.2 (g.0 ++ tail).length) →
+    @g.2 (length g.0 + (g.19 :: tail).length) →
+      @g.2 (g.0 ++ g.19 :: tail).length →
+        @g.2 ([].length + (g.19 :: tail).length) →
+          @g.2 ([] ++ g.19 :: tail).length →
+            (@g.2 (length g.8 + (g.19 :: tail).length) →
+                @g.2 (g.8 ++ g.19 :: tail).length → @g.2 (g.8 ++ g.19 :: tail).length) →
+              @g.2 ((g.7 :: g.8).length + (g.19 :: tail).length) →
+                @g.2 (g.7 :: g.8 ++ g.19 :: tail).length → @g.2 (g.0 ++ g.19 :: tail).length
+[introPass] calling core
+[introCore] call to add g.20 of type List ℕ
+[introCore] ugIs #[]
+[introCore] new forwHeights #[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+[introCore] new forwMetadata #[ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.std "List.length_append",
+  ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.intro,
+  ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.intro,
+  ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.intro,
+  ForwMetaData.intro]
+[introCore] new forwDepths #[1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+[introCore] locThmIdx 3
+[introCore] generated local theorems []
+[introCore] reset rec depth
+[introCore] updated deps to #[#[3, 4, 12, 13], #[3, 4, 5, 6, 9, 10, 11], #[3, 4, 5, 6, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18], #[], #[], #[], #[], #[10, 11, 17, 18], #[9, 10, 11, 16, 17, 18], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[]]
+[introPass] looking at (@g.2 (length g.0 + length g.20) →
+    @g.2 (g.0 ++ g.20).length →
+      @g.2 ([].length + length g.20) →
+        @g.2 ([] ++ g.20).length →
+          (@g.2 (length g.8 + length g.20) → @g.2 (g.8 ++ g.20).length → @g.2 (g.8 ++ g.20).length) →
+            @g.2 ((g.7 :: g.8).length + length g.20) → @g.2 (g.7 :: g.8 ++ g.20).length → @g.2 (g.0 ++ g.20).length) →
+  @g.2 (length g.0 + (g.19 :: g.20).length) →
+    @g.2 (g.0 ++ g.19 :: g.20).length →
+      @g.2 ([].length + (g.19 :: g.20).length) →
+        @g.2 ([] ++ g.19 :: g.20).length →
+          (@g.2 (length g.8 + (g.19 :: g.20).length) →
+              @g.2 (g.8 ++ g.19 :: g.20).length → @g.2 (g.8 ++ g.19 :: g.20).length) →
+            @g.2 ((g.7 :: g.8).length + (g.19 :: g.20).length) →
+              @g.2 (g.7 :: g.8 ++ g.19 :: g.20).length → @g.2 (g.0 ++ g.19 :: g.20).length
+[introPass] calling core
+[introCore] call to add g.21 of type @g.2 (length g.0 + length g.20) →
+  @g.2 (g.0 ++ g.20).length →
+    @g.2 ([].length + length g.20) →
+      @g.2 ([] ++ g.20).length →
+        (@g.2 (length g.8 + length g.20) → @g.2 (g.8 ++ g.20).length → @g.2 (g.8 ++ g.20).length) →
+          @g.2 ((g.7 :: g.8).length + length g.20) → @g.2 (g.7 :: g.8 ++ g.20).length → @g.2 (g.0 ++ g.20).length
+[introCore] ugIs #[]
+[introCore] new forwHeights #[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+[introCore] new forwMetadata #[ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.std "List.length_append",
+  ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.intro,
+  ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.intro,
+  ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.intro, ForwMetaData.intro,
+  ForwMetaData.intro, ForwMetaData.intro]
+[introCore] new forwDepths #[1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+[introCore] locThmIdx 3
+[introCore] generated local theorems [g.21]
+[introCore] reset rec depth
+ std case
+ badu badUniType.no
+ sinks [6, 5, 4, 3, 2, 1, 0]
+sanity 1
+sanity 2
+sanity 3
+sanity 4
+sanity 5
+sanity 6
+sanity 7

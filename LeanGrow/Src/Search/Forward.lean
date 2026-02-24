@@ -143,7 +143,7 @@ def addForwCandOfRW (l1 : LocalContext) (l2 : LocalInstances) (cfg : SearchConfi
           return .mk st l1 l2
 
 #check 1
-
+-- #exit
 
 def integrateForwardFull (l1 : LocalContext) (l2 : LocalInstances) (cfg : SearchConfig UInt32Array) (st : SearchState UInt32Array)
   (data : ForwCandData)
