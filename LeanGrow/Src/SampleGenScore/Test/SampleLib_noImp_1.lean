@@ -149,7 +149,7 @@ def testDelZet (printLift? : Bool) (thmName : Name)
 
 #check Nat.gcd_greatest
 
--- #eval testNoDelZet false `Nat.gcd_greatest 1 2 2
+#eval testNoDelZet false `Nat.gcd_greatest 1 2 2
 
 -- #eval testNoDelZet false `Nat.gcd_greatest 1 4 4
 

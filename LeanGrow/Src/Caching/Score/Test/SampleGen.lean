@@ -63,7 +63,7 @@ def mod1 := `LeanGrow.Src.Caching.Score.Test.DummySamples
 #check explore_gen_gh_core_S
 
 
--- #eval explore_gen_gh_core_S mod1
+#eval explore_gen_gh_core_S mod1
 
 
 /-
