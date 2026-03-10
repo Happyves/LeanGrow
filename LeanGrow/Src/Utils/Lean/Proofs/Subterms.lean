@@ -103,11 +103,10 @@ partial def Lean.Expr.abstractLetFvarLam'
 
 -- #exit
 
-def mkValLikeCore' (fu body : Expr) (args : Array Expr) : TermElabM Unit := do
+def mkValLikeCore' (N : Name) (fu body : Expr) (args : Array Expr) : TermElabM Unit := do
   let fv ← help fu
   logInfoAt (← getRef) s!"fu : {← ppExpr fu}\n{fu}"
   logInfoAt (← getRef) s!"args : {repr args}"
-  let N ← fv.getUserName
   let N := Name.str N "like"
   let args := args.map Expr.fvarId!
   logInfoAt (← getRef) s!"sanity 1 : {repr <| body.getFVarIds}"
@@ -149,7 +148,8 @@ elab "add_valLike" fu:term "args" as:term,* "in" body:term : term => do
   let args := args.map .cleanupAnnotations!
   let body ← Elab.Term.elabTermAndSynthesize body .none
   let body' := body.cleanupAnnotations!
-  mkValLikeCore' fu body' args
+  let .some N ← getDeclName? | throwErrorAt (← getRef) "Only works for defs"
+  mkValLikeCore' N fu body' args
   logInfoAt (← getRef) s!"{← getDeclName?}"
   return body
 
@@ -158,7 +158,7 @@ elab "add_valLike" fu:term "args" as:term,* "in" body:term : term => do
 #check mkLambdaFVars
 
 
--- #exit
+
 
 @[specialize f]
 partial def Lean.Expr.onAllSubterms' (e : Expr) (f : Expr → Expr) : Expr :=
@@ -179,7 +179,7 @@ partial def Lean.Expr.onAllSubterms' (e : Expr) (f : Expr → Expr) : Expr :=
 -- has no val you dummy
 
 #check 1
-#print go.like
+#print Lean.Expr.onAllSubterms'.go.like
 
 
 #print DefinitionSafety
@@ -348,3 +348,156 @@ example (f : Nat → Nat) (h : test1.like f)
       rw [h] at ih
       dsimp at ih
       exact ih
+
+
+
+@[specialize f]
+partial def Lean.Expr.onAllSubtermsWiDepth' (e : Expr) (f : Expr → Nat → Expr) : Expr :=
+  let rec @[specialize f] go (f : Expr → Nat → Expr) (e : Expr) (d : Nat) : Expr :=
+    add_valLike go args f, e, d in
+    match f e d with
+    | .app l r => Expr.app (go f l d) (go f r d)
+    | .lam n l r i => .lam n (go f l d) (go f r (d+1))  i
+    | .forallE n l r i => .forallE n (go f l d) (go f r (d+1))  i
+    | .letE n l r z i => .letE n (go f l d) (go f r d) (go f z (d+1))  i
+    | .proj n i e => .proj n i (go f e d)
+    | .mdata md e => .mdata md (go f e d)
+    | here => here
+  go f e 0
+
+def Lean.Expr.abstractPat' (pat within : Expr) : Expr :=
+  within.onAllSubtermsWiDepth' (fun x d =>
+    if x == pat
+    then
+      .bvar d
+    else
+      match x with
+      | .bvar i => if i ≥ d then .bvar (i+1) else x
+      | _ => x
+    )
+
+
+def Lean.Expr.hasNoLooseBvar (d := 0) : Expr → Prop
+  | .app l r => l.hasNoLooseBvar d ∧ r.hasNoLooseBvar d
+  | .lam _ l r _ => l.hasNoLooseBvar d ∧ r.hasNoLooseBvar (d+1)
+  | .forallE _ l r _ => l.hasNoLooseBvar d ∧ r.hasNoLooseBvar (d+1)
+  | .letE _ l r z _ => l.hasNoLooseBvar d ∧ r.hasNoLooseBvar d ∧ z.hasNoLooseBvar (d+1)
+  | .proj _ _ e => e.hasNoLooseBvar d
+  | .mdata _ e => e.hasNoLooseBvar d
+  | .bvar i => i < d
+  | _ => True
+
+theorem Lean.Expr.hasNoLooseBvar_succ
+  (d : Nat) (e : Expr) (h : e.hasNoLooseBvar d) : e.hasNoLooseBvar (d+1) := by
+    induction e generalizing d with
+    | bvar i =>
+      dsimp [Lean.Expr.hasNoLooseBvar] at *
+      grind
+    | fvar _ | mvar _ | sort _ | const _ | lit _ =>
+      trivial
+    | proj _ _ e ih | mdata _ e ih =>
+       dsimp [Lean.Expr.hasNoLooseBvar] at *
+       exact ih d h
+    | app l r il ir =>
+      dsimp [Lean.Expr.hasNoLooseBvar] at *
+      exact .intro (il d h.1) (ir d h.2)
+    | lam _ l r _ il ir | forallE _ l r _  il ir =>
+      dsimp [Lean.Expr.hasNoLooseBvar] at *
+      exact .intro (il d h.1) (ir (d+1) h.2)
+    | letE _ l r z _ il ir iz =>
+      dsimp [Lean.Expr.hasNoLooseBvar] at *
+      exact .intro (il d h.1) <| .intro (ir d h.2.1) (iz (d+1) h.2.2)
+
+
+
+
+example (pat within : Expr)
+  (h : ∀ i, pat ≠ .bvar i) [LawfulBEq Expr] (d : Nat)
+  (hp : pat.hasNoLooseBvar d) (hw : within.hasNoLooseBvar d) :
+  let f := (fun x d =>
+    if x == pat
+    then
+      .bvar d
+    else
+      match x with
+      | .bvar i => if i ≥ d then .bvar (i+1) else x
+      | _ => x
+    )
+  ∀ g, Lean.Expr.onAllSubtermsWiDepth'.go.like g →
+    (g f within d).hasNoLooseBvar (d+1) := by
+      intro f g hg
+      induction within generalizing d with
+      | bvar i =>
+        rw [hg]
+        dsimp
+        if q : (.bvar i) == pat
+        then
+          exfalso
+          apply h i
+          exact (eq_of_beq q).symm
+        else
+          have : f (Expr.bvar i) d = if i ≥ d then .bvar (i+1) else .bvar i := by
+            dsimp [f] ; rw [if_neg q]
+          split at this
+          · rename_i q
+            rw [this]
+            dsimp [Lean.Expr.hasNoLooseBvar] at ⊢ hw
+            grind
+          · rename_i q
+            rw [this]
+            dsimp [Lean.Expr.hasNoLooseBvar] at ⊢
+            apply Nat.lt_of_lt_of_le (Nat.lt_of_not_le q) (Nat.le_add_right d 1)
+      | fvar fv =>
+        rw [hg]
+        dsimp
+        if q : (.fvar fv) == pat
+        then
+          have : f (Expr.fvar fv) d = .bvar d := by
+            dsimp [f] ; rw [if_pos q]
+          rw [this]
+          dsimp [Lean.Expr.hasNoLooseBvar]
+          exact Nat.lt_add_one d
+        else
+          have : f (Expr.fvar fv) d = .fvar fv := by
+            dsimp [f] ; rw [if_neg q]
+          rw [this]
+          dsimp [Lean.Expr.hasNoLooseBvar]
+      | app l r il ir =>
+        dsimp [Lean.Expr.hasNoLooseBvar] at hw
+        specialize il d hp hw.1
+        specialize ir d hp hw.2
+        rw [hg]
+        dsimp
+        if q : (.app l r) == pat
+        then
+          have : f (Expr.app l r) d = .bvar d := by
+            dsimp [f] ; rw [if_pos q]
+          rw [this]
+          dsimp [Lean.Expr.hasNoLooseBvar]
+          exact Nat.lt_add_one d
+        else
+          have : f (Expr.app l r) d = .app l r := by
+            dsimp [f] ; rw [if_neg q]
+          rw [this]
+          dsimp [Lean.Expr.hasNoLooseBvar]
+          exact .intro il ir
+      | lam n l r b il ir =>
+        dsimp [Lean.Expr.hasNoLooseBvar] at hw
+        specialize il d hp hw.1
+        specialize ir (d+1) (Lean.Expr.hasNoLooseBvar_succ d _ hp) hw.2
+        rw [hg]
+        dsimp
+        if q : (.lam n l r b) == pat
+        then
+          have : f (Expr.lam n l r b) d = .bvar d := by
+            dsimp [f] ; rw [if_pos q]
+          rw [this]
+          dsimp [Lean.Expr.hasNoLooseBvar]
+          exact Nat.lt_add_one d
+        else
+          have : f (Expr.lam n l r b) d = .lam n l r b := by
+            dsimp [f] ; rw [if_neg q]
+          rw [this]
+          dsimp [Lean.Expr.hasNoLooseBvar]
+          exact .intro il ir
+      | _ => sorry
