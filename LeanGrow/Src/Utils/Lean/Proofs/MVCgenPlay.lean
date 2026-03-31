@@ -77,7 +77,10 @@ theorem mySum_correct_vanilla (l : List Nat) : mySum' l = l.sum := by
 #check List.foldl_eq_foldr_reverse
 
 
-#exit
+
+
+
+-- #exit
 
 -- # From tutorial
 
@@ -120,16 +123,16 @@ theorem mySum_correct (l : Array Nat) : mySum l = l.sum := by
     grind
 
 
-theorem mySum_correct_vanilla (l : Array Nat) : mySum l = l.sum := by
-  -- Turn the array into a list
-  cases l with | mk l =>
-  -- Unfold `mySum` and rewrite `forIn` to `foldl`
-  simp only [mySum, bind_pure_comp, map_pure, Array.forIn_pure_yield_eq_foldl, List.size_toArray,
-    List.foldl_toArray', bind_pure, Id.run_pure, List.sum_toArray]
-  -- Generalize the inductive hypothesis
-  suffices h : ∀ out, List.foldl (· + ·) out l = out + l.sum by simp [h]
-  -- Grind away
-  induction l with grind
+-- theorem mySum_correct_vanilla (l : Array Nat) : mySum l = l.sum := by
+--   -- Turn the array into a list
+--   cases l with | mk l =>
+--   -- Unfold `mySum` and rewrite `forIn` to `foldl`
+--   simp only [mySum, bind_pure_comp, map_pure, Array.forIn_pure_yield_eq_foldl, List.size_toArray,
+--     List.foldl_toArray', bind_pure, Id.run_pure, List.sum_toArray]
+--   -- Generalize the inductive hypothesis
+--   suffices h : ∀ out, List.foldl (· + ·) out l = out + l.sum by simp [h]
+--   -- Grind away
+--   induction l with grind
 
 
 def nodup (l : List Int) : Bool := Id.run do
@@ -184,3 +187,61 @@ theorem mkFreshN_correct (n : Nat) : ((mkFreshN n).run' s).Nodup := by
   · ⇓⟨xs, acc⟩ state =>
       ⌜(∀ x ∈ acc, x < state.counter) ∧ acc.toList.Nodup⌝
   with grind
+
+
+#check 1
+
+
+def WithLetDecl (n : Name) (type value : Expr) (initD : LocalContext) (initI : LocalInstances) : MetaM (FVarId × LocalContext × LocalInstances) :=
+  let fv := ⟨n⟩
+  let ltx := initD.mkLetDecl fv n type value false .default
+  withReader (fun ctx => {ctx with lctx := ltx, localInstances := initI}) do
+    match (← Lean.Meta.isClass? type) with
+    | .none  => return ⟨fv,ltx,initI⟩
+    | .some c => return ⟨fv,ltx, (initI.push {className := c, fvar := .fvar fv})⟩
+
+
+instance : WP MetaM (.arg Meta.Context .pure) := by
+  apply @ReaderT.instWP _ _ _ ?_
+  sorry
+
+#check PostCond.noThrow
+
+example (n : Name) (type value : Expr) (initD : LocalContext) (initI : LocalInstances)
+  (h : ⊢ₛ wp⟦Lean.Meta.isClass? type⟧ (PostCond.noThrow fun a => ⌜a = .none⌝) s) :
+  ⊢ₛ wp⟦WithLetDecl n type value initD initI⟧ (PostCond.noThrow fun a => ⌜a.2.2.size = initI.size⌝) s := by
+    unfold WithLetDecl
+    lift_lets
+    intro fv ltx
+    rw [WP.withReader_MonadWithReader]
+    rw [@WP.withReader_ReaderT]
+    dsimp
+    intro _
+    have : WPMonad MetaM (PostShape.arg Context PostShape.pure) := sorry
+    let f (a) : MetaM (FVarId × LocalContext × LocalInstances) :=
+      match a with
+      | none => pure (fv, ltx, initI)
+      | some c => pure (fv, ltx, Array.push initI { className := c, fvar := Expr.fvar fv })
+    dsimp [bind]
+    -- rw [WP.bind (isClass? type)]
+    sorry
+
+
+#check WPMonad.wp_seq
+#check WPMonad.wp_bind
+
+#check WP.withReader_ReaderT
+#check WP.withReader_MonadWithReader
+#check WP.withReader_MonadWithReaderOf
+
+theorem withReader_read {m} {C} [Monad m] (c : C) :
+  ((withReader (fun _ => c) read) : ReaderT C m C) = (pure c) := by
+    dsimp [withReader, withTheReader, MonadWithReaderOf.withReader, pure, ReaderT.pure]
+    unfold ReaderT.pure
+    funext _
+    dsimp [read, readThe, MonadReaderOf.read]
+    unfold ReaderT.read
+    rfl
+
+
+#check PersistentHashMap
