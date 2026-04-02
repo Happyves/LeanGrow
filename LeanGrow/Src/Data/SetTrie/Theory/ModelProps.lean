@@ -1,10 +1,25 @@
 
 
 import LeanGrow.Src.Data.SetTrie.Theory.Model
-import Mathlib.Data.Finset.Union
 
 
 open Finset
+
+
+
+#check biUnion_biUnion
+#check biUnion_insert
+
+theorem Finset.biUnion_union  {β : Type _} {γ : Type _}
+  [DecidableEq β] [DecidableEq γ]
+  (x y : Finset β) (g : β → Finset γ) :
+  (x ∪ y).biUnion g = x.biUnion g ∪ y.biUnion g := by
+    induction x using Finset.induction with
+    | empty => simp only [empty_union, biUnion_empty]
+    | insert a b c ih =>
+      rw [biUnion_insert, insert_union, biUnion_insert, union_assoc]
+      congr
+
 
 namespace StudyST
 
@@ -14,23 +29,6 @@ variable {α : Type} [DecidableEq α]
 
 #check Finset.biUnion
 
-theorem biUnion_sets_univ (st : StudyST α) : st.sets.biUnion id = st.univ := by
-  induction st, () using SetTrie.fold.induct with
-  | case1 _ kids ih_kids =>
-    unfold sets univ fold SetTrie.fold
-    induction kids with
-    | nil =>
-      rfl
-    | cons head tail ih =>
-      sorry
-  | case2 _ key kids ih_kids =>
-    sorry
-  | case3 _ =>
-    unfold sets univ fold SetTrie.fold
-    rfl
-
-
-#check List.foldl_assoc_comm_cons
 
 
 theorem fold_union_assoc (s k : Finset α) (a : SetTrie Unit (Finset α)) :
@@ -118,10 +116,9 @@ theorem fold_comm (s : Finset α) (a b : SetTrie Unit (Finset α)) :
 
 
 theorem fold_cons
-  {head : SetTrie Unit (Finset α)} {tail : List (SetTrie Unit (Finset α))} :
-  List.foldl (fun s t => t.fold s fun x y => x ∪ y) (∅ : Finset α) (head :: tail) =
-  head.fold (List.foldl (fun s t => t.fold s fun x y => x ∪ y) ∅ tail) fun x y => x ∪ y := by
-  generalize (∅ : Finset α) = s
+  {head : SetTrie Unit (Finset α)} {tail : List (SetTrie Unit (Finset α))} {s : Finset α} :
+  List.foldl (fun s t => t.fold s fun x y => x ∪ y) s (head :: tail) =
+  head.fold (List.foldl (fun s t => t.fold s fun x y => x ∪ y) s tail) fun x y => x ∪ y := by
   revert s
   induction tail generalizing head with
   | nil => intro _ ; rfl
@@ -132,3 +129,62 @@ theorem fold_cons
     rw [← List.foldl_cons]
     rw [ih]
     congr 1
+
+
+theorem sets_root_cons
+  {head : SetTrie Unit (Finset α)} {tail : List (SetTrie Unit (Finset α))} :
+  sets (SetTrie.root (head :: tail)) = (sets head) ∪ (sets (SetTrie.root tail)) := by
+    -- unfold sets mapMerge SetTrie.mapMerge
+    rw [sets, mapMerge, SetTrie.mapMerge]
+    rw [List.map_cons]
+    rw [List.foldl_assoc_comm_cons]
+    congr
+    rw [sets, mapMerge, SetTrie.mapMerge]
+
+
+#check List.foldl_assoc_comm_cons
+
+
+theorem fold_union_init
+  {head : SetTrie Unit (Finset α)} {s : Finset α} :
+  head.fold s (fun x y => x ∪ y) = s ∪ head.fold ∅ (fun x y => x ∪ y) := by
+  revert s
+  induction head, () using SetTrie.fold.induct with
+  | case1 _ kids ih_kids =>
+    induction kids with
+    | nil =>
+      intro _
+      unfold SetTrie.fold
+      dsimp
+      rw [union_empty]
+    | cons z zs ih =>
+      intro s
+      specialize @ih (fun u t mem s => @ih_kids u t (List.mem_cons_of_mem _ mem) s) s
+      specialize @ih_kids () z (List.mem_cons_self) --((List.foldl (fun s t => t.fold s fun x y => x ∪ y) s zs))
+      unfold SetTrie.fold
+      rw [fold_cons, fold_cons, ih_kids, ih_kids]
+
+
+
+#exit
+
+theorem biUnion_sets_univ (st : StudyST α) : st.sets.biUnion id = st.univ := by
+  induction st, () using SetTrie.fold.induct with
+  | case1 _ kids ih_kids =>
+    induction kids with
+    | nil =>
+      unfold sets univ fold SetTrie.fold mapMerge SetTrie.mapMerge
+      rfl
+    | cons head tail ih =>
+      unfold univ fold SetTrie.fold -- sets mapMerge SetTrie.mapMerge
+      rw [fold_cons]
+      rw [sets_root_cons]
+      rw [biUnion_union]
+      specialize ih (fun u t mem => ih_kids u t (List.mem_cons_of_mem _ mem))
+      specialize ih_kids () head (List.mem_cons_self)
+
+  | case2 _ key kids ih_kids =>
+    sorry
+  | case3 _ =>
+    unfold sets univ fold SetTrie.fold
+    rfl
