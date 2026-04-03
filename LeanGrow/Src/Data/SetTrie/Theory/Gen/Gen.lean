@@ -4,21 +4,6 @@
 import LeanGrow.Src.Data.SetTrie.Operations
 
 
-#check IO.rand
-
-#check IO.getRandomBytes
-
-#check ByteArray
-#check ByteArray.size
-
-
-#check UInt8.xor
-
-
--- #eval IO.getRandomBytes 3
-
-#check BitVec.xor
-
 
 structure ByteVect_8x (n : Nat) where
   a : ByteArray
@@ -101,6 +86,79 @@ unsafe def IO.randBV_impl (n : Nat) : IO (ByteVect_8x n) := do
 def IO.randBV (n : Nat) : IO (ByteVect_8x n) := do
   return default
 
+#check 1
+
+@[inline] -- should be given better support with FFI
+def ByteVect_8x.bytewise {n : Nat} (x y : ByteVect_8x n)
+  (f: UInt8 → UInt8 → UInt8) : ByteVect_8x n :=
+  let A : Array UInt8 := Array.emptyWithCapacity n
+  let rec go (i : Nat) (A : Array UInt8) (hi : A.size = i) (spe : i ≤ n) : ByteVect_8x n :=
+    if h : i < n
+    then
+      let a := x.a[i]!
+      let b := y.a[i]!
+      let res := f a b
+      let A := A.push res
+      go (i+1) A (by grind) (by grind)
+    else
+      .mk (.mk A) (by dsimp [ByteArray.size] ; grind)
+  go 0 A (by grind) (Nat.zero_le _)
+
+#check 1
+
+@[inline]
+def ByteVect_8x.or {n : Nat} (x y : ByteVect_8x n) :=
+  ByteVect_8x.bytewise x y UInt8.lor
+
+
+@[inline]
+def ByteVect_8x.and {n : Nat} (x y : ByteVect_8x n) :=
+  ByteVect_8x.bytewise x y UInt8.land
+
+instance (n : Nat) : BEq (ByteVect_8x n) where
+  beq := fun x y => x.a == y.a
+
+@[inline]
+def ByteVect_8x.sub {n : Nat} (x y : ByteVect_8x n) : Bool :=
+  x.and y == x
+
+
+@[inline]
+def UInt8.count (x : UInt8) : Nat :=
+  let c := 0
+  let one : UInt8 := 1
+  let One : Bool := (one.land x) != 0
+  let c := if One then c+1 else c
+  let two : UInt8 := 2
+  let Two : Bool := (two.land x) != 0
+  let c := if Two then c+1 else c
+  let three : UInt8 := 4
+  let Three : Bool := (three.land x) != 0
+  let c := if Three then c+1 else c
+  let four : UInt8 := 8
+  let Four : Bool := (four.land x) != 0
+  let c := if Four then c+1 else c
+  let five : UInt8 := 16
+  let Five : Bool := (five.land x) != 0
+  let c := if Five then c+1 else c
+  let six : UInt8 := 32
+  let Six : Bool := (six.land x) != 0
+  let c := if Six then c+1 else c
+  let seven : UInt8 := 64
+  let Seven : Bool := (seven.land x) != 0
+  let c := if Seven then c+1 else c
+  let eight : UInt8 := 128
+  let Eight : Bool := (eight.land x) != 0
+  let c := if Eight then c+1 else c
+  c
+
+@[inline]
+def ByteVect_8x.count {n : Nat} (x : ByteVect_8x n) : Nat :=
+  x.a.foldl (fun s u => u.count + s) 0
+
+
+#exit
+
 
 -- #eval IO.randBV 5
 
@@ -164,4 +222,4 @@ def testbinom'' : IO Unit := do
       IO.print "x"
     IO.println ""
 
-#eval testbinom''
+-- #eval testbinom''
