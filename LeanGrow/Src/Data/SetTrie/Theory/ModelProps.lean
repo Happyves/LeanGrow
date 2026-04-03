@@ -145,6 +145,7 @@ theorem sets_root_cons
 #check List.foldl_assoc_comm_cons
 
 
+
 theorem fold_union_init
   {head : SetTrie Unit (Finset α)} {s : Finset α} :
   head.fold s (fun x y => x ∪ y) = s ∪ head.fold ∅ (fun x y => x ∪ y) := by
@@ -159,14 +160,48 @@ theorem fold_union_init
       rw [union_empty]
     | cons z zs ih =>
       intro s
-      specialize @ih (fun u t mem s => @ih_kids u t (List.mem_cons_of_mem _ mem) s) s
-      specialize @ih_kids () z (List.mem_cons_self) --((List.foldl (fun s t => t.fold s fun x y => x ∪ y) s zs))
+      specialize @ih (fun u t mem s => @ih_kids u t (List.mem_cons_of_mem _ mem) s)
+      specialize @ih_kids () z (List.mem_cons_self)
       unfold SetTrie.fold
-      rw [fold_cons, fold_cons, ih_kids, ih_kids]
+      rw [fold_cons, fold_cons, ih_kids]
+      unfold SetTrie.fold at ih
+      rw [ih]
+      nth_rewrite 2 [ih_kids]
+      rw [union_assoc]
+  | case2 _ key kids ih_kids =>
+    induction kids with
+    | nil =>
+      intro _
+      unfold SetTrie.fold
+      dsimp
+      rw [← union_assoc, union_empty]
+    | cons z zs ih =>
+      intro s
+      specialize @ih (fun u t mem s => @ih_kids u t (List.mem_cons_of_mem _ mem) s)
+      specialize @ih_kids () z (List.mem_cons_self)
+      unfold SetTrie.fold
+      rw [fold_cons, fold_cons, ih_kids]
+      unfold SetTrie.fold at ih
+      rw [union_assoc]
+      nth_rewrite 2 [union_comm]
+      rw [← union_assoc]
+      rw [ih]
+      nth_rewrite 2 [ih_kids]
+      rw [union_assoc]
+      congr 1
+      rw [union_assoc]
+      nth_rewrite 2 [union_comm]
+      rw [← union_assoc]
+  | case3 _ _ =>
+    intro _
+    unfold SetTrie.fold
+    rw [union_empty]
 
 
 
-#exit
+
+
+-- #exit
 
 theorem biUnion_sets_univ (st : StudyST α) : st.sets.biUnion id = st.univ := by
   induction st, () using SetTrie.fold.induct with
@@ -182,9 +217,13 @@ theorem biUnion_sets_univ (st : StudyST α) : st.sets.biUnion id = st.univ := by
       rw [biUnion_union]
       specialize ih (fun u t mem => ih_kids u t (List.mem_cons_of_mem _ mem))
       specialize ih_kids () head (List.mem_cons_self)
-
+      rw [fold_union_init]
+      rw [union_comm]
+      congr
+      unfold univ fold SetTrie.fold at ih
+      apply ih
   | case2 _ key kids ih_kids =>
     sorry
   | case3 _ =>
-    unfold sets univ fold SetTrie.fold
+    unfold sets univ fold SetTrie.fold mapMerge SetTrie.mapMerge
     rfl
