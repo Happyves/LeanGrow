@@ -21,6 +21,15 @@ theorem Finset.biUnion_union  {β : Type _} {γ : Type _}
       congr
 
 
+lemma Finset.biUnion_union'  {α : Type u_1} {β : Type u_2} {s : Finset α} {t₁ t₂ : α → Finset β} [DecidableEq β]
+  : s.biUnion (fun x ↦ t₁ x ∪ t₂ x) = s.biUnion t₁ ∪ s.biUnion t₂ := by grind
+  -- added in recent mathlib under name Finset.biUnion_union
+
+
+
+
+-- #exit
+
 namespace StudyST
 
 variable {α : Type} [DecidableEq α]
@@ -201,29 +210,66 @@ theorem fold_union_init
 
 
 
--- #exit
+theorem univ_node_union_root
+  {key : Finset α} {kids : List (SetTrie Unit (Finset α))} :
+  univ (SetTrie.node key kids) = key ∪ univ (SetTrie.root kids) := by
+  unfold univ fold SetTrie.fold
+  rw [union_comm]
+
+theorem sets_node_image_root
+  {key : Finset α} {kids : List (SetTrie Unit (Finset α))} :
+  sets (SetTrie.node key kids) = image (fun z => key ∪ z) (sets (SetTrie.root kids)) := by
+    unfold sets mapMerge SetTrie.mapMerge
+    dsimp
+
 
 theorem biUnion_sets_univ (st : StudyST α) : st.sets.biUnion id = st.univ := by
+  have rq
+    (kids : List (SetTrie Unit (Finset α)))
+    (ih_kids : ∀ (s : Unit), ∀ t ∈ kids, (sets t).biUnion id = univ t)
+    : (sets (SetTrie.root kids)).biUnion id = univ (SetTrie.root kids) := by
+      induction kids with
+      | nil =>
+        unfold sets univ fold SetTrie.fold mapMerge SetTrie.mapMerge
+        rfl
+      | cons head tail ih =>
+        unfold univ fold SetTrie.fold -- sets mapMerge SetTrie.mapMerge
+        rw [fold_cons]
+        rw [sets_root_cons]
+        rw [biUnion_union]
+        specialize ih (fun u t mem => ih_kids u t (List.mem_cons_of_mem _ mem))
+        specialize ih_kids () head (List.mem_cons_self)
+        rw [fold_union_init]
+        rw [union_comm]
+        congr
+        unfold univ fold SetTrie.fold at ih
+        apply ih
   induction st, () using SetTrie.fold.induct with
   | case1 _ kids ih_kids =>
-    induction kids with
-    | nil =>
-      unfold sets univ fold SetTrie.fold mapMerge SetTrie.mapMerge
-      rfl
-    | cons head tail ih =>
-      unfold univ fold SetTrie.fold -- sets mapMerge SetTrie.mapMerge
-      rw [fold_cons]
-      rw [sets_root_cons]
-      rw [biUnion_union]
-      specialize ih (fun u t mem => ih_kids u t (List.mem_cons_of_mem _ mem))
-      specialize ih_kids () head (List.mem_cons_self)
-      rw [fold_union_init]
-      rw [union_comm]
-      congr
-      unfold univ fold SetTrie.fold at ih
-      apply ih
+    apply rq _ ih_kids
   | case2 _ key kids ih_kids =>
+    rw [univ_node_union_root, sets_node_image_root]
+    rw [image_biUnion]
+    dsimp
+    rw [Finset.biUnion_union']
+    -- todo: disjoin on empty or not to use ↓
     sorry
   | case3 _ =>
     unfold sets univ fold SetTrie.fold mapMerge SetTrie.mapMerge
     rfl
+
+
+#check biUnion_empty
+
+
+lemma Finset.biUnion_const {α : Type u_1} {β : Type u_2} [DecidableEq α] [DecidableEq β]
+  {s : Finset α} {c : Finset β} (h : s ≠ ∅)
+  : s.biUnion (fun _ ↦ c) = c := by
+  induction s using Finset.induction with
+  | empty => contradiction
+  | insert x xs ih1 ih2 =>
+    rw [biUnion_insert]
+    by_cases q : xs ≠ ∅
+    · rw [ih2 q, union_self]
+    · rw [not_not] at q
+      rw [q, biUnion_empty, union_empty]
