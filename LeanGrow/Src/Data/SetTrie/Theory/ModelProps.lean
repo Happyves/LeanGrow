@@ -223,10 +223,27 @@ theorem sets_node_image_root
     dsimp
 
 
-theorem biUnion_sets_univ (st : StudyST α) : st.sets.biUnion id = st.univ := by
+theorem univ_root_empty
+  {kids : List (SetTrie Unit (Finset α))} (h : wf (SetTrie.root kids)) :
+  univ (SetTrie.root kids) = ∅ ↔ kids = [] := by
+    induction kids with
+    | nil =>
+      unfold univ fold SetTrie.fold
+      simp only [List.foldl_nil]
+    | cons head tail ih =>
+      simp only [reduceCtorEq, iff_false]
+      unfold univ fold SetTrie.fold
+      unfold wf mapMergeDep SetTrie.mapMergeDep at h
+      dsimp at h
+
+
+
+#exit
+
+theorem biUnion_sets_univ (st : StudyST α) (hwf : st.wf) : st.sets.biUnion id = st.univ := by
   have rq
     (kids : List (SetTrie Unit (Finset α)))
-    (ih_kids : ∀ (s : Unit), ∀ t ∈ kids, (sets t).biUnion id = univ t)
+    (ih_kids : ∀ (s : Unit), ∀ t ∈ kids, wf t → (sets t).biUnion id = univ t)
     : (sets (SetTrie.root kids)).biUnion id = univ (SetTrie.root kids) := by
       induction kids with
       | nil =>
@@ -244,6 +261,7 @@ theorem biUnion_sets_univ (st : StudyST α) : st.sets.biUnion id = st.univ := by
         congr
         unfold univ fold SetTrie.fold at ih
         apply ih
+        sorry
   induction st, () using SetTrie.fold.induct with
   | case1 _ kids ih_kids =>
     apply rq _ ih_kids
@@ -252,12 +270,15 @@ theorem biUnion_sets_univ (st : StudyST α) : st.sets.biUnion id = st.univ := by
     rw [image_biUnion]
     dsimp
     rw [Finset.biUnion_union']
+    unfold wf mapMergeDep SetTrie.mapMergeDep at hwf
     -- todo: disjoin on empty or not to use ↓
+
     sorry
   | case3 _ =>
     unfold sets univ fold SetTrie.fold mapMerge SetTrie.mapMerge
     rfl
 
+#exit
 
 #check biUnion_empty
 

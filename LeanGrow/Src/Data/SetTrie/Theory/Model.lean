@@ -28,6 +28,12 @@ def SetTrie.mapMerge {γ : Type _} (c : SetTrie α β)
   | .node q c => mergeN q <| c.map (SetTrie.mapMerge · mergeR mergeN base)
   | .leaf _ => base
 
+def SetTrie.mapMergeDep {γ : Sort _} (c : SetTrie α β)
+  (mergeR : List (SetTrie α β) → List γ → γ) (mergeN : β → List (SetTrie α β)→ List γ → γ) (base : γ) : γ :=
+  match c with
+  | .root c => mergeR c <| c.map (SetTrie.mapMergeDep · mergeR mergeN base)
+  | .node q c => mergeN q c <| c.map (SetTrie.mapMergeDep · mergeR mergeN base)
+  | .leaf _ => base
 
 
 namespace StudyST
@@ -37,6 +43,10 @@ abbrev fold {γ : Type _} (c : StudyST α) (init : γ) (merge : γ → (Finset �
 
 abbrev mapMerge {γ : Type _} (c : StudyST α) (mergeR : List γ → γ) (mergeN : (Finset α) → List γ → γ) (base : γ) : γ :=
   SetTrie.mapMerge c mergeR mergeN base
+
+abbrev mapMergeDep {γ : Sort _} (c : StudyST α) (mergeR : List (StudyST α) → List γ → γ) (mergeN : (Finset α) → List (StudyST α)→ List γ → γ) (base : γ) : γ :=
+  SetTrie.mapMergeDep c mergeR mergeN base
+
 
 def univ (st : StudyST α) : Finset α :=
   st.fold ∅ (fun x y => x ∪ y)
@@ -61,6 +71,21 @@ def sets (st : StudyST α) : Finset (Finset α) :=
     (fun c => c.foldl (fun x y => x ∪ y) (∅ : Finset (Finset α)))
     (fun q c => (c.foldl (fun x y => x ∪ y) ∅).image (fun z => q ∪ z))
     {∅}
+
+def isRootP : StudyST α → Prop
+  | .root _ => True
+  | _ => False
+
+
+/-- Nodes must have children, and there are no empty keys-/
+def wf (st : StudyST α) : Prop :=
+  st.mapMergeDep
+    (fun _ r => r.foldl (· ∧ ·) True)
+    (fun q c r => q ≠ ∅ ∧ c ≠ [] ∧ c.Forall (fun x => ¬ (isRootP x)) ∧ r.foldl (· ∧ ·) True)
+    True
+
+
+#exit
 
 
 #check 1
