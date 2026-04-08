@@ -223,18 +223,39 @@ theorem sets_node_image_root
     dsimp
 
 
+theorem root_wf_of_cons_wf
+  (h : wf (SetTrie.root (head :: tail))) : wf (SetTrie.root tail) := by
+    dsimp [wf, mapMergeDep] at h
+    rw [SetTrie.mapMergeDep, List.map_cons, List.foldl_assoc_comm_cons] at h
+    unfold wf mapMergeDep SetTrie.mapMergeDep
+    constructor
+    · sorry
+    · apply h.2.2
+
+
+theorem univ_root_cons :
+  univ (SetTrie.root (head :: tail)) = (univ head : Finset α) ∪ (univ (SetTrie.root tail)) := by
+    unfold univ fold
+    rw [SetTrie.fold, fold_cons, fold_union_assoc, empty_union, SetTrie.fold]
+
+
+
+
+
+#exit
+
 theorem univ_root_empty
   {kids : List (SetTrie Unit (Finset α))} (h : wf (SetTrie.root kids)) :
-  univ (SetTrie.root kids) = ∅ ↔ kids = [] := by
+  univ (SetTrie.root kids) = ∅ ↔ (kids = [] ∨ kids = [.leaf ()]) := by
     induction kids with
     | nil =>
       unfold univ fold SetTrie.fold
-      simp only [List.foldl_nil]
+      simp only [List.foldl_nil, List.ne_cons_self, or_false]
     | cons head tail ih =>
-      simp only [reduceCtorEq, iff_false]
-      unfold univ fold SetTrie.fold
-      unfold wf mapMergeDep SetTrie.mapMergeDep at h
-      dsimp at h
+      specialize ih (root_wf_of_cons_wf h)
+      constructor
+      · intro q
+
 
 
 

@@ -76,12 +76,36 @@ def isRootP : StudyST α → Prop
   | .root _ => True
   | _ => False
 
+def isNodeP : StudyST α → Prop
+  | .node _ _ => True
+  | _ => False
 
-/-- Nodes must have children, and there are no empty keys-/
+def isLeafP : StudyST α → Prop
+  | .leaf _ => True
+  | _ => False
+
+def isLeaf : StudyST α → Bool
+  | .leaf _ => true
+  | _ => false
+
+
+structure wfRoot (c : List (StudyST α)) : Prop where
+  kids_noroot : c.Forall (fun x => ¬ (isRootP x))
+  kids_one_leaf : (c.filter isLeaf).length ≤ 1
+
+
+
+structure wfNode (q : Finset α) (c : List (StudyST α)) : Prop where
+  key_nonempty : q ≠ ∅
+  kids_nonempty : c ≠ []
+  kids_noroot : c.Forall (fun x => ¬ (isRootP x))
+  kids_one_leaf : (c.filter isLeaf).length ≤ 1
+
+
 def wf (st : StudyST α) : Prop :=
   st.mapMergeDep
-    (fun _ r => r.foldl (· ∧ ·) True)
-    (fun q c r => q ≠ ∅ ∧ c ≠ [] ∧ c.Forall (fun x => ¬ (isRootP x)) ∧ r.foldl (· ∧ ·) True)
+    (fun c r => wfRoot c ∧ r.foldl (· ∧ ·) True)
+    (fun q c r => wfNode q c ∧ r.foldl (· ∧ ·) True)
     True
 
 
