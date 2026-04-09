@@ -223,13 +223,27 @@ theorem sets_node_image_root
     dsimp
 
 
+theorem wfRoot_of_cons_wfRoot
+  (h : wfRoot (head :: tail)) : wfRoot tail := by
+    cases tail with
+    | nil =>
+      constructor
+      · simp only [List.Forall]
+      · simp only [List.filter_nil, List.length_nil, Nat.zero_le]
+    | cons x xs =>
+      constructor
+      · refine ((List.Forall.eq_3 _ _ _ ?_).mp h.kids_noroot).2
+        simp only [reduceCtorEq, imp_self]
+      · grind [wfRoot]
+
+
 theorem root_wf_of_cons_wf
   (h : wf (SetTrie.root (head :: tail))) : wf (SetTrie.root tail) := by
     dsimp [wf, mapMergeDep] at h
     rw [SetTrie.mapMergeDep, List.map_cons, List.foldl_assoc_comm_cons] at h
     unfold wf mapMergeDep SetTrie.mapMergeDep
     constructor
-    · sorry
+    · apply wfRoot_of_cons_wfRoot h.1
     · apply h.2.2
 
 
@@ -238,11 +252,43 @@ theorem univ_root_cons :
     unfold univ fold
     rw [SetTrie.fold, fold_cons, fold_union_assoc, empty_union, SetTrie.fold]
 
+theorem kids_root_wf_of_root_wf
+  (h : wf (SetTrie.root tail)) : ∀ c ∈ tail, wf c := by
+    induction tail with
+    | nil => grind
+    | cons x xs ih =>
+      intro c ch
+      rw [List.mem_cons] at ch
+      cases ch with
+      | inl ch =>
+        rw [ch]
+        clear ch
+        unfold wf mapMergeDep SetTrie.mapMergeDep at h
+        rw [List.map_cons, List.foldl_assoc_comm_cons] at h
+        exact h.2.1
+      | inr ch =>
+        exact ih (root_wf_of_cons_wf h) c ch
 
 
 
+theorem head_root_wf_of_cons_wf
+  (h : wf (SetTrie.root (head :: tail))) : wf head := by
+  apply kids_root_wf_of_root_wf h
+  exact List.mem_cons_self
 
-#exit
+
+theorem tec_1
+  (h1 : wf head) (h2 : ¬ isRootP head) : wf (SetTrie.root [head]) := by
+    unfold wf mapMergeDep SetTrie.mapMergeDep
+    rw [List.map_cons]
+    simp only [List.map_nil, List.foldl_cons, true_and, List.foldl_nil]
+    constructor
+    · constructor
+      · exact h2
+      · apply le_trans (List.length_filter_le _ _)
+        simp only [List.length_cons, List.length_nil, zero_add, le_refl]
+    · exact h1
+
 
 theorem univ_root_empty
   {kids : List (SetTrie Unit (Finset α))} (h : wf (SetTrie.root kids)) :
@@ -255,6 +301,23 @@ theorem univ_root_empty
       specialize ih (root_wf_of_cons_wf h)
       constructor
       · intro q
+        right
+        rw [univ_root_cons, union_eq_empty] at q
+        replace ih := ih.mp q.2
+        cases ih with
+        | inl ih =>
+          rw [ih]
+          congr
+          cases head
+          | root _ =>
+
+            sorry
+          | node q _ =>
+            sorry
+          -- | leaf _ =>
+        | inr ih =>
+          -- cases head
+
 
 
 
