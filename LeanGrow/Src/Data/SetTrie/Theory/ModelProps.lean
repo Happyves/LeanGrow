@@ -26,9 +26,20 @@ lemma Finset.biUnion_union'  {α : Type u_1} {β : Type u_2} {s : Finset α} {t�
   -- added in recent mathlib under name Finset.biUnion_union
 
 
+lemma Finset.biUnion_const {α : Type u_1} {β : Type u_2} [DecidableEq α] [DecidableEq β]
+  {s : Finset α} {c : Finset β} (h : s ≠ ∅)
+  : s.biUnion (fun _ ↦ c) = c := by
+  induction s using Finset.induction with
+  | empty => contradiction
+  | insert x xs ih1 ih2 =>
+    rw [biUnion_insert]
+    by_cases q : xs ≠ ∅
+    · rw [ih2 q, union_self]
+    · rw [not_not] at q
+      rw [q, biUnion_empty, union_empty]
 
 
--- #exit
+--#exit
 
 namespace StudyST
 
@@ -236,6 +247,24 @@ theorem wfRoot_of_cons_wfRoot
         simp only [reduceCtorEq, imp_self]
       · grind [wfRoot]
 
+theorem wfNode_of_cons_wfNode
+  (h : wfNode key (head :: tail)) (he : tail ≠ []) : wfNode key tail := by
+    cases tail with
+    | nil =>
+      constructor
+      · exact h.key_nonempty
+      · exact he
+      · simp only [List.Forall]
+      · simp only [List.filter_nil, List.length_nil, Nat.zero_le]
+    | cons x xs =>
+      constructor
+      · exact h.key_nonempty
+      · exact he
+      · refine ((List.Forall.eq_3 _ _ _ ?_).mp h.kids_noroot).2
+        simp only [reduceCtorEq, imp_self]
+      · grind [wfRoot, wfNode]
+
+
 
 theorem root_wf_of_cons_wf
   (h : wf (SetTrie.root (head :: tail))) : wf (SetTrie.root tail) := by
@@ -245,6 +274,16 @@ theorem root_wf_of_cons_wf
     constructor
     · apply wfRoot_of_cons_wfRoot h.1
     · apply h.2.2
+
+theorem node_wf_of_cons_wf
+  (h : wf (SetTrie.node key (head :: tail))) (he : tail ≠ []) : wf (SetTrie.node key tail) := by
+    dsimp [wf, mapMergeDep] at h
+    rw [SetTrie.mapMergeDep, List.map_cons, List.foldl_assoc_comm_cons] at h
+    unfold wf mapMergeDep SetTrie.mapMergeDep
+    constructor
+    · apply wfNode_of_cons_wfNode h.1 he
+    · apply h.2.2
+
 
 
 theorem univ_root_cons :
@@ -268,6 +307,24 @@ theorem kids_root_wf_of_root_wf
         exact h.2.1
       | inr ch =>
         exact ih (root_wf_of_cons_wf h) c ch
+
+theorem kids_node_wf_of_node_wf
+  (h : wf (SetTrie.node key tail)) : ∀ c ∈ tail, wf c := by
+    induction tail with
+    | nil => grind
+    | cons x xs ih =>
+      intro c ch
+      rw [List.mem_cons] at ch
+      cases ch with
+      | inl ch =>
+        rw [ch]
+        clear ch
+        unfold wf mapMergeDep SetTrie.mapMergeDep at h
+        rw [List.map_cons, List.foldl_assoc_comm_cons] at h
+        exact h.2.1
+      | inr ch =>
+        refine ih (node_wf_of_cons_wf h ?_) c ch
+        apply List.ne_nil_of_mem ch
 
 
 
@@ -308,25 +365,132 @@ theorem univ_root_empty
         | inl ih =>
           rw [ih]
           congr
-          cases head
+          cases head with
           | root _ =>
-
-            sorry
-          | node q _ =>
-            sorry
-          -- | leaf _ =>
+            rw [ih] at h
+            unfold wf mapMergeDep SetTrie.mapMergeDep at h
+            replace h := h.1.kids_noroot
+            dsimp [isRootP] at h
+            contradiction
+          | node _ _ =>
+            replace h := (head_root_wf_of_cons_wf h)
+            unfold wf mapMergeDep SetTrie.mapMergeDep at h
+            replace h := h.1.key_nonempty
+            replace q := q.1
+            unfold univ fold SetTrie.fold at q
+            rw [union_eq_empty] at q
+            exact False.elim (h q.2)
+          | leaf _ =>
+            rfl
         | inr ih =>
-          -- cases head
+          cases head with
+          | root _ => -- same as root case above
+            rw [ih] at h
+            unfold wf mapMergeDep SetTrie.mapMergeDep at h
+            replace h := h.1.kids_noroot
+            dsimp [isRootP] at h
+            contradiction
+          | node _ _ => -- same as node case above
+            replace h := (head_root_wf_of_cons_wf h)
+            unfold wf mapMergeDep SetTrie.mapMergeDep at h
+            replace h := h.1.key_nonempty
+            replace q := q.1
+            unfold univ fold SetTrie.fold at q
+            rw [union_eq_empty] at q
+            exact False.elim (h q.2)
+          | leaf _ =>
+            rw [ih] at h
+            unfold wf mapMergeDep SetTrie.mapMergeDep at h
+            replace h := h.1.kids_one_leaf
+            dsimp [isLeaf, List.filter] at h
+            contradiction
+      · intro Q
+        simp only [reduceCtorEq, List.cons.injEq, false_or] at Q
+        rw [Q.1, Q.2]
+        unfold univ fold SetTrie.fold
+        dsimp
+        rw [SetTrie.fold]
+
+
+theorem wf_root_of_wf_node
+  (h : wf (SetTrie.node key kids)) : wf (SetTrie.root kids) := by
+    unfold wf mapMergeDep SetTrie.mapMergeDep at *
+    refine ⟨?_, h.2⟩
+    constructor
+    · exact h.1.kids_noroot
+    · exact h.1.kids_one_leaf
+
+
+
+theorem sets_node_cons :
+  sets (SetTrie.node key (head :: tail)) = (image (fun z => key ∪ z) (sets head) : Finset (Finset α)) ∪ (sets (SetTrie.node key tail)) := by
+    rw [sets, mapMerge, SetTrie.mapMerge]
+    rw [List.map_cons]
+    rw [List.foldl_assoc_comm_cons]
+    rw [image_union]
+    congr
+    rw [sets, mapMerge, SetTrie.mapMerge]
 
 
 
 
+theorem sets_root_empty
+  {kids : List (SetTrie Unit (Finset α))} (h : wf (SetTrie.root kids)) :
+  sets (SetTrie.root kids) = ∅ ↔ kids = [] := by
+    induction kids with
+    | nil =>
+      unfold sets mapMerge SetTrie.mapMerge
+      simp only [List.map_nil, List.foldl_nil]
+    | cons x xs ih =>
+      specialize ih (root_wf_of_cons_wf h)
+      rw [sets_root_cons, union_eq_empty]
+      simp only [reduceCtorEq, iff_false, not_and]
+      intro a b
+      rw [ih] at b
+      rw [b] at h
+      induction x, () using SetTrie.fold.induct with
+      | case1 _ kids ih_kids =>
+        unfold wf mapMergeDep SetTrie.mapMergeDep at h
+        replace h := h.1.kids_noroot
+        dsimp [isRootP] at h
+        contradiction
+      | case2 _ q kids ih_kids =>
+        replace h := kids_root_wf_of_root_wf h _ (List.mem_cons_self)
+        cases kids with
+        | nil =>
+          unfold wf mapMergeDep SetTrie.mapMergeDep at h
+          replace h := h.1.kids_nonempty
+          contradiction
+        | cons z zs =>
+          rw [sets_node_cons, union_eq_empty, image_eq_empty] at a
+          apply ih_kids () z (List.mem_cons_self) ?_ a.1
+          have h2 := kids_node_wf_of_node_wf h z List.mem_cons_self
+          unfold wf mapMergeDep SetTrie.mapMergeDep
+          dsimp
+          refine ⟨?_,True.intro, h2⟩
+          constructor
+          · dsimp
+            unfold wf mapMergeDep SetTrie.mapMergeDep at h
+            have := h.1.kids_noroot
+            cases zs with -- wier List.Forall requirement
+            | nil =>
+              rw [List.Forall.eq_2] at this
+              exact this
+            | cons _ _ =>
+              rw [List.Forall.eq_3 _ _ _ (by simp)] at this
+              exact this.1
+          · grind
+      | case3 _ =>
+        rw [sets, mapMerge, SetTrie.mapMerge] at a
+        apply notMem_empty (∅ : Finset α)
+        rw [← a]
+        exact mem_singleton.mpr rfl
 
-#exit
+
 
 theorem biUnion_sets_univ (st : StudyST α) (hwf : st.wf) : st.sets.biUnion id = st.univ := by
   have rq
-    (kids : List (SetTrie Unit (Finset α)))
+    (kids : List (SetTrie Unit (Finset α))) (hwfk : wf (SetTrie.root kids))
     (ih_kids : ∀ (s : Unit), ∀ t ∈ kids, wf t → (sets t).biUnion id = univ t)
     : (sets (SetTrie.root kids)).biUnion id = univ (SetTrie.root kids) := by
       induction kids with
@@ -338,43 +502,35 @@ theorem biUnion_sets_univ (st : StudyST α) (hwf : st.wf) : st.sets.biUnion id =
         rw [fold_cons]
         rw [sets_root_cons]
         rw [biUnion_union]
-        specialize ih (fun u t mem => ih_kids u t (List.mem_cons_of_mem _ mem))
+        specialize ih (root_wf_of_cons_wf hwfk) (fun u t mem => ih_kids u t (List.mem_cons_of_mem _ mem))
         specialize ih_kids () head (List.mem_cons_self)
         rw [fold_union_init]
         rw [union_comm]
         congr
-        unfold univ fold SetTrie.fold at ih
-        apply ih
-        sorry
+        · unfold univ fold SetTrie.fold at ih
+          apply ih
+        · apply ih_kids (head_root_wf_of_cons_wf hwfk)
   induction st, () using SetTrie.fold.induct with
   | case1 _ kids ih_kids =>
-    apply rq _ ih_kids
+    apply rq _ hwf ih_kids
   | case2 _ key kids ih_kids =>
-    rw [univ_node_union_root, sets_node_image_root]
-    rw [image_biUnion]
-    dsimp
-    rw [Finset.biUnion_union']
-    unfold wf mapMergeDep SetTrie.mapMergeDep at hwf
-    -- todo: disjoin on empty or not to use ↓
+    by_cases k : sets (SetTrie.root kids) = ∅
+    · rw [sets_root_empty] at k
+      rw [k] at hwf
+      · unfold wf mapMergeDep SetTrie.mapMergeDep at hwf
+        exfalso
+        apply hwf.1.kids_nonempty
+        rfl
+      · apply wf_root_of_wf_node hwf
 
-    sorry
+    · rw [univ_node_union_root, sets_node_image_root]
+      rw [image_biUnion]
+      dsimp
+      rw [Finset.biUnion_union']
+      rw [← rq kids (wf_root_of_wf_node hwf) ih_kids]
+      congr
+      rw [biUnion_const]
+      exact k
   | case3 _ =>
     unfold sets univ fold SetTrie.fold mapMerge SetTrie.mapMerge
     rfl
-
-#exit
-
-#check biUnion_empty
-
-
-lemma Finset.biUnion_const {α : Type u_1} {β : Type u_2} [DecidableEq α] [DecidableEq β]
-  {s : Finset α} {c : Finset β} (h : s ≠ ∅)
-  : s.biUnion (fun _ ↦ c) = c := by
-  induction s using Finset.induction with
-  | empty => contradiction
-  | insert x xs ih1 ih2 =>
-    rw [biUnion_insert]
-    by_cases q : xs ≠ ∅
-    · rw [ih2 q, union_self]
-    · rw [not_not] at q
-      rw [q, biUnion_empty, union_empty]
