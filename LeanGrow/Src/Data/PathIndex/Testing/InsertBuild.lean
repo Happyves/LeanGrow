@@ -8,6 +8,8 @@ Author: Yves Jäckle.
 
 import LeanGrow.Src.Data.PathIndex.Insert
 import LeanGrow.Src.Utils.Lean.TestTools
+import LeanGrow.Src.Utils.Std.String
+
 
 
 open Lean Meta PaIn
@@ -66,3 +68,29 @@ def sanity : MetaM Unit := do
 
 
 #eval sanity
+
+
+#check 1
+
+def PaIn.ppp {IdxCollType} [Repr IdxCollType] (T : PaIn IdxCollType) : String :=
+  let rec go (off : Nat) : PaIn IdxCollType → String
+    | .dead => (Blank off) ++ "dead"
+    | .br fvars mvars bvars sorts consts lits apf apa _ laf laa _ alf ala _ lef lea lez _ projs props proofs =>
+       s!"{(Blank off)}(fvars) {repr fvars.toList}\n{(Blank off)}(mvars) {repr mvars.toList}\n{(Blank off)}(bvars) {repr bvars}\n{(Blank off)}(sorts) {repr sorts}\n{(Blank off)}(consts) {repr consts.toList}\n{(Blank off)}(lits) {repr lits}\n{(Blank off)}(app left)\n{go (off+2) apf}\n{(Blank off)}(app right)\n{go (off+2) apa}\n{(Blank off)}(λ left)\n{go (off+2) laf}\n{(Blank off)}(λ right)\n{go (off+2) laa}\n{(Blank off)}(∀ left)\n{go (off+2) alf}\n{(Blank off)}(∀ right)\n{go (off+2) ala}\n{(Blank off)}(omited) ..."
+  go 0 T
+
+
+def testInsertPres : Array Expr → Array Expr → MetaM Unit
+  | Gnodes, Objs => do
+      let mut L := []
+      let mut i := 0
+      for O in Objs do
+        L := (i,O) :: L
+        i := i+1
+      let ⟨T,l1,l2⟩ ← PaIn.ofList (← getLCtx) (← getLocalInstances) L .dead UInt32Array.empty (fun x => UInt32Array.single x.toUInt32)
+        (fun x y => UInt32Array.oInsert y x.toUInt32)
+      withReader (fun ctx => {ctx with lctx := l1, localInstances := l2}) do
+        let built := (← T.buildCore l1 l2 [] 0 id UInt32Array.inter UInt32Array.isEmpty).toListOfProd
+        let built := ← built.mapM (fun (x,y) => return (← ppExpr x, y))
+        IO.println s!"Indexed:\n{built}\n"
+        IO.println s!"Raw:\n{T.ppp}"

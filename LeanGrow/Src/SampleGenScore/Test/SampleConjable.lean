@@ -77,6 +77,8 @@ def test (printLift? : Bool) (modules : Array Name) (thmName : Name) (depthDig d
 def testStd (printLift? : Bool) (thmName : Name) (depthDig depthStart depthStop : Nat) : MetaM Unit := do
   test printLift? mods thmName depthDig depthStart depthStop
 
+#exit
+
 theorem test_1 (n m : Nat) : n*m + 1 ≤ 2 + (m*n) := by
   calc
     n*m + 1 = m*n + 1 := by

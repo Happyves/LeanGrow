@@ -122,7 +122,19 @@ def Lean.MVarId.setLCtx [MonadMCtx m] (mvarId : MVarId)
   modifyMCtx (·.setExprMVarLCtx mvarId l1 l2)
 
 
--- #exit
+def printForwDecls (st : SearchState UInt32Array) : MetaM String := do
+  let mut res := ""
+  for i in List.range st.id_gen_forw do
+    let n : FVarId := .mk <| if st.uNodes.contains i then unode i else gnode i
+    match ← n.getDecl with
+    | .cdecl _ _ _ T .. =>
+      res := res ++ s!"{n.name} : {← ppExpr T}\n"
+    | .ldecl _ _ _ T V .. =>
+      res := res ++ s!"{n.name} : {← ppExpr T} :=\n  {← ppExpr V}\n"
+  return res
+
+
+
 
 def growImpl
   (msgRef : Syntax)
@@ -180,9 +192,10 @@ def growImpl
               return []
           | .cons term _ _ =>
               mtrace on .zero with s!"[growImpl] found solution {← ppExpr term}"
-              mtrace on .zero with s!"[growImpl] raw {term}"
+              mtrace on .three with s!"[growImpl] raw {term}"
               mtrace on .one with s!"[growImpl] Final state:"
               mtrace on .one with s!"[growImpl] introTree: {st.introTree.pp 0}"
+              mtrace on .one with s!"[growImpl] forward decls:\n{← printForwDecls st}"
               mtrace on .one with s!"[growImpl] backTree: {← st.backTree.pp 0}"
               mtrace on .zero with s!"[growImpl] search completed"
               setMCtx mctx -- have to restore because calls to clearAssignements in grow clear those of the tactic framework

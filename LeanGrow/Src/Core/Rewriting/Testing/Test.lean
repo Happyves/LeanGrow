@@ -41,7 +41,7 @@ def testBackRWC := testForwRW_sandBox `Nat.add_comm
 
 
 
--- With context and objects ((fun x y : Nat => x + y) = (fun x y => x*y)) run testBackRWA
+With context and objects ((fun x y : Nat => x + y) = (fun x y => x*y)) run testBackRWA
 
 -- With context and objects ((fun x y : Nat => x + y) = (fun x y => x*y)) run testBackRWB
 
