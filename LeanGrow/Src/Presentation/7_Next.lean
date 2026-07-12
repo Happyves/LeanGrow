@@ -1,16 +1,21 @@
 
 
+import Lean
+
+#check Lean.Syntax
+
 /-
 
 
 # Things to do from here
 
 
-Bring it to Aesop :
+Bring Grow to Aesop :
 
 - Aesop works
 
 - Syntax objects are preferable output
+
 
 
 Fix :
@@ -51,5 +56,7 @@ State of the project :
 - **Get in touch if you want to fix, extend, or reuse this work, I'm happy to help**
 
 - You can find this work and these "slides" at https://github.com/Happyves/LeanGrow
+
+
 
 -/

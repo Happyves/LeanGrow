@@ -1,4 +1,6 @@
 
+import Mathlib.Tactic
+
 -- # Insights from rewriting in LeanGrow
 
 -- Rewriting under binders
@@ -14,6 +16,9 @@ example : (fun x y : Nat => x + y) = Nat.add :=
   refine @Eq.ndrec _ _ (fun p => p = Nat.add) ?newgoal _ second_binder.symm
   dsimp
   sorry
+
+example : (fun x y : Nat => x + y) = Nat.add := by
+  rw [Nat.add_comm]
 
 
 -- Pitfall : rewriting with conditions
@@ -41,6 +46,9 @@ example (a : Nat) : (fun (b : Nat) (h : 1 < b+1) => (b + a) / b) = (fun _ _ => 4
 -- Rewriting with dependencies
 
 def Fin.isNonZero (n : Nat) (x : Fin (n+1)) := x ≠ 0
+
+example (n m : Nat) (x : Fin (n+m + 1)) : x.isNonZero (n+m) → 42 = 42 := by
+  rw [Nat.add_comm]
 
 example (n m : Nat) (x : Fin (n+m + 1)) : x.isNonZero (n+m) → 42 = 42 :=
   have reverted : ∀ (x : Fin (n+m + 1)), x.isNonZero (n+m) → 42 = 42 := by
