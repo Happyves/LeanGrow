@@ -1,6 +1,7 @@
 
 
 import LeanGrow.Src.Data.SetTrie.Specialize
+import LeanGrow.Src.Core.Embedding.TestTools_fullStd
 
 
 -- # Settries
@@ -49,3 +50,28 @@ def printit : IO Unit := IO.println <| Id.run do
 
 #eval testST.query <| CTrie.ofList <| ListProd.ofListOfProd <|
   ["a","b","c","x"].map (fun x => (x,()))
+
+
+#check Int.le_add_one
+
+unsafe def test_2 := testForw #[`Init.Data.List.Basic, `Init.Data.List.Lemmas]
+
+unsafe def test_2_1 := test_2 (.leaf (.mk #[0,1,2,3]))
+
+
+With context g(a : Int) g(as : List Int) g(bs : List Int) g(h : a ∈ as) and objects run test_2_1
+
+
+open Lean Meta
+
+unsafe def exploreCaches_stdForwSetTrie
+  (moduleNames : Array Name)
+  : MetaM Unit := do
+    loadCacheDataS_forTest moduleNames <| fun data => do
+        SetTrieP.pp
+          0 (fun x => do PaInG.ppS (← getLCtx) (← getLocalInstances) x [] 0)
+          (fun v => do return (match v.name with | .inl v => v.toString | .inr v => v.name.toString))
+          data.data.stdForwSetTrie
+
+
+#eval exploreCaches_stdForwSetTrie #[`Init.Data.List.Basic, `Init.Data.List.Lemmas]

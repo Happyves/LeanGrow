@@ -101,7 +101,7 @@
 %  Title page
 %======================================================================
 \title[\leangrow]{Aspects of heuristic proof search}
-\subtitle{with an introduction to low level Lean metaprogramming}
+
 
 \author[Yves Jäckle]{Yves Jäckle}
 
@@ -130,22 +130,20 @@
 %--- What is an ITP? --------------------------------------------------
 \begin{frame}{Interactive theorem provers}
   An \alert{interactive theorem prover} (ITP, or proof assistant) is
-  software for writing \textbf{machine checkable maths} in a nice way.
+  software for writing machine checkable maths in a nice way.
   \medskip
   \begin{itemize}
-    \item The user supplies the ideas
-    \item The machine handles the bookkeeping
-          and rejects anything that does not \alert{typecheck}
+    \item The user supplies the definitions, statements \alert{and proofs}
+    \item The machine rejects anything that does not \alert{typecheck}
     \item Established systems: \alert{Lean}, Rocq/Coq, Isabelle/HOL, Agda, \dots
   \end{itemize}
   \medskip
   \begin{block}{Lean 4}
-    A proof assistant \emph{and} a full programming language, built on
+    A proof assistant and a full programming language, built on
     \alert{dependent type theory}.
     \begin{itemize}
-      \item Lean is largely implemented in Lean, with first-class
-            \alert{metaprogramming} --- this is how tactics like \grow{} are written
-      \item Backed by a large mathematical library, \emph{Mathlib}, and soon \emph{CSlib}
+      \item Lean supports \alert{metaprogramming} : this is how tactics like \grow{} are written
+      \item Backed by a large mathematical library, \alert{Mathlib}, and soon \alert{CSlib}
     \end{itemize}
   \end{block}
 \end{frame}
@@ -183,12 +181,12 @@ def Nat.two : Nat := Nat.succ Nat.one    -- defines 2
 \end{lstlisting}
   \begin{itemize}
     \item \texttt{def} introduces a new name for a term of a stated type
-    \item Lean has nice machinery to translate litterals to this representation
+    \item Lean has nice machinery to translate between litterals and this representation
   \end{itemize}
 \end{frame}
 
 %--- Propositions and predicates --------------------------------------
-\begin{frame}[fragile]{Propositions are types: the $\leq$ relation}
+\begin{frame}[fragile]{Propositions as types: the $\leq$ relation}
 \begin{lstlisting}
 axiom Nat.leq (n m : Nat) : Prop
 -- a relation between natural numbers:  n ≤ m
@@ -201,15 +199,13 @@ axiom Nat.leq_step (n m : Nat) (h : Nat.leq n m) :
 -- ∀ n m, n ≤ m → n+1 ≤ m+1
 \end{lstlisting}
   \begin{itemize}
-    \item \texttt{Prop} is the type of \alert{propositions}. \texttt{Nat.leq n m}
-          is the proposition ``$n \leq m$''
-    
+    \item \texttt{Prop} is the type of \alert{propositions}
     \item We'll prove all we need from \texttt{leq\_zero} and \texttt{leq\_step}
   \end{itemize}
 \end{frame}
 
 %--- myFirstTheorem : staged proof ------------------------------------
-\begin{frame}[fragile]{Proofs are terms \hfill (1/3)}
+\begin{frame}[fragile]{Proofs as terms \hfill (1/3)}
   Goal: construct a term of type $1 \leq 2$.
 \begin{lstlisting}
 def myFirstTheorem : Nat.leq Nat.one Nat.two := -- 1 ≤ 2
@@ -223,7 +219,7 @@ def myFirstTheorem : Nat.leq Nat.one Nat.two := -- 1 ≤ 2
   \end{itemize}
 \end{frame}
 
-\begin{frame}[fragile]{Proofs are terms \hfill (2/3)}
+\begin{frame}[fragile]{Proofs as terms \hfill (2/3)}
   $1 \leq 2$ should follow from $0 \leq 1$ via \texttt{leq\_step}.
 \begin{lstlisting}
 def myFirstTheorem : Nat.leq Nat.one Nat.two :=
@@ -233,15 +229,15 @@ def myFirstTheorem : Nat.leq Nat.one Nat.two :=
     sorry        -- remaining argument = remaining goal:  0 ≤ 1
 \end{lstlisting}
   \begin{itemize}
-    \item Applying \texttt{leq\_step} \alert{reduces} the goal:
-          it now suffices to prove $0 \leq 1$
-          \\In proof search, this is a \alert{backward step}
-    \item The three arguments fix $n := 0$, $m := 1$, and the last argument,
-          \\the next goal, has a type the \textit{depends} on the previous arguments
+    \item Applying \texttt{leq\_step} reduces the goal:
+          it now suffices to prove subgoal $0 \leq 1$
+          \\This is a \alert{backward step}
+    \item The two arguments  $n := 0$, $m := 1$ determine the next goal
+    	  \\The third arguments type \textit{depends} on the previous arguments
   \end{itemize}
 \end{frame}
 
-\begin{frame}[fragile]{Proofs are terms \hfill (3/3)}
+\begin{frame}[fragile]{Proofs as terms \hfill (3/3)}
   The last goal $0 \leq 1$ is exactly \texttt{leq\_zero}.
 \begin{lstlisting}
 def myFirstTheorem : Nat.leq Nat.one Nat.two :=
@@ -250,12 +246,71 @@ def myFirstTheorem : Nat.leq Nat.one Nat.two :=
 \end{lstlisting}
   \begin{itemize}
     \item No \texttt{sorry} left: the term is complete and typechecks.
-    \item Had we written \texttt{Nat.leq\_zero Nat.two} instead, Lean would have thrown an error
+    \item Had we written \texttt{Nat.leq\_zero Nat.two} instead, 
+       \\Lean would have thrown an error
   \end{itemize}
+\end{frame}
+
+
+%--- Recursion / induction --------------------------------------------
+\begin{frame}[fragile]{Recursion}
+\begin{lstlisting}
+axiom Nat.recursion (n : Nat) (expr : Nat -> Sort u)
+	(base : expr Nat.zero)
+	(step : ∀ m, expr m -> expr (Nat.succ m)) : expr n
+\end{lstlisting}
+One principle, two readings:
+\begin{itemize}
+	\item \texttt{expr : Nat $\to$ \alert{Prop}} $\Rightarrow$
+	\alert{induction} (prove a statement for all $n$).
+	\item \texttt{expr : Nat $\to$ \alert{Type}} $\Rightarrow$
+	\alert{recursion} (define a function on $n$).
+\end{itemize}
+\end{frame}
+
+%--- Second theorem --------------------------------------------
+\begin{frame}[fragile]{Recursion}
+	\begin{lstlisting}
+def mySecondTheorem (n : Nat) : Nat.leq n (Nat.succ n) := -- n ≤ n+1
+  Nat.recursion -- induction
+    n (fun x => Nat.leq x (Nat.succ x))
+	(base := Nat.leq_zero (Nat.succ Nat.zero)) -- 0 ≤ 1
+	(step := -- ∀ n, n ≤ n+1 → n+1 ≤ (n+1)+1
+	  fun n ih => -- ∀ n : ℕ, ih : n ≤ n+1
+		Nat.leq_step n (Nat.succ n) ih
+	)
+	\end{lstlisting}
+\begin{itemize}
+	\item Named arguments (ex: \texttt{(base := \ldots)}) for clarity
+	\item Anonymous functions \texttt{fun}
+	\item To prove $\forall$ display function that maps objects/hypotheses to a proof
+\end{itemize}
+\end{frame}
+
+%--- Second theorem with forward step--------------------------------------------
+\begin{frame}[fragile]{Recursion}
+\begin{lstlisting}
+def mySecondTheorem (n : Nat) : Nat.leq n (Nat.succ n) := -- n ≤ n+1
+  have fwd : Nat.leq Nat.zero (Nat.succ Nat.zero) := -- 0 ≤ 1
+    Nat.leq_zero (Nat.succ Nat.zero)
+  -- We now have 0 ≤ 1 in context
+  Nat.recursion -- induction
+	n (fun x => Nat.leq x (Nat.succ x))
+	(base := fwd) -- matches subgoal
+	(step := -- ∀ n, n ≤ n+1 → n+1 ≤ (n+1)+1
+	  fun n ih => -- ∀ n : ℕ, ih : n ≤ n+1
+		Nat.leq_step n (Nat.succ n) ih
+	)
+\end{lstlisting}
+\begin{itemize}
+	\item \texttt{have} adds fact proven from current hypotheses and facts
+	\item This is a \alert{forward step}
+\end{itemize}
 \end{frame}
 
 %--- Equality ---------------------------------------------------------
 \begin{frame}[fragile]{Equality and rewriting}
+Defining equality:
 \begin{lstlisting}
 axiom Eq {T : Sort u} (a b : T) : Prop
 -- the proposition  a = b
@@ -270,8 +325,7 @@ axiom Eq.rewrite {T : Sort u} (a b : T) (eq : Eq a b)
   \begin{itemize}
     \item \texttt{\{T : Sort u\}} is an \alert{implicit} argument (in braces):
           Lean infers it.
-    \item \texttt{Eq.rewrite} is the \alert{substitution principle}: equals may
-          replace equals inside any \texttt{expr}.
+    \item \texttt{Eq.rewrite} is the \alert{substitution principle}
   \end{itemize}
 \end{frame}
 
@@ -294,132 +348,110 @@ def Eq.symm {T : Sort u} (a b : T) (eq : Eq a b) : Eq b a :=
     (expr := fun x => Eq x a)  -- the expression 
     (h := Eq.refl a)           -- supply expr a, i.e. a = a, via reflexivity
 \end{lstlisting}
-  \begin{itemize}
-    \item Named arguments \texttt{(expr := \ldots)} pin down the implicit
-          predicate.
-    \item \texttt{Eq.rewrite} then delivers \texttt{expr b}, which is $b = a$.
-  \end{itemize}
+
 \end{frame}
 
-%--- Recursion / induction --------------------------------------------
-\begin{frame}[fragile]{Recursion}
-\begin{lstlisting}
-axiom Nat.recursion (n : Nat) (expr : Nat -> Sort u)
-  (base : expr Nat.zero)
-  (step : ∀ m, expr m -> expr (Nat.succ m)) : expr n
-\end{lstlisting}
-  \begin{itemize}
-    \item One principle, two readings, depending on where \texttt{expr} lands:
-      \begin{itemize}
-        \item \texttt{expr : Nat $\to$ \alert{Prop}} $\Rightarrow$
-              \alert{induction} (prove a statement for all $n$).
-        \item \texttt{expr : Nat $\to$ \alert{Type}} $\Rightarrow$
-              \alert{recursion} (define a function on $n$).
-      \end{itemize}
-    \item Give a \texttt{base} case and a \texttt{step}, and get a result at any
-          \texttt{n}.
-  \end{itemize}
-\end{frame}
-
-%--- Nat.add ----------------------------------------------------------
-\begin{frame}[fragile]{Defining addition by recursion}
-\begin{lstlisting}
-def Nat.add (n m : Nat) : Nat :=
-  Nat.recursion n (fun _ => Nat)   -- recurse on n
-    (base := m)                    -- 0 + m = m
-    (step := fun k res_k => Nat.succ res_k)
-                                   -- (k+1) + m = (k + m) + 1
-\end{lstlisting}
-  \begin{itemize}
-    \item Here \texttt{expr} is the constant \texttt{Nat}, so this is genuine
-          \alert{recursion}: we are defining a function.
-    \item \texttt{res\_k} is the result already computed for \texttt{k}.
-  \end{itemize}
-\end{frame}
-
-%--- Computation rules ------------------------------------------------
-\begin{frame}[fragile]{The computation rules}
-\begin{lstlisting}
-axiom Nat.recursion_base ... :
-  Eq (Nat.recursion Nat.zero expr base step) base
-axiom Nat.recursion_step ... :
-  Eq (Nat.recursion (Nat.succ n) expr base step) (step n recu)
-
-def Nat.add_zero (n : Nat) : Eq (Nat.add Nat.zero n) n :=
-  Nat.recursion_base
-def Nat.add_succ (n m : Nat) : 
-  Eq (Nat.add (Nat.succ n) m) (Nat.succ (Nat.add n m)) :=
-    Nat.recursion_step
-\end{lstlisting}
-  \begin{itemize}
-    \item The recursor's \alert{defining equations}, packaged as equalities.
-    \item Lean has them built-in as $\iota$ (iota) \alert{reduction}
-  \end{itemize}
-\end{frame}
-
-%--- mySecondTheorem : the payoff, staged -----------------------------
-\begin{frame}[fragile]{Putting it together: $n \leq n + m$ \hfill (1/4)}
-
-\large{\textbf{Grand finale of the introduction}}
-
-\begin{lstlisting}
-def mySecondTheorem (n m : Nat) : Nat.leq n (Nat.add n m) :=
-  sorry   -- n ≤ n + m
-\end{lstlisting}
-  \begin{itemize}
-    \item We prove it by \alert{induction on $n$} --- i.e.\ \texttt{Nat.recursion}
-          with \\\texttt{expr := fun n => n $\leq$ n + m}.
-    \item This leaves two goals: a \alert{base} case and a \alert{step}.
-  \end{itemize}
-\end{frame}
-
-\begin{frame}[fragile]{Putting it together: $n \leq n + m$ \hfill (2/4)}
 
 
-\begin{lstlisting}
-def mySecondTheorem (n m : Nat) : Nat.leq n (Nat.add n m) :=
-  Nat.recursion n (fun n => Nat.leq n (Nat.add n m))
-    (base := sorry)   -- 0 ≤ 0 + m
-    (step := sorry)   -- ∀ k, k ≤ k+m → k+1 ≤ (k+1)+m
-\end{lstlisting}
-  \begin{itemize}
-    \item The base case is immediate from \texttt{leq\_zero}.
-    \item The step is where the real work --- and a rewrite --- happens.
-  \end{itemize}
-\end{frame}
-
-\begin{frame}[fragile]{Putting it together: $n \leq n + m$ \hfill (3/4)}
-\begin{lstlisting}
-    (base := Nat.leq_zero (Nat.add Nat.zero m))   -- 0 ≤ 0+m
-    (step := fun k step =>
-      -- hypothesis  step : k ≤ k+m
-      have tmp : Nat.leq (Nat.succ k) (Nat.succ (Nat.add k m)) :=
-        Nat.leq_step k (Nat.add k m) step   
-      -- We've just shown k+1 ≤ (k+m)+1
-      sorry)   -- goal:  k+1 ≤ (k+1)+m
-\end{lstlisting}
-  \begin{itemize}
-    \item \texttt{leq\_step} on the hypothesis gives $k{+}1 \leq (k{+}m){+}1$
-          \\In proof search, this is a \alert{forward step}
-    \item But the goal wants $(k{+}1){+}m$ on the right
-  \end{itemize}
-\end{frame}
-
-\begin{frame}[fragile]{Putting it together: $n \leq n + m$ \hfill (4/4)}
-  Rewrite $(k{+}m){+}1 = (k{+}1){+}m$ using \texttt{add\_succ} (in reverse order).
-\begin{lstlisting}
-      -- show  k+1 ≤ (k+1)+m from k+1 ≤ (k+m)+1
-      Eq.rewrite (Nat.succ (Nat.add k m)) (Nat.add (Nat.succ k) m)
-        (eq := Eq.symm _ _ (Nat.add_succ k m)) -- show (k+m)+1 = (k+1)+m
-        (h := tmp)   -- we already have this as a forward step
-\end{lstlisting}
-  \begin{itemize}
-    \item \texttt{add\_succ} gives $(k{+}1){+}m = (k{+}m){+}1$; \texttt{Eq.symm}
-          flips it to the direction we need.
-    \item \texttt{Eq.rewrite} transports \texttt{tmp} to the goal --- proof
-          complete, no \texttt{sorry} remaining. \qedhere
-  \end{itemize}
-\end{frame}
+%%--- Nat.add ----------------------------------------------------------
+%\begin{frame}[fragile]{Defining addition by recursion}
+%\begin{lstlisting}
+%def Nat.add (n m : Nat) : Nat :=
+%  Nat.recursion n (fun _ => Nat)   -- recurse on n
+%    (base := m)                    -- 0 + m = m
+%    (step := fun k res_k => Nat.succ res_k)
+%                                   -- (k+1) + m = (k + m) + 1
+%\end{lstlisting}
+%  \begin{itemize}
+%    \item Here \texttt{expr} is the constant \texttt{Nat}, so this is genuine
+%          \alert{recursion}: we are defining a function.
+%    \item \texttt{res\_k} is the result already computed for \texttt{k}.
+%  \end{itemize}
+%\end{frame}
+%
+%%--- Computation rules ------------------------------------------------
+%\begin{frame}[fragile]{The computation rules}
+%\begin{lstlisting}
+%axiom Nat.recursion_base ... :
+%  Eq (Nat.recursion Nat.zero expr base step) base
+%axiom Nat.recursion_step ... :
+%  Eq (Nat.recursion (Nat.succ n) expr base step) (step n recu)
+%
+%def Nat.add_zero (n : Nat) : Eq (Nat.add Nat.zero n) n :=
+%  Nat.recursion_base
+%def Nat.add_succ (n m : Nat) : 
+%  Eq (Nat.add (Nat.succ n) m) (Nat.succ (Nat.add n m)) :=
+%    Nat.recursion_step
+%\end{lstlisting}
+%  \begin{itemize}
+%    \item The recursor's \alert{defining equations}, packaged as equalities.
+%    \item Lean has them built-in as $\iota$ (iota) \alert{reduction}
+%  \end{itemize}
+%\end{frame}
+%
+%%--- mySecondTheorem : the payoff, staged -----------------------------
+%\begin{frame}[fragile]{Putting it together: $n \leq n + m$ \hfill (1/4)}
+%
+%\large{\textbf{Grand finale of the introduction}}
+%
+%\begin{lstlisting}
+%def mySecondTheorem (n m : Nat) : Nat.leq n (Nat.add n m) :=
+%  sorry   -- n ≤ n + m
+%\end{lstlisting}
+%  \begin{itemize}
+%    \item We prove it by \alert{induction on $n$} --- i.e.\ \texttt{Nat.recursion}
+%          with \\\texttt{expr := fun n => n $\leq$ n + m}.
+%    \item This leaves two goals: a \alert{base} case and a \alert{step}.
+%  \end{itemize}
+%\end{frame}
+%
+%\begin{frame}[fragile]{Putting it together: $n \leq n + m$ \hfill (2/4)}
+%
+%
+%\begin{lstlisting}
+%def mySecondTheorem (n m : Nat) : Nat.leq n (Nat.add n m) :=
+%  Nat.recursion n (fun n => Nat.leq n (Nat.add n m))
+%    (base := sorry)   -- 0 ≤ 0 + m
+%    (step := sorry)   -- ∀ k, k ≤ k+m → k+1 ≤ (k+1)+m
+%\end{lstlisting}
+%  \begin{itemize}
+%    \item The base case is immediate from \texttt{leq\_zero}.
+%    \item The step is where the real work --- and a rewrite --- happens.
+%  \end{itemize}
+%\end{frame}
+%
+%\begin{frame}[fragile]{Putting it together: $n \leq n + m$ \hfill (3/4)}
+%\begin{lstlisting}
+%    (base := Nat.leq_zero (Nat.add Nat.zero m))   -- 0 ≤ 0+m
+%    (step := fun k step =>
+%      -- hypothesis  step : k ≤ k+m
+%      have tmp : Nat.leq (Nat.succ k) (Nat.succ (Nat.add k m)) :=
+%        Nat.leq_step k (Nat.add k m) step   
+%      -- We've just shown k+1 ≤ (k+m)+1
+%      sorry)   -- goal:  k+1 ≤ (k+1)+m
+%\end{lstlisting}
+%  \begin{itemize}
+%    \item \texttt{leq\_step} on the hypothesis gives $k{+}1 \leq (k{+}m){+}1$
+%          \\In proof search, this is a \alert{forward step}
+%    \item But the goal wants $(k{+}1){+}m$ on the right
+%  \end{itemize}
+%\end{frame}
+%
+%\begin{frame}[fragile]{Putting it together: $n \leq n + m$ \hfill (4/4)}
+%  Rewrite $(k{+}m){+}1 = (k{+}1){+}m$ using \texttt{add\_succ} (in reverse order).
+%\begin{lstlisting}
+%      -- show  k+1 ≤ (k+1)+m from k+1 ≤ (k+m)+1
+%      Eq.rewrite (Nat.succ (Nat.add k m)) (Nat.add (Nat.succ k) m)
+%        (eq := Eq.symm _ _ (Nat.add_succ k m)) -- show (k+m)+1 = (k+1)+m
+%        (h := tmp)   -- we already have this as a forward step
+%\end{lstlisting}
+%  \begin{itemize}
+%    \item \texttt{add\_succ} gives $(k{+}1){+}m = (k{+}m){+}1$; \texttt{Eq.symm}
+%          flips it to the direction we need.
+%    \item \texttt{Eq.rewrite} transports \texttt{tmp} to the goal --- proof
+%          complete, no \texttt{sorry} remaining. \qedhere
+%  \end{itemize}
+%\end{frame}
 
 %======================================================================
 %  PART III  --  Proof search, the big picture
@@ -437,7 +469,7 @@ def mySecondTheorem (n m : Nat) : Nat.leq n (Nat.add n m) :=
       \texttt{Nat.recursion} (induction on $n$): splits into a
       \alert{base} $0 \leq 0+m$ \emph{and} a \alert{step}
       $k \leq k{+}m \,\vdash\, k{+}1 \leq (k{+}1){+}m$.
-      \\{\footnotesize This is the road our earlier proof took.}
+      \\{\footnotesize This is a useful step.}
     \item[\textcolor{black!45}{$\blacktriangleright$}]
       rewrite with \texttt{Nat.add\_comm} $(a+b = b+a)$: new goal
       $n \leq m+n$.
@@ -488,51 +520,53 @@ def mySecondTheorem (n m : Nat) : Nat.leq n (Nat.add n m) :=
   \end{center}
   \begin{itemize}
     \item \alert{OR node} (a \emph{goal}): proven if \emph{some} applicable step
-          closes it.
-    \item \alert{AND node} (a \emph{step}): succeeds only if \emph{all} the
+          is proven
+    \item \alert{AND node} (a \emph{step}): proven only if \emph{all} the
           subgoals it produces are proven
   \end{itemize}
 \end{frame}
 
 %--- grow / Aesop / sandbox -------------------------------------------
-\begin{frame}[fragile]{Searching this tree in practice}
-  \begin{itemize}
-    \item \grow{} explores this AND--OR tree automatically, in the spirit of
-          \alert{Aesop}
-    \item To keep the search finite and legible, we restrict it to a small,
-          fixed set of lemmas --- a \alert{sandbox}.
-  \end{itemize}
+\begin{frame}[fragile]{Search tactics}
+\grow{} explores this AND--OR tree, in the spirit of \alert{Aesop}
 \begin{lstlisting}
-def stdSanbox := #[`List.dedup_cons_of_mem', `List.length_append,
-  `List.mem_dedup, `List.dedup_sublist, `List.dedup_subset,
-  `List.dedup_idem, `List.length_erase_le, `List.Perm.dedup, ...]
-  -- the only lemmata the search is allowed to use
-
-grow_load_sandbox stdSanbox ; elimSandbox ; funIndSandbox
+theorem test (l L : List Nat) (h : (l ++ L).length = 42) :
+  (l.length + L.length) = 42 := by
+	grows
 \end{lstlisting}
-  Our running examples live in the world of \alert{lists}: \texttt{length},
-  \texttt{dedup} (removing duplicates), sublists / prefixes (\texttt{<+}),
-  and \texttt{Subset}.
+Our running examples live in the world of \alert{linked lists}: 
+\begin{itemize}
+	\item \texttt{length} (number of entries)
+	\item \texttt{dedup} (removing duplicates)
+	\item sublists (\texttt{<+}) (same order, same multiplicity)
+\end{itemize}
+
+
+
+
+  
 \end{frame}
 
 %--- Example: test ----------------------------------------------------
 \begin{frame}[fragile]{Example 1: close to the human proof}
+In our examples we restrict search to a small set of lemmas
 \begin{lstlisting}
-theorem test (l L : List Nat) (h : (l ++ L).length = 42) :
-    (l.length + L.length) = 42 := by
-  grows
+def stdSanbox := #[`List.dedup_cons_of_mem', `List.length_append,
+	`List.mem_dedup, `List.dedup_sublist, `List.dedup_subset,
+	`List.dedup_idem, `List.length_erase_le, `List.Perm.dedup, ...]
+grow_load_sandbox stdSanbox ; elimSandbox ; funIndSandbox
 \end{lstlisting}
-  \grow{} finds a term \alert{close to} what a user would write
-  (\texttt{rw [$\leftarrow$ length\_append]; exact h}):
+\grow{} finds a term close to what a user would write:
 \begin{lstlisting}
 theorem test : ∀ (l L : List ℕ),
     (l ++ L).length = 42 → l.length + L.length = 42 :=
 fun l L h => (fun t => Eq.symm (Eq.symm length_append) ▸ t) h
 \end{lstlisting}
+Close to output of source language: \texttt{rw [$\leftarrow$ length\_append]; exact h}
 \end{frame}
 
 %--- Example: test' ---------------------------------------------------
-\begin{frame}[fragile]{Example 2: a proof, but a roundabout one}
+\begin{frame}[fragile]{Example 2: a proof with a messy term}
 \begin{lstlisting}
 theorem test' (l : List Nat) : l.dedup <+ l := by
   grows        -- apply dedup_sublist
@@ -551,7 +585,7 @@ fun l =>
 \end{frame}
 
 %--- Example: test' ---------------------------------------------------
-\begin{frame}[fragile]{Example 2: a proof, but a roundabout one}
+\begin{frame}[fragile]{Example 2: a proof with a messy term}
 \begin{lstlisting}
 theorem test' : ∀ (l : List ℕ), l.dedup <+ l :=
 fun l =>
@@ -577,10 +611,10 @@ fun l =>
 What are the aspects of proof search ?
 \begin{itemize}
 	\item Target lean source or \texttt{Lean.Expr}
-	\item Allowed steps and tools: induction, rewriting, tactics
+	\item Allowed steps and tools: forward steps, induction, rewriting, tactics
 	\item Find relevant lemmata and relevant steps
 	\item Beyond our scope: find relevant definitions and statements to study
-	\item Make it bug free and scale
+	\item Make it bug free and make it scale
 \end{itemize}
 \end{frame}
 
@@ -591,13 +625,11 @@ What are the aspects of proof search ?
 
 %--- Motivation: correct terms ----------------------------------------
 \begin{frame}[fragile]{First aspect: the search must build \emph{correct terms}}
-
+``Make it bug free''
 \begin{itemize}
 \item The whole point of Lean is that a proof is a \alert{term the kernel
-      checks}. A search that cut corners here would produce proofs we
-      \alert{cannot trust}.
-\item So every step the search takes must assemble into a genuine,
-      type-correct term.
+      checks}
+\item Search steps must assemble into a type-correct term
 \end{itemize}
 
 Goal: rewrite $y + x$ into $x + y$ underneath two binders
@@ -605,18 +637,16 @@ Goal: rewrite $y + x$ into $x + y$ underneath two binders
 \begin{lstlisting}
 example : (fun x y : Nat => y + x) = Nat.add := by
 	rw [Nat.add_comm]        -- FAILS: rw won't rewrite under fun
-	rfl
 	
 example : (fun x y : Nat => y + x) = Nat.add := by
 	simp_rw [Nat.add_comm]   -- succeeds
+	-- (fun x y : Nat => x + y) = Nat.add
 	rfl
 \end{lstlisting}
 
 \begin{itemize}
-	\item \texttt{rw} matches on the goal's surface term and refuses to descend
-	under a binder.
-	\item \texttt{simp\_rw} is built to rewrite \alert{under binders} --- so here
-	it goes through.
+	\item \texttt{rw} refuses to apply under a binder.
+	\item \texttt{simp\_rw} allows it as part of the simplification
 \end{itemize}
 
 \end{frame}
@@ -630,23 +660,20 @@ example : (fun x y : Nat => y + x) = Nat.add := by
 example (a : Nat) :
     (fun (b : Nat) (h : 1 < b+1) => (b + a) / b) = (fun _ _ => 42) := by
   rw [Nat.add_div_left]        -- FAILS
-  sorry
 
 example (a : Nat) :
     (fun (b : Nat) (h : 1 < b+1) => (b + a) / b) = (fun _ _ => 42) := by
   simp_rw [Nat.add_div_left]   -- FAILS, even though it is @[simp]
-  sorry
 \end{lstlisting}
   \begin{itemize}
-    \item The lemma carries a \alert{side condition} $0 < b$. Under the binder
-          the hypothesis \texttt{h : 1 < b+1} that would discharge it is in
-          scope, yet \alert{both tactics give up}.
-    \item \grow{}  implements a solution to allow this rewrite
+    \item The lemma carries a \alert{side condition} $0 < b$
+    \item \grow{} implements a solution to allow this rewrite
   \end{itemize}
 \end{frame}
 
 %--- Conditional rewriting: by hand -----------------------------------
 \begin{frame}[fragile]{Doing it by hand: thread the side condition}
+The big idea:
 \begin{lstlisting}[basicstyle=\ttfamily\scriptsize]
 example (a : Nat) :
     (fun (b : Nat) (h : 1 < b+1) => (b + a) / b) = (fun _ _ => 42) :=
@@ -671,6 +698,7 @@ example (a : Nat) :
 
 %--- Dependencies: both fail ------------------------------------------
 \begin{frame}[fragile]{Pitfall: rewriting inside a dependent type}
+Next issue:
 \begin{lstlisting}[basicstyle=\ttfamily\scriptsize]
 def Fin.isNonZero (n : Nat) (x : Fin (n+1)) := x ≠ 0
 
@@ -683,15 +711,15 @@ example (n m : Nat) (x : Fin (n+m + 1)) :
   simp_rw [Nat.add_comm]   -- FAILS
 \end{lstlisting}
   \begin{itemize}
-    \item Here \texttt{n+m} appears inside the \alert{dependent type}
-          \texttt{Fin (n+m+1)} --- the very type of \texttt{x}.
-    \item Rewriting it to \texttt{m+n} would retype \texttt{x}, so the motive is
-          not type-correct and both tactics won't work.
+    \item Pattern \texttt{n+m} appears inside the \alert{dependent type}
+          \texttt{Fin (n+m+1)} -- the type of \texttt{x}.
+    \item Usual rewrite-term is \alert{not type correct} : $x$'s type is not rewritten
   \end{itemize}
 \end{frame}
 
 %--- Dependencies: by hand --------------------------------------------
 \begin{frame}[fragile]{Doing it by hand: revert, rewrite, reintroduce}
+A solution is to \alert{revert}:
 \begin{lstlisting}[basicstyle=\ttfamily\scriptsize]
 example (n m : Nat) (x : Fin (n+m + 1)) :
     x.isNonZero (n+m) → ∃ y : Fin (m+n + 1), y.isNonZero (m+n) :=
@@ -709,6 +737,7 @@ example (n m : Nat) (x : Fin (n+m + 1)) :
     use x
   reverted x
 \end{lstlisting}
+Much more term building fun to be had!
 
 \end{frame}
 
@@ -727,13 +756,15 @@ example (n m : Nat) (x : Fin (n+m + 1)) :
   \end{itemize}
   \medskip
   \begin{block}{Abstractly}
-    A family of \alert{target sets} (each theorem's hypotheses), a \alert{query
-    set} (our current facts): report every target set that is
-    $\subseteq$ the query set.
+    Give:
+    \begin{itemize}
+    	\item family of \alert{target sets} (each theorem's hypotheses)
+    	\item a \alert{query set} (our current facts)
+    \end{itemize}
+    report every target set that is $\subseteq$ the query set.
   \end{block}
   \medskip
-  A \alert{set-trie} stores the family so that a \alert{common subset} of several
-  targets is tested \alert{once}, not once per theorem.
+  A \alert{set-trie} is a data-structure to do this efficiently.
 \end{frame}
 
 %--- Set-trie example (MaRDI slide, with the ∈ -> ∉ fix) --------------
@@ -761,16 +792,16 @@ example (n m : Nat) (x : Fin (n+m + 1)) :
     \draw[ed] (root)--(a); \draw[ed] (root)--(perm); \draw[ed] (root)--(dots);
     \draw[ed] (a)--(mem); \draw[ed] (a)--(nmem);
     \draw[ed] (mem)--(memL); \draw[ed] (nmem)--(nmemL);
-    \draw[ed] (perm)--(idem); \draw[ed] (perm)--(pdd);
+    \draw[ed] (root)--(idem); \draw[ed] (perm)--(pdd);
   \end{tikzpicture}}
   \end{center}
-  A root-to-leaf path lists the hypotheses a theorem needs; a shared prefix is stored \alert{once}.
+  A root-to-leaf path lists the hypotheses a theorem needs.
 \end{frame}
 
 %--- Set-trie example (MaRDI slide, with the ∈ -> ∉ fix) --------------
 \begin{frame}{Sharing common hypotheses}
 \begin{center}
-	\resizebox{0.9\linewidth}{!}{%
+	\resizebox{0.7\linewidth}{!}{%
 		\begin{tikzpicture}[
 			bx/.style={draw, rounded corners=2pt, fill=blue!6, align=center,
 				inner sep=3pt, font=\footnotesize},
@@ -781,31 +812,32 @@ example (n m : Nat) (x : Fin (n+m + 1)) :
 			{$\alpha : \mathrm{Type}$\\ $i : \mathrm{DecidableEq}\ \alpha$\\
 				$l : \mathrm{List}\ \alpha$};
 			\node[bx] (a)    at (4.2, 1.6) {$a : \alpha$};
+			\node[lf] (idem)  at (8.6,-1.2) {List.dedup\_idem};
 			\node[bx] (perm) at (4.2,-1.9) {$h : l_1 \sim l_2$};
 			\node[bx] (mem)  at (8.6, 2.6) {$h : a \in l.\mathrm{dedup}$};
 			\node[bx] (nmem) at (8.6, 0.7) {$h : a \notin\, l.\mathrm{dedup}$};
 			\node[lf] (memL)  at (13.0, 2.6) {List.dedup\_cons\_of\_mem'};
 			\node[lf] (nmemL) at (13.0, 0.7) {List.dedup\_cons\_of\_not\_mem'};
-			\node[lf] (idem)  at (8.6,-1.2) {List.dedup\_idem};
 			\node[lf] (pdd)   at (8.6,-2.6) {List.Perm.dedup};
 			\node (dots) at (2.1,-2.4) {$\cdots$};
 			\draw[ed] (root)--(a); \draw[ed] (root)--(perm); \draw[ed] (root)--(dots);
 			\draw[ed] (a)--(mem); \draw[ed] (a)--(nmem);
 			\draw[ed] (mem)--(memL); \draw[ed] (nmem)--(nmemL);
-			\draw[ed] (perm)--(idem); \draw[ed] (perm)--(pdd);
+			\draw[ed] (root)--(idem); \draw[ed] (perm)--(pdd);
 	\end{tikzpicture}}
 \end{center}
 \begin{itemize}
 \item In \grow{} we consider non-inferable hypotheses only (sinks)
 \item Note the term dependence, even among sinks
 \item Subsets of hypotheses (at set-trie nodes) can be queried efficiently via a \alert{path index}
+\item Larger example in code
 \end{itemize} 
 \end{frame}
 
 %--- Greedy building --------------------------------------------------
 \begin{frame}{Building a set-trie: a greedy heuristic}
-  Family $\{\{a,b,x\},\{a,c,x\},\{c,d\},\{c,e,y\},\{e,f,y\}\}$. Goal: a trie whose
-  total key size (summed over nodes) is small.
+  Goal: a trie whose total key size (summed over nodes) is small.
+  \\Family $\{\{a,b,x\},\{a,c,x\},\{c,d\},\{c,e,y\},\{e,f,y\}\}$. 
   \begin{center}
   \resizebox{0.98\linewidth}{!}{%
   \begin{tikzpicture}[
@@ -839,8 +871,7 @@ example (n m : Nat) (x : Fin (n+m + 1)) :
     \node[font=\small\bfseries] at (11.0,-3.8) {weight $= 12$};
   \end{tikzpicture}}
   \end{center}
-  Pick the element most common among siblings, make it a shared parent; stop when
-  siblings are disjoint.
+  Pick the element most common among siblings, make it a shared parent
 \end{frame}
 
 %--- Greedy is suboptimal ---------------------------------------------
@@ -880,11 +911,12 @@ efficient algorithm for the optimum.
 \begin{frame}{Path indexing: storing sets of expressions}
   \begin{itemize}
     \item Like \alert{discrimination trees}, a path index stores a set of
-          syntax trees (\texttt{Expr}) so we can query them efficiently.
+          syntax trees (\texttt{Expr})
+    \item Used for efficient membership queries
     \item Each stored expression gets an \alert{index}; the tree mirrors the
           shape of \texttt{Expr}, and every node records \alert{which indices
           carry which symbol} at that position.
-    \item Allowed for \alert{scoring heuristic} of the next section.
+    \item Will lead to \alert{scoring heuristic} of the next section.
   \end{itemize}
 \end{frame}
 
@@ -942,7 +974,7 @@ efficient algorithm for the optimum.
     \node[rec, rounded corners=2pt, font=\scriptsize, right=1mm of A2] {recurse};
   \end{tikzpicture}}
   \end{center}
-  Split $n+m=42 = \equiv{eq}\,(n+m)\,42$. The head $\mathit{eq}$ and the literal
+  Split $n+m=42  \equiv{eq}\,(n+m)\,42$. The head $\mathit{eq}$ and the literal
   $42$ each match \alert{all} indices, $\{0,1,2\}$; the middle argument $n+m$
   needs a \alert{recursion}.
 \end{frame}
@@ -1044,7 +1076,7 @@ efficient algorithm for the optimum.
 	\item And \alert{up to unification}: nodes may carry metavariables, so a query
 	can retrieve every stored expression it \emph{unifies} with, not only
 	the syntactically identical one.
-	\\Ex.: if $n$ is a metavariable, match $(a*b)+m=45$ with assignment
+	\\Ex.: if $n$ is a metavariable, match $(a*b)+m=42$ with assignment
 	\\These assignements must be tracked/propagated !
 \end{itemize}
 
@@ -1068,11 +1100,10 @@ efficient algorithm for the optimum.
     \item \alert{Memorisation.} A theorem is a promising candidate when, in
           \grow{}'s current state,
       \begin{itemize}
-        \item the current goal \emph{matches} a recorded goal, and
-        \item the context \emph{contains} the recorded hypotheses.
+        \item the search goal \emph{matches} a recorded goal, and
+        \item the search context \emph{contains} the recorded hypotheses.
       \end{itemize}
-    \item We won't compare goals syntactically: the recorded patterns get
-          \alert{generalised} with a path-index procedure --- \emph{covered later}.
+    \item The recorded goals/context get \alert{generalised} with a path-index procedure --- \emph{covered later}.
   \end{itemize}
   \medskip
   So the first task is to \alert{sample proof states} from proofs.
@@ -1089,7 +1120,7 @@ theorem testProof (l L : List Nat) :
   apply Sublist.length_le
   apply dedup_sublist
 \end{lstlisting}
-  A sample records the \alert{lifted context}, the \alert{goal}, the
+  A sample records the \alert{goal} and the
   \alert{hypotheses} it relied on, and the \alert{theorem} applied.
 \end{frame}
 
@@ -1120,7 +1151,7 @@ theorem testProof (l L : List Nat) :
 	Hyps:  l.dedup <+ l
 	Kind:  thm Nat.add_le_add_right
 \end{lstlisting}
-Ficticious foward step:
+One proof terms, many derivations. Sample ficticious foward step:
 \begin{lstlisting}
 theorem testProof (l L : List Nat) :
 	l.dedup.dedup.length + L.length ≤ (l ++ L).length := by
@@ -1135,26 +1166,26 @@ theorem testProof (l L : List Nat) :
 \end{frame}
 
 %--- Conjecturables ---------------------------------------------------
-\begin{frame}[fragile]{Conjecturables: arguments the goal doesn't reveal}
-Consider a transitivity step:
-\begin{lstlisting}[basicstyle=\ttfamily\scriptsize]
-theorem testConj (n m : Nat) : n*m + 1 ≤ 2 + (m*n) := by
-  calc n*m + 1 = m*n + 1   := by rw [Nat.mul_comm]
-    _          = 1 + (m*n) := by rw [Nat.add_comm]
-    _          ≤ 2 + (m*n) := by apply Nat.add_le_add_right; decide
-\end{lstlisting}
-\begin{lstlisting}[basicstyle=\ttfamily\small]
-Goal:  n * m + 1 = 1 + m * n
-Hyps:  · n * m + 1 = m * n + 1
-Kind:  thmC Eq.trans #[m * n + 1]
-\end{lstlisting}
-  \begin{itemize}
-    \item \texttt{Eq.trans} transitions through $m*n+1$ --- a term the goal
-          $n*m+1 = 1+m*n$ \alert{does not mention}, so it cannot be inferred from it.
-    \item We track such \alert{conjecturable} arguments (\texttt{\#[m * n + 1]}),
-          for better-informed backward steps.
-  \end{itemize}
-\end{frame}
+%\begin{frame}[fragile]{Conjecturables: arguments the goal doesn't reveal}
+%Consider a transitivity step:
+%\begin{lstlisting}[basicstyle=\ttfamily\scriptsize]
+%theorem testConj (n m : Nat) : n*m + 1 ≤ 2 + (m*n) := by
+%  calc n*m + 1 = m*n + 1   := by rw [Nat.mul_comm]
+%    _          = 1 + (m*n) := by rw [Nat.add_comm]
+%    _          ≤ 2 + (m*n) := by apply Nat.add_le_add_right; decide
+%\end{lstlisting}
+%\begin{lstlisting}[basicstyle=\ttfamily\small]
+%Goal:  n * m + 1 = 1 + m * n
+%Hyps:  · n * m + 1 = m * n + 1
+%Kind:  thmC Eq.trans #[m * n + 1]
+%\end{lstlisting}
+%  \begin{itemize}
+%    \item \texttt{Eq.trans} transitions through $m*n+1$ --- a term the goal
+%          $n*m+1 = 1+m*n$ \alert{does not mention}, so it cannot be inferred from it.
+%    \item We track such \alert{conjecturable} arguments (\texttt{\#[m * n + 1]}),
+%          for better-informed backward steps.
+%  \end{itemize}
+%\end{frame}
 
 %--- Generalisation: the procedure ------------------------------------
 \begin{frame}{From samples to a pattern: generalisation}
@@ -1169,8 +1200,7 @@ We can do better then memorisation.
   \end{itemize}
   \medskip
   A search goal then counts as \emph{resembling} the samples when it
-  \alert{unifies} with this pattern --- \emph{without} assigning the goal's own
-  variables.
+  \alert{unifies} with this pattern
 \end{frame}
 
 %--- Generalisation: reminder of the initial index --------------------
@@ -1230,7 +1260,7 @@ We can do better then memorisation.
   \end{center}
   Each of \textit{add}, \textit{mul}, \textit{sub} occurs in just
   $\tfrac{1}{3}$ of the siblings --- \alert{infrequent} --- so they collapse to a
-  metavariable $f? : \mathbb{N}\to\mathbb{N}\to\mathbb{N}$. $n/m$ will now match !
+  metavariable $f? : \mathbb{N}\to\mathbb{N}\to\mathbb{N}$. $n/m=42$ will now match !
 \end{frame}
 
 %--- Generalisation: aspects and status -------------------------------
@@ -1238,9 +1268,9 @@ We can do better then memorisation.
   \begin{itemize}
     \item \alert{Metavariable garbage collection}: Generalisation can create
           metavariables that later get generalised further and are no longer
-          referenced by the index --- these must be collected.
-    \item \alert{Metavariable reuse}: We want as few metavariables as possible;
-          this is delicate and \alert{still in a research state}.
+          referenced by the index --- these can be removed.
+    \item \alert{Metavariable reuse}: We want as few metavariables as possible for efficiency (keep path indices small): no need to have two $(m? \ :  \mathbb{N})$ if no goals share them.
+          \\This is delicate and \alert{still in a research state}.
     \item \alert{On real data.} Running the procedure over a larger body of
           samples:
 \begin{lstlisting}[basicstyle=\ttfamily\footnotesize]
@@ -1262,7 +1292,7 @@ We can do better then memorisation.
 
 \begin{itemize}
 	\item Heuristic proof search can't compete with LLMs \\\dots for now. But maybe one day ?
-	\item Currently a statistical/phenomenological approach: take theorem as search step if goal and context match previously seen applications.
+	\item Currently a \alert{statistical/phenomenological} approach: take theorem as search step if goal and context match previously seen  frequent applications.
 	\\Move towards \alert{learning}: determine goal path index and context set-trie that \textit{minimise} search step count or proof term size for a given set of target queries. How ?
 	\item Work in progress: rewrite with dependent constants ? Link induction reverts to samples ? Optimal set-tries and fuzzy queries ? Sample tactic applications ? Move to Aesop. Fix bugs. Optimize. Fix more bugs. 
 
