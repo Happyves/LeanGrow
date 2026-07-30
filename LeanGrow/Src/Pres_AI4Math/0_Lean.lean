@@ -77,6 +77,8 @@ def Eq.symm {T : Sort u} (a b : T) (eq : Eq a b) : Eq b a :=
     (h := Eq.refl a) -- last argument must have type Eq a a, which is provided by reflexivity
 
 
+
+
 #exit
 
 def Nat.add (n m : Nat) : Nat :=
